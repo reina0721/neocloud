@@ -1,0 +1,55 @@
+x-backend: &backend
+  image: ${API_IMAGE:?missing API image}
+  pull_policy: never
+  working_dir: /app
+  environment:
+    APP_LOGGER__ENVIRONMENT: production
+    APP_AUTH__MODE: session
+    APP_IAM__LOCAL__SETUPTOKEN: ${SETUP_TOKEN:-}
+    APP_HTTP__ADDR: 0.0.0.0:8080
+    APP_MANAGEMENT__ADDR: 0.0.0.0:9090
+    APP_HTTP__CORS__ALLOWEDORIGINS: '["http://127.0.0.1:${WEB_PORT:-4173}","http://localhost:${WEB_PORT:-4173}"]'
+    APP_DATABASE__DRIVER: sqlite
+    APP_DATABASE__DSN: .data/app.db
+    APP_STORAGE__DRIVER: local
+    APP_STORAGE__LOCAL__BASEPATH: .data/storage
+    APP_FILES__TRANSFERS__STAGINGPATH: .data/transfers
+    APP_FILES__CONNECTIONS__PUBLICORIGIN: http://127.0.0.1:${WEB_PORT:-4173}
+    APP_SCHEDULER__ENABLED: "true"
+  volumes:
+    - type: bind
+      source: ./data
+      target: /app/.data
+
+services:
+  migrate:
+    <<: *backend
+    profiles: [tools]
+    command: [db, migrate, up]
+  backend:
+    <<: *backend
+    stop_grace_period: 60s
+    restart: unless-stopped
+  web:
+    stop_grace_period: 30s
+    image: ${WEB_IMAGE:?missing Web image}
+    pull_policy: never
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      CLOUDDRIVE_BACKEND_URL: http://backend:8080
+    ports:
+      - "127.0.0.1:${WEB_PORT:-4173}:4173"
+    depends_on: [backend]
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:4173/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s

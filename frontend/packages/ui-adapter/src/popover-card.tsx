@@ -8,12 +8,16 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import { IconAction } from './icon-action';
 import { useTheme } from '@mui/material/styles';
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useState, useLayoutEffect, type RefObject, type ReactNode } from 'react';
 export type PopoverCardProps = Readonly<{
   triggerLabel: string;
   title: string;
   children: ReactNode;
   defaultOpen?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  triggerRef?: RefObject<HTMLButtonElement | null>;
+  headerAction?: ReactNode;
   triggerIcon?: ReactNode;
   closeLabel?: string;
   size?: 'content' | 'comfortable';
@@ -25,17 +29,30 @@ export function PopoverCard({
   title,
   children,
   defaultOpen = false,
+  isOpen,
+  onOpenChange,
+  triggerRef,
+  headerAction,
   triggerIcon,
   closeLabel,
   size = 'content',
 }: PopoverCardProps) {
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
-  const [open, setOpen] = useState(defaultOpen);
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const open = isOpen ?? internalOpen;
+  const setOpen = (next: boolean) => {
+    if (isOpen === undefined) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
+  useLayoutEffect(() => {
+    if (triggerRef) setAnchor(triggerRef.current);
+  }, [triggerRef, open]);
+  const target = anchor;
   const id = useId();
   const theme = useTheme();
   return (
     <>
-      {triggerIcon ? (
+      {triggerRef ? null : triggerIcon ? (
         <IconButton
           ref={setAnchor}
           className="ui-overlay-trigger size-control min-w-control"
@@ -59,14 +76,14 @@ export function PopoverCard({
         </Button>
       )}
       <Modal
-        open={Boolean(open && anchor)}
+        open={Boolean(open && target)}
         onClose={() => setOpen(false)}
         slots={{ backdrop: Backdrop }}
         slotProps={{ backdrop: { invisible: true } }}
       >
         <Popper
-          open={Boolean(open && anchor)}
-          anchorEl={anchor}
+          open={Boolean(open && target)}
+          anchorEl={target}
           disablePortal
           placement="bottom-start"
           modifiers={[
@@ -92,11 +109,18 @@ export function PopoverCard({
                 <h2 id={id} className="text-sm font-bold text-ink">
                   {title}
                 </h2>
-                {closeLabel ? (
-                  <IconAction label={closeLabel} onPress={() => setOpen(false)}>
-                    <span aria-hidden="true">×</span>
-                  </IconAction>
-                ) : null}
+                <div className="flex shrink-0 items-center gap-1">
+                  {headerAction}
+                  {closeLabel ? (
+                    <IconAction
+                      size={triggerRef ? 'lg' : 'md'}
+                      label={closeLabel}
+                      onPress={() => setOpen(false)}
+                    >
+                      <span aria-hidden="true">×</span>
+                    </IconAction>
+                  ) : null}
+                </div>
               </div>
               <div className="mt-2 text-sm leading-6 text-ink-muted">{children}</div>
             </Paper>

@@ -89,7 +89,7 @@ export function ActionsSelectionPage() {
                 name="IconAction"
                 description={t('uiElements.catalog.iconActionDescription')}
                 states={[
-                  'sm / md',
+                  'sm / md / lg',
                   'Standard / Filled',
                   'Active',
                   'Danger',
@@ -101,6 +101,7 @@ export function ActionsSelectionPage() {
                 <div className="flex flex-wrap items-center gap-3">
                   <IconAction
                     variant="filled"
+                    size="lg"
                     label={t('uiElements.catalog.search')}
                     onPress={() => setLastAction(t('uiElements.catalog.search'))}
                   >

@@ -26,7 +26,7 @@ FROM gcr.io/distroless/static-debian13:nonroot@sha256:b5b9fd04c8dcf72a173183c0b7
 ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILD_TIME=unknown
-ARG SOURCE=https://github.com/reina0721/clouddrive
+ARG SOURCE=https://github.com/reina0721/neocloud
 
 LABEL org.opencontainers.image.title="clouddrive" \
       org.opencontainers.image.description="Production-oriented Go HTTP API scaffold" \

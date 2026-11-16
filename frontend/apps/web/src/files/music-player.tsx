@@ -10,10 +10,12 @@ import {
 } from '@clouddrive/surface/files';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { PopoverCard } from '@clouddrive/ui-adapter/overlays';
+import { PopoverCard, DrawerSurface, DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
 import { RangeSlider } from '@clouddrive/ui-adapter/range-slider';
 import {
   ListMusic,
+  PanelsTopLeft,
   Music2,
   Pause,
   Play,
@@ -44,6 +46,7 @@ type MusicPlayerProps = Readonly<{
   onStop: () => void;
 }>;
 
+type Presentation = 'floating' | 'sheet' | 'fullscreen';
 type RepeatMode = 'off' | 'track' | 'queue';
 type TrackSelection = Readonly<{ entry: FileEntry; sequence: number; first: boolean }>;
 type MediaState = Readonly<{
@@ -65,6 +68,8 @@ const volumePercent = 100;
 const repeatModes: readonly RepeatMode[] = ['off', 'track', 'queue'];
 const zh = {
   player: '音乐播放器',
+  mode: '播放器布局',
+  modes: { floating: '悬浮', sheet: '底部面板', fullscreen: '全屏播放' },
   playing: '播放中',
   play: '播放',
   pause: '暂停',
@@ -89,6 +94,8 @@ const zh = {
 };
 const en: typeof zh = {
   player: 'Music player',
+  mode: 'Player layout',
+  modes: { floating: 'Floating', sheet: 'Bottom sheet', fullscreen: 'Full screen' },
   playing: 'Now playing',
   play: 'Play',
   pause: 'Pause',
@@ -135,6 +142,15 @@ export function MusicPlayer({
   const { t, locale } = useFrontendTranslation();
   const labels = locale.startsWith('zh') ? zh : en;
   const audio = useRef<HTMLAudioElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(true);
+  const [presentation, setPresentation] = useState<Presentation>(() =>
+    window.innerWidth < 768 ? 'sheet' : 'floating',
+  );
+  const close = (next: boolean) => {
+    setOpen(next);
+    if (!next) requestAnimationFrame(() => trigger.current?.focus({ preventScroll: true }));
+  };
   const queueId = useId();
   const locked = useLockStore((state) => state.locked);
   const [track, setTrack] = useState<TrackSelection>({
@@ -331,6 +347,242 @@ export function MusicPlayer({
       : failure === 'unsupported'
         ? t('files.mediaUnsupported')
         : t('files.errors.' + failure);
+  const modeControl = (
+    <MenuButton
+      ariaLabel={labels.mode}
+      label={<PanelsTopLeft className="size-5" />}
+      triggerVariant="icon"
+      triggerSize="lg"
+      selectedId={presentation}
+      items={(['floating', 'sheet', 'fullscreen'] as const).map((id) => ({
+        id,
+        label: labels.modes[id],
+      }))}
+      onAction={(id) => setPresentation(id as Presentation)}
+    />
+  );
+  const content = (
+    <div
+      data-music-layout={presentation}
+      className={`grid min-w-0 gap-4 ${presentation === 'fullscreen' ? 'mx-auto min-h-full w-full max-w-5xl content-between md:grid-cols-2 md:content-center md:items-center md:gap-12' : ''}`}
+    >
+      <div
+        data-music-information
+        className={`flex min-w-0 gap-4 ${presentation === 'fullscreen' ? 'flex-col items-center text-center' : 'items-center'}`}
+      >
+        <div
+          data-music-cover
+          className={`grid shrink-0 place-items-center overflow-hidden rounded-panel bg-surface-muted text-ink-muted ${presentation === 'fullscreen' ? 'aspect-square w-full max-h-72 max-w-72 [@media(height<25rem)]:w-24 [@media(height<25rem)]:max-h-24' : 'size-16'}`}
+        >
+          {current?.cover ? (
+            <img
+              src={current.cover}
+              alt={labels.fallbackCover}
+              className="h-full w-full object-cover"
+              onError={() =>
+                setMedia((state) =>
+                  state?.sequence === track.sequence ? { ...state, cover: '' } : state,
+                )
+              }
+            />
+          ) : (
+            <Music2 aria-hidden="true" />
+          )}
+        </div>
+        <div className="min-w-0">
+          {current?.tags?.artist ? (
+            <p className="break-words text-xs text-ink-muted">{current.tags.artist}</p>
+          ) : null}
+          <p className="break-words font-bold text-ink">
+            {current?.tags?.title ?? track.entry.name}
+          </p>
+          {current?.tags?.album ? (
+            <p className="break-words text-xs text-ink-muted">{current.tags.album}</p>
+          ) : null}
+        </div>
+      </div>
+      <div className="min-w-0 space-y-4">
+        <div data-music-progress className="px-3">
+          <RangeSlider
+            label={labels.progress}
+            max={duration || 1}
+            step={0.1}
+            value={Math.min(elapsed, duration)}
+            disabled={!duration || Boolean(failure)}
+            onValueChange={(seconds) => {
+              const node = audio.current;
+              if (node) {
+                node.currentTime = seconds;
+                syncClock(node);
+              }
+            }}
+          />
+          <div className="flex justify-between gap-2 text-xs text-ink-muted">
+            <span>
+              <span className="sr-only">{labels.elapsed} </span>
+              {clockText(elapsed)}
+            </span>
+            <span>
+              <span className="sr-only">{labels.remaining} </span>−{clockText(duration - elapsed)}
+            </span>
+          </div>
+        </div>
+        <div data-music-transport className="grid grid-cols-5 items-center justify-items-center">
+          <IconAction
+            size="lg"
+            label={labels.repeat[repeat]}
+            active={repeat !== 'off'}
+            tooltip
+            onPress={() =>
+              setRepeat(
+                repeatModes[(repeatModes.indexOf(repeat) + 1) % repeatModes.length] ?? 'off',
+              )
+            }
+          >
+            {repeat === 'track' ? <Repeat1 aria-hidden="true" /> : <Repeat aria-hidden="true" />}
+          </IconAction>
+          <IconAction
+            size="lg"
+            label={labels.previous}
+            tooltip
+            disabled={!previous}
+            onPress={() => {
+              if (previous) choose(previous);
+            }}
+          >
+            <SkipBack aria-hidden="true" />
+          </IconAction>
+          <IconAction
+            label={paused ? labels.play : labels.pause}
+            size="lg"
+            variant="filled"
+            disabled={!current?.url || Boolean(failure)}
+            onPress={() => {
+              if (paused) play();
+              else audio.current?.pause();
+            }}
+          >
+            {paused ? <Play /> : <Pause />}
+          </IconAction>
+          <IconAction
+            size="lg"
+            label={labels.next}
+            tooltip
+            disabled={!next}
+            onPress={() => {
+              if (next) choose(next);
+            }}
+          >
+            <SkipForward aria-hidden="true" />
+          </IconAction>
+          <IconAction
+            size="lg"
+            label={queueOpen ? labels.hideQueue : labels.showQueue}
+            expanded={queueOpen}
+            active={queueOpen}
+            tooltip
+            {...(queueOpen ? { controls: queueId } : {})}
+            onPress={() => setQueueOpen((open) => !open)}
+          >
+            <ListMusic aria-hidden="true" />
+          </IconAction>
+        </div>
+        <div data-music-volume className="flex items-center gap-2">
+          <IconAction
+            size="lg"
+            label={muted ? labels.unmute : labels.mute}
+            onPress={() => {
+              const node = audio.current;
+              if (!node) return;
+              node.muted = !node.muted;
+              setMuted(node.muted);
+            }}
+          >
+            {muted ? <VolumeX /> : <Volume2 />}
+          </IconAction>
+          <div className="min-w-0 flex-1 px-3">
+            <RangeSlider
+              label={labels.volume}
+              max={volumePercent}
+              value={volume}
+              onValueChange={(percent) => {
+                const node = audio.current;
+                if (!node) return;
+                node.volume = percent / volumePercent;
+                setVolume(Math.round(node.volume * volumePercent));
+              }}
+            />
+          </div>
+          <IconAction size="lg" label={labels.stop} onPress={onStop}>
+            <Square />
+          </IconAction>
+        </div>
+        {!current ? (
+          <p role="status" className="text-xs">
+            {t('files.mediaLoading')}
+          </p>
+        ) : null}
+        {failure ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <p role="alert" className="text-xs text-danger">
+              {failedMessage}
+            </p>
+            <Action size="lg" variant="secondary" onPress={retryTrack}>
+              {t('files.retry')}
+            </Action>
+          </div>
+        ) : blockedSequence === track.sequence ? (
+          <p role="status" className="text-xs">
+            {labels.blocked}
+          </p>
+        ) : null}
+        {queueOpen ? (
+          <div id={queueId} className="space-y-2 border-t border-border pt-3">
+            <p className="font-semibold text-ink">{labels.queue}</p>
+            {queue === undefined ? (
+              <p role="status" className="text-xs">
+                {labels.queueLoading}
+              </p>
+            ) : null}
+            {queue === null ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <p role="alert" className="text-xs text-danger">
+                  {labels.queueFailure}
+                </p>
+                <Action
+                  size="lg"
+                  variant="secondary"
+                  onPress={() => {
+                    setQueue(undefined);
+                    setQueueAttempt((attempt) => attempt + 1);
+                  }}
+                >
+                  {t('files.retry')}
+                </Action>
+              </div>
+            ) : null}
+            {queue?.limited ? <p className="text-xs">{labels.queueLimited}</p> : null}
+            <ul aria-label={labels.queue} className="max-h-48 overflow-auto">
+              {entries.map((entry) => (
+                <li key={entry.id} aria-current={entry.id === track.entry.id ? 'true' : undefined}>
+                  <Action size="lg" variant="quiet" onPress={() => choose(entry)}>
+                    <span
+                      className={entry.id === track.entry.id ? 'break-all text-brand' : 'break-all'}
+                    >
+                      {entry.name}
+                    </span>
+                    {entry.id === track.entry.id ? (
+                      <span className="sr-only"> · {labels.playing}</span>
+                    ) : null}
+                  </Action>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
   return (
     <>
       {/* 该节点只服务受控播放器，原生历史和访客入口继续使用自己的媒体元素。 */}
@@ -358,226 +610,56 @@ export function MusicPlayer({
           setMedia((state) => (state?.url === url ? { ...state, failure: 'unsupported' } : state));
         }}
       />
-      <PopoverCard
-        triggerLabel={labels.player}
-        triggerIcon={<Music2 />}
-        title={labels.player}
-        closeLabel={t('common.close')}
-        size="comfortable"
-        defaultOpen
+      <IconAction
+        ref={trigger}
+        size="lg"
+        label={labels.player}
+        expanded={open}
+        onPress={() => close(!open)}
       >
-        <div className="space-y-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-control bg-surface-muted text-ink-muted">
-              {current?.cover ? (
-                <img
-                  src={current.cover}
-                  alt={labels.fallbackCover}
-                  className="h-full w-full object-cover"
-                  onError={() =>
-                    setMedia((state) =>
-                      state?.sequence === track.sequence ? { ...state, cover: '' } : state,
-                    )
-                  }
-                />
-              ) : (
-                <Music2 aria-hidden="true" />
-              )}
-            </div>
-            <div className="min-w-0">
-              {current?.tags?.artist ? (
-                <p className="break-words text-xs text-ink-muted">{current.tags.artist}</p>
-              ) : null}
-              <p className="break-words font-bold text-ink">
-                {current?.tags?.title ?? track.entry.name}
-              </p>
-              {current?.tags?.album ? (
-                <p className="break-words text-xs text-ink-muted">{current.tags.album}</p>
-              ) : null}
-            </div>
-          </div>
-          <div>
-            <RangeSlider
-              label={labels.progress}
-              max={duration || 1}
-              step={0.1}
-              value={Math.min(elapsed, duration)}
-              disabled={!duration || Boolean(failure)}
-              onValueChange={(seconds) => {
-                const node = audio.current;
-                if (node) {
-                  node.currentTime = seconds;
-                  syncClock(node);
-                }
-              }}
-            />
-            <div className="flex justify-between gap-2 text-xs text-ink-muted">
-              <span>
-                <span className="sr-only">{labels.elapsed} </span>
-                {clockText(elapsed)}
-              </span>
-              <span>
-                <span className="sr-only">{labels.remaining} </span>−{clockText(duration - elapsed)}
-              </span>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <IconAction
-              size="sm"
-              label={labels.repeat[repeat]}
-              active={repeat !== 'off'}
-              tooltip
-              onPress={() =>
-                setRepeat(
-                  repeatModes[(repeatModes.indexOf(repeat) + 1) % repeatModes.length] ?? 'off',
-                )
-              }
-            >
-              {repeat === 'track' ? <Repeat1 aria-hidden="true" /> : <Repeat aria-hidden="true" />}
-            </IconAction>
-            <IconAction
-              size="sm"
-              label={labels.previous}
-              tooltip
-              disabled={!previous}
-              onPress={() => {
-                if (previous) choose(previous);
-              }}
-            >
-              <SkipBack aria-hidden="true" />
-            </IconAction>
-            <IconAction
-              label={paused ? labels.play : labels.pause}
-              variant="filled"
-              disabled={!current?.url || Boolean(failure)}
-              onPress={() => {
-                if (paused) play();
-                else audio.current?.pause();
-              }}
-            >
-              {paused ? <Play /> : <Pause />}
-            </IconAction>
-            <IconAction
-              size="sm"
-              label={labels.next}
-              tooltip
-              disabled={!next}
-              onPress={() => {
-                if (next) choose(next);
-              }}
-            >
-              <SkipForward aria-hidden="true" />
-            </IconAction>
-            <IconAction
-              size="sm"
-              label={queueOpen ? labels.hideQueue : labels.showQueue}
-              expanded={queueOpen}
-              active={queueOpen}
-              tooltip
-              {...(queueOpen ? { controls: queueId } : {})}
-              onPress={() => setQueueOpen((open) => !open)}
-            >
-              <ListMusic aria-hidden="true" />
-            </IconAction>
-          </div>
-          <div className="flex items-center gap-2">
-            <IconAction
-              size="sm"
-              label={muted ? labels.unmute : labels.mute}
-              onPress={() => {
-                const node = audio.current;
-                if (!node) return;
-                node.muted = !node.muted;
-                setMuted(node.muted);
-              }}
-            >
-              {muted ? <VolumeX /> : <Volume2 />}
-            </IconAction>
-            <RangeSlider
-              label={labels.volume}
-              max={volumePercent}
-              value={volume}
-              onValueChange={(percent) => {
-                const node = audio.current;
-                if (!node) return;
-                node.volume = percent / volumePercent;
-                setVolume(Math.round(node.volume * volumePercent));
-              }}
-            />
-            <IconAction size="sm" label={labels.stop} onPress={onStop}>
-              <Square />
-            </IconAction>
-          </div>
-          {!current ? (
-            <p role="status" className="text-xs">
-              {t('files.mediaLoading')}
-            </p>
-          ) : null}
-          {failure ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <p role="alert" className="text-xs text-danger">
-                {failedMessage}
-              </p>
-              <Action size="sm" variant="secondary" onPress={retryTrack}>
-                {t('files.retry')}
-              </Action>
-            </div>
-          ) : blockedSequence === track.sequence ? (
-            <p role="status" className="text-xs">
-              {labels.blocked}
-            </p>
-          ) : null}
-          {queueOpen ? (
-            <div id={queueId} className="space-y-2 border-t border-border pt-3">
-              <p className="font-semibold text-ink">{labels.queue}</p>
-              {queue === undefined ? (
-                <p role="status" className="text-xs">
-                  {labels.queueLoading}
-                </p>
-              ) : null}
-              {queue === null ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <p role="alert" className="text-xs text-danger">
-                    {labels.queueFailure}
-                  </p>
-                  <Action
-                    size="sm"
-                    variant="secondary"
-                    onPress={() => {
-                      setQueue(undefined);
-                      setQueueAttempt((attempt) => attempt + 1);
-                    }}
-                  >
-                    {t('files.retry')}
-                  </Action>
-                </div>
-              ) : null}
-              {queue?.limited ? <p className="text-xs">{labels.queueLimited}</p> : null}
-              <ul aria-label={labels.queue} className="max-h-48 overflow-auto">
-                {entries.map((entry) => (
-                  <li
-                    key={entry.id}
-                    aria-current={entry.id === track.entry.id ? 'true' : undefined}
-                  >
-                    <Action size="sm" variant="quiet" onPress={() => choose(entry)}>
-                      <span
-                        className={
-                          entry.id === track.entry.id ? 'break-all text-brand' : 'break-all'
-                        }
-                      >
-                        {entry.name}
-                      </span>
-                      {entry.id === track.entry.id ? (
-                        <span className="sr-only"> · {labels.playing}</span>
-                      ) : null}
-                    </Action>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      </PopoverCard>
+        <Music2 />
+      </IconAction>
+      {presentation === 'floating' ? (
+        <PopoverCard
+          triggerLabel={labels.player}
+          title={labels.player}
+          closeLabel={t('common.close')}
+          triggerRef={trigger}
+          isOpen={open}
+          onOpenChange={close}
+          headerAction={modeControl}
+          size="comfortable"
+        >
+          {content}
+        </PopoverCard>
+      ) : presentation === 'sheet' ? (
+        <DrawerSurface
+          triggerLabel={labels.player}
+          title={labels.player}
+          description=""
+          closeLabel={t('common.close')}
+          placement="bottom"
+          isOpen={open}
+          onOpenChange={close}
+          headerAction={modeControl}
+        >
+          {content}
+        </DrawerSurface>
+      ) : (
+        <DialogSurface
+          triggerLabel={labels.player}
+          title={labels.player}
+          description=""
+          cancelLabel={t('common.close')}
+          size="fullscreen"
+          layout="workspace"
+          isOpen={open}
+          onOpenChange={close}
+          headerAction={modeControl}
+        >
+          {content}
+        </DialogSurface>
+      )}
     </>
   );
 }

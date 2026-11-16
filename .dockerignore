@@ -28,3 +28,6 @@ config.json
 frontend/apps/web/dist
 frontend/test-results
 frontend/playwright-report
+
+# 下载版安装器默认生成的私有运行目录
+clouddrive

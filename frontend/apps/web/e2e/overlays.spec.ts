@@ -943,3 +943,26 @@ test('Tree 层级数据集合：depth 缩进、展开/折叠、状态与 keyboar
     .analyze();
   expect(accessibility.violations).toEqual([]);
 });
+
+test('受控外部触发器、底部面板与全屏复用 Material 浮层契约', async ({ page }) => {
+  for (const kind of ['external-popover', 'bottom-sheet', 'fullscreen']) {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.goto('/ui-elements/overlays?overlay=' + kind);
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    if (kind === 'bottom-sheet') {
+      const bounds = await dialog.boundingBox();
+      expect(bounds!.x).toBe(0);
+      expect(Math.round(bounds!.y + bounds!.height)).toBe(800);
+    }
+    if (kind === 'fullscreen') {
+      const bounds = await dialog.boundingBox();
+      expect(bounds!.x).toBe(0);
+      expect(bounds!.y).toBe(0);
+      expect(bounds!.width).toBe(320);
+      expect(bounds!.height).toBe(800);
+    }
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+  }
+});

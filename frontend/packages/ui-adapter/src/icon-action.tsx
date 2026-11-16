@@ -14,7 +14,7 @@ export type IconActionProps = Readonly<{
   controls?: string;
   expanded?: boolean;
   loading?: boolean;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   tone?: 'neutral' | 'danger';
   variant?: 'standard' | 'filled';
   tooltip?: boolean | string;
@@ -47,7 +47,7 @@ export function IconAction({
       aria-busy={loading || undefined}
       disabled={disabled || loading}
       onClick={onPress}
-      className={`ui-action shrink-0 rounded-action ${size === 'sm' ? 'size-control-sm min-w-control-sm' : 'size-control min-w-control'} ${variant === 'filled' ? (tone === 'danger' ? 'bg-danger text-on-danger' : 'bg-brand text-on-brand hover:bg-brand-strong') : tone === 'danger' ? 'bg-danger-soft text-danger' : active ? 'bg-brand-soft text-brand' : 'bg-transparent text-ink-muted hover:bg-ink/8 hover:text-ink'}`}
+      className={`ui-action shrink-0 rounded-action ${size === 'sm' ? 'size-control-sm min-w-control-sm' : size === 'lg' ? 'ui-icon-action-lg size-control-lg min-w-control-lg' : 'size-control min-w-control'} ${variant === 'filled' ? (tone === 'danger' ? 'bg-danger text-on-danger' : 'bg-brand text-on-brand hover:bg-brand-strong') : tone === 'danger' ? 'bg-danger-soft text-danger' : active ? 'bg-brand-soft text-brand' : 'bg-transparent text-ink-muted hover:bg-ink/8 hover:text-ink'}`}
     >
       {loading ? <CircularProgress size="1rem" color="inherit" aria-hidden="true" /> : children}
     </Button>

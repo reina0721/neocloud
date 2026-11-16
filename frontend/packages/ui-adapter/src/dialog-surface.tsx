@@ -14,7 +14,8 @@ export type DialogSurfaceProps = Readonly<{
   children: ReactNode;
   cancelLabel: string;
   /** 压缩包等连续浏览工作区使用cover，普通确认保持lg。 */
-  size?: 'lg' | 'cover';
+  size?: 'lg' | 'cover' | 'fullscreen';
+  headerAction?: ReactNode;
   /** workspace 为连续阅读保留视口，使用紧凑边距；普通确认保持standard。 */
   layout?: 'standard' | 'workspace';
   /**
@@ -55,6 +56,7 @@ export function DialogSurface({
   onConfirm,
   isOpen,
   onOpenChange,
+  headerAction,
 }: DialogSurfaceProps) {
   const titleId = useId();
   const descriptionId = useId();
@@ -99,12 +101,13 @@ export function DialogSurface({
           if (!pending) setOpen(false);
         }}
         aria-labelledby={titleId}
-        aria-describedby={descriptionId}
+        aria-describedby={description ? descriptionId : undefined}
         fullWidth
-        maxWidth={size === 'cover' ? false : 'md'}
+        fullScreen={size === 'fullscreen'}
+        maxWidth={size === 'lg' ? 'md' : false}
         slotProps={{
           paper: {
-            className: `ui-overlay-surface ui-dialog-layout ${layout === 'workspace' ? 'ui-dialog-workspace' : ''}`,
+            className: `ui-overlay-surface ui-dialog-layout ${layout === 'workspace' ? 'ui-dialog-workspace' : ''} ${size === 'fullscreen' ? 'ui-dialog-fullscreen' : ''}`,
             sx:
               size === 'cover'
                 ? {
@@ -120,9 +123,11 @@ export function DialogSurface({
         <DialogTitle
           id={titleId + '-container'}
           component="div"
-          className={`shrink-0 border-b border-border ${layout === 'workspace' ? 'px-4 py-3' : 'px-6 py-5'}`}
+          className={`shrink-0 border-b border-border ${size === 'fullscreen' ? 'px-4 py-1' : layout === 'workspace' ? 'px-4 py-3' : 'px-6 py-5'}`}
         >
-          <div className="flex items-start justify-between gap-3">
+          <div
+            className={`flex ${size === 'fullscreen' ? 'items-center' : 'items-start'} justify-between gap-3`}
+          >
             <div className="min-w-0">
               <h2
                 id={titleId}
@@ -130,18 +135,28 @@ export function DialogSurface({
               >
                 {title}
               </h2>
-              <p
-                id={descriptionId}
-                className={`${layout === 'workspace' ? 'hidden md:block' : ''} mt-1 text-sm leading-6 text-ink-muted`}
-              >
-                {description}
-              </p>
+              {description ? (
+                <p
+                  id={descriptionId}
+                  className={`${layout === 'workspace' ? 'hidden md:block' : ''} mt-1 text-sm leading-6 text-ink-muted`}
+                >
+                  {description}
+                </p>
+              ) : null}
             </div>
-            {headerClose ? (
-              <IconAction label={cancelLabel} disabled={pending} onPress={() => setOpen(false)}>
-                <span aria-hidden="true">×</span>
-              </IconAction>
-            ) : null}
+            <div className="flex shrink-0 items-center gap-1">
+              {headerAction}
+              {headerClose ? (
+                <IconAction
+                  size={size === 'fullscreen' ? 'lg' : 'md'}
+                  label={cancelLabel}
+                  disabled={pending}
+                  onPress={() => setOpen(false)}
+                >
+                  <span aria-hidden="true">×</span>
+                </IconAction>
+              ) : null}
+            </div>
           </div>
         </DialogTitle>
         <DialogContent className="ui-dialog-body">{children}</DialogContent>

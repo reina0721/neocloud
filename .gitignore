@@ -75,3 +75,6 @@ frontend/playwright-report/
 
 # 固定SDK与项目frame的可复现生成资源
 /frontend/apps/web/public/file-viewers/pdf/
+
+# 下载版安装器的默认运行目录
+/clouddrive/

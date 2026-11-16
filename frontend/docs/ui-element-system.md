@@ -313,3 +313,11 @@ Flyout 有标题和完整子树，键盘内部焦点不会因指针离开关闭�
 - 持久化仍属业务：users/audit 各自持有列布局 store（按用户或页面），Showcase 仅本地状态。
 
 目的地类型栏使用 Material Nav Tabs 的外观与原生链接语义，各目的地均可按 Tab 顺序聚焦并通过 Enter 导航；未选中任何类型的页面也保留该入口。内容切换仍由 TabsView 提供箭头键及 TabPanel 契约。
+
+### 外部触发器与展示位置
+
+`PopoverCard` 支持 `triggerRef`、`isOpen/onOpenChange` 的外部受控组合；未传入时保留原有自带触发器。`DrawerSurface.placement` 新增 `bottom`，内容宽度受视口约束，顶部圆角、固定标题与关闭入口、可滚动正文和底部安全区由 Adapter 负责。`DialogSurface.size="fullscreen"` 映射 Material 全屏 Dialog，不调用浏览器 Fullscreen API。三者的 `headerAction` 插槽用于布局切换等头部动作，不接收媒体或业务状态。
+
+`IconAction.size="lg"` 和 `MenuButton.triggerSize="lg"` 使用 control-lg Token；窄屏最低命中区为 48px。`MenuButton.selectedId` 可将简单选项呈现为单层 radio menu，避免为单个布局选择增加第二层菜单。
+
+同源验收入口为 `/ui-elements/overlays?overlay=external-popover`、`?overlay=bottom-sheet` 和 `?overlay=fullscreen`；常规入口的默认外观保持原有组合。

@@ -10,6 +10,12 @@ RUN mkdir -p /app/api \
     && npx --yes pnpm@10.22.0 standalone:check
 
 FROM node:24-bookworm-slim AS runtime
+ARG VERSION=dev
+ARG COMMIT=unknown
+LABEL org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${COMMIT}" \
+      org.opencontainers.image.source="https://github.com/reina0721/neocloud" \
+      org.opencontainers.image.licenses="Apache-2.0"
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV CLOUDDRIVE_BACKEND_URL=http://backend:8080

@@ -13,7 +13,8 @@ export type DrawerSurfaceProps = Readonly<{
   busy?: boolean;
   closeLabel: string;
   defaultOpen?: boolean;
-  placement?: 'left' | 'right';
+  placement?: 'left' | 'right' | 'bottom';
+  headerAction?: ReactNode;
   composition?: 'standard' | 'navigation';
   /** 受控模式：提供 isOpen/onOpenChange 时隐藏 trigger，由父级控制开关。 */
   isOpen?: boolean;
@@ -33,6 +34,7 @@ export function DrawerSurface({
   onOpenChange,
   placement = 'right',
   composition = 'standard',
+  headerAction,
 }: DrawerSurfaceProps) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const controlled = isOpen !== undefined;
@@ -66,33 +68,69 @@ export function DrawerSurface({
             role: 'dialog',
             'aria-modal': true,
             'aria-labelledby': id,
-            'aria-describedby': id + '-description',
-            className: `ui-overlay-surface ${composition === 'navigation' ? 'ui-drawer-navigation' : 'ui-drawer-form'} flex h-full flex-col`,
+            'aria-describedby': description ? id + '-description' : undefined,
+            className: `ui-overlay-surface ${placement === 'bottom' ? 'ui-drawer-bottom' : composition === 'navigation' ? 'ui-drawer-navigation' : 'ui-drawer-form'} flex ${placement === 'bottom' ? '' : 'h-full'} flex-col`,
             sx: {
-              width: composition === 'navigation' ? 'min(24rem, 90dvw)' : 'min(32rem, 95dvw)',
-              borderRadius: 0,
+              ...(placement === 'bottom'
+                ? {}
+                : {
+                    width: composition === 'navigation' ? 'min(24rem, 90dvw)' : 'min(32rem, 95dvw)',
+                    borderRadius: 0,
+                  }),
             },
           },
         }}
       >
-        <header className="relative shrink-0 px-6 py-5 pr-20">
-          <h2 id={id} className="line-clamp-2 break-words text-lg font-bold text-ink">
-            {title}
-          </h2>
-          <p id={id + '-description'} className="mt-1 text-sm leading-6 text-ink-muted">
-            {description}
-          </p>
-          <div className="absolute right-4 top-4">
-            <IconAction label={closeLabel} disabled={busy} onPress={() => setOpen(false)}>
-              <span aria-hidden="true">×</span>
-            </IconAction>
-          </div>
-        </header>
+        {placement === 'bottom' || headerAction ? (
+          <header className={`shrink-0 ${placement === 'bottom' ? 'px-4 py-1' : 'px-6 py-5'}`}>
+            <div
+              className={`flex ${placement === 'bottom' ? 'items-center' : 'items-start'} justify-between gap-2`}
+            >
+              <div className="min-w-0">
+                <h2 id={id} className="line-clamp-2 break-words text-lg font-bold text-ink">
+                  {title}
+                </h2>
+                {description ? (
+                  <p id={id + '-description'} className="mt-1 text-sm leading-6 text-ink-muted">
+                    {description}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                {headerAction}
+                <IconAction
+                  size={placement === 'bottom' ? 'lg' : 'md'}
+                  label={closeLabel}
+                  disabled={busy}
+                  onPress={() => setOpen(false)}
+                >
+                  <span aria-hidden="true">×</span>
+                </IconAction>
+              </div>
+            </div>
+          </header>
+        ) : (
+          <header className="relative shrink-0 px-6 py-5 pr-20">
+            <h2 id={id} className="line-clamp-2 break-words text-lg font-bold text-ink">
+              {title}
+            </h2>
+            <p id={id + '-description'} className="mt-1 text-sm leading-6 text-ink-muted">
+              {description}
+            </p>
+            <div className="absolute right-4 top-4">
+              <IconAction label={closeLabel} disabled={busy} onPress={() => setOpen(false)}>
+                <span aria-hidden="true">×</span>
+              </IconAction>
+            </div>
+          </header>
+        )}
         <div
           className={
             composition === 'navigation'
               ? 'min-h-0 flex-1 overflow-hidden'
-              : 'min-h-0 flex-1 overflow-y-auto px-6 py-5'
+              : placement === 'bottom'
+                ? 'min-h-0 overflow-y-auto px-4 pb-4'
+                : 'min-h-0 flex-1 overflow-y-auto px-6 py-5'
           }
         >
           {children}

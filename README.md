@@ -22,6 +22,10 @@ node scripts/dev.mjs --prepare
 
 界面基于 Material UI（MUI）二次封装，统一采用 [Material Design 3](frontend/docs/ui-visual-calibration.md)，设计 Token 与交互组件由公共基础层管理。
 
+## 下载版 Docker 部署
+
+面向 Linux amd64/arm64 的 Release 安装器支持安装、备份、版本检查及升级。目标机只需 Docker/Compose 与标准 Linux 工具，不编译源码；默认仅访问本机 `127.0.0.1:4173`。完整命令见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。公开直链须等待维护者发布包含两种架构 Docker 产物的正式 Release，draft 不能作为匿名下载入口。
+
 ## 开发与验证
 
 普通任务按[Agent 日常流程](docs/development/agent-workflow.md)执行，不要求整套任务档案。日常检查先看影响范围：

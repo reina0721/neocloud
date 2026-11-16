@@ -1,5 +1,6 @@
 'use client';
 
+import { IconAction } from '@clouddrive/ui-adapter/icon-action';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { CommandMenu } from '@clouddrive/ui-adapter/command-menu';
 import { SwitchField, TextField } from '@clouddrive/ui-adapter/form-field';
@@ -15,7 +16,7 @@ import {
   TooltipAction,
 } from '@clouddrive/ui-adapter/overlays';
 import { Archive, Copy, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useId, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { Section } from '@clouddrive/surface-foundation/layout';
@@ -28,6 +29,8 @@ export function OverlayElementsPage() {
   const { t } = useFrontendTranslation();
   const searchParams = useSearchParams();
   const overlay = searchParams.get('overlay');
+  const externalTrigger = useRef<HTMLButtonElement>(null);
+  const [externalOpen, setExternalOpen] = useState(overlay === 'external-popover');
   const [checked, setChecked] = useState(true);
   const [lastAction, setLastAction] = useState<string>();
   const [selectedChoice, setSelectedChoice] = useState('edit');
@@ -152,10 +155,27 @@ export function OverlayElementsPage() {
                 description={t('uiElements.catalog.popoverDescription')}
                 states={['Trigger', 'Heading', 'Long content', 'Focus return', 'Collision']}
               >
+                {overlay === 'external-popover' ? (
+                  <IconAction
+                    ref={externalTrigger}
+                    label={t('uiElements.popover')}
+                    onPress={() => setExternalOpen(true)}
+                  >
+                    <MoreHorizontal />
+                  </IconAction>
+                ) : null}
                 <PopoverCard
                   triggerLabel={t('uiElements.popover')}
                   title={t('uiElements.popoverTitle')}
                   defaultOpen={overlay === 'popover'}
+                  {...(overlay === 'external-popover'
+                    ? {
+                        triggerRef: externalTrigger,
+                        isOpen: externalOpen,
+                        onOpenChange: setExternalOpen,
+                        closeLabel: t('uiElements.close'),
+                      }
+                    : {})}
                 >
                   {description}
                 </PopoverCard>
@@ -206,7 +226,8 @@ export function OverlayElementsPage() {
                   description={t('uiElements.dialogDescription')}
                   cancelLabel={t('uiElements.cancel')}
                   confirmLabel={t('uiElements.confirm')}
-                  defaultOpen={overlay === 'dialog'}
+                  defaultOpen={overlay === 'dialog' || overlay === 'fullscreen'}
+                  size={overlay === 'fullscreen' ? 'fullscreen' : 'lg'}
                   onConfirm={() => setLastAction(t('uiElements.confirm'))}
                 >
                   <TextField label={t('uiElements.dialogField')} defaultValue="Community" />
@@ -328,7 +349,8 @@ export function OverlayElementsPage() {
                   title={t('uiElements.drawerTitle')}
                   description={t('uiElements.drawerDescription')}
                   closeLabel={t('uiElements.close')}
-                  defaultOpen={overlay === 'drawer'}
+                  defaultOpen={overlay === 'drawer' || overlay === 'bottom-sheet'}
+                  placement={overlay === 'bottom-sheet' ? 'bottom' : 'right'}
                   footer={
                     <Action type="submit" form={drawerFormId}>
                       {t('uiElements.confirm')}

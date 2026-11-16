@@ -42,9 +42,10 @@ export type MenuButtonProps = Readonly<
     isOpen?: boolean;
     onOpenChange?: (open: boolean) => void;
     /** Trigger 控件高度：`sm` 用于工具条内与其它 sm 控件同排。 */
-    triggerSize?: 'sm' | 'md';
+    triggerSize?: 'sm' | 'md' | 'lg';
     triggerVariant?: 'standard' | 'primary' | 'icon';
     onAction: (id: string) => void;
+    selectedId?: string;
   } & (
     | { items: readonly MenuAction[]; groups?: never }
     | { items?: never; groups: readonly MenuGroup[] }
@@ -64,6 +65,7 @@ export function MenuButton({
   triggerSize = 'md',
   triggerVariant = 'standard',
   onAction,
+  selectedId,
 }: MenuButtonProps) {
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
@@ -141,7 +143,7 @@ export function MenuButton({
         </ListSubheader>,
         ...group.items.map(renderItem),
       ])
-    : (items ?? []).map((item) => renderAction(item));
+    : (items ?? []).map((item) => renderAction(item, selectedId !== undefined, selectedId));
   return (
     <>
       <Button
@@ -158,7 +160,7 @@ export function MenuButton({
               ? 'text'
               : 'outlined'
         }
-        className={`ui-overlay-trigger ${triggerVariant === 'primary' ? 'ui-overlay-trigger-primary' : ''} ${triggerSize === 'sm' ? 'min-h-control-sm' : ''} ${triggerVariant === 'icon' ? 'size-control-sm min-w-control-sm border-0 bg-transparent px-0' : ''}`}
+        className={`ui-overlay-trigger ${triggerVariant === 'primary' ? 'ui-overlay-trigger-primary' : ''} ${triggerSize === 'sm' ? 'min-h-control-sm' : triggerSize === 'lg' ? 'ui-icon-action-lg h-control-lg min-h-control-lg' : ''} ${triggerVariant === 'icon' ? `${triggerSize === 'lg' ? 'size-control-lg min-w-control-lg' : 'size-control-sm min-w-control-sm'} border-0 bg-transparent px-0` : ''}`}
       >
         {label}
       </Button>

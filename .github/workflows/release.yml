@@ -12,7 +12,7 @@ permissions:
 jobs:
   release:
     name: Build signed draft release
-    if: github.repository == 'rin721/clouddrive'
+    if: github.repository == 'reina0721/neocloud'
     runs-on: ubuntu-latest
     environment: release
     steps:
@@ -43,9 +43,13 @@ jobs:
           echo "GORELEASER_DIST=$(node scripts/project-layout.mjs --field releaseRoot)" >> "${GITHUB_ENV}"
       - name: Verify release gates
         run: |
+          node --test scripts/install.test.mjs
           bash scripts/verify-docs.sh
           bash scripts/verify-webui.sh --prepare
           bash scripts/verify-quality.sh
+          # Next 会把本次验收的临时路由类型目录写入该自动生成文件。
+          git restore -- frontend/apps/web/next-env.d.ts
+          test -z "$(git status --porcelain)"
       - name: Build draft release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -64,3 +68,84 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload "${GITHUB_REF_NAME}" "${GORELEASER_DIST}/checksums.txt.sigstore.json" --clobber
+
+  docker-bundles:
+    name: Docker Release / ${{ matrix.arch }}
+    needs: release
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@1e60f620b9541dca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.11.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - name: Build paired offline images
+        run: bash scripts/build-docker-release.sh --version "${GITHUB_REF_NAME}" --arch "${{ matrix.arch }}" --out dist/docker
+      - name: Exercise installation and persistence on native architecture
+        run: node scripts/test-docker-release.mjs --release-dir dist/docker --version "${GITHUB_REF_NAME}"
+      - name: Produce image SBOMs
+        run: |
+          GOBIN="${RUNNER_TEMP}/release-tools" go install github.com/anchore/syft/cmd/syft@v1.50.0
+          for service in api web; do
+            "${RUNNER_TEMP}/release-tools/syft" "docker:clouddrive-${service}:${GITHUB_REF_NAME}-${{ matrix.arch }}" \
+              --output "spdx-json=dist/docker/clouddrive-${service}_${GITHUB_REF_NAME}_${{ matrix.arch }}.spdx.json"
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: docker-${{ matrix.arch }}
+          path: dist/docker/
+          compression-level: 0
+
+  attach-docker:
+    name: Attach and sign complete draft asset set
+    needs: [release, docker-bundles]
+    runs-on: ubuntu-24.04
+    environment: release
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: docker-*
+          merge-multiple: true
+          path: dist/docker
+      - name: Merge checksums and verify images' archives
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p dist/complete
+          gh release download "${GITHUB_REF_NAME}" --pattern checksums.txt --dir dist/complete
+          cd dist/docker
+          sha256sum --check "checksums-amd64.txt"
+          sha256sum --check "checksums-arm64.txt"
+          sha256sum clouddrive_*_docker.tar.gz install.sh version.txt *.spdx.json >> ../complete/checksums.txt
+          LC_ALL=C sort -u -k2 ../complete/checksums.txt -o ../complete/checksums.txt
+      - name: Sign final checksum set
+        run: |
+          GOBIN="${RUNNER_TEMP}/release-tools" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
+          cosign="${RUNNER_TEMP}/release-tools/cosign"
+          "${cosign}" sign-blob --yes --bundle dist/complete/checksums.txt.sigstore.json dist/complete/checksums.txt
+          "${cosign}" verify-blob --bundle dist/complete/checksums.txt.sigstore.json \
+            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/release.yml@${{ github.ref }}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com dist/complete/checksums.txt
+      - name: Upload complete assets to draft only
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          test "$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq .isDraft)" = true
+          gh release upload "${GITHUB_REF_NAME}" dist/docker/clouddrive_*_docker.tar.gz dist/docker/install.sh \
+            dist/docker/version.txt dist/docker/*.spdx.json dist/complete/checksums.txt dist/complete/checksums.txt.sigstore.json --clobber

@@ -3,6 +3,36 @@
 
 @scope ([data-ui-system='kira']) {
   @layer components {
+    .ui-overlay-surface.ui-drawer-bottom {
+      width: 100%;
+      max-width: 40rem;
+      height: auto;
+      max-height: calc(100dvh - 1rem);
+      margin-inline: auto;
+      border-radius: var(--radius-shell) var(--radius-shell) 0 0;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .ui-dialog-layout.ui-dialog-fullscreen {
+      margin: 0;
+      width: 100dvw;
+      max-width: 100dvw;
+      height: 100dvh;
+      max-height: 100dvh;
+      border-radius: 0;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .ui-dialog-fullscreen.ui-dialog-workspace > .ui-dialog-body {
+      overflow-y: auto;
+      padding: calc(var(--spacing) * 4);
+    }
+    @media (width < 48rem) {
+      .ui-icon-action-lg {
+        min-height: 3rem;
+        min-width: 3rem;
+      }
+    }
+
     .ui-action-toolbar {
       min-height: 0;
       width: 100%;
