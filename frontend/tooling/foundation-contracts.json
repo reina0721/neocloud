@@ -25,7 +25,7 @@
       "layer": "universal",
       "owner": "semantic token and motion primitives",
       "maturity": "stable",
-      "exports": ["./tokens.css", "./motion.css"],
+      "exports": ["./tokens.css", "./motion.css", "./parameters"],
       "authorityRoutes": ["/motion", "/ui-elements"],
       "evidence": [
         "packages/design-system/src/tokens.css",
@@ -127,7 +127,11 @@
         "./step-navigation",
         "./tree",
         "./toggle-group",
-        "./container-layout"
+        "./container-layout",
+        "./theme-provider",
+        "./mobile-navigation",
+        "./destination-navigation",
+        "./action-toolbar"
       ],
       "authorityRoutes": ["/ui-elements", "/motion"],
       "evidence": [

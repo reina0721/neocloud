@@ -134,8 +134,18 @@ export function findImportPolicyViolations({ localPath, specifier, workspace }) 
     violations.push(['Architecture naming', '禁止恢复旧 package namespace']);
   }
 
-  if (specifier.startsWith('@heroui/') && !localPath.startsWith('packages/ui-adapter/')) {
-    violations.push(['HeroUI isolation', '直接依赖只能出现在 packages/ui-adapter']);
+  if (specifier.startsWith('@heroui/')) {
+    violations.push(['Retired UI library', '历史 HeroUI 已退出；使用 Material UI Adapter']);
+  }
+  const materialRuntime =
+    specifier.startsWith('@mui/') || specifier.startsWith('@emotion/') || specifier === 'notistack';
+  const hostMaterialCache =
+    localPath === 'apps/web/src/app/layout.tsx' && specifier.startsWith('@mui/material-nextjs/');
+  if (materialRuntime && !localPath.startsWith('packages/ui-adapter/') && !hostMaterialCache) {
+    violations.push([
+      'Material UI isolation',
+      'Material组件只允许在 UI Adapter；Host仅装配Next SSR缓存',
+    ]);
   }
   const importsZustand =
     specifier === 'zustand' ||

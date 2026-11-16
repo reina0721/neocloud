@@ -88,7 +88,7 @@ export function AlertBanner({
   return (
     <section
       aria-label={title}
-      className={`relative flex items-start gap-3 rounded-panel border p-4 ${softToneClass[tone]}`}
+      className={`ui-alert relative flex items-start gap-3 rounded-panel border p-4 ${softToneClass[tone]}`}
       {...(announcement === 'urgent'
         ? { role: 'alert' as const }
         : announcement === 'polite'
@@ -100,7 +100,7 @@ export function AlertBanner({
       </span>
       <div className={dismissLabel ? 'min-w-0 flex-1 pr-control-sm' : 'min-w-0 flex-1'}>
         <h3 className="text-sm font-bold text-ink">{title}</h3>
-        <p className="mt-1 text-sm leading-6 text-ink-muted">{description}</p>
+        <p className="mt-1 text-sm leading-6 text-current">{description}</p>
         {actionLabel !== undefined ? (
           <div className="mt-3">
             <Action variant="secondary" size="sm" onPress={onAction}>

@@ -1,12 +1,16 @@
+'use client';
+import MuiSkeleton from '@mui/material/Skeleton';
 export type SkeletonProps = Readonly<{
   className?: string;
 }>;
 
 export function Skeleton({ className = '' }: SkeletonProps) {
   return (
-    <span
+    <MuiSkeleton
       data-slot="skeleton"
-      className={`block animate-pulse rounded-control bg-surface-muted ${className}`}
+      variant="rounded"
+      animation="pulse"
+      className={`block rounded-control bg-surface-muted ${className}`}
       aria-hidden="true"
     />
   );

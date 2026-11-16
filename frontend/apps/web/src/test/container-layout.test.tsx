@@ -2,18 +2,35 @@ import { useContainerBreakpoint } from '@clouddrive/ui-adapter/container-layout'
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-function Probe() {
+function Probe({ visible = true }: { visible?: boolean }) {
   const { ref, matches } = useContainerBreakpoint('4xl');
-  return (
+  return visible ? (
     <div ref={ref} data-testid="container">
       {matches ? 'expanded' : 'compact'}
     </div>
-  );
+  ) : null;
 }
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Container composition Browser Adapter', () => {
+  it('observes a container mounted after the adapter effect, as with a Material portal', () => {
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe = observe;
+        disconnect = disconnect;
+      },
+    );
+    const { rerender } = render(<Probe visible={false} />);
+    expect(observe).not.toHaveBeenCalled();
+    rerender(<Probe visible />);
+    expect(observe).toHaveBeenCalledWith(screen.getByTestId('container'));
+    rerender(<Probe visible={false} />);
+    expect(disconnect).toHaveBeenCalledOnce();
+  });
   it('uses the owned container and theme threshold rather than the browser width, and cleans up', () => {
     let notify: (() => void) | undefined;
     const disconnect = vi.fn();

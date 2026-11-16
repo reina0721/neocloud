@@ -134,11 +134,14 @@ test('真实私有 HLS 支持多档清晰度、AES、范围分片和直播刷新
   await page.getByRole('button', { name: 'master.m3u8', exact: true }).click();
   const master = page.getByRole('dialog', { name: 'master.m3u8', exact: true });
   const video = master.locator('video');
-  const quality = master.getByRole('button', { name: /清晰度/ });
+  const quality = master.getByRole('combobox', { name: '清晰度', exact: true });
   await expect(quality).toContainText('自动');
   await quality.click();
   await page.getByRole('option', { name: '144p', exact: true }).click();
   await expect(quality).toContainText('144p');
+  await expect(page.locator('[role="listbox"]')).toHaveCount(0);
+  // 解码播放中的实际画面，再确认分辨率；metadata 预载可能仍保留前一档首帧。
+  await video.evaluate((element) => (element as HTMLVideoElement).play());
   const videoHeight = () => video.evaluate((element) => (element as HTMLVideoElement).videoHeight);
   const videoTime = () => video.evaluate((element) => (element as HTMLVideoElement).currentTime);
   await expect.poll(videoHeight).toBe(144);

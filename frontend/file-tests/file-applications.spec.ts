@@ -110,7 +110,7 @@ test('文件浏览应用保存、默认选择、平台限制和恢复', async ({
     await expect(page.getByRole('status').filter({ hasText: '文件应用设置已保存' })).toBeVisible();
   }
   async function selectTextDefault() {
-    await page.getByRole('button', { name: /\.md 的默认应用/ }).click();
+    await page.getByRole('combobox', { name: /\.md 的默认应用/ }).click();
     await page.getByRole('option', { name: '文本编辑器', exact: true }).click();
   }
   async function openFile() {
@@ -167,11 +167,11 @@ test('文件浏览应用保存、默认选择、平台限制和恢复', async ({
     await expect(viewer.getByLabel('文件内容', { exact: true })).toHaveText('# 内置文件应用');
 
     await admin();
-    await row.getByRole('button', { name: /平台/ }).click();
+    await row.getByRole('combobox', { name: /平台/ }).click();
     await page.getByRole('option', { name: '桌面端', exact: true }).click();
     await page
       .getByRole('region', { name: '默认打开方式', exact: true })
-      .getByRole('button', { name: /扩展名/ })
+      .getByRole('combobox', { name: /扩展名/ })
       .click();
     await page.getByRole('option', { name: '.md', exact: true }).click();
     await page.getByRole('button', { name: '添加默认规则', exact: true }).click();
@@ -296,15 +296,18 @@ test('扩展名关联编辑、别名打开和清空恢复', async ({ page }, inf
     await apply.click();
     await edit(epubRow, 'epub book168');
     await apply.click();
-    await markdownRow.getByRole('button', { name: /平台/ }).click();
+    await markdownRow.getByRole('combobox', { name: /平台/ }).click();
     await page.getByRole('option', { name: '桌面端', exact: true }).click();
-    await defaults.getByRole('button', { name: /扩展名/ }).click();
+    await defaults.getByRole('combobox', { name: /扩展名/ }).click();
     await page.getByRole('option', { name: '.note168', exact: true }).click();
     await defaults.getByRole('button', { name: '添加默认规则', exact: true }).click();
     await savePolicy();
-    await expect(
-      defaults.getByRole('button', { name: /Markdown 编辑器 .*\.note168 的默认应用/ }),
-    ).toBeVisible();
+    const noteDefault = defaults.getByRole('combobox', {
+      name: '.note168 的默认应用',
+      exact: true,
+    });
+    await expect(noteDefault).toBeVisible();
+    await expect(noteDefault).toContainText('Markdown 编辑器');
 
     await open(alias);
     const preview = viewer.getByRole('article', { name: '预览', exact: true });
@@ -405,13 +408,15 @@ test('新建文件映射按配置创建真实文件并保留后缀', async ({ pa
       .getByRole('group', { name: '.markdown', exact: true })
       .getByRole('button', { name: '上移', exact: true })
       .click();
-    await expect(editor.locator('legend')).toHaveText(['.markdown', '.md']);
+    await expect(
+      editor.locator('fieldset > legend').filter({ hasText: /^\.(markdown|md)$/ }),
+    ).toHaveText(['.markdown', '.md']);
     await page.screenshot({
       path: info.outputPath('creation-mappings.png'),
       animations: 'disabled',
     });
     await apply.click();
-    await row.getByRole('button', { name: /平台/ }).click();
+    await row.getByRole('combobox', { name: /平台/ }).click();
     await page.getByRole('option', { name: '桌面端', exact: true }).click();
     await savePolicy();
 
@@ -542,12 +547,12 @@ test('网页应用配置和临时文件预览', async ({ page }, info) => {
     await expect(settings().getByText('请输入含文件地址变量的 HTTPS 模板。')).toBeVisible();
     await address.fill(origin + '/read?file={$src}&name={$name}');
     await settings().getByLabel('最大文件大小（字节）', { exact: true }).fill('512');
-    await settings().getByRole('button', { name: /平台/ }).click();
+    await settings().getByRole('combobox', { name: /平台/ }).click();
     await page.getByRole('option', { name: '桌面端', exact: true }).click();
     await page.screenshot({ path: info.outputPath('web-app-form.png'), animations: 'disabled' });
     await draft.click();
     const defaults = page.getByRole('region', { name: '默认打开方式', exact: true });
-    await defaults.getByRole('button', { name: /\.md 的默认应用/ }).click();
+    await defaults.getByRole('combobox', { name: /\.md 的默认应用/ }).click();
     await page.getByRole('option', { name: viewerName, exact: true }).click();
     await savePolicy();
 
@@ -759,11 +764,11 @@ test('导入 WOPI 应用并打开真实只读文件', async ({ page }, info) => 
     await expect(edit.getByText('请选择发现结果中支持的扩展名。')).toBeVisible();
     await edit.getByLabel('扩展名列表', { exact: true }).fill('md, docx');
     await edit.getByRole('checkbox', { name: '允许在线编辑', exact: true }).press('Space');
-    await edit.getByRole('button', { name: /平台/ }).click();
+    await edit.getByRole('combobox', { name: /平台/ }).click();
     await page.getByRole('option', { name: '桌面端', exact: true }).click();
     await draft.click();
     const defaults = page.getByRole('region', { name: '默认打开方式', exact: true });
-    await defaults.getByRole('button', { name: /\.md 的默认应用/ }).click();
+    await defaults.getByRole('combobox', { name: /\.md 的默认应用/ }).click();
     await page.getByRole('option', { name: appName, exact: true }).click();
     await savePolicy();
 

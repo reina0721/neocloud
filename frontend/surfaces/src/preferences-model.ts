@@ -54,7 +54,7 @@ export const THEME_MODES = ['system', 'light', 'dark'] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
 
 /** 受控强调色（与 packages/design-system schema accents.order 对齐）。 */
-export const ACCENT_PRESETS = ['purple', 'blue', 'green', 'orange'] as const;
+export const ACCENT_PRESETS = ['pink', 'purple', 'blue', 'green', 'orange'] as const;
 export type AccentPreset = (typeof ACCENT_PRESETS)[number];
 
 export const DENSITY_LEVELS = ['compact', 'standard', 'comfortable'] as const;
@@ -112,7 +112,7 @@ export type AppearancePreferences = Readonly<{
 
 export const defaultAppearance: AppearancePreferences = {
   themeMode: 'system',
-  accent: 'purple',
+  accent: 'pink',
   density: 'standard',
   fontScale: 'standard',
   contentWidth: 'auto',

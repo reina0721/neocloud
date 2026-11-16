@@ -1,5 +1,6 @@
+/* Fix cascade order before Tailwind or vendor imports register their layers. */
+@layer theme, base, mui, components, utilities;
 @import 'tailwindcss';
-@import 'tw-animate-css';
 @import '@clouddrive/ui-adapter/styles.css';
 @import '@clouddrive/design-system/tokens.css';
 @import '@clouddrive/design-system/motion.css';

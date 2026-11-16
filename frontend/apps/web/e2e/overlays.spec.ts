@@ -1,9 +1,10 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { waitForVisualReadiness } from './visual-readiness';
 
 async function assertOverlayAccessibility(page: Page) {
+  await waitForVisualReadiness(page);
   const accessibility = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze();
@@ -22,21 +23,33 @@ async function readThemeRoles(page: Page) {
         probe.style.color = `var(--color-${role})`;
         return getComputedStyle(probe).color;
       };
-      return { surface: color('surface'), muted: color('surface-muted'), brand: color('brand') };
+      return {
+        surface: color('surface'),
+        muted: color('surface-muted'),
+        brand: color('brand'),
+        ink: color('ink'),
+      };
     } finally {
       probe.remove();
     }
   });
 }
 
-async function assertMatchesTriggerWidth(page: Page, slot: string) {
-  await page.waitForTimeout(250);
-  const metrics = await page.locator(`[data-slot="${slot}"]`).evaluate((element) => ({
-    popupWidth: element.getBoundingClientRect().width,
-    triggerWidth: Number.parseFloat(getComputedStyle(element).getPropertyValue('--trigger-width')),
-  }));
-  expect(metrics.triggerWidth).toBeGreaterThan(0);
-  expect(Math.abs(metrics.popupWidth - metrics.triggerWidth)).toBeLessThanOrEqual(1);
+async function assertMatchesTriggerWidth(page: Page, trigger: Locator) {
+  const popup = page.getByRole('listbox');
+  await expect
+    .poll(async () => {
+      const [overlay, anchor] = await Promise.all([
+        popup.evaluate((element) => ({
+          width: element.closest('.ui-overlay-surface')!.getBoundingClientRect().width,
+        })),
+        trigger.evaluate((element) => ({
+          width: element.closest('.MuiInputBase-root')!.getBoundingClientRect().width,
+        })),
+      ]);
+      return overlay && anchor ? Math.abs(overlay.width - anchor.width) : Infinity;
+    })
+    .toBeLessThanOrEqual(1);
 }
 
 async function assertListboxScrolls(page: Page) {
@@ -85,6 +98,8 @@ test('九个 Family 页面逐项公开全部 UI Element', async ({ page }) => {
     {
       path: '/ui-elements/navigation',
       elements: [
+        'NavigationItem',
+        'NavigationTabs',
         'TextLink',
         'BreadcrumbTrail',
         'PaginationControl',
@@ -129,13 +144,13 @@ test('九个 Family 页面逐项公开全部 UI Element', async ({ page }) => {
     },
   ] as const;
 
-  expect(families.flatMap(({ elements }) => elements)).toHaveLength(46);
+  expect(families.flatMap(({ elements }) => elements)).toHaveLength(48);
   for (const family of families) {
     await page.goto(family.path);
     await expect(
       page.getByRole('navigation', { name: 'UI Elements 分类导航' }).getByRole('link'),
     ).toHaveCount(9);
-    await expect(page.getByText('公开 Element 46 / 46')).toBeVisible();
+    await expect(page.getByText('公开 Element 48 / 48')).toBeVisible();
     for (const element of family.elements) {
       await expect(page.getByRole('heading', { level: 3, name: element, exact: true })).toHaveCount(
         1,
@@ -272,15 +287,11 @@ test('Status 与 Progress 保持对象状态和确定进度语义', async ({ pag
   await expect(progress).toHaveAttribute('aria-valuemin', '0');
   await expect(progress).toHaveAttribute('aria-valuemax', '100');
   await expect(progress).toHaveAttribute('aria-valuenow', '64');
-  await expect(progress.getByText('64%')).toBeVisible();
-  const progressWidth = await progress
-    .locator('[data-slot="progress-bar-fill"]')
-    .evaluate((element) => (element as HTMLElement).style.width);
-  expect(progressWidth).toBe('64%');
+  await expect(page.locator('.ui-progress-meter').getByText('64%')).toBeVisible();
   await assertOverlayAccessibility(page);
 });
 
-test('Tabs 保持 HeroUI 键盘语义并由父 Surface 提供内边距', async ({ page }) => {
+test('Tabs 保持 Material 键盘语义并由父 Surface 提供内边距', async ({ page }) => {
   await page.goto('/ui-elements/surfaces');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   const tablist = page.getByRole('tablist', { name: '状态组合 Tabs' });
@@ -340,7 +351,9 @@ test('TabsView line、section、soft 与 vertical 视觉职责边界', async ({ 
     color: getComputedStyle(el).borderBottomColor,
   }));
   expect(softSelectedBorderBottom.width).not.toBe('2px');
-  expect(softSelectedBorderBottom.color).not.toBe(colors.brand);
+  await expect(
+    soft.locator('xpath=ancestor::*[@data-ui-tabs][1]').locator('.ui-tabs-indicator'),
+  ).toBeHidden();
 
   // line：透明 TabList、无圆角、底部 1px 基线；无胶囊残留
   const line = tablists.nth(1);
@@ -351,8 +364,11 @@ test('TabsView line、section、soft 与 vertical 视觉职责边界', async ({ 
   await expect(lineSelected).toHaveCSS('color', colors.brand);
   const lineRadius = await lineSelected.evaluate((el) => getComputedStyle(el).borderRadius);
   expect(lineRadius).toBe('0px'); // 无胶囊
-  const lineUnderline = await lineSelected.evaluate((el) => getComputedStyle(el).borderBottomWidth);
-  expect(lineUnderline).toBe('2px');
+  const lineUnderline = line
+    .locator('xpath=ancestor::*[@data-ui-tabs][1]')
+    .locator('.ui-tabs-indicator');
+  await expect(lineUnderline).toHaveCSS('height', '2px');
+  await expect(lineUnderline).toHaveCSS('background-color', colors.brand);
 
   // section：透明、无成形 Toolbar、无强制 baseline；selected 仍 brand underline
   const section = tablists.nth(5);
@@ -368,8 +384,11 @@ test('TabsView line、section、soft 与 vertical 视觉职责边界', async ({ 
   const verticalSelected = vertical.getByRole('tab', { name: '总览' });
   await expect(verticalSelected).toHaveAttribute('aria-selected', 'true');
   await expect(verticalSelected).toHaveCSS('color', colors.brand);
-  const vSide = await verticalSelected.evaluate((el) => getComputedStyle(el).borderLeftWidth);
-  expect(vSide).toBe('2px');
+  const vSide = vertical
+    .locator('xpath=ancestor::*[@data-ui-tabs][1]')
+    .locator('.ui-tabs-indicator');
+  await expect(vSide).toHaveCSS('width', '2px');
+  await expect(vSide).toHaveCSS('background-color', colors.brand);
   const vBottom = await verticalSelected.evaluate((el) => getComputedStyle(el).borderBottomWidth);
   expect(vBottom).toBe('0px');
   // vertical ARIA orientation
@@ -433,92 +452,80 @@ test('section Tabs 宿主组合：TabList 与内容共享父容器 inset 且无�
 test('Radio/Checkbox 内部 indicator 与 label 同行且无双重成形', async ({ page }) => {
   await page.goto('/ui-elements/forms');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
-
-  // RadioGroupField：option 行 flex-row（control 与 label 同 top），indicator 无 vendor 双 dot
   const radioPanel = page
     .getByRole('heading', { level: 3, name: 'RadioGroupField' })
     .locator('xpath=ancestor::section[1]');
-  const standardRadioGroup = radioPanel.getByRole('radiogroup', { name: '反馈密度', exact: true });
-  const radioRows = standardRadioGroup.locator('.ui-choice-content');
-  await expect(radioRows).toHaveCount(3);
-  await expect(radioRows.first()).toHaveCSS('flex-direction', 'row');
-  const radioGeom = await radioRows.first().evaluate((row) => {
-    const ctrl = row.querySelector('.radio__control');
-    const content = row.querySelector('span.flex');
-    if (!ctrl || !content) return null;
-    const rr = row.getBoundingClientRect();
-    return {
-      controlTop: Math.round(ctrl.getBoundingClientRect().top - rr.top),
-      labelTop: Math.round(content.getBoundingClientRect().top - rr.top),
-    };
-  });
-  expect(radioGeom).not.toBeNull();
-  // 同行：control 与 label 垂直差 < 8px（不再列堆叠 32px）
-  expect(Math.abs((radioGeom?.controlTop ?? 0) - (radioGeom?.labelTop ?? 0))).toBeLessThan(8);
-
-  // dot：unselected 行不可见（opacity 0），selected 行可见
-  const dotStates = await standardRadioGroup.evaluate((panel) => {
-    const rows = [...panel.querySelectorAll('[class*="radio "]')];
-    return rows.map((row) => {
-      const input = row.querySelector('input[type="radio"]');
-      const dot = row.querySelector('.radio__indicator span');
-      const checked = input instanceof HTMLInputElement ? input.checked : false;
+  const group = radioPanel.getByRole('radiogroup', { name: '反馈密度', exact: true });
+  await expect(group.getByRole('radio')).toHaveCount(3);
+  for (const radio of await group.getByRole('radio').all()) {
+    const geometry = await radio.evaluate((input) => {
+      const row = input.closest('label');
+      const indicator = input.parentElement?.querySelector('svg');
+      const text = row?.querySelector('.ui-choice-text > span:first-child');
+      if (!row || !indicator || !text) throw new Error('Radio anatomy missing');
       return {
-        checked,
-        dotOpacity: dot instanceof HTMLElement ? getComputedStyle(dot).opacity : null,
+        controls: row.querySelectorAll('input[type="radio"]').length,
+        indicatorTop: indicator.getBoundingClientRect().top,
+        textTop: text.getBoundingClientRect().top,
       };
     });
-  });
-  for (const row of dotStates) {
-    if (row.checked) expect(row.dotOpacity).toBe('1');
-    else expect(row.dotOpacity).toBe('0');
+    expect(geometry.controls).toBe(1);
+    expect(Math.abs(geometry.indicatorTop - geometry.textTop)).toBeLessThan(8);
   }
+  await group.getByRole('radio', { checked: false }).first().press('Space');
+  await expect(group.getByRole('radio', { checked: true })).toHaveCount(1);
 
-  // 图标选择卡片没有圆点；独立验证透明图标与上图标/下标题的 anatomy。
-  const tileGroup = radioPanel.getByRole('radiogroup', { name: '图标选择卡片', exact: true });
-  await expect(tileGroup.getByRole('radio')).toHaveCount(3);
-  await expect(tileGroup.locator('.radio__control')).toHaveCount(0);
-  const tiles = tileGroup.locator('.ui-choice-content');
-  for (const tile of await tiles.all()) {
-    await expect(tile).toHaveCSS('flex-direction', 'column');
-    const geometry = await tile.evaluate((row) => {
-      const icon = row.querySelector('[aria-hidden="true"]');
-      const label = row.querySelector('span.flex');
-      if (!icon || !label) throw new Error('Choice tile anatomy missing');
+  const tiles = radioPanel.getByRole('radiogroup', { name: '图标选择卡片', exact: true });
+  await expect(tiles.getByRole('radio')).toHaveCount(3);
+  for (const radio of await tiles.getByRole('radio').all()) {
+    const geometry = await radio.evaluate((input) => {
+      const row = input.closest('label');
+      const icon = input.parentElement?.querySelector('svg');
+      const text = row?.querySelector('.ui-choice-text > span:first-child');
+      if (!row || !icon || !text) throw new Error('Choice tile anatomy missing');
       const style = getComputedStyle(icon);
       return {
+        icons: row.querySelectorAll('svg').length,
         iconBottom: icon.getBoundingClientRect().bottom,
-        labelTop: label.getBoundingClientRect().top,
+        labelTop: text.getBoundingClientRect().top,
         background: style.backgroundColor,
         border: style.borderTopWidth,
         width: icon.getBoundingClientRect().width,
         height: icon.getBoundingClientRect().height,
       };
     });
+    expect(geometry.icons).toBe(1);
     expect(geometry.iconBottom).toBeLessThanOrEqual(geometry.labelTop);
     expect(geometry.background).toBe('rgba(0, 0, 0, 0)');
     expect(geometry.border).toBe('0px');
     expect(geometry.width).toBe(20);
     expect(geometry.height).toBe(20);
   }
-
-  // CheckboxField：行 flex-row（非列堆叠）
   const checkboxPanel = page
     .getByRole('heading', { level: 3, name: 'CheckboxField' })
     .locator('xpath=ancestor::section[1]');
-  await expect(checkboxPanel.locator('.ui-choice-content').first()).toHaveCSS(
-    'flex-direction',
-    'row',
-  );
-  const checkboxFill = await checkboxPanel
-    .locator('.checkbox__control')
+  const checkbox = checkboxPanel.getByRole('checkbox').first();
+  const checkboxGeometry = await checkbox.evaluate((input) => {
+    const row = input.closest('label');
+    const control = input.parentElement?.querySelector('svg');
+    const text = row?.querySelector('span.block');
+    if (!row || !control || !text) throw new Error('Checkbox anatomy missing');
+    return {
+      controls: row.querySelectorAll('input[type="checkbox"]').length,
+      controlTop: control.getBoundingClientRect().top,
+      textTop: text.getBoundingClientRect().top,
+    };
+  });
+  expect(checkboxGeometry.controls).toBe(1);
+  expect(Math.abs(checkboxGeometry.controlTop - checkboxGeometry.textTop)).toBeLessThan(8);
+  const selectedRadioColor = await group
+    .getByRole('radio', { checked: true })
+    .evaluate((input) => getComputedStyle(input.parentElement!).color);
+  const selectedCheckboxColor = await checkboxPanel
+    .getByRole('checkbox', { checked: true })
     .first()
-    .evaluate((control) => getComputedStyle(control, '::before').backgroundColor);
-  const radioFill = await radioPanel
-    .locator('.radio__indicator span')
-    .first()
-    .evaluate((dot) => getComputedStyle(dot).backgroundColor);
-  expect(checkboxFill).toBe(radioFill);
+    .evaluate((input) => getComputedStyle(input.parentElement!).color);
+  expect(selectedCheckboxColor).toBe(selectedRadioColor);
 });
 
 test('Action 与 ToggleGroup 内部 icon wrapper 不二次成形', async ({ page }) => {
@@ -582,7 +589,7 @@ test('Action 与 ToggleGroup 内部 icon wrapper 不二次成形', async ({ page
   const multiGroup = page.getByRole('toolbar', { name: '可见列' });
   await expect(multiGroup).not.toHaveCSS('gap', '0px');
   const multiGeom = await multiGroup.evaluate((group) => {
-    const items = [...group.querySelectorAll('[data-slot="toggle-button"]')] as HTMLElement[];
+    const items = [...group.querySelectorAll('button[aria-pressed]')] as HTMLElement[];
     return items.map((it, index) => {
       const cs = getComputedStyle(it);
       const r = it.getBoundingClientRect();
@@ -620,36 +627,32 @@ test('Action 与 ToggleGroup 内部 icon wrapper 不二次成形', async ({ page
 
 test('Select 与 Combobox 使用统一 Popup、键盘和选中状态', async ({ page }) => {
   await page.goto('/ui-elements/forms');
-  await page.getByRole('button', { name: '引导执行 Select' }).click();
+  const select = page.getByRole('combobox', { name: 'Select', exact: true, includeHidden: true });
+  await select.click();
   const selectListbox = page.getByRole('listbox');
   await expect(selectListbox).toBeVisible();
   await expect(page.getByRole('option', { name: '自动执行' })).toBeDisabled();
-  await assertMatchesTriggerWidth(page, 'select-popover');
+  await assertMatchesTriggerWidth(page, select);
   await assertListboxScrolls(page);
   await expect(page.getByRole('option', { name: '执行队列 12' })).toBeVisible();
   await expect.soft(page).toHaveScreenshot('ui-elements-select-open.png');
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('button', { name: '执行队列 12 Select' })).toBeVisible();
+  await expect(select).toContainText('执行队列 12');
 
   const combo = page.getByRole('combobox', { name: 'Combobox' });
   await combo.click();
   await expect(page.getByRole('option', { name: 'Omar Haddad' })).toBeDisabled();
-  await assertMatchesTriggerWidth(page, 'combo-box-popover');
+  await assertMatchesTriggerWidth(page, combo);
   await assertListboxScrolls(page);
 
-  // ComboField 只有一个 Field Surface：InputGroup 不承担边框/阴影，边框落在内部 Input 上
-  const comboInputGroup = page.locator('[data-slot="combo-box-input-group"]').first();
-  await expect(comboInputGroup).not.toHaveClass(/ui-field-control/);
-  const comboSurface = page
-    .locator('[data-slot="combo-box-input-group"] [data-slot="input"]')
-    .first();
-  await expect(comboSurface).toHaveClass(/ui-field-control/);
-
+  // 组合框保留单一文本输入和 label，MUI 的外层容器负责边框。
+  await expect(combo).toHaveAccessibleName('Combobox');
+  await expect(combo.locator('xpath=ancestor::label')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await combo.click();
   await combo.fill('Mika');
   await expect(page.getByRole('option', { name: 'Mika Sato' })).toBeVisible();
-  await assertMatchesTriggerWidth(page, 'combo-box-popover');
+  await assertMatchesTriggerWidth(page, combo);
   await expect.soft(page).toHaveScreenshot('ui-elements-combobox-open.png');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
@@ -666,7 +669,7 @@ test('Dropdown、Popover 与 Tooltip 展开面进入视觉回归', async ({ page
   await page.keyboard.press('Escape');
   await expect(menuTrigger).toBeFocused();
 
-  const popoverTrigger = page.getByRole('button', { name: 'Popover' });
+  const popoverTrigger = page.getByRole('button', { name: 'Popover', includeHidden: true });
   const pageHeightBeforeOpen = await page
     .locator('html')
     .evaluate((element) => element.scrollHeight);
@@ -676,8 +679,14 @@ test('Dropdown、Popover 与 Tooltip 展开面进入视觉回归', async ({ page
   // The reference grows as capabilities are added; collision handling may flip the overlay above.
   await expect
     .poll(async () => {
-      const anchor = await popoverTrigger.evaluate((element) => element.getBoundingClientRect());
-      const overlay = await popover.evaluate((element) => element.getBoundingClientRect());
+      const anchor = await popoverTrigger.evaluate((element) => {
+        const { left, right, top, bottom } = element.getBoundingClientRect();
+        return { left, right, top, bottom };
+      });
+      const overlay = await popover.evaluate((element) => {
+        const { left, right, top, bottom } = element.getBoundingClientRect();
+        return { left, right, top, bottom };
+      });
       const viewport = page.viewportSize();
       return (
         viewport !== null &&
@@ -699,7 +708,7 @@ test('Dropdown、Popover 与 Tooltip 展开面进入视觉回归', async ({ page
   await expect(popover).toBeHidden();
   await expect(popoverTrigger).toBeFocused();
 
-  const tooltipTrigger = page.getByRole('button', { name: 'Tooltip' });
+  const tooltipTrigger = page.getByRole('button', { name: '键盘聚焦与悬停均可访问', exact: true });
   await tooltipTrigger.scrollIntoViewIfNeeded();
   await waitForVisualReadiness(page);
   await tooltipTrigger.focus();
@@ -714,7 +723,9 @@ test('DatePicker 与 Command 展开面支持键盘及无障碍扫描', async ({ 
   await page.clock.setFixedTime(new Date('2026-10-09T04:00:00Z'));
   await page.goto('/ui-elements/forms');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
-  const datePickerTrigger = page.getByRole('button', { name: '日历 DatePicker' });
+  const datePickerTrigger = page
+    .getByRole('group', { name: 'DatePicker', exact: true })
+    .getByRole('button', { name: '选择复核日期' });
   // Focus entry stabilizes the project's Reveal before measuring the offscreen anchor.
   await datePickerTrigger.focus();
   // 触发元素位于首屏之外：先滚动进入视口再点击，避免打开弹层时的滚动定位竞态
@@ -725,6 +736,10 @@ test('DatePicker 与 Command 展开面支持键盘及无障碍扫描', async ({ 
   await datePickerTrigger.click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByRole('dialog').getByRole('grid')).toBeVisible();
+  const roles = await readThemeRoles(page);
+  await expect(
+    page.getByRole('group', { name: 'DatePicker', exact: true }).locator('fieldset'),
+  ).toHaveCSS('border-color', roles.brand);
   await waitForVisualReadiness(page);
   await assertOverlayAccessibility(page);
   await expect.soft(page).toHaveScreenshot('ui-elements-date-picker-open.png');
@@ -741,11 +756,9 @@ test('DatePicker 与 Command 展开面支持键盘及无障碍扫描', async ({ 
   await page.getByRole('button', { name: 'Command' }).click();
   const commandDialog = page.getByRole('dialog');
   await expect(commandDialog).toContainText('快速跳转');
-  // CommandMenu 复用 SearchBox：输入框是 SearchField.Input，不再出现嵌套的通用 data-slot="input"
-  await expect(commandDialog.locator('[data-slot="search-field-input"]')).toHaveCount(1);
-  await expect(commandDialog.locator('[data-slot="input"]')).toHaveCount(0);
+  await expect(commandDialog.getByRole('combobox', { name: '搜索命令' })).toHaveCount(1);
   await page.getByLabel('搜索命令').fill('状态');
-  await expect(page.getByRole('option', { name: /状态体系/ })).toBeVisible();
+  await expect(page.getByRole('option', { name: /状态体系/ })).toBeInViewport({ ratio: 1 });
   await assertOverlayAccessibility(page);
   await expect.soft(page).toHaveScreenshot('ui-elements-command-open.png');
 });
@@ -785,14 +798,14 @@ test('Overlay Trigger 交互状态不切换成 Brand Primary（idle/hover/presse
     const trigger = page.getByRole('button', { name, exact: true });
     await expect(trigger).toBeVisible();
     const cls = (await trigger.getAttribute('class')) ?? '';
-    expect(cls).toContain('button--ghost');
+    expect(cls).toContain('ui-overlay-trigger');
     expect(cls).not.toContain('button--primary');
     // Material outlined 使用 primary 前景与透明容器；危险入口保持 danger 语义。
     if (name === '危险确认') {
       expect(cls).toContain('text-danger');
     } else {
       await expect(trigger).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-      await expect(trigger).toHaveCSS('color', colors.brand);
+      await expect(trigger).toHaveCSS('color', colors.ink);
       await expect(trigger).toHaveCSS('border-top-width', '1px');
     }
   }
@@ -819,7 +832,7 @@ test('Overlay Trigger 交互状态不切换成 Brand Primary（idle/hover/presse
   await page.mouse.down();
   await expect.poll(async () => (await readBg()).bg).toBe(colors.muted);
   const pressed = await readBg();
-  // 允许中性按下反馈（surface-muted 灰），但绝不能是 HeroUI accent 蓝（oklch hue≈253 渲染值）
+  // 允许中性按下反馈；普通展开动作保持中性语义。
   expect(pressed.cls).not.toContain('button--primary');
   await page.mouse.up();
 
@@ -835,8 +848,7 @@ test('Overlay Trigger 交互状态不切换成 Brand Primary（idle/hover/presse
 
 test('危险确认 Trigger 在 pressed 状态保持 danger 语义（不切换 Brand）', async ({ page }) => {
   await page.goto('/ui-elements/overlays?overlay=confirm');
-  const trigger = page.getByRole('button', { name: '危险确认', exact: true });
-  await expect(trigger).toBeVisible();
+  const trigger = page.getByRole('button', { name: '危险确认', exact: true, includeHidden: true });
   // 关闭默认打开的 dialog 以便操作 trigger（与既有用例一致：用取消按钮关闭）
   await page.getByRole('alertdialog').getByRole('button', { name: '取消' }).click();
   await expect(page.getByRole('alertdialog')).toBeHidden();
@@ -862,7 +874,9 @@ test('危险确认 Trigger 在 pressed 状态保持 danger 语义（不切换 Br
   await page.mouse.down();
   await page.waitForTimeout(120);
   const pressedCls = (await readState()).cls.join(' ');
-  expect(pressedCls).toContain('data-[pressed=true]:bg-danger-soft');
+  expect(pressedCls).toContain('ui-overlay-trigger-danger');
+  const pressedColor = (await readState()).color;
+  expect(pressedColor).toBe(idle.color);
   expect(pressedCls).not.toContain('button--primary');
   expect(pressedCls).not.toContain('data-[pressed=true]:bg-brand');
   await page.mouse.up();

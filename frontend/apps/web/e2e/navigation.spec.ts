@@ -64,6 +64,7 @@ test('展开侧栏用同一递归能力呈现 Page Archetypes 与 UI Elements（
 
 test('收缩侧栏的 Hover Flyout 保持稳定并支持键盘进入', async ({ page }) => {
   await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.getByRole('button', { name: '收起侧栏' }).click();
   const expandSidebar = page.getByRole('button', { name: '展开侧栏' });
   await expect(expandSidebar).toBeFocused();
@@ -100,6 +101,7 @@ test('收缩侧栏的 Hover Flyout 保持稳定并支持键盘进入', async ({ 
 
 test('收缩侧栏切换兄弟菜单时同一时刻只有一个 Flyout 且旧菜单不残留', async ({ page }) => {
   await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.getByRole('button', { name: '收起侧栏' }).click();
   const navigation = page.getByRole('navigation', { name: '主导航' });
 
@@ -155,6 +157,7 @@ test('收缩侧栏切换兄弟菜单时同一时刻只有一个 Flyout 且旧菜
 test('移动侧栏使用同一树并在选择叶子后关闭', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.getByRole('button', { name: '打开导航' }).click();
   const navigation = page.getByRole('navigation', { name: '主导航' });
   const uiElementsToggle = navigation.getByRole('button', {
@@ -171,6 +174,7 @@ test('Shell NavigationViewport 隐藏原生 scrollbar 且保留滚动能力', as
   // 低高度桌面视口：导航内容必然超出可用高度，触发纵向滚动
   await page.setViewportSize({ width: 1440, height: 600 });
   await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   const navigation = page.getByRole('navigation', { name: '主导航' });
 
   // 1. 滚动能力保留：overflow-y 是 auto，而不是 hidden
@@ -232,16 +236,21 @@ test('Shell NavigationViewport 隐藏原生 scrollbar 且保留滚动能力', as
     .evaluate((element) => getComputedStyle(element).scrollbarWidth);
   expect(mainScrollbarWidth).not.toBe('none');
 
-  // 9. Sidebar 宽度不因 scrollbar 隐藏变化（grid 列宽仍为 16.5rem 语义）
+  // 9. Sidebar 宽度不因 scrollbar 隐藏变化，使用统一展开宽度 Token。
   const sidebarWidth = await page
     .locator('aside')
     .first()
     .evaluate((element) => element.getBoundingClientRect().width);
-  expect(sidebarWidth).toBe(264); // 16.5rem
+  const expectedWidth = await page.locator('.surface-shell-grid').evaluate((element) => {
+    const value = getComputedStyle(element).getPropertyValue('--surface-shell-expanded-width');
+    return parseFloat(value) * parseFloat(getComputedStyle(document.documentElement).fontSize);
+  });
+  expect(sidebarWidth).toBe(expectedWidth);
 
   // 10. 移动端导航 drawer 同样隐藏 scrollbar 且可滚动
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.getByRole('button', { name: '打开导航' }).click();
   const mobileNavigation = page.getByRole('navigation', { name: '主导航' });
   await expect(mobileNavigation).toHaveCSS('overflow-y', 'auto');

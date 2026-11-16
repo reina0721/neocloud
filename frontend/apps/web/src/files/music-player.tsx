@@ -358,7 +358,14 @@ export function MusicPlayer({
           setMedia((state) => (state?.url === url ? { ...state, failure: 'unsupported' } : state));
         }}
       />
-      <PopoverCard triggerLabel={labels.player} title={labels.player} defaultOpen>
+      <PopoverCard
+        triggerLabel={labels.player}
+        triggerIcon={<Music2 />}
+        title={labels.player}
+        closeLabel={t('common.close')}
+        size="comfortable"
+        defaultOpen
+      >
         <div className="space-y-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-control bg-surface-muted text-ink-muted">
@@ -439,17 +446,17 @@ export function MusicPlayer({
             >
               <SkipBack aria-hidden="true" />
             </IconAction>
-            <Action
-              size="sm"
-              leadingIcon={paused ? <Play /> : <Pause />}
+            <IconAction
+              label={paused ? labels.play : labels.pause}
+              variant="filled"
               disabled={!current?.url || Boolean(failure)}
               onPress={() => {
                 if (paused) play();
                 else audio.current?.pause();
               }}
             >
-              <span className="sr-only">{paused ? labels.play : labels.pause}</span>
-            </Action>
+              {paused ? <Play /> : <Pause />}
+            </IconAction>
             <IconAction
               size="sm"
               label={labels.next}
@@ -474,10 +481,9 @@ export function MusicPlayer({
             </IconAction>
           </div>
           <div className="flex items-center gap-2">
-            <Action
+            <IconAction
               size="sm"
-              variant="quiet"
-              leadingIcon={muted ? <VolumeX /> : <Volume2 />}
+              label={muted ? labels.unmute : labels.mute}
               onPress={() => {
                 const node = audio.current;
                 if (!node) return;
@@ -485,8 +491,8 @@ export function MusicPlayer({
                 setMuted(node.muted);
               }}
             >
-              <span className="sr-only">{muted ? labels.unmute : labels.mute}</span>
-            </Action>
+              {muted ? <VolumeX /> : <Volume2 />}
+            </IconAction>
             <RangeSlider
               label={labels.volume}
               max={volumePercent}
@@ -498,9 +504,9 @@ export function MusicPlayer({
                 setVolume(Math.round(node.volume * volumePercent));
               }}
             />
-            <Action size="sm" variant="quiet" leadingIcon={<Square />} onPress={onStop}>
-              <span className="sr-only">{labels.stop}</span>
-            </Action>
+            <IconAction size="sm" label={labels.stop} onPress={onStop}>
+              <Square />
+            </IconAction>
           </div>
           {!current ? (
             <p role="status" className="text-xs">

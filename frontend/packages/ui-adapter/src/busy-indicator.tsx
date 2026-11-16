@@ -1,5 +1,5 @@
-import { Spinner as HeroSpinner } from '@heroui/react/spinner';
-
+'use client';
+import CircularProgress from '@mui/material/CircularProgress';
 export type BusyIndicatorProps = Readonly<{
   label: string;
   size?: 'sm' | 'md' | 'lg';
@@ -13,10 +13,10 @@ export function BusyIndicator({ label, size = 'md', showLabel = false }: BusyInd
       className="inline-flex items-center gap-2 text-sm font-medium text-ink-muted"
       role="status"
     >
-      <HeroSpinner
+      <CircularProgress
         aria-hidden="true"
-        className="text-brand motion-reduce:animate-none"
-        size={size}
+        className="text-brand"
+        size={size === 'sm' ? 16 : size === 'lg' ? 32 : 24}
       />
       {showLabel ? <span>{label}</span> : null}
     </span>

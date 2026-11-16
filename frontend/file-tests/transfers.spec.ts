@@ -68,8 +68,11 @@ test('大文件暂停、跨路由、刷新重选校验、断点接续和原生�
     await expect(row).toContainText('已暂停');
     await expect(row).toContainText('4.0 MiB');
     await page.reload();
+    // 服务端记录超过一页时，刷新后按真实状态筛选定位等待重选的任务。
+    await page.getByRole('combobox', { name: '任务状态', exact: true }).click();
+    await page.getByRole('option', { name: '等待处理', exact: true }).click();
     await expect(row).toContainText('需要重新选择源文件');
-    await page.getByRole('button', { name: '全部记录 任务状态', exact: true }).click();
+    await page.getByRole('combobox', { name: '任务状态', exact: true }).click();
     await page.getByRole('option', { name: '等待处理', exact: true }).click();
     await expect(row).toContainText('需要重新选择源文件');
     const wrongSource = page.waitForEvent('filechooser');
@@ -103,7 +106,7 @@ test('大文件暂停、跨路由、刷新重选校验、断点接续和原生�
         { timeout: 60_000 },
       )
       .toBe('completed');
-    await page.getByRole('button', { name: '等待处理 任务状态', exact: true }).click();
+    await page.getByRole('combobox', { name: '任务状态', exact: true }).click();
     await page.getByRole('option', { name: '已完成', exact: true }).click();
     // 服务端记录按游标分页；不能把本次记录固定假设在第一页。
     while (!(await row.count())) {

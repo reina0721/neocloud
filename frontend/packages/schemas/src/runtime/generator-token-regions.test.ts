@@ -110,7 +110,7 @@ describe('css-token-regions-v1（真实 fixture）', () => {
         ':root {',
         `/* @ds-region:${region.regionId}:start */`,
         expected.replace(
-          '--motion-duration-fast: calc(120ms * var(--motion-debug-scale));',
+          /--motion-duration-fast: calc\([^;]+;/,
           '--motion-duration-fast: calc(999ms * var(--motion-debug-scale));',
         ),
         `/* @ds-region:${region.regionId}:end */`,

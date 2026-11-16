@@ -15,7 +15,7 @@ export function isReferenceRefreshPaused() {
   return document.visibilityState === 'hidden' || !navigator.onLine;
 }
 
-/** Let the collection commit its selection focus before HeroUI captures the return target. */
+/** Let the collection commit its selection focus before MUI captures the return target. */
 export function useWorkbenchDetailDrawer() {
   const [isOpen, setOpen] = useState(false);
   const frame = useRef<number | null>(null);

@@ -166,7 +166,7 @@ test('F501–F520：汇总列表筛选、刷新、下载详情及结果', async 
   await expect(row.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100');
   await expect(row).not.toContainText('browser-private');
   const choose = async (label: string, option: string) => {
-    await page.getByRole('button', { name: new RegExp(label) }).click();
+    await page.getByRole('combobox', { name: label, exact: true }).click();
     await page.getByRole('option', { name: option, exact: true }).click();
   };
   await choose('任务类型', 'HTTP 下载');
@@ -551,7 +551,7 @@ test('21链接限制、真实任务游标分页、状态筛选及整页清理', 
   await expect(page.getByRole('button', { name: '下一页', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: '上一页', exact: true }).click();
   await expect(page.locator('[data-download-id]')).toHaveCount(20);
-  await page.getByRole('button', { name: /任务状态/ }).click();
+  await page.getByRole('combobox', { name: '任务状态', exact: true }).click();
   await page.getByRole('option', { name: '已完成', exact: true }).click();
   await expect(page.locator('[data-download-id]')).toHaveCount(20);
   await page.getByText('选择本页全部任务', { exact: true }).click();

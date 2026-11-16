@@ -5,7 +5,8 @@ import {
   type Key,
   type Selection,
 } from 'react-aria-components/Tree';
-import { Button } from 'react-aria-components/Button';
+import { Button as AriaButton } from 'react-aria-components/Button';
+import ButtonBase from '@mui/material/ButtonBase';
 import type { ReactNode } from 'react';
 
 /**
@@ -117,13 +118,14 @@ function renderTreeItem(
             }}
           >
             {hasChildItems ? (
-              <Button
+              <ButtonBase
+                component={AriaButton}
                 aria-label={isExpanded ? collapseLabel : expandLabel}
                 className="grid size-5 shrink-0 place-items-center rounded-control text-ink-muted outline-none transition-colors hover:bg-surface-raised hover:text-ink focus-visible:ring-2 focus-visible:ring-focus"
                 slot="chevron"
               >
                 <DisclosureChevronIcon expanded={isExpanded} />
-              </Button>
+              </ButtonBase>
             ) : (
               // 叶子：disclosure slot 保留同宽透明占位以对齐子列，不渲染假 affordance。
               <span aria-hidden="true" className="grid size-5 shrink-0 place-items-center" />

@@ -1,12 +1,10 @@
-import { ComboBox } from '@heroui/react/combo-box';
-import { Description } from '@heroui/react/description';
-import { FieldError } from '@heroui/react/field-error';
-import { Input } from '@heroui/react/input';
-import { Label } from '@heroui/react/label';
-import { ListBox } from '@heroui/react/list-box';
+'use client';
+import { useAutocompleteMessages } from './autocomplete-messages';
+import Autocomplete from '@mui/material/Autocomplete';
+import MuiTextField from '@mui/material/TextField';
+import { useId } from 'react';
 import type { FieldTextProps } from './field-contract';
 import type { SelectOption } from './select-field';
-
 export type ComboFieldProps = FieldTextProps &
   Readonly<{
     value?: string | null;
@@ -26,49 +24,47 @@ export function ComboField({
   disabled = false,
   onValueChange,
 }: ComboFieldProps) {
-  const disabledKeys = options.filter((option) => option.disabled).map((option) => option.value);
+  const id = useId();
+  const messages = useAutocompleteMessages();
   return (
-    <ComboBox
-      className="ui-field"
-      disabledKeys={disabledKeys}
-      fullWidth
-      isDisabled={disabled}
-      isInvalid={Boolean(error)}
-      menuTrigger="focus"
-      onSelectionChange={(key) => {
-        if (key !== null) onValueChange?.(String(key));
-      }}
-      {...(value !== undefined ? { selectedKey: value } : {})}
-    >
-      <Label className="ui-field-label">{label}</Label>
-      <ComboBox.InputGroup>
-        <Input
-          className="ui-field-control min-w-0 flex-1 pe-7"
-          fullWidth
-          placeholder={placeholder}
-        />
-        <ComboBox.Trigger />
-      </ComboBox.InputGroup>
-      {error ? (
-        <FieldError className="ui-field-error">{error}</FieldError>
-      ) : hint ? (
-        <Description className="ui-field-hint">{hint}</Description>
-      ) : null}
-      <ComboBox.Popover className="ui-overlay-surface ui-anchored-overlay-match-trigger">
-        <ListBox className="ui-listbox">
-          {options.map((option) => (
-            <ListBox.Item
-              className="ui-option"
-              id={option.value}
-              key={option.value}
-              textValue={option.label}
-            >
-              <Label className="truncate">{option.label}</Label>
-              <ListBox.ItemIndicator className="text-brand" />
-            </ListBox.Item>
-          ))}
-        </ListBox>
-      </ComboBox.Popover>
-    </ComboBox>
+    <div className="ui-field">
+      <label className="ui-field-label" htmlFor={id}>
+        {label}
+      </label>
+      <Autocomplete
+        {...messages}
+        id={id}
+        options={[...options]}
+        {...(value === undefined
+          ? {}
+          : { value: options.find((option) => option.value === value) ?? null })}
+        getOptionLabel={(option) => option.label}
+        getOptionDisabled={(option) => Boolean(option.disabled)}
+        isOptionEqualToValue={(a, b) => a.value === b.value}
+        disabled={disabled}
+        openOnFocus
+        autoHighlight
+        onChange={(_, option) => {
+          if (option) onValueChange?.(option.value);
+        }}
+        slotProps={{
+          paper: { className: 'ui-overlay-surface' },
+          listbox: { className: 'ui-listbox' },
+        }}
+        renderInput={(params) => (
+          <MuiTextField
+            {...params}
+            placeholder={placeholder}
+            error={Boolean(error)}
+            helperText={error || hint}
+            slotProps={{
+              htmlInput: { ...params.slotProps.htmlInput, 'aria-label': label },
+              input: params.slotProps.input,
+              formHelperText: { className: error ? 'ui-field-error' : 'ui-field-hint' },
+            }}
+          />
+        )}
+      />
+    </div>
   );
 }

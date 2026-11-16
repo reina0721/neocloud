@@ -88,7 +88,7 @@ test('管理员定义文件属性，窄屏编辑并保留移除定义后的值',
     await page.getByRole('menuitem', { name: '属性', exact: true }).click();
     const details = page.getByRole('dialog', { name: fileName, exact: true });
     await details.getByRole('button', { name: '编辑整理信息', exact: true }).click();
-    await details.getByRole('button', { name: /全局属性/ }).click();
+    await details.getByRole('combobox', { name: '全局属性', exact: true }).click();
     await page.getByRole('option', { name: display, exact: true }).click();
     await details.getByRole('button', { name: '添加已定义属性', exact: true }).click();
     await expect(details.getByLabel(display, { exact: true })).toHaveValue('默认');

@@ -37,7 +37,12 @@ async function expectWithinViewport(page: Page) {
   for (const menu of await page.getByRole('menu').all()) {
     await expect
       .poll(async () => {
-        const box = await menu.boundingBox();
+        const box = await menu.evaluate((element) => {
+          // Material Menu 的 Paper 拥有滚动与视口碰撞，内部 MenuList 可长于可见区域。
+          const surface = element.closest('.ui-overlay-surface') ?? element;
+          const rect = surface.getBoundingClientRect();
+          return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+        });
         const viewport = page.viewportSize();
         return Boolean(
           box &&
@@ -178,6 +183,9 @@ test('Dark English expanded text and Reduced Motion keep preference overlays acc
   expect(result.violations).toEqual([]);
   await saveEvidenceScreenshot(page, { path: `${evidence}/dark-en-expanded-reduced.png` });
   await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toHaveCount(0);
   await openAccount(page);
   const region = page.getByRole('region', { name: 'Current user', exact: true });
   await region.focus();

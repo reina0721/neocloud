@@ -1,3 +1,4 @@
+import { NavigationItem, NavigationTabs } from '@clouddrive/ui-adapter/destination-navigation';
 import { BusyIndicator } from '@clouddrive/ui-adapter/busy-indicator';
 import { Card, CardContent, CardFooter, CardHeader } from '@clouddrive/ui-adapter/card';
 import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
@@ -83,4 +84,41 @@ describe('Identity、Navigation 与 Surface Foundations', () => {
     render(<Avatar name="Mei" />);
     expect(screen.getByLabelText('Mei')).toHaveTextContent('ME');
   });
+});
+
+it('Material 目的地保留链接修饰键、当前项和具名导航', () => {
+  const navigate = vi.fn();
+  render(
+    <>
+      <NavigationItem
+        href="#files"
+        label="文件目录"
+        icon={<span />}
+        selected
+        onNavigate={() => {
+          navigate('files');
+        }}
+      />
+      <NavigationTabs
+        label="文件类型"
+        value="images"
+        items={[
+          { id: 'images', href: '#images', label: '图片' },
+          { id: 'documents', href: '#documents', label: '文档' },
+        ]}
+        onNavigate={navigate}
+      />
+    </>,
+  );
+  const directory = screen.getByRole('link', { name: '文件目录' });
+  expect(directory).toHaveAttribute('aria-current', 'page');
+  expect(fireEvent.click(directory, { ctrlKey: true })).toBe(true);
+  expect(navigate).not.toHaveBeenCalled();
+  expect(fireEvent.click(directory)).toBe(false);
+  expect(navigate).toHaveBeenCalledWith('files');
+  const navigation = screen.getByRole('navigation', { name: '文件类型' });
+  expect(navigation).toContainElement(screen.getByRole('link', { name: '图片' }));
+  expect(screen.getByRole('link', { name: '图片' })).toHaveAttribute('aria-current', 'page');
+  fireEvent.click(screen.getByRole('link', { name: '文档' }));
+  expect(navigate).toHaveBeenCalledWith('documents');
 });

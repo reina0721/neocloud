@@ -148,3 +148,26 @@ export function NotificationFeedback({
     </div>
   );
 }
+
+export function ThemePreview({ theme }: Readonly<{ theme: 'light' | 'dark' | 'system' }>) {
+  return (
+    <span className="surface-theme-preview" data-preview-theme={theme}>
+      <span />
+      <span className="surface-theme-preview-content">
+        <span />
+        <span />
+        <span />
+        <span />
+      </span>
+    </span>
+  );
+}
+
+export function PalettePreview({ accent, label }: Readonly<{ accent: string; label: string }>) {
+  return (
+    <span className="surface-palette-preview" data-accent-preview={accent}>
+      <span aria-label={label}>✦</span>
+      <span aria-hidden="true">✦</span>
+    </span>
+  );
+}

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { useRegisterDirtySource } from '@clouddrive/plugin-framework/leave-confirm';
 import {
@@ -46,6 +46,13 @@ export function Workbench() {
   const feedback = useFeedback();
   const { ref: workspaceRef, matches: expanded } = useContainerBreakpoint('4xl');
   const { ref: treeWidthRef, matches: wide } = useContainerBreakpoint('7xl');
+  const attachWorkspace = useCallback(
+    (node: HTMLDivElement | null) => {
+      workspaceRef(node);
+      treeWidthRef(node);
+    },
+    [workspaceRef, treeWidthRef],
+  );
   const [treeCollapsed, setTreeCollapsed] = useState(false);
   const treeVisible = wide && !treeCollapsed;
   const snapshot = useWorkbenchStore((state) => state.snapshot);
@@ -391,10 +398,7 @@ export function Workbench() {
   ];
   return (
     <div
-      ref={(node) => {
-        workspaceRef.current = node;
-        treeWidthRef.current = node;
-      }}
+      ref={attachWorkspace}
       className="@container/workbench min-w-0"
       data-workbench-layout={expanded ? 'expanded' : 'compact'}
     >

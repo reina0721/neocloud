@@ -1,6 +1,8 @@
 'use client';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { Toolbar } from '@clouddrive/surface-foundation/layout';
+import { BreadcrumbTrail } from '@clouddrive/ui-adapter/navigation';
+import { IconAction } from '@clouddrive/ui-adapter/icon-action';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { CheckboxField, TextField } from '@clouddrive/ui-adapter/form-field';
 import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
@@ -22,6 +24,7 @@ import { isMarkdownFile } from '../../../src/files/markdown';
 import { fileClipboardMaxEntries, type FileClipboardMode } from '../../../src/files/clipboard';
 import { formatFileBytes as bytes } from '../../../src/files/format';
 import {
+  ArrowUp,
   ArrowUpDown,
   Cloud,
   Home,
@@ -792,67 +795,90 @@ export function FilesPage({
       : (listing?.breadcrumbs.at(-1)?.name ?? t('files.nav'));
   return (
     <>
-      <div className="flex min-h-full min-w-0 flex-col gap-3">
-        <h1 className="sr-only">{title}</h1>
+      <div className="surface-file-collection flex min-h-full min-w-0 flex-col gap-3">
+        <div className="surface-file-heading">
+          <div className="flex min-w-0 items-center gap-1">
+            {listing?.items.length ? (
+              <div>
+                <CheckboxField
+                  label={t('files.discovery.selectPage')}
+                  presentation="control-only"
+                  checked={selected.length === visibleItems.length}
+                  onCheckedChange={(checked) => {
+                    setSelectionAnchor('');
+                    setSelected(checked ? visibleItems.map((entry) => entry.id) : []);
+                  }}
+                />
+              </div>
+            ) : null}
+            <h1 className="min-w-0 truncate text-lg font-bold text-brand md:text-xl">{title}</h1>
+          </div>
+          {listing ? (
+            <span className="text-xs text-ink-muted">
+              {t('files.workspace.library')} · {listing.total}
+            </span>
+          ) : null}
+        </div>
         <Toolbar
           label={title}
           primary={
             <>
               <div
                 data-file-breadcrumbs
-                className="flex w-full min-w-0 items-center gap-2 overflow-x-auto md:w-auto md:flex-1"
+                className="flex min-w-0 flex-1 items-center gap-1 md:gap-2 md:overflow-x-auto"
               >
                 {parent && !trash && !category ? (
-                  <Action
+                  <IconAction
                     size="sm"
-                    variant="quiet"
+                    label={t('files.explorer.parent')}
+                    tooltip
                     disabled={loading || navigating}
                     onPress={() => navigate({ parent: listing?.breadcrumbs.at(-2)?.id ?? '' })}
                   >
-                    {t('files.explorer.parent')}
-                  </Action>
+                    <ArrowUp className="size-5" />
+                  </IconAction>
                 ) : null}
-                <MenuButton
-                  ariaLabel={t('files.explorer.ancestors')}
-                  triggerVariant="icon"
-                  label={<MoreHorizontal className="size-4" />}
-                  triggerSize="sm"
-                  items={[
-                    { id: 'root', label: t('files.nav') },
-                    ...(listing?.breadcrumbs.map((entry, index) => ({
-                      id: entry.id,
-                      label: index === 0 ? '/' + entry.name : String(index + 1) + '. ' + entry.name,
-                    })) ?? []),
-                  ]}
-                  onAction={(id) => navigate({ parent: id === 'root' ? '' : id })}
-                />
-                <button
-                  type="button"
-                  onClick={() => navigate({})}
-                  className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm font-medium text-ink"
-                >
-                  <Home className="size-4 shrink-0" aria-hidden="true" />
-                  {t('files.nav')}
-                </button>
-                {listing?.breadcrumbs.map((entry) => (
-                  <span key={entry.id} className="flex shrink-0 items-center gap-2 text-sm">
-                    <span aria-hidden="true">/</span>
-                    <button
-                      type="button"
-                      onClick={() => navigate({ parent: entry.id })}
-                      title={entry.name}
-                      className="max-w-28 truncate hover:text-brand"
-                    >
-                      {entry.name}
-                    </button>
-                  </span>
-                ))}
-                {trash || category ? (
-                  <span className="text-sm text-ink-muted">/ {title}</span>
-                ) : null}
-                <Action size="sm" variant="quiet" leadingIcon={<RefreshCw />} onPress={reload}>
-                  {t('files.refresh')}
-                </Action>
+                <div className={parent ? 'md:hidden' : 'hidden'}>
+                  <MenuButton
+                    ariaLabel={t('files.explorer.ancestors')}
+                    triggerVariant="icon"
+                    label={<MoreHorizontal className="size-4" />}
+                    triggerSize="sm"
+                    items={[
+                      { id: 'root', label: t('files.nav') },
+                      ...(listing?.breadcrumbs.map((entry, index) => ({
+                        id: entry.id,
+                        label:
+                          index === 0 ? '/' + entry.name : String(index + 1) + '. ' + entry.name,
+                      })) ?? []),
+                    ]}
+                    onAction={(id) => navigate({ parent: id === 'root' ? '' : id })}
+                  />
+                </div>
+                <div className="hidden min-w-0 items-center gap-2 md:flex">
+                  <BreadcrumbTrail
+                    label={t('files.explorer.ancestors')}
+                    items={[
+                      {
+                        id: 'root',
+                        label: t('files.nav'),
+                        icon: <Home className="size-5" />,
+                        href: port.destinationHref('files'),
+                        onNavigate: () => navigate({}),
+                      },
+                      ...(listing?.breadcrumbs.map((entry) => ({
+                        id: entry.id,
+                        label: entry.name,
+                        href: port.destinationHref('files', { parent: entry.id }),
+                        onNavigate: () => navigate({ parent: entry.id }),
+                      })) ?? []),
+                      ...(trash || category ? [{ id: 'scope', label: title }] : []),
+                    ]}
+                  />
+                  <IconAction size="sm" label={t('files.refresh')} tooltip onPress={reload}>
+                    <RefreshCw className="size-4" />
+                  </IconAction>
+                </div>
                 <MenuButton
                   label={<MoreHorizontal className="size-5" />}
                   ariaLabel={t('files.discovery.folderActions')}
@@ -862,6 +888,7 @@ export function FilesPage({
                     { id: 'save-shortcut', label: t('files.navigation.save') },
                     { id: 'pin-folder', label: t('files.navigation.pin') },
                     { id: 'copy-path', label: t('files.explorer.copyPath') },
+                    { id: 'refresh', label: t('files.refresh') },
                     {
                       id: 'select-all',
                       label: t('files.selectAll'),
@@ -879,7 +906,8 @@ export function FilesPage({
                     },
                   ]}
                   onAction={(action) => {
-                    if (action === 'copy-path')
+                    if (action === 'refresh') reload();
+                    else if (action === 'copy-path')
                       void port.annotations
                         .copyText(
                           '/' + (listing?.breadcrumbs.map((entry) => entry.name).join('/') ?? ''),
@@ -897,21 +925,22 @@ export function FilesPage({
                 />
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Action
+                <IconAction
                   size="sm"
-                  variant="secondary"
+                  label={t('files.discovery.advanced')}
+                  tooltip
                   disabled={loading || navigating}
                   onPress={() => setAdvancedOpen(true)}
                 >
-                  {t('files.discovery.advanced')}
-                </Action>
+                  <Search className="size-4" />
+                </IconAction>
                 <MenuButton
                   triggerSize="sm"
                   ariaLabel={t('files.explorer.view')}
+                  triggerVariant="icon"
                   label={
                     <span className="flex items-center gap-2">
                       <LayoutGrid className="size-4" />
-                      {t('files.explorer.view')}
                     </span>
                   }
                   items={['grid', 'list', 'gallery']
@@ -940,10 +969,10 @@ export function FilesPage({
                 <MenuButton
                   triggerSize="sm"
                   ariaLabel={t('files.explorer.sort')}
+                  triggerVariant="icon"
                   label={
                     <span className="flex items-center gap-2">
                       <ArrowUpDown className="size-4" />
-                      {t('files.explorer.sort')}
                     </span>
                   }
                   items={[
@@ -977,7 +1006,7 @@ export function FilesPage({
           }
         />
         {listing && !loading && !navigating ? (
-          <p role="status" className="text-xs text-ink-muted">
+          <p role="status" className="sr-only">
             {t('files.explorer.results', {
               count: listing.total,
               scope: trash
@@ -1137,17 +1166,7 @@ export function FilesPage({
           </p>
         ) : null}
         {listing?.items.length ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="min-w-32">
-              <CheckboxField
-                label={t('files.discovery.selectPage')}
-                checked={selected.length === visibleItems.length}
-                onCheckedChange={(checked) => {
-                  setSelectionAnchor('');
-                  setSelected(checked ? visibleItems.map((entry) => entry.id) : []);
-                }}
-              />
-            </div>
+          <div className={`${targets.length ? 'flex' : 'hidden'} flex-wrap items-center gap-3`}>
             {targets.length ? (
               <>
                 {!trash ? (
@@ -1600,7 +1619,9 @@ export function FilesPage({
             {t('files.discovery.galleryBudget', { count: listing.maxGalleryEntries })}
           </p>
         ) : null}
-        <p className="text-xs text-ink-muted">{t('files.discovery.keyboardHint')}</p>
+        <p className="hidden text-xs text-ink-muted md:block">
+          {t('files.discovery.keyboardHint')}
+        </p>
         {listing && preferences.thumbnails && thumbnailIds.size > 0 ? (
           <p className="text-xs text-ink-muted">
             {t('files.discovery.thumbnailBudget', { count: listing.maxGalleryEntries })}

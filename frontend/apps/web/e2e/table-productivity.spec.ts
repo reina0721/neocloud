@@ -34,7 +34,7 @@ test('用户列设置：隐藏邮箱列立即生效并在刷新后保持', async
   const dialog = page.getByRole('dialog', { name: '列设置' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText('始终显示', { exact: true })).toBeVisible();
-  // HeroUI Checkbox 的可见 label 承担点击（input 被 control 覆盖）。
+  // 通过控件的可见标签点击，保留原生 Checkbox 的整行操作边界。
   await dialog.getByText('邮箱', { exact: true }).click();
   await dialog.getByRole('button', { name: '完成' }).click();
   await expect(dialog).toHaveCount(0);
@@ -62,7 +62,7 @@ test('用户密度切换：三档写入偏好并改变真实行内边距', async
   await page.goto('/users?pageSize=50');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   const rowHeader = page.getByRole('grid', { name: '用户目录' }).getByRole('rowheader').first();
-  const densityTrigger = page.getByRole('button', { name: /表格密度/ });
+  const densityTrigger = page.getByRole('combobox', { name: '表格密度', exact: true });
   await expect(densityTrigger).toContainText('标准');
   const standardPadding = await rowHeader.evaluate(
     (element) => getComputedStyle(element).paddingTop,
@@ -77,7 +77,7 @@ test('用户密度切换：三档写入偏好并改变真实行内边距', async
   // 偏好写入 Host 偏好 store（全局表格密度），刷新后仍生效。
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
-  await expect(page.getByRole('button', { name: /表格密度/ })).toContainText('紧凑');
+  await expect(page.getByRole('combobox', { name: '表格密度', exact: true })).toContainText('紧凑');
 });
 
 test('用户 CSV 导出：当前页与仅所选行，引号按 RFC 4180 转义', async ({ page }) => {

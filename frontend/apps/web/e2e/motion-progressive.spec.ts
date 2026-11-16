@@ -32,7 +32,10 @@ test('settings keeps its shell stable and enters semantic regions inside the nes
     .toContain('surface-item-enter');
   await expect
     .poll(() =>
-      page.locator('main h1').evaluate((e) => getComputedStyle(e.closest('header')!).animationName),
+      page
+        .getByRole('main')
+        .getByRole('heading', { level: 1 })
+        .evaluate((e) => getComputedStyle(e.closest('header')!).animationName),
     )
     .not.toContain('surface-enter-forward');
 });

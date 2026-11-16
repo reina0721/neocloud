@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /** Browser adapter for content that changes composition at a named container breakpoint. */
 export function useContainerBreakpoint(breakpoint: '4xl' | '7xl') {
-  const ref = useRef<HTMLDivElement>(null);
+  const [element, ref] = useState<HTMLDivElement | null>(null);
   const [matches, setMatches] = useState(false);
   useEffect(() => {
-    const element = ref.current;
     if (!element) return;
     const measure = () => {
       const style = getComputedStyle(element);
@@ -20,6 +19,6 @@ export function useContainerBreakpoint(breakpoint: '4xl' | '7xl') {
     observer.observe(element);
     measure();
     return () => observer.disconnect();
-  }, [breakpoint]);
+  }, [element, breakpoint]);
   return { ref, matches };
 }

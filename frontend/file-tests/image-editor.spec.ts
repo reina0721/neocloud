@@ -147,13 +147,11 @@ async function imageAnnotationWorkspace(page: Page) {
   const editor = page.getByRole('dialog', { name: '图片编辑器', exact: true });
   const button = (name: string) => editor.getByRole('button', { name, exact: true });
   const canvas = editor.getByRole('img', { name: '图片编辑画布', exact: true });
-  const field = (name: string) =>
-    editor
-      .locator('[data-slot="select-trigger"]')
-      .and(editor.getByRole('button', { name: new RegExp(name) }));
+  const field = (name: string) => editor.getByRole('combobox', { name, exact: true });
   const choose = async (name: string, option: string) => {
     await field(name).click();
     await page.getByRole('option', { name: option, exact: true }).click();
+    await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   };
   const chooseImage = async (name: string, buffer: Buffer, mimeType = 'image/png') => {
     const pending = page.waitForEvent('filechooser');
@@ -440,11 +438,9 @@ test('图片按原版本保存并可将过期草稿另存到指定目录', async
   const version = button('保存为新版本');
   const confirm = page.getByRole('dialog', { name: '确认保存新版本', exact: true });
   const chooseFormat = async (format: string) => {
-    await editor
-      .locator('[data-slot="select-trigger"]')
-      .and(editor.getByRole('button', { name: /输出格式/ }))
-      .click();
+    await editor.getByRole('combobox', { name: '输出格式', exact: true }).click();
     await page.getByRole('option', { name: format, exact: true }).click();
+    await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   };
 
   await expect(version).toBeDisabled();
@@ -508,7 +504,10 @@ test('图片按原版本保存并可将过期草稿另存到指定目录', async
     await version.click();
     await confirm.getByRole('button', { name: '保存新版本', exact: true }).click();
     await expect.poll(() => waiting).toBe(true);
-    await expect(confirm.getByText('保存新版本…', { exact: true })).toBeVisible();
+    await expect(confirm.getByRole('button', { name: '保存新版本', exact: true })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
     await expect(page.getByText('已保存图片新版本。', { exact: true })).toHaveCount(0);
     expect(
       (await listing(page, root)).find(({ id }) => id === sourceEntry.id)?.contentRevision,
@@ -633,11 +632,9 @@ test('图片编辑器支持视图缩放、原图对比及独立导出质量', as
   const scrollPosition = () =>
     viewport.evaluate((node) => ({ x: node.scrollLeft, y: node.scrollTop }));
   const choose = async (field: string, option: string) => {
-    await editor
-      .locator('[data-slot="select-trigger"]')
-      .and(editor.getByRole('button', { name: new RegExp(field) }))
-      .click();
+    await editor.getByRole('combobox', { name: new RegExp(field) }).click();
     await page.getByRole('option', { name: option, exact: true }).click();
+    await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   };
   const draw = async (from: [number, number], to: [number, number]) => {
     const bounds = await canvas.boundingBox();
@@ -832,13 +829,11 @@ test('WebP 支持图片水印、透明副本和原件保留', async ({ page }, i
   const canvas = editor.getByRole('img', { name: '图片编辑画布', exact: true });
   const slider = (name: string) => editor.getByRole('slider', { name, exact: true });
   const pixel = (x: number, y: number) => canvasPixel(canvas, x / 320, y / 240);
-  const select = (field: string) =>
-    editor
-      .locator('[data-slot="select-trigger"]')
-      .and(editor.getByRole('button', { name: new RegExp(field) }));
+  const select = (field: string) => editor.getByRole('combobox', { name: new RegExp(field) });
   const choose = async (field: string, option: string) => {
     await select(field).click();
     await page.getByRole('option', { name: option, exact: true }).click();
+    await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   };
   const chooseFile = async (name: string, mimeType: string, buffer: Buffer) => {
     const pending = page.waitForEvent('filechooser');
@@ -1028,11 +1023,9 @@ test('图片外观调整支持色彩、滤镜、文字水印和副本导出', as
   const pixel = () => canvasPixel(canvas, 0.25, 0.25);
   const original = [96, 120, 156, 255];
   const choose = async (field: string, option: string) => {
-    await editor
-      .locator('[data-slot="select-trigger"]')
-      .and(editor.getByRole('button', { name: new RegExp(field) }))
-      .click();
+    await editor.getByRole('combobox', { name: new RegExp(field) }).click();
     await page.getByRole('option', { name: option, exact: true }).click();
+    await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   };
 
   await button('色彩微调').click();
@@ -1193,13 +1186,11 @@ test('本人图片标注支持图形、样式、历史和带标注副本', async
   const editor = page.getByRole('dialog', { name: '图片编辑器', exact: true });
   const button = (name: string) => editor.getByRole('button', { name, exact: true });
   const canvas = editor.getByRole('img', { name: '图片编辑画布', exact: true });
-  const selectField = (field: string) =>
-    editor
-      .locator('[data-slot="select-trigger"]')
-      .and(editor.getByRole('button', { name: new RegExp(field) }));
+  const selectField = (field: string) => editor.getByRole('combobox', { name: new RegExp(field) });
   const choose = async (field: string, option: string) => {
     await selectField(field).click();
     await page.getByRole('option', { name: option, exact: true }).click();
+    await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   };
   const pointer = async (points: readonly (readonly [number, number])[]) => {
     await canvas.scrollIntoViewIfNeeded();
@@ -1509,6 +1500,7 @@ test('本人图片可裁剪、变换、调整尺寸、下载与上传独立副�
 
   await editor.locator('[aria-haspopup="listbox"]').click();
   await page.getByRole('option', { name: 'JPEG', exact: true }).click();
+  await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   const jpeg = await downloadCopy(page, editor, 'edited-copy.jpg');
   expect(jpeg.subarray(0, 2).toString('hex')).toBe('ffd8');
   const jpegResult = await page.evaluate(async (base64) => {

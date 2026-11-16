@@ -5,6 +5,10 @@
   "type": "module",
   "exports": {
     "./tokens.css": "./src/tokens.css",
-    "./motion.css": "./src/motion.css"
+    "./motion.css": "./src/motion.css",
+    "./parameters": "./src/parameters.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
   }
 }

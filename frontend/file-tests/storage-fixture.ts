@@ -41,7 +41,7 @@ export function storageSection(page: Page, name: string) {
     .filter({ has: page.getByRole('heading', { name, exact: true, level: 2 }) });
 }
 export async function selectStorageUnit(page: Page, scope: Locator, name: string, unit: string) {
-  await scope.getByRole('button', { name: new RegExp(name + '单位') }).click();
+  await scope.getByRole('combobox', { name: new RegExp(name + '单位') }).click();
   await page.getByRole('option', { name: unit, exact: true }).click();
 }
 export async function customizeLimit(

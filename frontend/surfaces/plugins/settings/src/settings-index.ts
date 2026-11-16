@@ -42,6 +42,8 @@ export const SETTINGS_INDEX: readonly SettingsEntry[] = [
       '强调色',
       '颜色',
       'color',
+      'pink',
+      '樱花',
       'purple',
       'blue',
       'green',

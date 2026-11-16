@@ -34,7 +34,7 @@ test('桌面 UI Elements Family 保持基础组件权威面稳定', async ({ pag
   await page.goto('/ui-elements/actions-selection');
   await expectHydrated(page);
   await expect(page.getByRole('heading', { level: 1, name: '操作与选择' })).toBeVisible();
-  await expect(page.getByText('公开 Element 46 / 46')).toBeVisible();
+  await expect(page.getByText('公开 Element 48 / 48')).toBeVisible();
   await waitForVisualReadiness(page);
   await expect.soft(page).toHaveScreenshot('ui-elements-desktop.png', { fullPage: true });
   expect(consoleErrors).toEqual([]);
@@ -59,7 +59,7 @@ for (const family of [
     const section = page.locator(`#${sectionId}`);
     // HTML 水合完成后，身份恢复与业务区域仍可能尚未就绪。
     await section.waitFor({ state: 'visible' });
-    await expect(page.getByText('公开 Element 46 / 46')).toBeVisible();
+    await expect(page.getByText('公开 Element 48 / 48')).toBeVisible();
     // 按实际阅读顺序走过各示例，让屏外 Reveal 完成；不把半截入场帧当作基线。
     for (const item of await section.locator('[data-reveal-item]').all()) {
       await item.scrollIntoViewIfNeeded();
@@ -100,8 +100,10 @@ test('移动窗口、Dark Mode 与英文扩张保持无溢出', async ({ page })
   await page.getByRole('menuitemradio', { name: 'English', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(
-    page.locator('.ui-field').filter({ has: page.getByText('DatePicker', { exact: true }) }),
-  ).toContainText('yyyy');
+    page
+      .getByRole('group', { name: 'DatePicker', exact: true })
+      .getByRole('spinbutton', { name: 'Year', exact: true }),
+  ).toBeVisible();
   await waitForVisualReadiness(page);
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,

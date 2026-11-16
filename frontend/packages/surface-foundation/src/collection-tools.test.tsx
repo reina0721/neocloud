@@ -163,7 +163,7 @@ describe('CollectionToolbar', () => {
     );
     const toolbar = screen.getByRole('toolbar', { name: '表格工具栏' });
     expect(within(toolbar).getByText('工具条主区')).toBeTruthy();
-    expect(within(toolbar).getByRole('button', { name: /表格密度/ })).toBeTruthy();
+    expect(within(toolbar).getByRole('combobox', { name: /表格密度/ })).toBeTruthy();
     expect(within(toolbar).getByRole('button', { name: '列设置' })).toBeTruthy();
     expect(within(toolbar).getByRole('button', { name: '导出数据' })).toBeTruthy();
     expect(screen.queryByRole('dialog')).toBeNull();

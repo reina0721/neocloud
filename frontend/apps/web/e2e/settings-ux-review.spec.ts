@@ -101,7 +101,7 @@ for (const width of [1440, 390, 320]) {
       const darkIcon = group
         .locator('label')
         .filter({ has: page.getByRole('radio', { name: names[1], exact: true }) })
-        .locator('svg');
+        .locator('.ui-choice-icon svg');
       if (width < 768) await darkIcon.tap();
       else await darkIcon.click();
       await expect(dark).toBeChecked();
@@ -153,21 +153,18 @@ test('Choice tiles authority retains disabled state and keyboard focus on the ca
   const disabled = group.getByRole('radio', { name: '自动执行', exact: true });
   await expect(disabled).toBeDisabled();
   const observe = group.getByRole('radio', { name: '仅观察', exact: true });
-  await group
-    .locator('label')
-    .filter({ has: page.getByRole('radio', { name: '仅观察', exact: true }) })
-    .locator('svg')
-    .click();
+  await observe.click();
   await expect(observe).toBeChecked();
   await observe.focus();
   await page.keyboard.press('ArrowRight');
   const guided = group.getByRole('radio', { name: '引导执行', exact: true });
   await expect(guided).toBeChecked();
+  await expect(guided).toBeFocused();
   await expect(
-    group
-      .locator('label')
-      .filter({ has: page.getByRole('radio', { name: '引导执行', exact: true }) }),
-  ).toHaveAttribute('data-focus-visible', 'true');
+    group.locator('label').filter({
+      has: page.getByRole('radio', { name: '引导执行', exact: true }),
+    }),
+  ).toHaveCSS('outline-style', 'solid');
   await page.keyboard.press('ArrowRight');
   await expect(observe).toBeChecked();
   expect(
@@ -179,13 +176,13 @@ test('Choice tiles authority retains disabled state and keyboard focus on the ca
 async function expectSwitchGeometry(page: Page) {
   await expect
     .poll(() =>
-      page.locator('[data-slot="switch-control"]').evaluateAll((controls) =>
+      page.locator('.ui-switch').evaluateAll((controls) =>
         controls.every((control) => {
-          const thumb = control.querySelector('[data-slot="switch-thumb"]');
+          const thumb = control.querySelector('.ui-switch-thumb');
           if (!thumb) return false;
           const track = control.getBoundingClientRect();
           const circle = thumb.getBoundingClientRect();
-          const selected = control.closest('[data-selected="true"]') !== null;
+          const selected = control.querySelector('input')?.checked === true;
           const rtl = getComputedStyle(control).direction === 'rtl';
           const left = circle.left - track.left;
           const right = track.right - circle.right;
@@ -248,10 +245,21 @@ for (const width of [1440, 390, 320]) {
       const input = page.getByRole('switch', { name: '跳转后自动滚动到顶部', exact: true });
       const row = page.locator('label').filter({ has: input });
       await row.hover();
-      await expect(row).toHaveAttribute('data-hovered', 'true');
+      await expect.poll(() => row.evaluate((element) => element.matches(':hover'))).toBe(true);
+      await expect(row).toHaveCSS(
+        'background-color',
+        await row.evaluate((element) => {
+          const probe = document.createElement('span');
+          probe.style.color = 'var(--color-surface-muted)';
+          element.append(probe);
+          const color = getComputedStyle(probe).color;
+          probe.remove();
+          return color;
+        }),
+      );
       const surface = await row.boundingBox();
       const text = await row.getByText('跳转后自动滚动到顶部', { exact: true }).boundingBox();
-      const control = await row.locator('[data-slot="switch-control"]').boundingBox();
+      const control = await row.locator('.ui-switch').boundingBox();
       expect((text?.x ?? 0) - (surface?.x ?? 0)).toBeGreaterThanOrEqual(10);
       expect(
         (surface?.x ?? 0) + (surface?.width ?? 0) - (control?.x ?? 0) - (control?.width ?? 0),
@@ -310,11 +318,18 @@ test('Sticky consumers resolve actual chrome height across live tabs and viewpor
         .toBeLessThan(1);
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight / 2));
       const nav = await page.locator('.surface-settings-nav').boundingBox();
-      const header = await page.getByRole('banner').boundingBox();
-      expect(nav?.y).toBeGreaterThanOrEqual((header?.y ?? 0) + (header?.height ?? 0) - 1);
-      if (state === 'pinned') {
-        const tabs = await page.getByRole('navigation', { name: '页面标签' }).boundingBox();
-        expect(nav?.y).toBeGreaterThanOrEqual((tabs?.y ?? 0) + (tabs?.height ?? 0) - 1);
+      if (width < 768) {
+        // 手机设置由自己的任务栏占据顶部，不叠加全局 Chrome 和页面标签。
+        await expect(page.getByRole('banner')).toBeHidden();
+        await expect(page.getByRole('navigation', { name: '页面标签' })).toBeHidden();
+        expect(nav?.y).toBeGreaterThanOrEqual(-1);
+      } else {
+        const header = await page.getByRole('banner').boundingBox();
+        expect(nav?.y).toBeGreaterThanOrEqual((header?.y ?? 0) + (header?.height ?? 0) - 1);
+        if (state === 'pinned') {
+          const tabs = await page.getByRole('navigation', { name: '页面标签' }).boundingBox();
+          expect(nav?.y).toBeGreaterThanOrEqual((tabs?.y ?? 0) + (tabs?.height ?? 0) - 1);
+        }
       }
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
@@ -379,7 +394,7 @@ test('Settings switches share one pointer and keyboard press boundary', async ({
   await page.goto('/settings/navigation');
   const input = page.getByRole('switch', { name: '顶部页面标签', exact: true });
   const label = page.locator('label').filter({ has: input });
-  await label.locator('[data-slot="switch-control"]').click();
+  await label.locator('.ui-switch').click();
   await expect(input).toBeChecked();
   await label.getByText('顶部页面标签', { exact: true }).click();
   await expect(input).not.toBeChecked();
@@ -398,10 +413,7 @@ test('Radio indicator and card edge select the same option and arrows retain sel
   await page.goto('/ui-elements/forms#element-radiogroupfield');
   const group = page.getByRole('radiogroup', { name: '反馈密度', exact: true });
   const compact = group.getByRole('radio', { name: '仅观察', exact: true });
-  const compactLabel = group
-    .locator('label')
-    .filter({ has: page.getByRole('radio', { name: '仅观察', exact: true }) });
-  await compactLabel.locator('[data-slot="radio-control"]').click();
+  await compact.locator('..').click();
   await expect(compact).toBeChecked();
   const comfortable = group.getByRole('radio', { name: '引导执行', exact: true });
   const card = group
@@ -422,8 +434,7 @@ test('Checkbox indicator works in the shared form authority and disabled option 
   await page.goto('/ui-elements/forms');
   const input = page.getByRole('checkbox', { name: '复选项', exact: true });
   const initial = await input.isChecked();
-  const label = page.locator('label').filter({ has: input });
-  await label.locator('[data-slot="checkbox-control"]').click();
+  await input.locator('..').click();
   await expect(input).toBeChecked({ checked: !initial });
   await input.focus();
   await page.keyboard.press('Space');
@@ -445,9 +456,15 @@ for (const width of [320, 390, 430, 768, 1024, 1279]) {
       await page.evaluate((y) => window.scrollTo(0, y), offset);
       await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
       const position = await page.locator('.surface-settings-nav').boundingBox();
-      const tabs = await page.getByRole('navigation', { name: '页面标签' }).boundingBox();
-      expect(position?.y).toBeGreaterThanOrEqual((tabs?.y ?? 0) + (tabs?.height ?? 0) - 1);
-      expect(position?.y).toBeLessThan(210);
+      if (width < 768) {
+        await expect(page.getByRole('navigation', { name: '页面标签' })).toBeHidden();
+        expect(position?.y).toBeGreaterThanOrEqual(-1);
+        expect(position?.y).toBeLessThanOrEqual(1);
+      } else {
+        const tabs = await page.getByRole('navigation', { name: '页面标签' }).boundingBox();
+        expect(position?.y).toBeGreaterThanOrEqual((tabs?.y ?? 0) + (tabs?.height ?? 0) - 1);
+        expect(position?.y).toBeLessThan(210);
+      }
     }
     await chooseCategory(page, '通知');
     await page.evaluate(() => window.scrollTo(0, 800));
@@ -482,7 +499,8 @@ test('Pinned page tabs track the header; unpinned tabs scroll and persist after 
   await expect(tabs).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 700));
   const pinnedBounds = await tabs.boundingBox();
-  expect(pinnedBounds?.y).toBe(80);
+  const headerBounds = await page.getByRole('banner').boundingBox();
+  expect(pinnedBounds?.y).toBe((headerBounds?.y ?? 0) + (headerBounds?.height ?? 0));
   await pinned.focus();
   await page.keyboard.press('Space');
   await expect(pinned).not.toBeChecked();
@@ -554,14 +572,18 @@ test.describe('Touch settings tasks', () => {
     await page.goto('/settings/navigation');
     const input = page.getByRole('switch', { name: '顶部页面标签', exact: true });
     const label = page.locator('label').filter({ has: input });
-    await label.locator('[data-slot="switch-control"]').tap();
+    await label.locator('.ui-switch').tap();
     await expect(input).toBeChecked();
     await page.evaluate(() => window.scrollTo(0, 1200));
     await page.getByRole('button', { name: /切换分类与搜索/ }).tap();
     await page.getByRole('dialog').getByRole('link', { name: '通知', exact: true }).tap();
     await expect(page).toHaveURL('/settings/notifications');
     await expect(page.getByRole('dialog')).not.toBeVisible();
-    await expect(page.getByRole('button', { name: '关闭 通知', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '通知', level: 1, exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: '关闭', exact: true })).toHaveAttribute(
+      'href',
+      '/home',
+    );
   });
 });
 

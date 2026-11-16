@@ -1,11 +1,9 @@
-import { Description } from '@heroui/react/description';
-import { FieldError } from '@heroui/react/field-error';
-import { Label } from '@heroui/react/label';
-import { Radio } from '@heroui/react/radio';
-import { RadioGroup } from '@heroui/react/radio-group';
-import type { FieldTextProps } from './field-contract';
+'use client';
+import FormControl from '@mui/material/FormControl';
+import RadioGroup from '@mui/material/RadioGroup';
+import Radio from '@mui/material/Radio';
 import { useId, type ReactNode } from 'react';
-
+import type { FieldTextProps } from './field-contract';
 export type RadioOption = Readonly<{
   value: string;
   label: string;
@@ -22,6 +20,7 @@ export type RadioGroupFieldProps = FieldTextProps &
     options: readonly RadioOption[];
     presentation?: 'cards' | 'rows' | 'tiles' | 'inline' | 'previews';
     labelIcon?: ReactNode;
+    labelVisibility?: 'visible' | 'screen-reader';
     disabled?: boolean;
     onValueChange: (value: string) => void;
   }>;
@@ -36,20 +35,19 @@ export function RadioGroupField({
   onValueChange,
   presentation = 'cards',
   labelIcon,
+  labelVisibility = 'visible',
 }: RadioGroupFieldProps) {
-  const descriptionId = useId();
+  const id = useId();
   const comparison = presentation === 'previews';
   const compact = presentation === 'inline';
-  const hintFirst = presentation === 'tiles' || comparison;
+  const tiles = presentation === 'tiles';
   return (
-    <RadioGroup
-      className="ui-field @container"
-      isDisabled={disabled}
-      isInvalid={Boolean(error)}
-      value={value}
-      onChange={onValueChange}
-    >
-      <div className="flex min-w-0 items-start gap-3">
+    <FormControl className="ui-field @container" error={Boolean(error)} disabled={disabled}>
+      <div
+        className={
+          labelVisibility === 'screen-reader' ? 'sr-only' : 'flex min-w-0 items-start gap-3'
+        }
+      >
         {labelIcon ? (
           <span
             aria-hidden="true"
@@ -58,98 +56,112 @@ export function RadioGroupField({
             {labelIcon}
           </span>
         ) : null}
-        <div className="grid min-w-0 gap-1">
-          <Label className="ui-field-label">{label}</Label>
-          {hintFirst && hint && !error ? (
-            <Description className="ui-field-hint">{hint}</Description>
+        <div className="grid gap-1">
+          <span id={id} className="ui-field-label">
+            {label}
+          </span>
+          {hint ? (
+            <p id={id + '-hint'} className="ui-field-hint">
+              {hint}
+            </p>
           ) : null}
         </div>
       </div>
-      <div
+      <RadioGroup
+        aria-labelledby={id}
+        aria-invalid={Boolean(error) || undefined}
+        aria-describedby={
+          [hint ? id + '-hint' : '', error ? id + '-error' : ''].filter(Boolean).join(' ') ||
+          undefined
+        }
+        value={value}
+        onChange={(_, next) => onValueChange(next)}
         className={
           presentation === 'rows'
             ? 'grid gap-2'
-            : comparison
-              ? 'grid grid-cols-1 gap-3 @sm:grid-cols-3'
-              : presentation === 'tiles'
+            : compact
+              ? 'flex flex-row flex-wrap gap-2'
+              : comparison || presentation === 'tiles'
                 ? 'grid grid-cols-1 gap-3 @sm:grid-cols-3'
-                : compact
-                  ? 'flex flex-wrap gap-2'
-                  : 'surface-filter-grid'
+                : 'surface-filter-grid'
         }
       >
-        {options.map((option, index) => (
-          <Radio
-            aria-label={option.label}
-            {...(option.description ? { 'aria-describedby': `${descriptionId}-${index}` } : {})}
-            className={`group min-w-0 text-sm ${compact ? 'mt-0 max-w-full' : 'w-full'} ${presentation === 'tiles' || comparison ? 'mt-0 h-full' : ''}`}
+        {options.map((option) => (
+          <label
             key={option.value}
-            value={option.value}
-            {...(option.disabled ? { isDisabled: true } : {})}
+            className={`ui-choice-content flex min-w-0 cursor-pointer border rounded-control ${comparison ? 'p-2 border-transparent bg-transparent' : 'p-3'} ${comparison ? (value === option.value ? 'text-brand' : 'text-ink') : value === option.value ? 'border-brand bg-brand-soft text-brand' : 'border-border bg-surface text-ink'} ${disabled || option.disabled ? 'cursor-not-allowed opacity-50' : ''} ${comparison ? 'flex-row @sm:flex-col @sm:items-start' : 'items-start'}`}
           >
-            <Radio.Content
-              className={`ui-choice-content border border-border bg-surface group-data-[selected]:border-brand group-data-[selected]:bg-brand-soft ${comparison ? 'h-full min-h-24 gap-3 rounded-control p-3 text-ink group-data-[selected]:text-brand @sm:flex-col @sm:justify-between @sm:gap-4 @sm:rounded-panel @sm:p-4' : presentation === 'rows' || compact ? 'rounded-control px-3 py-2' : presentation === 'tiles' ? 'h-full min-h-control gap-3 rounded-control p-3 text-ink group-data-[selected]:text-brand @sm:min-h-24 @sm:flex-col @sm:justify-between @sm:gap-4 @sm:rounded-panel @sm:p-4' : 'rounded-panel min-h-20 p-4'}`}
+            {option.preview ? (
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none block min-w-0 ${comparison ? `w-28 shrink-0 rounded-control border-2 ${value === option.value ? 'border-brand' : 'border-transparent'} @sm:w-full` : 'w-full'}`}
+              >
+                {option.preview}
+              </span>
+            ) : null}
+            <span
+              className={`flex min-w-0 gap-2 ${tiles ? 'flex-col items-center' : 'items-start'}`}
             >
-              {option.preview ? (
+              <Radio
+                value={option.value}
+                disabled={disabled || option.disabled}
+                size="small"
+                {...(tiles
+                  ? {
+                      className: option.icon ? 'p-0' : 'sr-only',
+                      icon: (
+                        <span
+                          aria-hidden="true"
+                          className="ui-choice-icon grid size-5 place-items-center"
+                        >
+                          {option.icon}
+                        </span>
+                      ),
+                      checkedIcon: (
+                        <span
+                          aria-hidden="true"
+                          className="ui-choice-icon grid size-5 place-items-center"
+                        >
+                          {option.icon}
+                        </span>
+                      ),
+                    }
+                  : {})}
+                slotProps={{
+                  input: {
+                    'aria-label': option.label,
+                    'aria-describedby': option.description ? id + '-' + option.value : undefined,
+                  },
+                }}
+              />
+              {option.icon && !tiles ? (
                 <span
                   aria-hidden="true"
-                  className={`pointer-events-none block min-w-0 ${comparison ? 'w-20 shrink-0 @sm:w-full' : 'w-full'}`}
+                  className="ui-choice-icon grid size-5 shrink-0 place-items-center mt-2"
                 >
-                  {option.preview}
-                </span>
-              ) : null}
-              {compact && option.icon ? (
-                <span aria-hidden="true" className="grid size-5 shrink-0 place-items-center">
                   {option.icon}
                 </span>
               ) : null}
-              {presentation === 'tiles' ? (
-                option.icon ? (
-                  <span
-                    aria-hidden="true"
-                    className="grid size-5 shrink-0 place-items-center text-current"
-                  >
-                    {option.icon}
-                  </span>
-                ) : null
-              ) : !comparison && !(compact && option.icon) ? (
-                <Radio.Control className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border border-border-strong bg-surface group-data-[selected]:border-brand">
-                  <Radio.Indicator className="pointer-events-none">
-                    {/* 项目单选 dot：几何固定 10×10；仅 selected 时可见（group 根 data-selected）。
-                    非空子节点避免 vendor `.radio__indicator:empty::before` 的默认 dot。 */}
-                    <span
-                      aria-hidden="true"
-                      className="block size-2.5 rounded-full bg-brand opacity-0 transition-opacity group-data-[selected]:opacity-100"
-                    />
-                  </Radio.Indicator>
-                </Radio.Control>
-              ) : null}
-              <span
-                className={`flex min-w-0 flex-col items-start ${comparison || presentation === 'tiles' ? 'flex-1 @sm:w-full' : ''}`}
-              >
-                <span
-                  className={`block max-w-full wrap-break-word font-semibold ${presentation === 'tiles' || comparison ? 'text-current' : compact && option.icon ? 'text-ink group-data-[selected]:text-brand' : 'text-ink'}`}
-                >
-                  {option.label}
-                </span>
+              <span className={`ui-choice-text min-w-0 ${tiles ? 'text-center' : 'pt-2'}`}>
+                <span className="block font-semibold">{option.label}</span>
                 {option.description ? (
                   <span
-                    id={`${descriptionId}-${index}`}
+                    id={id + '-' + option.value}
                     className="mt-1 block text-xs leading-5 text-ink-muted"
                   >
                     {option.description}
                   </span>
                 ) : null}
               </span>
-            </Radio.Content>
-          </Radio>
+            </span>
+          </label>
         ))}
-      </div>
+      </RadioGroup>
       {error ? (
-        <FieldError className="ui-field-error">{error}</FieldError>
-      ) : hint && !hintFirst ? (
-        <Description className="ui-field-hint">{hint}</Description>
+        <p id={id + '-error'} className="ui-field-error" role="alert">
+          {error}
+        </p>
       ) : null}
-    </RadioGroup>
+    </FormControl>
   );
 }

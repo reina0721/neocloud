@@ -299,7 +299,7 @@ test('批量标签冲突不部分写入，标签与属性组合检索可恢复',
   }
   await dialog.getByRole('checkbox', { name: '按自定义属性筛选', exact: true }).press('Space');
   await dialog.getByLabel('属性键', { exact: true }).fill('Empty');
-  await dialog.getByRole('button', { name: /匹配方式/ }).click();
+  await dialog.getByRole('combobox', { name: '匹配方式', exact: true }).click();
   await page.getByRole('option', { name: '值完全相等', exact: true }).click();
   await dialog.getByRole('button', { name: '搜索', exact: true }).click();
   await expect(dialog).toHaveCount(0);
@@ -658,6 +658,11 @@ test('属性窄屏英文深色长名称与空值可读，固定操作不遮住�
     }
     await page.getByRole('button', { name: '当前用户', exact: true }).click();
     await page.getByRole('menuitem', { name: /^主题 / }).click();
-    await page.getByRole('menuitemradio', { name: originalTheme.trim(), exact: true }).click();
+    await page
+      .getByRole('menuitemradio', {
+        name: originalTheme.replace(/\s*✓\s*$/, '').trim(),
+        exact: true,
+      })
+      .click();
   }
 });

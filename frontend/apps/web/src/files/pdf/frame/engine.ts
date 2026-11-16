@@ -686,10 +686,16 @@ async function command(request: PdfRequest) {
       await insertStamp(request, viewer, core.AnnotationEditorType.STAMP);
       syncModified();
       break;
-    case 'edit':
+    case 'edit': {
+      // SDK 在阅读模式隐藏编辑层；直接重做文字会以零尺寸恢复并导出不可见批注。
+      // 通过公开模式 API 恢复可测量的编辑层，完成历史动作后回到原阅读模式。
+      const reading = state.editor === 'none';
+      if (reading) await selectEditorMode(core.AnnotationEditorType.FREETEXT);
       bus.dispatch('editingaction', { source: viewer, name: request.action });
+      if (reading) await selectEditorMode(core.AnnotationEditorType.NONE);
       syncModified();
       break;
+    }
     case 'exported':
       if (pendingExportHash === undefined) throw new Error('PDF export not prepared');
       exportedHash = pendingExportHash;

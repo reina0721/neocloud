@@ -88,10 +88,19 @@ export function ActionsSelectionPage() {
               <ComponentPreview
                 name="IconAction"
                 description={t('uiElements.catalog.iconActionDescription')}
-                states={['sm / md', 'Active', 'Danger', 'Pending', 'Disabled', 'Accessible name']}
+                states={[
+                  'sm / md',
+                  'Standard / Filled',
+                  'Active',
+                  'Danger',
+                  'Pending',
+                  'Disabled',
+                  'Accessible name',
+                ]}
               >
                 <div className="flex flex-wrap items-center gap-3">
                   <IconAction
+                    variant="filled"
                     label={t('uiElements.catalog.search')}
                     onPress={() => setLastAction(t('uiElements.catalog.search'))}
                   >

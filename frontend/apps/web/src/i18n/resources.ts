@@ -44,7 +44,7 @@ export const resources = {
         design: 'Design System',
         designDescription: '语义色彩、排版、间距、层级和动效由统一 Token 驱动。',
         adapter: 'UI Adapter',
-        adapterDescription: 'HeroUI 被限制在稳定的语义界面契约之后。',
+        adapterDescription: 'MUI 被限制在稳定的语义界面契约之后。',
         hosts: 'Host Boundary',
         hostsDescription: '当前唯一 Web Host 装配 Product Surface；平台生命周期归 Host 管理。',
         gates: 'Architecture Gates',
@@ -107,7 +107,7 @@ export const resources = {
         designDescription:
           'Semantic color, type, spacing, elevation, and motion come from shared tokens.',
         adapter: 'UI Adapter',
-        adapterDescription: 'HeroUI stays behind a stable semantic interface contract.',
+        adapterDescription: 'MUI stays behind a stable semantic interface contract.',
         hosts: 'Host Boundary',
         hostsDescription:
           'The single Web Host composes the Product Surface and owns platform lifecycle.',

@@ -25,7 +25,7 @@ describe('文件工作区Host边界', () => {
     first.port.saveSidebarPreferences({ collapsed: true, autoExpandTree: false });
     const second = fixture(() => 'workspace-two');
     expect(second.port.loadSidebarPreferences()).toEqual({
-      collapsed: false,
+      collapsed: true,
       autoExpandTree: true,
     });
     expect(first.port.loadSidebarPreferences()).toEqual({ collapsed: true, autoExpandTree: false });
@@ -99,5 +99,30 @@ describe('文件工作区Host边界', () => {
     const after = new KeyboardEvent('keydown', { key: '/', cancelable: true, bubbles: true });
     document.body.dispatchEvent(after);
     expect(after.defaultPrevented).toBe(false);
+  });
+  it('分页等原生按钮拥有 Enter，文件条目仍可用 Enter 打开', () => {
+    const runtime = fixture();
+    const listener = vi.fn();
+    runtime.port.subscribeShortcuts(listener);
+    const button = document.createElement('button');
+    document.body.append(button);
+    try {
+      const press = () => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'Enter',
+          bubbles: true,
+          cancelable: true,
+        });
+        button.dispatchEvent(event);
+        return event.defaultPrevented;
+      };
+      expect(press()).toBe(false);
+      expect(listener).not.toHaveBeenCalled();
+      button.setAttribute('data-file-entry', 'fixture');
+      expect(press()).toBe(true);
+      expect(listener).toHaveBeenCalledWith('openFocused');
+    } finally {
+      button.remove();
+    }
   });
 });

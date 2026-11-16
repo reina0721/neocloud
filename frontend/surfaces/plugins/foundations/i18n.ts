@@ -10,8 +10,8 @@ export const pluginI18nResources = {
         description: '依赖只能朝向更稳定的契约。目录不是目的，变化传播范围才是设计对象。',
         favoritesTitle: '收藏',
         recentsTitle: '最近访问',
-        directUse: 'HeroUI 直接使用范围',
-        directUseDescription: '只有 UI Adapter 可以导入 @heroui/*；页面只消费语义化 UI Contract。',
+        directUse: 'MUI 直接使用范围',
+        directUseDescription: '只有 UI Adapter 可以导入 @mui/*；页面只消费语义化 UI Contract。',
         layers: {
           hosts: 'Runtime Hosts',
           hostsDescription:
@@ -29,7 +29,7 @@ export const pluginI18nResources = {
         rules: {
           first: 'Core 不导入 React、Host 或 Infrastructure。',
           second: 'Host 专属能力不得下沉到共享 Core。',
-          third: '页面不穿透 Adapter 修改 HeroUI 内部 DOM。',
+          third: '页面不穿透 Adapter 修改 MUI 内部 DOM。',
           fourth: '局部差异优先使用 Variant 与 Composition。',
         },
       },
@@ -47,9 +47,9 @@ export const pluginI18nResources = {
           'Dependencies point toward stable contracts. Folders are incidental; change propagation is the design target.',
         favoritesTitle: 'Favorites',
         recentsTitle: 'Recent visits',
-        directUse: 'Direct HeroUI usage',
+        directUse: 'Direct MUI usage',
         directUseDescription:
-          'Only the UI Adapter may import @heroui/*; screens consume semantic UI contracts.',
+          'Only the UI Adapter may import @mui/*; screens consume semantic UI contracts.',
         layers: {
           hosts: 'Runtime Hosts',
           hostsDescription:
@@ -68,7 +68,7 @@ export const pluginI18nResources = {
         rules: {
           first: 'Core never imports React, hosts, or infrastructure.',
           second: 'Host-specific capabilities never leak into shared Core.',
-          third: 'Screens never pierce the Adapter to style HeroUI internals.',
+          third: 'Screens never pierce the Adapter to style MUI internals.',
           fourth: 'Local differences use variants and composition first.',
         },
       },

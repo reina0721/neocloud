@@ -1,90 +1,68 @@
-import { ToastQueue, type ToastContentValue } from '@heroui/react/toast';
-import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
-
-import { FeedbackContext, type FeedbackController } from './feedback-context';
-import type { FeedbackTone } from './feedback';
-import { BusyIndicator } from './busy-indicator';
-const FeedbackToastRegion = lazy(() =>
-  import('./feedback-toast-region').then((module) => ({ default: module.FeedbackToastRegion })),
-);
-
-const toneVariant: Record<FeedbackTone, ToastContentValue['variant']> = {
-  danger: 'danger',
-  info: 'accent',
-  neutral: 'default',
-  success: 'success',
-  warning: 'warning',
-};
-
+'use client';
+import { lazy, Suspense, useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { FeedbackContext, type FeedbackController, type FeedbackMessage } from './feedback-context';
+const ToastHost = lazy(() => import('./feedback-toast-host'));
 export type FeedbackProviderProps = Readonly<{
   children: ReactNode;
   closeLabel: string;
   loadingLabel: string;
-  /**
-   * 非关键成功提示时长（ms）。Host 经展示策略传入（settings 通知 → 提示时长
-   * short/standard/long → 3/5/8s）；persistent/loading toast 不受影响。缺省 5000ms。
-   */
   toastDurationMs?: number;
 }>;
+export type FeedbackTransport = Readonly<{
+  enqueue: (id: string, message: FeedbackMessage) => void;
+  dismiss: (id?: string) => void;
+}>;
 
-export function FeedbackProvider({
-  children,
-  closeLabel,
-  loadingLabel,
-  toastDurationMs = 5_000,
-}: FeedbackProviderProps) {
-  const [queue] = useState(() => new ToastQueue<ToastContentValue>({ maxVisibleToasts: 3 }));
-  const [requested, setRequested] = useState(false);
+/** Keep the context and business subtree stable while loading the notification renderer. */
+export function FeedbackProvider({ children, ...labels }: FeedbackProviderProps) {
+  const [active, setActive] = useState(false);
+  const state = useRef({
+    sequence: 0,
+    pending: new Map<string, FeedbackMessage>(),
+    transport: undefined as FeedbackTransport | undefined,
+  });
   const controller = useMemo<FeedbackController>(
     () => ({
-      clear: () => queue.clear(),
-      dismiss: (id) => queue.close(id),
-      notify: ({
-        title,
-        description,
-        tone = 'neutral',
-        action,
-        duration = 'transient',
-        loading = false,
-      }) => {
-        setRequested(true);
-        return queue.add(
-          {
-            title,
-            variant: toneVariant[tone],
-            ...(description ? { description } : {}),
-            ...(action
-              ? {
-                  actionProps: {
-                    children: action.label,
-                    onPress: action.onPress,
-                    variant: 'ghost',
-                  },
-                }
-              : {}),
-            ...(loading ? { isLoading: true } : {}),
-          },
-          { timeout: loading || duration === 'persistent' ? 0 : toastDurationMs },
-        );
+      notify(message) {
+        const id = `feedback-${++state.current.sequence}`;
+        if (state.current.transport) state.current.transport.enqueue(id, message);
+        else {
+          state.current.pending.set(id, message);
+          setActive(true);
+        }
+        return id;
+      },
+      dismiss(id) {
+        state.current.pending.delete(id);
+        state.current.transport?.dismiss(id);
+      },
+      clear() {
+        state.current.pending.clear();
+        state.current.transport?.dismiss();
       },
     }),
-    [queue, toastDurationMs],
+    [],
   );
-
+  const connect = useCallback((transport: FeedbackTransport) => {
+    state.current.transport = transport;
+    for (const [id, message] of state.current.pending) transport.enqueue(id, message);
+    state.current.pending.clear();
+    return () => {
+      if (state.current.transport === transport) state.current.transport = undefined;
+    };
+  }, []);
   return (
     <FeedbackContext value={controller}>
       {children}
-      {requested ? (
-        <Suspense
-          fallback={
-            <div className="pointer-events-none fixed bottom-6 right-6 z-toast">
-              <BusyIndicator label={loadingLabel} />
-            </div>
-          }
-        >
-          <FeedbackToastRegion queue={queue} closeLabel={closeLabel} />
-        </Suspense>
-      ) : null}
+      <Suspense
+        fallback={
+          <div role="status" className="sr-only">
+            {labels.loadingLabel}
+          </div>
+        }
+      >
+        {active ? <ToastHost {...labels} connect={connect} /> : null}
+      </Suspense>
     </FeedbackContext>
   );
 }

@@ -635,7 +635,7 @@ export function createFilesRuntime(
           '[data-file-workspace-search] input[type="search"]',
         ) ?? document.querySelector<HTMLInputElement>('#main-content input[type="search"]')
       )?.focus(),
-    focusFiles: () => document.getElementById('main-content')?.focus(),
+    focusFiles: () => document.getElementById('main-content')?.focus({ preventScroll: true }),
     focusEntry: (id) => document.getElementById('file-entry-' + id)?.focus(),
     observeListEnd: observeFileListEnd,
     subscribeShortcuts: (listener, accepted) => {
@@ -651,6 +651,13 @@ export function createFilesRuntime(
         if (
           target instanceof Element &&
           target.closest('input,textarea,select,[contenteditable="true"],[role="treegrid"]')
+        )
+          return;
+        // 原生控件拥有 Enter/Space 等按键；只有文件条目交给集合快捷键。
+        if (
+          target instanceof Element &&
+          !target.closest('[data-file-entry]') &&
+          target.closest('button,a[href],[role="button"],[role="combobox"],[role="slider"]')
         )
           return;
         let shortcut: FileShortcut | undefined;

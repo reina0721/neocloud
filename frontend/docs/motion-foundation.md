@@ -10,7 +10,7 @@ Motion Recipe      Design Token 之上的语义行为，决定如何呈现连续
 Semantic Component 绑定真实生命周期，决定为什么动、何时动
 ```
 
-页面只声明业务状态，不填写 duration、easing、keyframes 或浏览器观察器。动画层不得改变高度、滚动容器、定位上下文或 Layout Contract。Overlay Enter/Exit 继续完全由 HeroUI 与 UI Adapter 主持。
+页面只声明业务状态，不填写 duration、easing、keyframes 或浏览器观察器。动画层不得改变高度、滚动容器、定位上下文或 Layout Contract。Overlay Enter/Exit 继续完全由 MUI 与 UI Adapter 主持。
 
 ## 2. 生命周期与所有权
 
@@ -22,26 +22,26 @@ Semantic Component 绑定真实生命周期，决定为什么动、何时动
 
 `appearance.pageTransition` 是 Surface Screen Recipe 的选择器，默认 `default`：
 
-| 值           | Recipe                      | 行为                                                                           |
-| ------------ | --------------------------- | ------------------------------------------------------------------------------ |
-| `default`    | 无新增（沿用标题方向进入）  | 非持久 PageHeader 的 `content-rise-in` / `surface-enter-forward`，项目现行体验 |
-| `fade`       | `surface-screen-fade`       | 整页淡入，无位移                                                               |
-| `fade-slide` | `surface-screen-fade-slide` | 自右轻移入 + 淡入（`--motion-distance-enter`）                                 |
-| `fade-up`    | `surface-screen-fade-up`    | 自下轻移入 + 淡入                                                              |
-| `fade-down`  | `surface-screen-fade-down`  | 自上轻移入 + 淡入                                                              |
-| `none`       | 无                          | 仅停用页面切换动画，不关闭其它动效                                             |
+| 值           | Recipe                                                 | 行为                                           |
+| ------------ | ------------------------------------------------------ | ---------------------------------------------- |
+| `default`    | `surface-screen-fade-up` / `surface-screen-fade-slide` | 非持久内容区域轻抬升；向前路由轻移入           |
+| `fade`       | `surface-screen-fade`                                  | 整页淡入，无位移                               |
+| `fade-slide` | `surface-screen-fade-slide`                            | 自右轻移入 + 淡入（`--motion-distance-enter`） |
+| `fade-up`    | `surface-screen-fade-up`                               | 自下轻移入 + 淡入                              |
+| `fade-down`  | `surface-screen-fade-down`                             | 自上轻移入 + 淡入                              |
+| `none`       | 无                                                     | 仅停用页面切换动画，不关闭其它动效             |
 
-- 非默认值下标题动画让位（`animation: none`），避免与整页 recipe 叠加；
+- 标题不再单独播放路由动画，避免与内容 recipe 叠加；
 - 动画只作用于 `.surface-route-content > .surface-page-stack`，纯 opacity/transform；
 - 含嵌套 Route 的持久面板（`:has([data-route-content])`）不重放整页动画；
 - `motion=reduced`、系统 reduced-motion 与 `data-motion-screen='off'` 统一降级；
-- 只实现 enter（React commit 替换子树），Vben 的 leave 过渡不适用；`fade-scale` 不在 Vben 可选集合，未提供。
+- 路由使用 enter 动画，React commit 后立即替换旧内容；不延迟业务导航等待退出动画。
   | 数据 readiness | `AsyncRegion`、`StateRegion` | Universal / Product Surface | initial 才替换 Skeleton；refresh 保留旧内容；background 静默 |
   | 首次进入视口 | `ViewportReveal` | 已登记浏览器适配 + Host 装配 + Surface recipe | Page 语义项 scope，单例 Observer，默认可见，首次进入一次 |
   | 同路由内容切换 | `ContentSwapTransition` | UI Adapter | 使用稳定 `contentKey`；`TabsView` 默认接入；筛选刷新不使用它 |
   | Inline Feedback Presence | `FeedbackPresence` | UI Adapter | exit 期间立即退出辅助技术与交互树；支持快速反转；Toast 不接入 |
   | 非 Avatar 图片 readiness | `ReadyImage` | UI Adapter | width/height 预留空间，load + decode 后 crossfade，error 保持尺寸 |
-  | Overlay | HeroUI compound lifecycle | UI Adapter | 禁止再套 Presence 或页面动画容器 |
+  | Overlay | MUI compound lifecycle | UI Adapter | 禁止再套 Presence 或页面动画容器 |
 
 冷启动与路由挂起统一使用 `PageLoadingSurface`。根 `loading.tsx` 与各路由 Suspense 都必须提供 `page/catalog/collection/form` 结构化 Skeleton；禁止 `fallback={null}` 和居中卡片整屏替换 Shell。
 
@@ -140,18 +140,18 @@ Browser API 的一般豁免。新增平台生命周期仍优先在 Host 或明�
 - Web Host `ScrollRevealRuntime` 单点采样正文 scrollY，向现役 Provider 提供 fast/restored
   判断；单个 passive listener，无每帧 DOM 测量、无滚动时 React 更新。快滚跳过后续项动画；
   已越过区域、首次恢复位置、hash、Reduced/off 和焦点进入直接稳定，反向浏览不重播。
-- RouteTransition 仅给非持久 PageHeader 轻量方向/抬升，标题保持不透明，取消页面直接子区段的路由 stagger。
+- RouteTransition 给非持久页面内容统一的短距离进入动画；标题随所属内容进入，不另开一段路由 stagger。
   设置持久 Shell 不动；内容项由视口生命周期拥有，避免父子叠加。原显式单 Region
   ViewportReveal 仍用于真正单一内容单元；禁止用于包含多个独立语义项的大容器。
-- 高对比度（含系统 more）将 Reveal 透明度起点设为1；Adapter 的 Dialog、Confirm、Command、Drawer 打开/关闭不做透明度过渡，HeroUI 继续拥有焦点与生命周期。
+- 高对比度（含系统 more）将 Reveal 透明度起点设为1；Adapter 的 Dialog、Confirm、Command、Drawer 打开/关闭不做透明度过渡，MUI 继续拥有焦点与生命周期。
 - Async Region 各自 progressive ready；不得 Wait-all → Reveal-all。
 - `refreshing → ready`、`background → ready` 保留同一内容实例，不重播整块进场。
-- `TabsView` 的键盘、Selection 和 Focus 仍由 HeroUI 主持，Content Swap 只主持面板视觉切换。
+- `TabsView` 的键盘、Selection 和 Focus 仍由 MUI 主持，Content Swap 只主持面板视觉切换。
 - 初始内容不是内容替换，`ContentSwapTransition` 首次挂载默认稳定；仅 `contentKey`
   改变后播放替换。Tabs 的惰性 Panel 因选择变化挂载时，经 `initialChange` 传递该生命周期，
   首次选择不重复叠加淡入。
 - 输入每次击键、筛选请求、表格行和 UI Element 不播放页面级动效。
-- Avatar 继续使用 HeroUI Image/Fallback readiness，不嵌套 `ReadyImage`。
+- Avatar 继续使用 MUI Avatar 图片与回退生命周期，不嵌套 `ReadyImage`。
 
 ## 7. Reduced Motion 与中断安全
 
@@ -177,7 +177,7 @@ Browser API 的一般豁免。新增平台生命周期仍优先在 Host 或明�
 2. 数据首次就绪/刷新/后台更新 → AsyncRegion 或 StateRegion；刷新保留旧内容。
 3. 语义内容项首次进入视口 → Page/ViewportReveal items；按内容粒度声明，快滚、恢复与焦点直接稳定。
 4. 同一路由替换一个内容域 → ContentSwapTransition，稳定 contentKey；TabsView 已集成。
-5. 展开折叠 → Disclosure；浮层 → Adapter/HeroUI Overlay，禁止第二层 Presence。
+5. 展开折叠 → Disclosure；浮层 → Adapter/MUI Overlay，禁止第二层 Presence。
 6. 流内反馈挂载/退出 → FeedbackPresence；Toast 仍由现有 FeedbackController 管理。
 7. 控件 Hover/Press/Focus → 控件本身；不以路由或 Reveal 表达操作状态。
 

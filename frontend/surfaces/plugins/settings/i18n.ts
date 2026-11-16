@@ -90,6 +90,7 @@ export const pluginI18nResources = {
           themeFollowSystem: '跟随操作系统的浅色/深色偏好',
           accent: '强调色',
           accentDescription: '产品主操作与选中状态的强调颜色。',
+          accentPink: '樱花粉',
           accentPurple: '紫色',
           accentBlue: '蓝色',
           accentGreen: '绿色',
@@ -142,7 +143,7 @@ export const pluginI18nResources = {
             '仅影响页面切换；默认保留项目现行方向进入。选择“关闭”只停用页面切换动画，其他动效不受影响。',
           pageTransitions: {
             default: '默认（方向进入）',
-            defaultDescription: '标题轻量方向过渡，保持当前项目体验。',
+            defaultDescription: '页面内容轻量进入，向前导航时从侧边移入。',
             fade: '淡入',
             fadeDescription: '整页淡入，无位移。',
             fadeSlide: '淡入滑动',
@@ -441,6 +442,7 @@ export const pluginI18nResources = {
           themeFollowSystem: 'Follow the operating system light/dark preference',
           accent: 'Accent color',
           accentDescription: 'Accent for primary actions and selected states.',
+          accentPink: 'Sakura pink',
           accentPurple: 'Purple',
           accentBlue: 'Blue',
           accentGreen: 'Green',
@@ -494,11 +496,11 @@ export const pluginI18nResources = {
             'Removes color overall for long reading sessions or low-stimulation contexts; can be combined with high contrast.',
           pageTransition: 'Page transition',
           pageTransitionDescription:
-            'Affects page switching only; the default keeps the current directional title enter. "Off" disables page transitions without touching other motion.',
+            'Affects page switching only; the default uses a gentle directional content enter. "Off" disables page transitions without touching other motion.',
           pageTransitions: {
             default: 'Default (directional enter)',
             defaultDescription:
-              'Lightweight directional title enter, the current project experience.',
+              'Content enters gently; forward navigation slides in from the side.',
             fade: 'Fade',
             fadeDescription: 'Whole page fades in without displacement.',
             fadeSlide: 'Fade slide',

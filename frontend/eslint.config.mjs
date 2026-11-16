@@ -12,6 +12,8 @@ export default tseslint.config(
       '**/out/**',
       '**/.next/**',
       '**/coverage/**',
+      '**/test-results/**',
+      '**/playwright-report/**',
       '**/node_modules/**',
       'apps/web/public/file-viewers/pdf/**',
     ],

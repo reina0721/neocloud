@@ -1,11 +1,7 @@
-import { Description } from '@heroui/react/description';
-import { FieldError } from '@heroui/react/field-error';
-import { Label } from '@heroui/react/label';
-import { TextArea } from '@heroui/react/textarea';
-import { TextField as HeroTextField } from '@heroui/react/textfield';
-import type { ChangeEvent, FocusEvent, KeyboardEvent, Ref } from 'react';
+'use client';
+import MuiTextField from '@mui/material/TextField';
+import { useId, type ChangeEvent, type FocusEvent, type KeyboardEvent, type Ref } from 'react';
 import type { FieldTextProps, FieldValueProps } from './field-contract';
-
 export type TextAreaFieldProps = FieldTextProps &
   FieldValueProps &
   Readonly<{
@@ -30,31 +26,45 @@ export function TextAreaField({
   name,
   value,
   defaultValue,
+  ref,
+  onChange,
+  onBlur,
+  onKeyDown,
   ...inputProps
 }: TextAreaFieldProps) {
+  const id = useId();
   return (
-    <HeroTextField
-      className="ui-field"
-      isDisabled={disabled}
-      isInvalid={Boolean(error)}
-      {...(name ? { name } : {})}
-      {...(value !== undefined ? { value } : {})}
-      {...(defaultValue !== undefined ? { defaultValue } : {})}
-    >
-      <Label className="ui-field-label">{label}</Label>
-      <TextArea
-        className={`ui-field-control resize-y py-3 ${content === 'code' ? 'font-mono text-xs' : ''}`}
+    <div className="ui-field">
+      <label className="ui-field-label" htmlFor={id}>
+        {label}
+      </label>
+      <MuiTextField
+        id={id}
+        className={`ui-material-field ${content === 'code' ? 'ui-code-field' : ''}`}
+        multiline
         rows={rows}
-        spellCheck={content === 'code' ? false : undefined}
-        autoCapitalize={content === 'code' ? 'none' : undefined}
-        autoCorrect={content === 'code' ? 'off' : undefined}
-        {...inputProps}
+        fullWidth
+        disabled={disabled}
+        error={Boolean(error)}
+        name={name}
+        value={value}
+        defaultValue={defaultValue}
+        inputRef={ref}
+        onChange={onChange}
+        onBlur={onBlur}
+        helperText={error || hint}
+        slotProps={{
+          htmlInput: {
+            ...inputProps,
+            onKeyDown,
+            spellCheck: content === 'code' ? false : undefined,
+            autoCapitalize: content === 'code' ? 'none' : undefined,
+            autoCorrect: content === 'code' ? 'off' : undefined,
+            'aria-label': label,
+          },
+          formHelperText: { className: error ? 'ui-field-error' : 'ui-field-hint' },
+        }}
       />
-      {error ? (
-        <FieldError className="ui-field-error">{error}</FieldError>
-      ) : hint ? (
-        <Description className="ui-field-hint">{hint}</Description>
-      ) : null}
-    </HeroTextField>
+    </div>
   );
 }

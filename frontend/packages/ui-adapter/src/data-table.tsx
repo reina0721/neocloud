@@ -1,4 +1,16 @@
-import { Table } from '@heroui/react/table';
+import MuiTable from '@mui/material/Table';
+import TableContainer from '@mui/material/TableContainer';
+import TableSortLabel from '@mui/material/TableSortLabel';
+import {
+  Table as AriaTable,
+  TableHeader,
+  Column,
+  TableBody,
+  Row,
+  Cell,
+  ResizableTableContainer,
+  ColumnResizer,
+} from 'react-aria-components/Table';
 import { Fragment, useEffect, useRef, useState, type Key, type ReactNode } from 'react';
 
 export type DataColumn<Row> = Readonly<{
@@ -164,7 +176,7 @@ export function DataTable<Row extends Readonly<{ id: string }>>({
     const width = (resizingWidths ?? columnWidths)?.[id];
     return width !== undefined ? { width } : {};
   };
-  const ResizableContainer = onColumnWidthsChange ? Table.ResizableContainer : Fragment;
+  const ResizableContainer = onColumnWidthsChange ? ResizableTableContainer : Fragment;
   const cellSpacing = cellSpacingByDensity[density];
   const pinnedIds = pinnedColumnIds ?? [];
   const pinnedSet = new Set(pinnedIds);
@@ -262,8 +274,8 @@ export function DataTable<Row extends Readonly<{ id: string }>>({
     );
   };
   return (
-    <Table>
-      <Table.ScrollContainer className="min-w-0 overflow-auto" data-table-scroll-container>
+    <div className="ui-data-table">
+      <TableContainer className="min-w-0 overflow-auto" data-table-scroll-container>
         <ResizableContainer
           {...(onColumnWidthsChange
             ? {
@@ -276,7 +288,8 @@ export function DataTable<Row extends Readonly<{ id: string }>>({
               }
             : {})}
         >
-          <Table.Content
+          <MuiTable
+            component={AriaTable}
             aria-label={label}
             className="min-w-full border-separate border-spacing-0 text-left text-sm"
             {...(selection
@@ -311,17 +324,21 @@ export function DataTable<Row extends Readonly<{ id: string }>>({
                 }
               : {})}
           >
-            <Table.Header>
+            <TableHeader>
               {columns.map((column) => {
                 const pinned = pinnedSet.has(column.id);
                 return (
-                  <Table.Column
-                    className={`${cellSpacing} ${stickyHeader || pinned ? 'sticky' : ''} ${stickyHeader ? 'top-0' : ''} ${pinned ? 'z-20 border-r border-border' : ''} border-b border-border bg-surface-muted text-xs font-bold uppercase tracking-wider text-ink`}
+                  <Column
+                    className={`relative ${cellSpacing} ${stickyHeader || pinned ? 'sticky' : ''} ${stickyHeader ? 'top-0' : ''} ${pinned ? 'z-20 border-r border-border' : ''} border-b border-border bg-surface-muted text-xs font-bold uppercase tracking-wider text-ink`}
                     {...widthProps(column.id)}
                     {...(pinned
                       ? {
-                          ref: (element: HTMLTableCellElement | null) => {
-                            if (element) pinnedHeaderRefs.current.set(column.id, element);
+                          ref: (element: HTMLTableCellElement | HTMLDivElement | null) => {
+                            if (element)
+                              pinnedHeaderRefs.current.set(
+                                column.id,
+                                element as HTMLTableCellElement,
+                              );
                             else pinnedHeaderRefs.current.delete(column.id);
                           },
                         }
@@ -332,21 +349,35 @@ export function DataTable<Row extends Readonly<{ id: string }>>({
                     {...(column.sortable ? { allowsSorting: true } : {})}
                     {...(column.rowHeader ? { isRowHeader: true } : {})}
                   >
-                    {({ sortDirection }) => (
+                    {(columnState) => (
                       <>
-                        <Table.SortableColumnHeader {...(sortDirection ? { sortDirection } : {})}>
+                        <TableSortLabel
+                          component="button"
+                          type="button"
+                          active={Boolean(columnState.sortDirection)}
+                          direction={columnState.sortDirection === 'descending' ? 'desc' : 'asc'}
+                          disabled={!column.sortable}
+                          hideSortIcon={!column.sortable}
+                          onClick={() =>
+                            columnState.sort(
+                              columnState.sortDirection === 'ascending'
+                                ? 'descending'
+                                : 'ascending',
+                            )
+                          }
+                        >
                           {column.label}
-                        </Table.SortableColumnHeader>
+                        </TableSortLabel>
                         {onColumnWidthsChange ? (
-                          <Table.ColumnResizer className="translate-x-0" />
+                          <ColumnResizer className="ui-column-resizer absolute end-0 top-0 h-full w-1 translate-x-0 cursor-col-resize bg-border hover:bg-brand" />
                         ) : null}
                       </>
                     )}
-                  </Table.Column>
+                  </Column>
                 );
               })}
-            </Table.Header>
-            <Table.Body
+            </TableHeader>
+            <TableBody
               renderEmptyState={
                 emptyStateHint
                   ? () => (
@@ -358,8 +389,12 @@ export function DataTable<Row extends Readonly<{ id: string }>>({
               }
             >
               {rowEntries.map((entry) => (
-                <Table.Row
-                  className={selection ? 'cursor-pointer' : 'cursor-default'}
+                <Row
+                  className={
+                    selection
+                      ? 'cursor-pointer data-[selected]:bg-brand-soft hover:bg-surface-muted'
+                      : 'cursor-default hover:bg-surface-muted'
+                  }
                   id={entry.row.id}
                   key={entry.row.id}
                   {...(tree ? ({ 'data-tree-depth': entry.depth } as Record<string, number>) : {})}
@@ -367,7 +402,7 @@ export function DataTable<Row extends Readonly<{ id: string }>>({
                   {columns.map((column) => {
                     const pinned = pinnedSet.has(column.id);
                     return (
-                      <Table.Cell
+                      <Cell
                         className={`${cellSpacing} ${rowSeparators ? 'border-b border-border' : ''} ${pinned ? 'sticky z-10 border-r border-border bg-surface' : ''} align-middle text-ink`}
                         key={column.id}
                         {...(pinned ? { style: { left: pinnedOffsets[column.id] ?? 0 } } : {})}
@@ -375,15 +410,15 @@ export function DataTable<Row extends Readonly<{ id: string }>>({
                         {column.rowHeader
                           ? renderRowHeader(column, entry)
                           : column.render(entry.row)}
-                      </Table.Cell>
+                      </Cell>
                     );
                   })}
-                </Table.Row>
+                </Row>
               ))}
-            </Table.Body>
-          </Table.Content>
+            </TableBody>
+          </MuiTable>
         </ResizableContainer>
-      </Table.ScrollContainer>
-    </Table>
+      </TableContainer>
+    </div>
   );
 }

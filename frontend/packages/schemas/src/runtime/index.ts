@@ -37,6 +37,7 @@ import {
   type SchemaSourceSummary,
   type ValidationResult,
 } from './types.ts';
+import { renderTokenValues, type TokenValuesOptions } from './generator-token-values.ts';
 import { readPointer } from './json-pointer.ts';
 import {
   applyTokenRegionContents,
@@ -277,6 +278,11 @@ export async function createSchemaRuntime(options: SchemaRuntimeOptions): Promis
               }
               await writeFile(absoluteTarget, css, 'utf8');
               results.push({ target, generator, ok: true });
+            } else if (generator === 'ts-token-values-v1') {
+              const opt = options as TokenValuesOptions | undefined;
+              if (!opt) throw new SchemaIoError('token values options 缺失');
+              await writeFile(absoluteTarget, renderTokenValues(meta.source, opt), 'utf8');
+              results.push({ target, generator, ok: true });
             } else if (generator === 'css-motion-language-v1') {
               const opt = options as MotionLanguageOptions | undefined;
               if (!opt) throw new SchemaIoError('motion options 缺失');
@@ -338,6 +344,13 @@ export async function createSchemaRuntime(options: SchemaRuntimeOptions): Promis
                 regions: regionResults,
                 ...(drift ? { error: drift } : {}),
               });
+            } else if (generator === 'ts-token-values-v1') {
+              const opt = options as TokenValuesOptions | undefined;
+              if (!opt) throw new SchemaIoError('token values options 缺失');
+              const expected = renderTokenValues(meta.source, opt);
+              const actual = await readFile(absoluteTarget, 'utf8');
+              const ok = actual === expected;
+              results.push({ target, ok, ...(ok ? {} : { error: 'token values 整文件 drift' }) });
             } else if (generator === 'css-motion-language-v1') {
               const opt = options as MotionLanguageOptions | undefined;
               if (!opt) throw new SchemaIoError('motion options 缺失');

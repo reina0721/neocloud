@@ -4,7 +4,7 @@
 - 只拥有 Next Router、Browser API、生命周期、持久化、Error Boundary、View Transition 桥接以及 `surface-foundation` 装配。
 - 页面优先组合 Universal Element 与 Page Pattern；可跨后台业务复用的 Layout/Pattern 必须进入 `packages/surface-foundation` 并完成 Contract 门禁。
 - Reference 数据、场景 Schema 和可直接打开的 URL 只用于确定性验收，不模拟 API、权限引擎或后端业务正确性。
-- 禁止直接导入 HeroUI、React Hook Form、Resolver、i18next/react-i18next；分别经过 `ui-adapter`、`form-foundation` 与 `i18n`。
+- 禁止直接导入 MUI、React Hook Form、Resolver、i18next/react-i18next；分别经过 `ui-adapter`、`form-foundation` 与 `i18n`。
 
 <!-- BEGIN:nextjs-agent-rules -->
 

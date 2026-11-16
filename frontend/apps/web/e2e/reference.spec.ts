@@ -7,7 +7,7 @@ test('Reference 工作台覆盖筛选、Master-Detail 与侧栏布局契约', as
   // 默认每页 20（数据展示全局默认）→ 首页 20 数据行 + 1 表头。
   await expect(page.getByRole('row')).toHaveCount(21);
 
-  await page.getByRole('button', { name: '全部 状态', exact: true }).click();
+  await page.getByRole('combobox', { name: '状态', exact: true }).click();
   await expect(page.getByRole('listbox')).toBeVisible();
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
@@ -42,12 +42,12 @@ test('Reference 工作台覆盖筛选、Master-Detail 与侧栏布局契约', as
 
 test('Reference 非正常状态保持可恢复语义', async ({ page }) => {
   await page.goto('/page-archetypes/resource-list');
-  await page.getByRole('button', { name: '正常 场景状态', exact: true }).click();
+  await page.getByRole('combobox', { name: '场景状态', exact: true }).click();
   await page.getByRole('option', { name: 'Partial Error' }).click();
   await expect(page.getByText('部分指标不可用')).toBeVisible();
   await expect(page.getByRole('grid')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Partial Error 场景状态', exact: true }).click();
+  await page.getByRole('combobox', { name: '场景状态', exact: true }).click();
   await page.getByRole('option', { name: 'Offline' }).click();
   await expect(page.getByText('离线快照可用')).toBeVisible();
   await page.getByRole('button', { name: '恢复正常场景' }).click();

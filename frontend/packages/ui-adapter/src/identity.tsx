@@ -1,7 +1,5 @@
-import { tv } from '@heroui/styles';
-import { Avatar as HeroAvatar } from '@heroui/react/avatar';
+import MuiAvatar from '@mui/material/Avatar';
 import type { ReactNode } from 'react';
-
 export type AvatarPresence = Readonly<{
   label: string;
   tone: 'neutral' | 'success' | 'warning';
@@ -14,35 +12,6 @@ export type AvatarProps = Readonly<{
   presence?: AvatarPresence;
 }>;
 
-const avatarStyles = tv({
-  base: 'shrink-0 overflow-hidden rounded-full bg-surface-inset text-ink',
-  defaultVariants: { size: 'md' },
-  variants: {
-    size: {
-      lg: 'size-12 text-base',
-      md: 'size-9 text-sm',
-      sm: 'size-7 text-xs',
-    },
-  },
-});
-
-const presenceStyles = tv({
-  base: 'absolute bottom-0 right-0 rounded-full border-2 border-surface',
-  defaultVariants: { size: 'md', tone: 'neutral' },
-  variants: {
-    size: {
-      lg: 'size-3.5',
-      md: 'size-3',
-      sm: 'size-2.5',
-    },
-    tone: {
-      neutral: 'bg-ink-muted',
-      success: 'bg-success',
-      warning: 'bg-warning',
-    },
-  },
-});
-
 function initials(name: string) {
   const parts = name.trim().split(/\s+/u).filter(Boolean);
   return (parts.length > 1 ? `${parts[0]?.[0] ?? ''}${parts.at(-1)?.[0] ?? ''}` : name.slice(0, 2))
@@ -53,26 +22,24 @@ function initials(name: string) {
 export function Avatar({ name, src, size = 'md', presence }: AvatarProps) {
   return (
     <span className="relative inline-flex shrink-0">
-      <HeroAvatar className={avatarStyles({ size })}>
-        {src ? <HeroAvatar.Image alt={name} src={src} /> : null}
-        <HeroAvatar.Fallback
-          aria-label={name}
-          className="grid size-full place-items-center font-bold"
-        >
-          {initials(name)}
-        </HeroAvatar.Fallback>
-      </HeroAvatar>
+      <MuiAvatar
+        src={src}
+        alt={name}
+        aria-label={name}
+        className={`shrink-0 bg-surface-inset text-ink ${size === 'lg' ? 'size-12 text-base' : size === 'sm' ? 'size-7 text-xs' : 'size-9 text-sm'}`}
+      >
+        {initials(name)}
+      </MuiAvatar>
       {presence ? (
         <span
-          aria-label={presence.label}
-          className={presenceStyles({ size, tone: presence.tone })}
           role="img"
+          aria-label={presence.label}
+          className={`absolute bottom-0 right-0 rounded-full border-2 border-surface ${size === 'lg' ? 'size-3.5' : size === 'sm' ? 'size-2.5' : 'size-3'} ${presence.tone === 'success' ? 'bg-success' : presence.tone === 'warning' ? 'bg-warning' : 'bg-ink-muted'}`}
         />
       ) : null}
     </span>
   );
 }
-
 export type UserIdentityProps = Readonly<{
   name: string;
   description?: ReactNode;

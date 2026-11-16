@@ -119,7 +119,7 @@ test('F521–F540：真实视频的自动外挂字幕、三格式切换、关闭
   await page.getByRole('button', { name, exact: true }).click();
   const player = page.getByRole('dialog', { name, exact: true });
   const video = player.locator('video');
-  const menu = player.getByRole('button', { name: /字幕/ });
+  const menu = player.getByRole('combobox', { name: '字幕', exact: true });
   const snapshot = () =>
     video.evaluate((element: HTMLVideoElement) => {
       const track = element.textTracks[0];

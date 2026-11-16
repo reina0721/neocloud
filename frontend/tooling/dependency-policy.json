@@ -35,7 +35,7 @@
     },
     "@clouddrive/design-system": {
       "owner": "semantic design tokens",
-      "allowed": ["apps/web"]
+      "allowed": ["apps/web", "packages/ui-adapter"]
     },
     "@clouddrive/form-foundation": {
       "owner": "universal form lifecycle",
@@ -64,15 +64,6 @@
     "@clouddrive/ui-adapter": {
       "owner": "product-neutral UI contracts",
       "allowed": ["apps/web", "packages/surface-foundation", "surfaces"]
-    },
-    "@heroui/react": {
-      "owner": "accessible UI primitives",
-      "allowed": ["packages/ui-adapter"],
-      "category": "ui-primitives"
-    },
-    "@heroui/styles": {
-      "owner": "HeroUI vendor styles",
-      "allowed": ["packages/ui-adapter"]
     },
     "@hookform/resolvers": {
       "owner": "form-schema bridge",
@@ -111,7 +102,7 @@
     },
     "react-dom": {
       "owner": "Web renderer",
-      "allowed": ["apps/web"]
+      "allowed": ["apps/web", "packages/ui-adapter"]
     },
     "react-hook-form": {
       "owner": "complex form state",
@@ -142,14 +133,9 @@
       "allowed": ["apps/web", "surfaces"],
       "category": "client-state"
     },
-    "tw-animate-css": {
-      "owner": "HeroUI component enter/exit animation utilities consumed by UI Adapter styles",
-      "allowed": ["apps/web"],
-      "category": "ui"
-    },
     "@internationalized/date": {
-      "owner": "UI Adapter日历值解析及i18n独立temporal边界的时区/DST转换，第三方日期对象不穿越公开契约",
-      "allowed": ["packages/ui-adapter", "packages/i18n"]
+      "owner": "i18n temporal边界的时区与DST转换",
+      "allowed": ["packages/i18n"]
     },
     "pdfjs-dist": {
       "owner": "Host PDF应用：固定本地SDK资源与独立frame/Worker生命周期；SDK对象不得穿越Surface契约",
@@ -218,6 +204,38 @@
     "@lezer/highlight": {
       "owner": "本人文件代码编辑组件的语法令牌标签",
       "allowed": ["surfaces"]
+    },
+    "@mui/material": {
+      "owner": "Material Design组件与主题二次封装",
+      "allowed": ["packages/ui-adapter"]
+    },
+    "@mui/x-date-pickers": {
+      "owner": "成熟日历与日期输入",
+      "allowed": ["packages/ui-adapter"]
+    },
+    "@emotion/react": {
+      "owner": "Material样式运行时与Next SSR缓存共享",
+      "allowed": ["packages/ui-adapter", "apps/web"]
+    },
+    "@emotion/styled": {
+      "owner": "Material组件样式引擎",
+      "allowed": ["packages/ui-adapter"]
+    },
+    "@mui/material-nextjs": {
+      "owner": "Next App Router流式SSR样式缓存",
+      "allowed": ["apps/web"]
+    },
+    "@emotion/cache": {
+      "owner": "Next Emotion样式收集",
+      "allowed": ["apps/web"]
+    },
+    "dayjs": {
+      "owner": "MUI日期适配器，日期对象留在Adapter",
+      "allowed": ["packages/ui-adapter"]
+    },
+    "notistack": {
+      "owner": "有界通知队列与生命周期",
+      "allowed": ["packages/ui-adapter"]
     }
   }
 }

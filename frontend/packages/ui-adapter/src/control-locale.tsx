@@ -1,6 +1,10 @@
 import { I18nProvider } from 'react-aria-components/I18nProvider';
 import type { ReactNode } from 'react';
-import { ControlWeekStartContext, type ControlWeekStart } from './control-locale-context';
+import {
+  ControlWeekStartContext,
+  ControlLocaleContext,
+  type ControlWeekStart,
+} from './control-locale-context';
 
 export type ControlLocaleProviderProps = Readonly<{
   locale: string;
@@ -12,7 +16,9 @@ export type ControlLocaleProviderProps = Readonly<{
 export function ControlLocaleProvider({ locale, weekStart, children }: ControlLocaleProviderProps) {
   return (
     <I18nProvider locale={locale}>
-      <ControlWeekStartContext value={weekStart}>{children}</ControlWeekStartContext>
+      <ControlLocaleContext value={{ locale, ...(weekStart ? { weekStart } : {}) }}>
+        <ControlWeekStartContext value={weekStart}>{children}</ControlWeekStartContext>
+      </ControlLocaleContext>
     </I18nProvider>
   );
 }

@@ -178,7 +178,7 @@ assert(
     localPath: 'apps/web/src/app/example.tsx',
     specifier: '@heroui/react',
     workspace: 'apps/web',
-  }).some(([rule]) => rule === 'HeroUI isolation'),
+  }).some(([rule]) => rule === 'Retired UI library'),
   'UI Adapter 外导入 HeroUI 必须失败',
 );
 
@@ -229,11 +229,11 @@ assert(
 assert.deepEqual(
   findImportPolicyViolations({
     localPath: 'packages/ui-adapter/src/action.tsx',
-    specifier: '@heroui/react',
+    specifier: '@mui/material/Button',
     workspace: 'packages/ui-adapter',
   }),
   [],
-  'UI Adapter 内导入 HeroUI 应通过',
+  'UI Adapter 内导入 Material UI 应通过',
 );
 
 assert(

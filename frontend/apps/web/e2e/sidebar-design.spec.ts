@@ -8,7 +8,7 @@ async function collapse(page: Page) {
   // 页面实现按需加载：先等 shell hydration，避免冷编译时在按钮出现前就到超时。
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   await page.getByRole('button', { name: '收起侧栏' }).click();
-  await expect(page.locator('aside').first()).toHaveCSS('width', '80px');
+  await expect(page.locator('aside').first()).toHaveCSS('width', '64px');
 }
 
 test('Compact rail uses coherent geometry, current route, named groups and focus/hover hints', async ({
@@ -22,7 +22,7 @@ test('Compact rail uses coherent geometry, current route, named groups and focus
     const box = await item.boundingBox();
     expect(box?.width).toBe(48);
     expect(box?.height).toBe(48);
-    expect(box!.x + box!.width / 2).toBe(40);
+    expect(box!.x + box!.width / 2).toBe(32);
     await expect(item.locator('svg').first()).toHaveCSS('width', '24px');
     await expect(item.locator('svg').first()).toHaveAttribute('aria-hidden', 'true');
   }
@@ -57,7 +57,7 @@ test('Compact rail uses coherent geometry, current route, named groups and focus
   await expect(page).toHaveURL(/\/settings$/);
   await expect(settings).toHaveAttribute('aria-current', 'page');
   await page.reload();
-  await expect(page.locator('aside').first()).toHaveCSS('width', '80px');
+  await expect(page.locator('aside').first()).toHaveCSS('width', '64px');
 });
 
 test('Hover bridge, click pin, second click close and keyboard focus survive pointer departure', async ({
@@ -87,8 +87,9 @@ test('Hover bridge, click pin, second click close and keyboard focus survive poi
   await trigger.focus();
   await trigger.press('Enter');
   await expect(flyout).toBeVisible();
-  await page.keyboard.press('Tab');
   await expect(flyout.getByRole('link').first()).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(flyout.getByRole('link').nth(1)).toBeFocused();
   await page.mouse.move(700, 200);
   await page.waitForTimeout(400);
   await expect(flyout).toBeVisible();
@@ -123,7 +124,7 @@ test('Mode round trip retains exploration and closes old portal; expanded layout
     'aria-expanded',
     'true',
   );
-  await expect(page.locator('aside').first()).toHaveCSS('width', '264px');
+  await expect(page.locator('aside').first()).toHaveCSS('width', '240px');
   await expect(nav.getByRole('link', { name: '工作台', exact: true }).locator('svg')).toHaveCSS(
     'width',
     '16px',
@@ -140,7 +141,7 @@ test('Compact rail stays usable at 1024/1440/2560, dark English, short height an
   await page.getByRole('button', { name: 'Switch theme', exact: true }).click();
   for (const width of [1024, 1440, 2560]) {
     await page.setViewportSize({ width, height: 900 });
-    await expect(page.locator('aside').first()).toHaveCSS('width', '80px');
+    await expect(page.locator('aside').first()).toHaveCSS('width', '64px');
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
@@ -170,7 +171,7 @@ test('Compact rail stays usable at 1024/1440/2560, dark English, short height an
   await page.evaluate(() => {
     document.documentElement.style.fontSize = '125%';
   });
-  await expect(page.locator('aside').first()).toHaveCSS('width', '100px');
+  await expect(page.locator('aside').first()).toHaveCSS('width', '80px');
   await expect(bottom).toHaveCSS('width', '60px');
   await expect(bottom.locator('svg').first()).toHaveCSS('width', '30px');
   await saveEvidenceScreenshot(page, {
@@ -193,19 +194,19 @@ test('Compact rail stays usable at 1024/1440/2560, dark English, short height an
       },
       { density, enhanceTarget },
     );
-    await expect(page.locator('aside').first()).toHaveCSS('width', `${targetSize + 32}px`);
+    await expect(page.locator('aside').first()).toHaveCSS('width', '64px');
     await expect(bottom).toHaveCSS('width', `${targetSize}px`);
     const icon = await bottom.locator('svg').first().boundingBox();
-    expect(icon!.x + icon!.width / 2).toBe((targetSize + 32) / 2);
+    expect(icon!.x + icon!.width / 2).toBe(64 / 2);
     await page.getByRole('button', { name: 'Expand sidebar', exact: true }).click();
-    await expect(page.locator('aside').first()).toHaveCSS('width', '264px');
+    await expect(page.locator('aside').first()).toHaveCSS('width', '240px');
     const expandedIcon = await nav
       .getByRole('link', { name: 'Workbench', exact: true })
       .locator('svg')
       .boundingBox();
-    expect(expandedIcon!.x + expandedIcon!.width / 2).toBe((targetSize + 32) / 2);
+    expect(expandedIcon!.x + expandedIcon!.width / 2).toBe(32);
     await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click();
-    await expect(page.locator('aside').first()).toHaveCSS('width', `${targetSize + 32}px`);
+    await expect(page.locator('aside').first()).toHaveCSS('width', '64px');
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
@@ -257,7 +258,7 @@ test('Mobile Drawer remains expanded, traps focus and restores desktop collapse 
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.getByRole('button', { name: '展开侧栏', exact: true })).toBeVisible();
-  await expect(page.locator('aside').first()).toHaveCSS('width', '80px');
+  await expect(page.locator('aside').first()).toHaveCSS('width', '64px');
 });
 
 test.describe('Touch desktop rail', () => {
@@ -282,9 +283,9 @@ test('Reduced motion and repeated mode changes keep header and content in their 
   await page.goto('/');
   for (let i = 0; i < 4; i++) {
     await page.getByRole('button', { name: '收起侧栏', exact: true }).click();
-    await expect(page.locator('aside').first()).toHaveCSS('width', '80px');
+    await expect(page.locator('aside').first()).toHaveCSS('width', '64px');
     await page.getByRole('button', { name: '展开侧栏', exact: true }).click();
-    await expect(page.locator('aside').first()).toHaveCSS('width', '264px');
+    await expect(page.locator('aside').first()).toHaveCSS('width', '240px');
   }
   const duration = await page
     .locator('.surface-shell-grid')
@@ -373,22 +374,22 @@ test('Standard motion changes width monotonically and keeps header/content natur
       return frames;
     });
   for (const [label, finalWidth] of [
-    ['收起侧栏', 80],
-    ['展开侧栏', 264],
+    ['收起侧栏', 64],
+    ['展开侧栏', 240],
   ] as const) {
     const samples = sampleFrames();
     await page.getByRole('button', { name: label, exact: true }).click();
     const frames = await samples;
     expect(frames.at(-1)?.rail).toBe(finalWidth);
-    expect(frames.some((frame) => frame.rail > 80 && frame.rail < 264)).toBe(true);
+    expect(frames.some((frame) => frame.rail > 64 && frame.rail < 240)).toBe(true);
     for (let i = 0; i < frames.length; i++) {
       const frame = frames[i]!;
       expect(frame.overflow).toBe(false);
       expect(Math.abs(frame.header - frame.rail)).toBeLessThan(1);
       expect(frame.main).toBeGreaterThanOrEqual(frame.rail);
-      expect(frame.iconCenter).toBe(40);
+      expect(frame.iconCenter).toBe(32);
       if (i > 0) {
-        if (finalWidth === 80) expect(frame.rail).toBeLessThanOrEqual(frames[i - 1]!.rail + 0.5);
+        if (finalWidth === 64) expect(frame.rail).toBeLessThanOrEqual(frames[i - 1]!.rail + 0.5);
         else expect(frame.rail).toBeGreaterThanOrEqual(frames[i - 1]!.rail - 0.5);
       }
     }

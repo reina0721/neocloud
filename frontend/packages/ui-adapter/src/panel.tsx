@@ -1,3 +1,4 @@
+import Paper from '@mui/material/Paper';
 import type { HTMLAttributes, ReactNode } from 'react';
 
 export type PanelProps = Readonly<{
@@ -15,8 +16,8 @@ const toneClass = {
 } as const;
 
 const appearanceClass = {
-  elevated: 'rounded-panel border shadow-panel',
-  outlined: 'rounded-panel border shadow-none',
+  elevated: 'ui-panel rounded-panel border border-transparent shadow-panel',
+  outlined: 'ui-panel rounded-panel border shadow-none',
   embedded: 'border-0 shadow-none',
 } as const;
 
@@ -28,8 +29,13 @@ export function Panel({
   ...aria
 }: PanelProps) {
   return (
-    <section className={`${appearanceClass[appearance]} ${toneClass[tone]} ${className}`} {...aria}>
+    <Paper
+      component="section"
+      elevation={0}
+      className={`${appearanceClass[appearance]} ${toneClass[tone]} ${className}`}
+      {...aria}
+    >
       {children}
-    </section>
+    </Paper>
   );
 }

@@ -90,8 +90,9 @@ async function search(page: Page, value: string) {
   await form.getByRole('button', { name: '搜索', exact: true }).click();
 }
 async function select(page: Page, label: RegExp, value: string) {
-  await page.getByRole('button', { name: label }).click();
+  await page.getByRole('combobox', { name: label }).click();
   await page.getByRole('option', { name: value, exact: true }).click();
+  await expect(page.locator('[role="listbox"]')).toHaveCount(0);
 }
 async function axe(page: Page) {
   // 审核实际可读状态；不能等待整页可能处于挂起状态的滚动过渡。
@@ -318,7 +319,7 @@ test('窄屏英文深色保留筛选和菜单，公共工具栏选择不横向�
     await page.setViewportSize({ width: 320, height: 800 });
     await select(page, /Link status/, 'Enabled and not expired');
     const filterBounds = await page
-      .getByRole('button', { name: /Link status/ })
+      .getByRole('combobox', { name: /Link status/ })
       .evaluate((button) => {
         const toolbar = button.closest('[role="toolbar"]');
         if (!toolbar) throw new Error('Missing share filter toolbar');
@@ -354,7 +355,7 @@ test('窄屏英文深色保留筛选和菜单，公共工具栏选择不横向�
     await page.screenshot({ path: info.outputPath('share-catalog-mobile-menu.png') });
     await page.keyboard.press('Escape');
     await page.goto('/ui-elements/forms');
-    const toolbar = page.getByRole('button', { name: /Toolbar selection/ });
+    const toolbar = page.getByRole('combobox', { name: 'Toolbar selection', exact: true });
     await expect(toolbar).toBeVisible();
     expect((await toolbar.boundingBox())!.width).toBeLessThanOrEqual(240);
     await toolbar.click();
@@ -375,7 +376,12 @@ test('窄屏英文深色保留筛选和菜单，公共工具栏选择不横向�
         await page.getByRole('button', { name: '当前用户', exact: true }).click();
       }
       await page.getByRole('menuitem', { name: /^主题 / }).click();
-      await page.getByRole('menuitemradio', { name: originalTheme, exact: true }).click();
+      await page
+        .getByRole('menuitemradio', {
+          name: originalTheme.replace(/\s*✓\s*$/, '').trim(),
+          exact: true,
+        })
+        .click();
     }
   }
 });

@@ -26,6 +26,11 @@ async function copyCssFixtures(workspace: string) {
   await import('node:fs/promises').then((m) => m.mkdir(dir, { recursive: true }));
   await writeFile(join(dir, 'tokens.css'), await readFile(realTokensPath, 'utf8'), 'utf8');
   await writeFile(join(dir, 'motion.css'), await readFile(realMotionPath, 'utf8'), 'utf8');
+  await writeFile(
+    join(dir, 'parameters.ts'),
+    await readFile(join(dirname(realTokensPath), 'parameters.ts'), 'utf8'),
+    'utf8',
+  );
 }
 
 describe('Schema Runtime 集成（临时 workspace + 真实 fixture）', () => {
@@ -79,6 +84,7 @@ describe('Schema Runtime 集成（临时 workspace + 真实 fixture）', () => {
       expect(freshness.map((f) => ({ target: f.target, ok: f.ok }))).toEqual([
         { target: 'packages/design-system/src/tokens.css', ok: true },
         { target: 'packages/design-system/src/motion.css', ok: true },
+        { target: 'packages/design-system/src/parameters.ts', ok: true },
       ]);
       const results = await runtime.generate();
       expect(results.every((r) => r.ok)).toBe(true);
@@ -122,7 +128,8 @@ describe('Schema Runtime 集成（临时 workspace + 真实 fixture）', () => {
       };
       const etagBefore = computeEtag(doc);
       // 直接手工改一个可写值（绕过 runtime）。
-      meta.source.tokens.theme.radii.control = '0.5rem';
+      meta.source.tokens.theme.radii.control =
+        meta.source.tokens.theme.radii.control === '0.5rem' ? '0.625rem' : '0.5rem';
       await writeFile(schemaFile, JSON.stringify(doc, null, 2), 'utf8');
 
       // 旧 etag（编辑前）→ 冲突。

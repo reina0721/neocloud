@@ -92,7 +92,7 @@ test('拥有者创建预设、修改标题密码有效期、详情、暂停恢�
   const create = page.getByRole('dialog', { name: '分享', exact: true });
   await create.getByRole('button', { name: '添加分享标题', exact: true }).click();
   await create.getByLabel('分享标题（可选）', { exact: true }).fill('UI创建-' + f.suffix);
-  await create.getByRole('button', { name: /分享权限/ }).click();
+  await create.getByRole('combobox', { name: '分享权限', exact: true }).click();
   await page.getByRole('option', { name: '仅上传', exact: true }).click();
   await create.getByRole('button', { name: '创建分享链接', exact: true }).click();
   await expect(create.getByRole('link')).toBeVisible();
@@ -103,9 +103,9 @@ test('拥有者创建预设、修改标题密码有效期、详情、暂停恢�
   await shareMenuAction(page, owned, '修改分享设置');
   const settings = page.getByRole('dialog', { name: '修改分享设置', exact: true });
   await settings.getByLabel('分享标题（可选）', { exact: true }).fill('设置已保存-' + f.suffix);
-  await settings.getByRole('button', { name: /有效期/ }).click();
+  await settings.getByRole('combobox', { name: '有效期', exact: true }).click();
   await page.getByRole('option', { name: '1 小时', exact: true }).click();
-  await settings.getByRole('button', { name: /访问密码操作/ }).click();
+  await settings.getByRole('combobox', { name: '访问密码操作', exact: true }).click();
   await page.getByRole('option', { name: '设置或更换密码', exact: true }).click();
   const password = randomUUID();
   await settings.getByLabel('访问密码（可选）', { exact: true }).fill(password);

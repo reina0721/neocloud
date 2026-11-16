@@ -11,6 +11,7 @@ import {
   FilterBar,
   Page,
   PageHeader,
+  ProductMasthead,
   Section,
   Toolbar,
 } from '@clouddrive/surface-foundation/layout';
@@ -62,6 +63,7 @@ export function PagePatternCatalog({ kind }: Readonly<{ kind: PagePatternKind }>
       {kind === 'layout-navigation' ? (
         <Section title={t('pagePatterns.content.example3')}>
           <div data-reveal-items className="grid gap-5 p-5">
+            <ProductMasthead name="CloudDrive" description={t('pagePatterns.content.example4')} />
             <Toolbar
               label={t('pagePatterns.content.example4')}
               primary={

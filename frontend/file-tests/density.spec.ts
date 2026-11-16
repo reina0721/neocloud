@@ -72,6 +72,9 @@ test.beforeEach(async ({ page }) => {
   await login(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/home?parent=' + fixture.root);
+  await expect(page.getByRole('button', { name: /^(展开|收起)文件导航$/ })).toBeVisible();
+  const expand = page.getByRole('button', { name: '展开文件导航', exact: true });
+  if (await expand.isVisible()) await expand.click();
   await expect(page.locator('[data-file-item]')).toHaveCount(31);
 });
 async function noHorizontalOverflow(page: Page) {
@@ -81,6 +84,9 @@ async function noHorizontalOverflow(page: Page) {
 }
 
 test('F301–308：桌面独立滚动、稳定工具、可见存储与完整品牌', async ({ page }, info) => {
+  await expect
+    .poll(async () => (await page.locator('.surface-file-sidebar').boundingBox())?.width)
+    .toBe(256);
   const header = page.locator('[data-file-workspace-header]');
   const before = await header.boundingBox();
   const main = page.locator('[data-file-scroll-region]');
@@ -93,6 +99,9 @@ test('F301–308：桌面独立滚动、稳定工具、可见存储与完整品�
   await expect.poll(() => main.evaluate((e) => e.scrollTop)).toBeGreaterThan(0);
   expect((await header.boundingBox())?.y).toBe(before?.y);
   expect(await page.evaluate(() => scrollY)).toBe(0);
+  expect(await page.locator('[data-file-workspace]').evaluate((element) => element.scrollTop)).toBe(
+    0,
+  );
   await expect(page.getByRole('region', { name: '存储空间', exact: true })).toBeInViewport();
   await page.getByRole('button', { name: '收起文件导航', exact: true }).click();
   await expect(page.getByRole('link', { name: '我的分享', exact: true })).toBeVisible();
@@ -132,7 +141,11 @@ test('F314–315：根目录隐藏无效返回，长路径和完整路径菜单�
   await expect(page.getByRole('button', { name: '上级目录', exact: true })).toBeVisible();
   await noHorizontalOverflow(page);
   await page.getByRole('button', { name: '完整目录路径', exact: true }).click();
-  await expect(page.getByRole('menuitem', { name: '我的文件', exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole('navigation', { name: '完整目录路径', exact: true })
+      .getByRole('link', { name: '我的文件', exact: true }),
+  ).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: '上级目录', exact: true }).click();
   await expect(page).not.toHaveURL(new RegExp(fixture.longParent));

@@ -18,7 +18,8 @@ export function createFileSidebarPreferences(account: string | null, assertCurre
         const saved = localStorage.getItem(key);
         if (saved !== null) return fileSidebarPreferencesSchema.parse(JSON.parse(saved));
         const previous = localStorage.getItem(previousSidebarKey + '.' + account);
-        const collapsed: unknown = previous === null ? false : JSON.parse(previous);
+        const collapsed: unknown =
+          previous === null ? defaultFileSidebarPreferences.collapsed : JSON.parse(previous);
         if (typeof collapsed !== 'boolean') throw new FilesError('invalid');
         const preferences = { ...defaultFileSidebarPreferences, collapsed };
         localStorage.setItem(key, JSON.stringify(preferences));

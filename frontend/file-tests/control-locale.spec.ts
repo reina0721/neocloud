@@ -16,7 +16,7 @@ test('Application language and week preference reach real audit date controls', 
   await expect(week.getByRole('radio', { name: '周日', exact: true })).toBeChecked();
   await page.goto('/audit-logs?from=2026-10-01T00%3A00%3A00.000Z&to=2026-10-13T23%3A59%3A59.999Z');
   await page.getByText('筛选条件', { exact: true }).click();
-  const dates = page.locator('[data-slot="date-picker"]');
+  const dates = page.getByRole('group', { name: /^(开始日期|结束日期|Start date|End date)$/ });
   await expect(dates).toHaveCount(2);
   const facts = () =>
     dates.evaluateAll((fields) =>
@@ -33,7 +33,7 @@ test('Application language and week preference reach real audit date controls', 
   ]);
   const url = page.url();
   await dates.first().getByRole('button').click();
-  await expect(page.getByRole('dialog').getByRole('gridcell').first()).toHaveAccessibleName(
+  await expect(page.getByRole('dialog').getByRole('columnheader').first()).toHaveAccessibleName(
     /星期日/,
   );
   await page.keyboard.press('Escape');
@@ -43,7 +43,7 @@ test('Application language and week preference reach real audit date controls', 
   await expect(page).toHaveURL(url);
   await dates.first().getByRole('button').click();
   await expect(page.getByRole('dialog').getByText('October 2026', { exact: true })).toBeVisible();
-  await expect(page.getByRole('dialog').getByRole('gridcell').first()).toHaveAccessibleName(
+  await expect(page.getByRole('dialog').getByRole('columnheader').first()).toHaveAccessibleName(
     /Sunday/,
   );
   const accessibility = await new AxeBuilder({ page })

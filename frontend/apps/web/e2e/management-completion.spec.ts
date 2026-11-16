@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { userSchema, auditRecordSchema } from '@clouddrive/surface/identity';
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { waitForVisualReadiness } from './visual-readiness';
 import { saveEvidenceScreenshot } from './evidence-screenshot';
 
 test('Home has only recents and never redirects to a saved draft', async ({ page }) => {
@@ -70,10 +71,7 @@ test('Role members change only the selected role and audit filters survive detai
   await expect(page).toHaveURL(/\/roles\/detail\?id=/);
   const roleId = new URL(page.url()).searchParams.get('id');
   await page.getByRole('searchbox', { name: '搜索待添加用户' }).fill('Member 01');
-  await page
-    .getByRole('button', { name: /添加成员/ })
-    .first()
-    .click();
+  await page.getByRole('combobox', { name: '添加成员', exact: true }).click();
   await page.getByRole('option', { name: /Member 01/ }).click();
   await page.getByRole('button', { name: '添加成员', exact: true }).last().click();
   await page
@@ -151,7 +149,7 @@ for (const variant of ['zh-light', 'en-dark'] as const)
         '/notifications',
       ]) {
         await page.goto(path);
-        await expect(page.locator('main h1')).toBeVisible();
+        await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toBeVisible();
         await expect(page.locator('main')).not.toContainText('identityProduct.');
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
           true,
@@ -212,7 +210,7 @@ for (const width of [320, 390])
     const confirmation = page.getByRole('alertdialog');
     await expect(confirmation).toBeVisible();
     // Overlay enter 动画结束再做 Axe 扫描：半透明过渡态会得到被混合后的低对比度读数。
-    await expect(page.locator('[data-entering]')).toHaveCount(0);
+    await waitForVisualReadiness(page);
     expect(
       (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
         .violations,

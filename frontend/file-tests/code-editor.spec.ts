@@ -57,7 +57,7 @@ test('代码编辑、搜索替换、版本冲突及原始编码保存', async ({
   await page.getByRole('button', { name: 'source.js', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'source.js', exact: true });
   const editor = dialog.getByLabel('文件内容', { exact: true });
-  const language = dialog.getByRole('button', { name: /语言/ });
+  const language = dialog.getByRole('combobox', { name: '语言', exact: true });
   await expect(editor).toContainText('function greet(name)');
   await expect(language).toContainText('自动 · JavaScript');
   await expect(dialog.getByText('UTF-8 · LF', { exact: true })).toBeVisible();
@@ -141,7 +141,7 @@ test('代码编辑、搜索替换、版本冲突及原始编码保存', async ({
   await page.getByRole('button', { name: 'legacy.txt', exact: true }).click();
   const legacy = page.getByRole('dialog', { name: 'legacy.txt', exact: true });
   const legacyEditor = legacy.getByLabel('文件内容', { exact: true });
-  const encoding = legacy.getByRole('button', { name: /读取编码/ });
+  const encoding = legacy.getByRole('combobox', { name: '读取编码', exact: true });
   await expect(legacy.getByRole('alert')).toContainText('无法用所选编码读取');
   await select(encoding, 'GB18030 / GBK');
   await expect(legacyEditor).toContainText('中文');
@@ -165,7 +165,7 @@ test('代码编辑、搜索替换、版本冲突及原始编码保存', async ({
   await page.getByRole('button', { name: 'unicode.txt', exact: true }).click();
   const unicode = page.getByRole('dialog', { name: 'unicode.txt', exact: true });
   await expect(unicode.getByLabel('文件内容', { exact: true })).toHaveText('Unicode 文本');
-  const unicodeEncoding = unicode.getByRole('button', { name: /读取编码/ });
+  const unicodeEncoding = unicode.getByRole('combobox', { name: '读取编码', exact: true });
   await select(unicodeEncoding, 'UTF-8');
   await expect(unicode.getByRole('alert')).toContainText('编辑区保留此前内容');
   await expect(unicode.getByLabel('文件内容', { exact: true })).toHaveText('Unicode 文本');

@@ -65,7 +65,7 @@ for (const factor of [1.25, 2]) {
       if (factor === 1.25) {
         await page.getByRole('button', { name: '收起侧栏' }).click();
         const nav = page.getByRole('navigation', { name: '主导航' });
-        await expect(page.locator('aside').first()).toHaveCSS('width', '80px');
+        await expect(page.locator('aside').first()).toHaveCSS('width', '64px');
         const branch = nav.getByRole('button', { name: 'UI Elements', exact: true });
         expect((await branch.boundingBox())?.width).toBe(48);
         await expect(branch.locator('svg').first()).toHaveCSS('width', '24px');

@@ -3,6 +3,7 @@
 import { TabsView } from '@clouddrive/ui-adapter/data-display';
 import { DisclosurePanel } from '@clouddrive/ui-adapter/disclosure';
 import { BreadcrumbTrail, PaginationControl, TextLink } from '@clouddrive/ui-adapter/navigation';
+import { NavigationItem, NavigationTabs } from '@clouddrive/ui-adapter/destination-navigation';
 import { StepNavigation } from '@clouddrive/ui-adapter/step-navigation';
 import { Tree } from '@clouddrive/ui-adapter/tree';
 import {
@@ -22,6 +23,7 @@ import { UiElementsFamilyPage } from './family-page';
 export function NavigationElementsPage() {
   const { t } = useFrontendTranslation();
   const [page, setPage] = useState(2);
+  const [destination, setDestination] = useState('overview');
   const [contentTab, setContentTab] = useState('overview');
   const [, setLastAction] = useState<string>();
   return (
@@ -38,6 +40,53 @@ export function NavigationElementsPage() {
             description={t('uiElements.catalog.navigationDescription')}
           >
             <div data-reveal-items className="grid gap-4 p-5 lg:grid-cols-2">
+              <ComponentPreview
+                name="NavigationItem"
+                description={t('uiElements.catalog.destinationItemDescription')}
+                states={['Current', 'Keyboard', 'External']}
+              >
+                <nav aria-label={t('uiElements.catalog.destinationLabel')} className="grid gap-1">
+                  <NavigationItem
+                    href="#overview"
+                    label={t('uiElements.catalog.tabsOverview')}
+                    icon={<LayoutDashboard />}
+                    selected={destination === 'overview'}
+                    onNavigate={() => setDestination('overview')}
+                  />
+                  <NavigationItem
+                    href="#notifications"
+                    label={t('uiElements.catalog.tabsNotifications')}
+                    icon={<Bell />}
+                    selected={destination === 'notifications'}
+                    onNavigate={() => setDestination('notifications')}
+                  />
+                </nav>
+              </ComponentPreview>
+              <ComponentPreview
+                name="NavigationTabs"
+                description={t('uiElements.catalog.destinationTabsDescription')}
+                states={['Current', 'Keyboard', 'External']}
+              >
+                <NavigationTabs
+                  label={t('uiElements.catalog.destinationLabel')}
+                  value={destination}
+                  items={[
+                    {
+                      id: 'overview',
+                      href: '#overview',
+                      label: t('uiElements.catalog.tabsOverview'),
+                      icon: <LayoutDashboard />,
+                    },
+                    {
+                      id: 'notifications',
+                      href: '#notifications',
+                      label: t('uiElements.catalog.tabsNotifications'),
+                      icon: <Bell />,
+                    },
+                  ]}
+                  onNavigate={setDestination}
+                />
+              </ComponentPreview>
               <ComponentPreview
                 name="TextLink"
                 description={t('uiElements.catalog.textLinkDescription')}

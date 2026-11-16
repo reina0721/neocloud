@@ -28,35 +28,26 @@ describe('RadioGroupField 内部控件视觉职责', () => {
     const radios = screen.getAllByRole('radio');
     for (const radio of radios) {
       const row = radio.closest('label');
-      expect(row?.querySelector('.radio__control')).not.toBeNull();
+      expect(row?.querySelector('input[type=radio]')).not.toBeNull();
       expect(row?.textContent).toContain(radio.getAttribute('aria-label'));
       expect(row?.querySelector('label')).toBeNull();
     }
   });
 
-  it('indicator dot 只属 selected（unselected/disabled 无实心 dot 可见类）', () => {
-    const { unmount } = renderRadios();
-    // RAC radio 行根带 data-selected；以 input checked 判断选中
-    const inputs = document.querySelectorAll<HTMLInputElement>('input[type="radio"]');
-    const selectedInput = [...inputs].find((i) => i.checked);
-    const unselectedInput = [...inputs].find((i) => !i.checked);
-    if (!selectedInput || !unselectedInput) throw new Error('radio inputs missing');
-    const cardOf = (input: HTMLInputElement) => input.closest('[class*="rounded-panel"]');
-    const dotOf = (card: Element | null) => card?.querySelector('.radio__indicator span');
-    const selectedDot = dotOf(cardOf(selectedInput));
-    const unselectedDot = dotOf(cardOf(unselectedInput));
-    // dot 几何固定且跟随 selected 显隐（class 契约：opacity-0 默认，group-data-[selected] 显示）
-    expect(selectedDot?.getAttribute('class')).toContain('size-2.5');
-    expect(selectedDot?.getAttribute('class')).toContain('group-data-[selected]:opacity-100');
-    expect(unselectedDot?.getAttribute('class')).toContain('opacity-0');
-    unmount();
+  it('受控选中值与禁用状态独立，不产生第二个可交互 indicator', () => {
+    renderRadios();
+    expect(screen.getByRole('radio', { name: 'A' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'B' })).not.toBeChecked();
+    expect(screen.getByRole('radio', { name: 'B' })).toBeDisabled();
+    for (const radio of screen.getAllByRole('radio'))
+      expect(radio.closest('label')?.querySelectorAll('input')).toHaveLength(1);
   });
 
   it('CheckboxField 的点击标签包含指示器和文字，不产生嵌套 label', () => {
     render(<CheckboxField checked label="复选框" onCheckedChange={() => undefined} />);
     const box = screen.getByRole('checkbox');
     const row = box.closest('label');
-    expect(row?.querySelector('.checkbox__control')).not.toBeNull();
+    expect(row?.querySelector('input[type=checkbox]')).not.toBeNull();
     expect(row?.textContent).toContain('复选框');
     expect(row?.querySelector('label')).toBeNull();
   });
@@ -156,7 +147,7 @@ describe('ToggleGroup 内部 icon 契约', () => {
     );
     const singleGroup = screen.getByRole('radiogroup', { name: '单选项' });
     const singleCls = (singleGroup.getAttribute('class') ?? '').split(' ');
-    expect(singleCls.some((c) => c.startsWith('gap-'))).toBe(false);
+    expect(singleCls.filter((c) => c.startsWith('gap-'))).toEqual(['gap-0']);
     unmountSingle();
 
     const { unmount: unmountMulti } = render(
@@ -174,7 +165,7 @@ describe('ToggleGroup 内部 icon 契约', () => {
     const multiGroup = screen.getByRole('toolbar', { name: '多选项' });
     const multiCls = (multiGroup.getAttribute('class') ?? '').split(' ');
     expect(multiCls.some((c) => c === 'gap-1' || c.startsWith('gap-'))).toBe(true);
-    const items = multiGroup.querySelectorAll('[data-slot="toggle-button"]');
+    const items = multiGroup.querySelectorAll('button[aria-pressed]');
     expect(items.length).toBeGreaterThanOrEqual(2);
     for (const item of items) {
       const cls = (item.getAttribute('class') ?? '').split(' ');

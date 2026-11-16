@@ -162,7 +162,7 @@ test.describe('API workbench execution and state', () => {
       page.getByText('JSON 格式无效，请检查括号、引号和逗号。', { exact: true }),
     ).toBeVisible();
     await expect(body).toHaveValue('{');
-    await page.getByRole('button', { name: 'JSON 格式', exact: true }).click();
+    await page.getByRole('combobox', { name: '格式', exact: true }).click();
     await page.getByRole('option', { name: '无请求体', exact: true }).click();
     const confirm = page.getByRole('alertdialog', { name: '更改请求体格式', exact: true });
     await assertAccessible(page, '[role="alertdialog"]');
@@ -361,7 +361,7 @@ test('dark English layout, keyboard collection navigation and floating layer bou
     .getByRole('tablist', { name: 'Params', exact: true })
     .getByRole('tab', { name: 'Auth', exact: true })
     .click();
-  await page.getByRole('button', { name: 'No Auth Auth Type', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Auth Type', exact: true }).click();
   const listbox = page.getByRole('listbox', { name: 'Auth Type', exact: true });
   const box = await listbox.boundingBox();
   expect(box).not.toBeNull();

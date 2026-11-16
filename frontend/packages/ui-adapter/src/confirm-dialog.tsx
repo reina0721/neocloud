@@ -1,9 +1,11 @@
-import { AlertDialog } from '@heroui/react/alert-dialog';
-import { Button as HeroButton } from '@heroui/react/button';
+'use client';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import { useId, useRef, useState, type ReactNode } from 'react';
+import { Action } from './action';
 import { OverlayTriggerAction } from './overlay-trigger';
-import { actionStyles } from './action-styles';
-import { useRef, useState, type ReactNode } from 'react';
-
 export type ConfirmDialogProps = Readonly<{
   triggerLabel: string;
   title: string;
@@ -39,6 +41,8 @@ export function ConfirmDialog({
   isOpen,
   onOpenChange,
 }: ConfirmDialogProps) {
+  const titleId = useId();
+  const descriptionId = useId();
   const controlled = isOpen !== undefined;
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const open = controlled ? isOpen : internalOpen;
@@ -67,12 +71,7 @@ export function ConfirmDialog({
   };
 
   return (
-    <AlertDialog
-      isOpen={open}
-      onOpenChange={(next) => {
-        if (!pendingRef.current) setOpen(next);
-      }}
-    >
+    <>
       {controlled ? null : (
         <OverlayTriggerAction
           tone={tone === 'danger' ? 'danger' : 'default'}
@@ -81,52 +80,47 @@ export function ConfirmDialog({
           {triggerLabel}
         </OverlayTriggerAction>
       )}
-      <AlertDialog.Backdrop
-        isDismissable={!pending}
-        isKeyboardDismissDisabled={pending}
-        className="ui-overlay-motion bg-scrim"
+      <Dialog
+        open={open}
+        onClose={() => {
+          if (!pendingRef.current) setOpen(false);
+        }}
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        fullWidth
+        maxWidth="sm"
+        role="alertdialog"
+        slotProps={{ paper: { className: 'ui-overlay-surface ui-dialog-layout' } }}
       >
-        <AlertDialog.Container className="ui-overlay-motion" placement="center" size="md">
-          <AlertDialog.Dialog className="ui-overlay-surface ui-dialog-layout w-full">
-            <AlertDialog.Header className="px-6 pt-6">
-              <AlertDialog.Icon status={tone === 'danger' ? 'danger' : 'accent'} />
-              <AlertDialog.Heading className="mt-4 text-lg font-bold text-ink">
-                {title}
-              </AlertDialog.Heading>
-            </AlertDialog.Header>
-            <AlertDialog.Body className="ui-dialog-body px-6 py-4 text-sm leading-6 text-ink-muted">
-              <p>{description}</p>
-              <div className="mt-3 rounded-control bg-surface-muted p-3 text-ink">{impact}</div>
-              {failed ? (
-                <p className="mt-3 font-medium text-danger" role="alert">
-                  {failureMessage}
-                </p>
-              ) : null}
-            </AlertDialog.Body>
-            <AlertDialog.Footer className="ui-dialog-footer flex flex-wrap justify-end gap-3 border-t border-border px-6 py-4">
-              <AlertDialog.CloseTrigger
-                aria-label={cancelLabel}
-                className={actionStyles({ variant: 'quiet' }) + ' static w-auto min-w-20'}
-                isDisabled={pending}
-              >
-                {cancelLabel}
-              </AlertDialog.CloseTrigger>
-              <HeroButton
-                className={actionStyles({ variant: tone === 'danger' ? 'danger' : 'primary' })}
-                isDisabled={confirmDisabled || pending}
-                isPending={pending}
-                onPress={() => void confirm()}
-              >
-                {confirmLabel}
-              </HeroButton>
-            </AlertDialog.Footer>
-          </AlertDialog.Dialog>
-        </AlertDialog.Container>
-      </AlertDialog.Backdrop>
-    </AlertDialog>
+        <DialogTitle component="h2" id={titleId} className="px-6 pt-6 text-lg font-bold text-ink">
+          {title}
+        </DialogTitle>
+        <DialogContent className="ui-dialog-body px-6 py-4 text-sm leading-6 text-ink-muted">
+          <p id={descriptionId}>{description}</p>
+          <div className="mt-3 rounded-control bg-surface-muted p-3 text-ink">{impact}</div>
+          {failed ? (
+            <p role="alert" className="mt-3 font-medium text-danger">
+              {failureMessage}
+            </p>
+          ) : null}
+        </DialogContent>
+        <DialogActions className="ui-dialog-footer flex flex-wrap gap-3 border-t border-border px-6 py-4">
+          <Action variant="quiet" disabled={pending} onPress={() => setOpen(false)}>
+            {cancelLabel}
+          </Action>
+          <Action
+            variant={tone === 'danger' ? 'danger' : 'primary'}
+            disabled={confirmDisabled || pending}
+            loading={pending}
+            onPress={() => void confirm()}
+          >
+            {confirmLabel}
+          </Action>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
-
 export type DestructiveConfirmDialogProps = Omit<ConfirmDialogProps, 'tone'>;
 
 export function DestructiveConfirmDialog(props: DestructiveConfirmDialogProps) {

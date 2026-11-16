@@ -1,10 +1,10 @@
-import { Description } from '@heroui/react/description';
-import { FieldError } from '@heroui/react/field-error';
-import { Label } from '@heroui/react/label';
-import { ListBox } from '@heroui/react/list-box';
-import { Select } from '@heroui/react/select';
+'use client';
+import { useId } from 'react';
+import MuiSelect from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import FormHelperText from '@mui/material/FormHelperText';
 import type { FieldTextProps } from './field-contract';
-
 export type SelectOption = Readonly<{
   label: string;
   value: string;
@@ -41,73 +41,79 @@ export function SelectField({
   presentation = 'field',
   popoverPlacement,
 }: SelectFieldProps) {
-  const disabledKeys = options.filter((option) => option.disabled).map((option) => option.value);
-  const isToolbar = presentation === 'toolbar';
-
+  const id = useId();
+  const toolbar = presentation === 'toolbar';
   return (
-    <Select
-      className={isToolbar ? 'inline-flex min-w-0 max-w-full shrink-0' : 'ui-field'}
-      defaultOpen={defaultOpen}
-      disabledKeys={disabledKeys}
-      fullWidth={!isToolbar}
-      isDisabled={disabled}
-      isInvalid={Boolean(error)}
-      onChange={(key) => {
-        if (key !== null) onValueChange?.(String(key));
-      }}
-      {...(defaultValue ? { defaultValue } : {})}
-      {...(name ? { name } : {})}
-      {...(placeholder ? { placeholder } : {})}
-      {...(value !== undefined ? { value } : {})}
+    <FormControl
+      className={toolbar ? 'ui-select-toolbar min-w-0 max-w-full' : 'ui-field'}
+      fullWidth={!toolbar}
+      disabled={disabled}
+      error={Boolean(error)}
     >
-      {isToolbar ? (
-        <Label className="sr-only">{label}</Label>
-      ) : (
-        <Label className="ui-field-label">{label}</Label>
-      )}
-      <Select.Trigger
-        className={
-          isToolbar
-            ? 'flex h-control-sm min-w-32 max-w-full items-center justify-between gap-2 rounded-control border border-border bg-surface px-3 text-sm text-ink outline-none transition-colors hover:bg-surface-muted focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-focus'
-            : 'ui-field-control flex items-center justify-between gap-3'
-        }
+      <label id={id + '-label'} htmlFor={id} className={toolbar ? 'sr-only' : 'ui-field-label'}>
+        {label}
+      </label>
+      <MuiSelect
+        id={id}
+        labelId={id + '-label'}
+        aria-describedby={!toolbar && (error || hint) ? id + '-helper' : undefined}
+        name={name}
+        value={value === null ? '' : value}
+        defaultValue={defaultValue ?? ''}
+        defaultOpen={defaultOpen}
+        displayEmpty
+        className={toolbar ? 'min-h-control-sm max-w-full' : 'ui-material-field'}
+        onChange={(event) => onValueChange?.(String(event.target.value))}
+        renderValue={(selected) => (
+          <span className="ui-select-value flex min-w-0 items-center gap-1.5 truncate">
+            {toolbar ? <span className="text-ink-muted">{label}:</span> : null}
+            <span className="ui-select-label truncate">
+              {options.find((option) => option.value === selected)?.label || placeholder || ''}
+            </span>
+          </span>
+        )}
+        MenuProps={{
+          slotProps: {
+            paper: { className: 'ui-overlay-surface overflow-hidden' },
+            list: { className: 'ui-listbox' },
+          },
+          ...(popoverPlacement === 'top'
+            ? {
+                anchorOrigin: { vertical: 'top', horizontal: 'left' },
+                transformOrigin: { vertical: 'bottom', horizontal: 'left' },
+              }
+            : {}),
+        }}
       >
-        <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-left text-sm">
-          {isToolbar ? <span className="shrink-0 text-ink-muted">{label}:</span> : null}
-          <Select.Value className="truncate font-medium text-ink" />
-        </span>
-        <Select.Indicator className="static size-3.5 shrink-0 text-ink-muted" />
-      </Select.Trigger>
-      {error && !isToolbar ? (
-        <FieldError className="ui-field-error">{error}</FieldError>
-      ) : hint && !isToolbar ? (
-        <Description className="ui-field-hint">{hint}</Description>
+        {options.map((option, index) => (
+          <MenuItem
+            key={option.value}
+            value={option.value}
+            aria-label={option.label}
+            aria-describedby={option.description ? `${id}-option-${index}` : undefined}
+            disabled={option.disabled}
+            className="ui-option"
+          >
+            <span className="min-w-0">
+              <span className="block truncate font-medium">{option.label}</span>
+              {option.description ? (
+                <span id={`${id}-option-${index}`} className="mt-0.5 block text-xs text-ink-muted">
+                  {option.description}
+                </span>
+              ) : null}
+            </span>
+          </MenuItem>
+        ))}
+      </MuiSelect>
+      {!toolbar && (error || hint) ? (
+        <FormHelperText
+          id={id + '-helper'}
+          role={error ? 'alert' : undefined}
+          className={error ? 'ui-field-error' : 'ui-field-hint'}
+        >
+          {error || hint}
+        </FormHelperText>
       ) : null}
-      <Select.Popover
-        className="ui-overlay-surface ui-anchored-overlay-match-trigger"
-        {...(popoverPlacement ? { placement: popoverPlacement } : {})}
-      >
-        <ListBox className="ui-listbox">
-          {options.map((option) => (
-            <ListBox.Item
-              className="ui-option"
-              id={option.value}
-              key={option.value}
-              textValue={option.label}
-            >
-              <span className="block min-w-0">
-                <Label className="block max-w-full truncate font-medium">{option.label}</Label>
-                {option.description ? (
-                  <Description className="mt-0.5 block text-xs text-ink-muted">
-                    {option.description}
-                  </Description>
-                ) : null}
-              </span>
-              <ListBox.ItemIndicator className="text-brand" />
-            </ListBox.Item>
-          ))}
-        </ListBox>
-      </Select.Popover>
-    </Select>
+    </FormControl>
   );
 }

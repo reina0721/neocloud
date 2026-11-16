@@ -38,7 +38,7 @@ test('管理文件系统参数可校验、保存、刷新和恢复继承', async
   await expect(title).toBeVisible();
   const text = page.getByLabel('在线文本大小上限（字节）', { exact: true });
   const maxPageSize = page.getByLabel('最大分页大小（项）', { exact: true });
-  const pagination = page.getByRole('button', { name: /文件列表分页方式/ });
+  const pagination = page.getByRole('combobox', { name: '文件列表分页方式', exact: true });
   const save = page.getByRole('button', { name: '保存参数', exact: true });
   const dialog = page.getByRole('dialog', { name: '确认保存文件系统参数' });
   const confirm = dialog.getByRole('button', { name: '保存参数', exact: true });

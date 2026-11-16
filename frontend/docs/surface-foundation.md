@@ -2,7 +2,7 @@
 
 `packages/surface-foundation` 是首个成熟 Product-Surface Foundation，只依赖 Universal Foundation。
 
-- `layout`：Page、Header、Toolbar、Filter、Section、Split View、Sticky Actions。`Section` 是 Panel 类 Section 容器（header + children）；需要「章节导航 + 内容共享父容器内容边界」的组合（如 `TabsView variant="section"` 作章节导航）时使用 `contentInset`（children 包进统一 horizontal inset）或 `SectionBody`（自定义 header 的 Panel body 复用同一 inset）。父容器负责区域分隔（divider/boundary）；Tabs 等子组件不自建 Surface。
+- `layout`：Page、Header、ProductMasthead、Toolbar、Filter、Section、Split View、Sticky Actions。`Section` 是 Panel 类 Section 容器（header + children）；需要「章节导航 + 内容共享父容器内容边界」的组合（如 `TabsView variant="section"` 作章节导航）时使用 `contentInset`（children 包进统一 horizontal inset）或 `SectionBody`（自定义 header 的 Panel body 复用同一 inset）。父容器负责区域分隔（divider/boundary）；Tabs 等子组件不自建 Surface。
 - `shell-navigation`：Router Port 上的 Shell Grid、Sidebar Navigation 与响应式表现；不依赖 Next。展开态使用 **Active Path Anchored Accordion**（Shell Navigation UX/State Policy）：visual group 只是分类标题、不等于 Accordion parent——顶层所有 Branch 共享单一 `root` scope，真实嵌套 Branch 的下一层以该 Branch 的 navigationId 为 scope，规则递归；每个 scope 同时至多展开「1 个 active branch + 1 个 exploration branch」。active 状态与展开/探索状态是独立状态模型：active ancestor chain 由当前 Route 运行时推导并始终展开，不允许被普通 toggle 收起到隐藏当前 Route；`exploration` 是瞬时用户意图（绑定产生它的 routeKey），真实 Route Commit 后立即失效并清空、由新 Active Path 重算必要展开链，same-route no-op 保留；收起或替换 exploration branch 时同步清理其子树内全部 exploration scope（不残留历史展开）。展开状态由 Navigation Tree 统一管理（scope -> exploration branch），Menu Item 不各自维护 `isOpen`。Branch 使用整行 Disclosure Button，只有 Leaf 触发路由。Compact Sidebar 使用非模态 Submenu Flyout：Flyout 的打开（`openBranchId`）与 Expanded Tree 的 Accordion exploration 分离，hover/open Flyout 不写入 exploration；Pointer Hover 不转移焦点，Trigger/Content 共享关闭走廊，Keyboard Press 与 Escape 继续由 Overlay Contract 管理。
 - `collection`：Collection 区域、筛选、结果、分页与 Bulk Action。
 - `detail-settings`：Entity Summary、Settings Layout、Timeline。SettingsLayout 的 `persistentNavigation` 为可选空间策略：小于 xl 时分类区域在同一文档滚动流中 sticky，xl 起保持侧栏；默认关闭，不改变不需要持续导航的消费者。设置业务、Pattern 与 Archetype 共享此实现。
@@ -31,7 +31,7 @@ Web Host 的 Header 与启用且固定的页面标签共享一个 sticky chrome�
 关闭时标签位于 chrome 之外并随文档滚动；页面标签本身的启用偏好维持原默认值。
 Host 用 ResizeObserver 测量真实 chrome 高度，向其内容子树提供 `--shell-chrome-height`。
 SettingsLayout 的持续分类导航和桌面侧栏只消费此运行时空间变量，不读取 DOM 或 Router。
-动态字号、标签开关与视口变化不依赖固定像素叠加。浮层继续由 HeroUI Portal 管理。
+动态字号、标签开关与视口变化不依赖固定像素叠加。浮层继续由 MUI Portal 管理。
 
 派生的 `--surface-sticky-top` 必须在 SettingsLayout / SplitView 的 sticky 消费节点计算，
 不能在 `:root` 提前计算：自定义属性继承的是已替换变量的值，根节点无法读取下层 Host
@@ -83,3 +83,5 @@ Host 的 remember 在原 v1 key 中追加可选上次模式字段，缺字段旧
     Surface 只消费已经决定好的 groups。部署期 Plugin Registry 仍是路由与组件唯一真相。
 - 水印与锁屏属于 Host Shell 表现（需要当前身份与全局遮挡），不下沉到 Foundation；
   Foundation 不反向依赖身份或会话。
+
+`ProductMasthead` 接收品牌名、说明与可选动作槽，统一文件、管理、登录和公开分享的几何品牌横幅；装饰与间距由产品层 Token 管理。其同源示例位于 `/page-patterns/layout-navigation`。

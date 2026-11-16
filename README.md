@@ -20,7 +20,7 @@ node scripts/dev.mjs --prepare
 
 统一入口使用 Node 24，按需生成本地配置、迁移数据库并验证前后端就绪；已有数据保留。日志在 `.data/dev/`，设置令牌在 `.data/dev/setup-token`。Windows 既有 `Start-Dev.ps1` / `Stop-Dev.ps1` 仍可使用。完整参数、预览账号与排障见[本地开发](docs/getting-started/local-development.md)。
 
-界面统一采用 [Material Design 3](frontend/docs/ui-visual-calibration.md)，设计 Token 与交互组件由公共基础层管理。
+界面基于 Material UI（MUI）二次封装，统一采用 [Material Design 3](frontend/docs/ui-visual-calibration.md)，设计 Token 与交互组件由公共基础层管理。
 
 ## 开发与验证
 

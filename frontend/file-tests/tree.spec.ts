@@ -16,6 +16,11 @@ async function login(page: Page, accessPath = process.env.CLOUDDRIVE_FILE_TEST_A
   await page.getByLabel('密码', { exact: true }).fill(access.password);
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
+  if ((page.viewportSize()?.width ?? 1280) >= 768) {
+    await expect(page.getByRole('button', { name: /^(展开|收起)文件导航$/ })).toBeVisible();
+    const expand = page.getByRole('button', { name: '展开文件导航', exact: true });
+    if (await expand.isVisible()) await expand.click();
+  }
 }
 async function mutate(page: Page, path: string, method: string, body?: unknown): Promise<Folder> {
   const result = await page.evaluate(
@@ -38,7 +43,7 @@ const createFolder = (page: Page, name: string, parentId = '') =>
 const tree = (page: Page) => page.getByRole('treegrid', { name: '目录树', exact: true });
 const row = (view: Locator, name: string) =>
   view.getByRole('row').filter({ has: view.page().getByText(name, { exact: true }) });
-async function openRoot(page: Page) {
+async function openRoot(page: Page, targetName?: string) {
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   await expect(page.getByRole('button', { name: /^(展开|收起)我的文件目录树$/ })).toBeVisible();
   const expand = page.getByRole('button', { name: '展开我的文件目录树', exact: true });
@@ -50,6 +55,19 @@ async function openRoot(page: Page) {
   }
   await expect(tree(page)).toBeVisible();
   await expect(tree(page).getByText('正在读取子目录', { exact: true })).toHaveCount(0);
+  // 持久验收账户可能已有多页根目录；通过真实分页入口找到本次 fixture。
+  if (targetName) {
+    const target = row(tree(page), targetName);
+    for (let pageIndex = 0; pageIndex < 20 && !(await target.count()); pageIndex++) {
+      const more = tree(page)
+        .getByText(/^载入更多子目录/)
+        .last();
+      if (!(await more.count())) break;
+      await more.click();
+      await expect(tree(page).getByText('正在读取子目录', { exact: true })).toHaveCount(0);
+    }
+    await expect(target).toBeVisible();
+  }
 }
 async function expand(page: Page, name: string) {
   await tree(page)
@@ -86,7 +104,7 @@ test('F341–344/351–353：真实文件夹过滤、逐层加载与51项目分�
       });
   });
   await page.reload();
-  await openRoot(page);
+  await openRoot(page, root.name);
   await expect(row(tree(page), root.name)).toBeVisible();
   expect(queryReads.filter((value) => value.parent === root.id)).toHaveLength(0);
   await expand(page, root.name);
@@ -112,7 +130,7 @@ test('F341–344/351–353：真实文件夹过滤、逐层加载与51项目分�
   ).toHaveCount(0);
   await page.getByRole('button', { name: '收起我的文件目录树', exact: true }).click();
   await expect(tree(page)).toHaveCount(0);
-  await openRoot(page);
+  await openRoot(page, root.name);
   expect(queryReads.filter((value) => value.parent === root.id)).toHaveLength(2);
   await page.screenshot({ path: info.outputPath('tree-pagination.png') });
 });
@@ -166,17 +184,17 @@ test('F349/350/360：设备开关、旧偏好迁移与账号隔离', async ({ pa
   await login(page);
   const root = await createFolder(page, '树设备-' + randomUUID().slice(0, 8));
   const child = await createFolder(page, '不自动跟随', root.id);
-  await openRoot(page);
+  await openRoot(page, root.name);
   await page.getByLabel('自动展开当前目录', { exact: true }).press('Space');
   await page.goto('/home?parent=' + child.id);
   await expect(page.getByRole('button', { name: '展开我的文件目录树', exact: true })).toBeVisible();
-  await openRoot(page);
+  await openRoot(page, root.name);
   await expect(
     tree(page).getByRole('button', { name: '展开 ' + root.name, exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel('自动展开当前目录', { exact: true })).not.toBeChecked();
   await page.reload();
-  await openRoot(page);
+  await openRoot(page, root.name);
   await expect(page.getByLabel('自动展开当前目录', { exact: true })).not.toBeChecked();
   const adminPath = process.env.CLOUDDRIVE_FILE_TEST_ADMIN_ACCESS;
   if (!adminPath) throw Error('An isolated administrator access file is required');
@@ -234,7 +252,7 @@ test('F354：失败不冒充空目录，可在同一分支重试', async ({ page
     else await route.continue();
   });
   await page.reload();
-  await openRoot(page);
+  await openRoot(page, root.name);
   await expand(page, root.name);
   await expect(tree(page).getByText('重试此目录', { exact: true })).toBeVisible();
   await expect(tree(page).getByText(child.name, { exact: true })).toHaveCount(0);
@@ -274,11 +292,15 @@ test('F355–357：工作区创建与改名移动回收刷新，其他页面仍�
   await expect(tree(page).getByText('改名后目录', { exact: true })).toBeVisible();
   await mutate(page, '/' + child.id + '/trash', 'POST');
   await page.getByRole('button', { name: '刷新目录树', exact: true }).click();
+  await openRoot(page, target.name);
   await expect(row(tree(page), target.name)).toBeVisible();
   await expect(row(tree(page), target.name)).not.toHaveAttribute('aria-expanded', 'true');
   await expect(tree(page).getByText('改名后目录', { exact: true })).toHaveCount(0);
   for (const label of ['我的分享', '连接与挂载', '传输中心', '离线下载', '与我共享']) {
-    await page.getByRole('link', { name: label, exact: true }).click();
+    await page
+      .locator('.ui-navigation-item')
+      .and(page.getByRole('link', { name: label, exact: true }))
+      .click();
     await expect(tree(page)).toBeVisible();
   }
   await row(tree(page), root.name).click();
@@ -326,6 +348,7 @@ test('F345/357：目录树导航保留同一真实上传及原目标', async ({ 
   const source = await createFolder(page, '树上传原目标-' + randomUUID().slice(0, 8));
   const target = await createFolder(page, '树上传导航目标-' + randomUUID().slice(0, 8));
   await page.goto('/home?parent=' + source.id);
+  await openRoot(page, target.name);
   await expect(row(tree(page), target.name)).toBeVisible();
   let release: (() => void) | undefined;
   const gate = new Promise<void>((resolveGate) => {

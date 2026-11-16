@@ -174,6 +174,7 @@ const previewStateLabels = {
   '5 tones': '五种语义色',
   'sm / md / lg': 'sm / md / lg',
   'sm / md': 'sm / md',
+  'Standard / Filled': '标准 / 填充',
   'cover / contain': 'cover / contain',
   'aria-current': 'aria-current',
   '0%': '0%',
@@ -205,7 +206,7 @@ export const pluginI18nResources = {
           treeLabel: '基座树',
           treeDescription: '跨 Surface 稳定契约',
           longNode: '这是验证深层级与窄宽度下长文本仍完整可读和可访问的树节点示例。',
-          disclosure: '补充内容展开由 React Aria/HeroUI 管理状态与焦点。',
+          disclosure: '补充内容展开由 MUI 管理状态与焦点。',
           composition: '组合边界',
           compositionHint: 'Disclosure 不承担页面导航或浮层交互。',
           readyImage: '图片预留尺寸，解码完成后显现，失败时保留占位。',
@@ -297,7 +298,7 @@ export const pluginI18nResources = {
         busyLabel: '正在刷新组件契约',
         dataDisplayTitle: 'Data Display 与 Table',
         dataDisplayDescription:
-          '表格默认只展示结构化数据；显式启用单选后，选中态、键盘导航和空集合继续由 HeroUI 管理。',
+          '表格默认只展示结构化数据；显式启用单选后，选中态、键盘导航和空集合继续由 React Aria 管理。',
         dataTableLabel: 'UI Element 治理状态',
         dataTableShowEmpty: '查看空集合',
         dataTableRestoreRows: '恢复数据行',
@@ -414,7 +415,7 @@ export const pluginI18nResources = {
         password: '密码输入',
         showPassword: '显示密码',
         hidePassword: '隐藏密码',
-        passwordDescription: '复用 HeroUI InputGroup，提供密码显示、自动填充、错误与禁用语义。',
+        passwordDescription: '复用 MUI TextField，提供密码显示、自动填充、错误与禁用语义。',
         errorField: '错误输入',
         disabledField: '禁用输入',
         fieldHint: '帮助文本必须与输入状态保持可读关联。',
@@ -451,7 +452,7 @@ export const pluginI18nResources = {
         searchLabel: '搜索 UI Elements 数据',
         searchPlaceholder: '按名称、编号或负责人搜索',
         overlaysTitle: 'Overlay 与 Floating Layer',
-        overlaysDescription: '每个 Trigger 与展开层均由 UI Adapter 组合 HeroUI，并纳入视觉回归。',
+        overlaysDescription: '每个 Trigger 与展开层均由 UI Adapter 组合 MUI，并纳入视觉回归。',
         menu: 'Dropdown Menu',
         menuLabel: 'Reference 操作菜单',
         tonalMenu: '柔和强调菜单',
@@ -584,6 +585,11 @@ export const pluginI18nResources = {
           navigationDescription: '文本链接、层级导航、分页和内容 Tabs 分别保留原生导航语义。',
           treeExpand: '展开',
           treeCollapse: '收起',
+          destinationItemDescription:
+            'MUI ListItemButton 统一导航图标槽、文字基线、选中态与紧凑侧轨。',
+          destinationTabsDescription:
+            'MUI Tabs 与 Tab 表达同级目的地，保留链接、键盘和原生修饰键。',
+          destinationLabel: '示例目的地',
           textLinkDescription:
             'TextLink 用于真实导航；SPA 拦截由 Host Adapter 注入，Action 不伪装链接。',
           backToActions: '返回 Actions',
@@ -620,8 +626,7 @@ export const pluginI18nResources = {
           textAreaDescription: 'TextAreaField 复用 Field 状态，并保留多行、长内容和调整高度能力。',
           searchBoxDescription: 'SearchBox 是搜索交互组合，拥有搜索图标、清除动作和可访问名称。',
           disabledSearch: '禁用搜索',
-          selectDescription:
-            'Select 从有限集合选择值；Popup、Selection 与 Keyboard 由 HeroUI 管理。',
+          selectDescription: 'Select 从有限集合选择值；Popup、Selection 与 Keyboard 由 MUI 管理。',
           comboDescription: 'ComboField 允许筛选候选，不与普通 Select 或 Command Menu 混用。',
           dateDescription: 'DatePickerField 组合可编辑日期段和日历 Popup，并保留键盘与禁用状态。',
           checkboxDescription: 'CheckboxField 表达独立布尔值，Label 与说明只出现一次。',
@@ -669,7 +674,7 @@ export const pluginI18nResources = {
           treeDescription: 'Stable contracts across surfaces',
           longNode:
             'A long tree node proving readable content and accessible names in deep, narrow hierarchies.',
-          disclosure: 'React Aria/HeroUI manages disclosure state and focus.',
+          disclosure: 'MUI manages disclosure state and focus.',
           composition: 'Composition boundary',
           compositionHint: 'Disclosure does not manage page navigation or overlays.',
           readyImage: 'Reserve image space, reveal after decoding and retain an error placeholder.',
@@ -769,7 +774,7 @@ export const pluginI18nResources = {
         busyLabel: 'Refreshing component contracts',
         dataDisplayTitle: 'Data display and tables',
         dataDisplayDescription:
-          'Tables display structured data by default; explicit single selection delegates selected state, keyboard navigation, and empty collections to HeroUI.',
+          'Tables display structured data by default; explicit single selection delegates selected state, keyboard navigation, and empty collections to React Aria.',
         dataTableLabel: 'UI Element governance status',
         dataTableShowEmpty: 'Show empty collection',
         dataTableRestoreRows: 'Restore data rows',
@@ -890,7 +895,7 @@ export const pluginI18nResources = {
         showPassword: 'Show password',
         hidePassword: 'Hide password',
         passwordDescription:
-          'HeroUI InputGroup provides password visibility, autocomplete, error and disabled semantics.',
+          'MUI TextField provides password visibility, autocomplete, error and disabled semantics.',
         errorField: 'Error field',
         disabledField: 'Disabled field',
         fieldHint: 'Help text remains legibly associated with the control.',
@@ -929,7 +934,7 @@ export const pluginI18nResources = {
         searchPlaceholder: 'Search by name, ID, or owner',
         overlaysTitle: 'Overlays and floating layers',
         overlaysDescription:
-          'Every trigger and open layer composes HeroUI through the UI Adapter and joins visual regression.',
+          'Every trigger and open layer composes MUI through the UI Adapter and joins visual regression.',
         menu: 'Dropdown menu',
         menuLabel: 'Reference action menu',
         tonalMenu: 'Tonal action menu',
@@ -1080,6 +1085,11 @@ export const pluginI18nResources = {
             'Text links, hierarchy, pagination, and content tabs each preserve their native navigation meaning.',
           treeExpand: 'Expand',
           treeCollapse: 'Collapse',
+          destinationItemDescription:
+            'MUI ListItemButton aligns icons, labels, selection, and compact rails.',
+          destinationTabsDescription:
+            'MUI Tabs and Tab navigate between peer destinations with native links and keyboard behavior.',
+          destinationLabel: 'Example destinations',
           textLinkDescription:
             'TextLink performs navigation; SPA interception belongs to the Host adapter and Action never impersonates a link.',
           backToActions: 'Back to actions',
@@ -1124,7 +1134,7 @@ export const pluginI18nResources = {
             'SearchBox composes search icon, clear action, and accessible naming around search behavior.',
           disabledSearch: 'Disabled search',
           selectDescription:
-            'Select chooses from a finite collection while HeroUI owns popup, selection, and keyboard behavior.',
+            'Select chooses from a finite collection while MUI owns popup, selection, and keyboard behavior.',
           comboDescription:
             'ComboField filters candidates and remains distinct from select and command menus.',
           dateDescription:

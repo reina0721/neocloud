@@ -98,8 +98,10 @@ test('紧凑导航、路径、搜索及选择菜单真实可用', async ({ page,
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     '/' + String(f.root.name) + '/' + String(f.from.name),
   );
-  await page.getByRole('button', { name: '完整目录路径', exact: true }).click();
-  await page.getByRole('menuitem', { name: '/' + String(f.root.name), exact: true }).click();
+  await page
+    .getByRole('navigation', { name: '完整目录路径', exact: true })
+    .getByRole('link', { name: String(f.root.name), exact: true })
+    .click();
   await expect(row(page, f.from.id)).toBeVisible();
   await menu(page, '当前目录操作', '全选');
   await expect(page.getByText('已选择 2 项', { exact: true })).toBeVisible();
@@ -136,8 +138,10 @@ test('紧凑导航、路径、搜索及选择菜单真实可用', async ({ page,
     .locator('#main-content')
     .evaluate((e) => e.getBoundingClientRect().top);
   const headerBottom = await page
-    .getByRole('banner')
+    .locator('[data-file-workspace-header]')
     .evaluate((e) => e.getBoundingClientRect().bottom);
+  await expect(page.getByRole('navigation', { name: '按文件类型浏览', exact: true })).toBeHidden();
+  await expect(page.getByRole('navigation', { name: '主要目的地', exact: true })).toBeVisible();
   expect(mainTop).toBeGreaterThanOrEqual(headerBottom);
   expect(mainTop - headerBottom).toBeLessThanOrEqual(24);
   await page.screenshot({ path: info.outputPath('explorer-mobile.png'), fullPage: false });

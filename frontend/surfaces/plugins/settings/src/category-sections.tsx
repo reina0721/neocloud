@@ -24,6 +24,8 @@ import { SETTINGS_INDEX } from './settings-index';
 import { LockKeyhole, Sun, Moon, MonitorCog, SunMoon } from 'lucide-react';
 import {
   AppearanceFeedback,
+  ThemePreview,
+  PalettePreview,
   DensityPreview,
   FontPreview,
   WidthPreview,
@@ -105,9 +107,10 @@ export function AppearanceSection({ ctx }: Readonly<{ ctx: Ctx }>) {
   const appearance = ctx.prefs.appearance;
   return (
     <>
-      <SectionShell title={t('settings.groups.theme')}>
+      <SectionShell title={t('settings.appearance.themeMode')}>
         <RadioGroupField
-          presentation="tiles"
+          presentation="previews"
+          labelVisibility="screen-reader"
           labelIcon={<SunMoon className="size-5" />}
           hint={t('settings.appearance.themeModeDescription')}
           label={t('settings.appearance.themeMode')}
@@ -115,62 +118,62 @@ export function AppearanceSection({ ctx }: Readonly<{ ctx: Ctx }>) {
             {
               label: t('settings.appearance.themeLight'),
               value: 'light',
+              preview: <ThemePreview theme="light" />,
               icon: <Sun className="size-5" />,
             },
             {
               label: t('settings.appearance.themeDark'),
               value: 'dark',
+              preview: <ThemePreview theme="dark" />,
               icon: <Moon className="size-5" />,
             },
             {
               label: t('settings.appearance.themeSystem'),
               value: 'system',
+              preview: <ThemePreview theme="system" />,
               icon: <MonitorCog className="size-5" />,
             },
           ]}
           value={appearance.themeMode}
           onValueChange={(value) => updateSetting(ctx, 'appearance', { themeMode: value })}
         />
+      </SectionShell>
+      <SectionShell title={t('settings.appearance.accent')}>
         <RadioGroupField
-          presentation="inline"
+          presentation="previews"
+          labelVisibility="screen-reader"
           hint={t('settings.appearance.accentDescription')}
           label={t('settings.appearance.accent')}
           options={[
             {
+              label: t('settings.appearance.accentPink'),
+              value: 'pink',
+              preview: <PalettePreview accent="pink" label={t('settings.appearance.accentPink')} />,
+            },
+            {
               label: t('settings.appearance.accentPurple'),
               value: 'purple',
-              icon: (
-                <span
-                  className="ds-accent-swatch size-5 rounded-full"
-                  data-accent-preview="purple"
-                />
+              preview: (
+                <PalettePreview accent="purple" label={t('settings.appearance.accentPurple')} />
               ),
             },
             {
               label: t('settings.appearance.accentBlue'),
               value: 'blue',
-              icon: (
-                <span className="ds-accent-swatch size-5 rounded-full" data-accent-preview="blue" />
-              ),
+              preview: <PalettePreview accent="blue" label={t('settings.appearance.accentBlue')} />,
             },
             {
               label: t('settings.appearance.accentGreen'),
               value: 'green',
-              icon: (
-                <span
-                  className="ds-accent-swatch size-5 rounded-full"
-                  data-accent-preview="green"
-                />
+              preview: (
+                <PalettePreview accent="green" label={t('settings.appearance.accentGreen')} />
               ),
             },
             {
               label: t('settings.appearance.accentOrange'),
               value: 'orange',
-              icon: (
-                <span
-                  className="ds-accent-swatch size-5 rounded-full"
-                  data-accent-preview="orange"
-                />
+              preview: (
+                <PalettePreview accent="orange" label={t('settings.appearance.accentOrange')} />
               ),
             },
           ]}

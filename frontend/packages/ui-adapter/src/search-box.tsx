@@ -1,6 +1,10 @@
-import { SearchField } from '@heroui/react/search-field';
+'use client';
+import MuiTextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import IconButton from '@mui/material/IconButton';
 import type { Ref } from 'react';
-
+import { zhCN, enUS } from '@mui/material/locale';
+import { useControlLocale } from './control-locale-context';
 export type SearchBoxProps = Readonly<{
   label: string;
   placeholder: string;
@@ -18,23 +22,48 @@ export function SearchBox({
   inputRef,
   onValueChange,
 }: SearchBoxProps) {
+  const { locale } = useControlLocale();
+  const clearLabel =
+    (locale.startsWith('zh') ? zhCN : enUS).components?.MuiAutocomplete?.defaultProps?.clearText ??
+    'Clear';
   return (
-    <SearchField
-      aria-label={label}
-      className="min-w-0 w-full"
-      isDisabled={disabled}
-      {...(value !== undefined ? { value } : {})}
-      {...(onValueChange ? { onChange: onValueChange } : {})}
-    >
-      <SearchField.Group className="flex min-w-0 min-h-control items-center gap-2 rounded-action border border-transparent bg-surface-muted px-4 shadow-none data-[focus-within]:border-brand">
-        <SearchField.SearchIcon className="size-4 shrink-0 text-ink-muted" />
-        <SearchField.Input
-          ref={inputRef}
-          className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-muted/70"
-          placeholder={placeholder}
-        />
-        <SearchField.ClearButton className="grid size-7 place-items-center rounded-control text-ink-muted hover:bg-surface-muted" />
-      </SearchField.Group>
-    </SearchField>
+    <MuiTextField
+      type="search"
+      variant="filled"
+      className="ui-search-field min-w-0 w-full"
+      fullWidth
+      placeholder={placeholder}
+      value={value}
+      disabled={disabled}
+      inputRef={inputRef}
+      onChange={(event) => onValueChange?.(event.target.value)}
+      slotProps={{
+        htmlInput: { 'aria-label': label },
+        input: {
+          startAdornment: (
+            <InputAdornment position="start">
+              <svg
+                aria-hidden="true"
+                className="size-4 text-ink-muted"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="10" cy="10" r="6" />
+                <path d="m15 15 5 5" />
+              </svg>
+            </InputAdornment>
+          ),
+          endAdornment: value ? (
+            <InputAdornment position="end">
+              <IconButton aria-label={clearLabel} size="small" onClick={() => onValueChange?.('')}>
+                <span aria-hidden="true">×</span>
+              </IconButton>
+            </InputAdornment>
+          ) : null,
+        },
+      }}
+    />
   );
 }

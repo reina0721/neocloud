@@ -5,9 +5,11 @@ import { ShellNavigationViewProvider } from '@clouddrive/surface/shell/runtime';
 import { flattenNavigationLeaves } from '@clouddrive/core';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { PluginLocaleProvider } from '@clouddrive/plugin-framework/plugin';
+import { ProductMasthead } from '@clouddrive/surface-foundation/layout';
 import { ShellRoot } from '@clouddrive/surface-foundation/shell-navigation';
 import type { NavigationGroup, NavigationNode } from '@clouddrive/types';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
+import { MobileNavigation } from '@clouddrive/ui-adapter/mobile-navigation';
 import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
 import {
   Languages,
@@ -19,6 +21,7 @@ import {
   Search,
   Settings2,
   Sun,
+  Home,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
@@ -110,7 +113,7 @@ function NavigationContent({
       </div>
       <nav
         ref={navigationRef}
-        className={`surface-shell-navigation-viewport min-h-0 flex-1 py-6 ${compact ? 'surface-shell-compact-rail flex flex-col items-center px-3' : 'space-y-7 px-3'}`}
+        className={`surface-shell-navigation-viewport min-h-0 flex-1 py-6 ${compact ? 'surface-shell-compact-rail flex flex-col items-center px-0' : 'space-y-7 px-3'}`}
         aria-label={t('shell.primaryNav')}
       >
         <Suspense
@@ -313,7 +316,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         />
       ) : null}
       {layoutMode !== 'horizontal' ? (
-        <aside className="sticky top-0 hidden h-screen min-w-0 flex-col border-r border-border bg-surface lg:flex">
+        <aside className="surface-management-sidebar sticky top-0 hidden h-screen min-w-0 flex-col bg-surface lg:flex">
           <NavigationContent
             groups={sidebarGroups}
             compact={sidebarCollapsed}
@@ -341,9 +344,14 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         </div>
       </DrawerSurface>
 
-      <div className="min-w-0" ref={shellRef}>
-        <div className="sticky top-0 z-sticky" ref={chromeRef}>
-          <header className="flex h-20 items-center gap-3 border-b border-border bg-canvas/90 px-4 backdrop-blur-xl sm:px-6 xl:px-8">
+      <div
+        className="min-w-0"
+        ref={shellRef}
+        data-shell-section={pathname.startsWith('/settings') ? 'settings' : 'workspace'}
+      >
+        <ProductMasthead name={t('brand.name')} description={t('brand.edition')} />
+        <div className="sticky top-0 z-sticky" ref={chromeRef} data-shell-chrome>
+          <header className="flex h-14 items-center gap-2 border-b border-border bg-surface/95 px-3 backdrop-blur-xl md:h-16 sm:px-6 xl:px-8">
             <div className="lg:hidden">
               <IconAction label={t('shell.menu')} onPress={() => setMobileNavigationOpen(true)}>
                 <Menu className="size-5" />
@@ -373,11 +381,9 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 />
               </div>
             ) : null}
-            <div className="md:hidden">
-              <IconAction label={t('shell.search')} onPress={() => setCommandOpen(true)}>
-                <Search className="size-5" />
-              </IconAction>
-            </div>
+            <span className="min-w-0 flex-1 truncate text-lg font-bold text-brand md:hidden">
+              {t('brand.name')}
+            </span>
             <div className="min-w-0 md:flex-1">
               <CommandMenu
                 hideTrigger={!desktopTools}
@@ -459,10 +465,21 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               />
             </div>
           </header>
-          {pageTabsEnabled && pageTabsPinned ? <PageTabs /> : null}
+          {pageTabsEnabled && pageTabsPinned ? (
+            <div className="hidden md:block">
+              <PageTabs />
+            </div>
+          ) : null}
         </div>
-        {pageTabsEnabled && !pageTabsPinned ? <PageTabs /> : null}
-        <main className="mx-auto max-w-screen-2xl p-4 sm:p-6 xl:p-8" id="main-content">
+        {pageTabsEnabled && !pageTabsPinned ? (
+          <div className="hidden md:block">
+            <PageTabs />
+          </div>
+        ) : null}
+        <main
+          className={`surface-mobile-content mx-auto max-w-screen-2xl ${pathname.startsWith('/settings') ? 'p-0 md:p-6' : 'p-3 sm:p-6'} xl:px-10 xl:py-8`}
+          id="main-content"
+        >
           <RouteTransition>
             <PluginLocaleProvider
               port={{
@@ -485,6 +502,34 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
             </PluginLocaleProvider>
           </RouteTransition>
         </main>
+        <MobileNavigation
+          label={t('shell.mobileDestinations')}
+          value={pathname.startsWith('/settings') ? 'settings' : undefined}
+          items={[
+            { id: 'home', label: t('shell.mobileHome'), icon: <Home />, href: '/home' },
+            { id: 'navigation', label: t('shell.mobileNavigation'), icon: <Menu /> },
+            { id: 'search', label: t('shell.mobileSearch'), icon: <Search /> },
+            {
+              id: 'settings',
+              label: t('shell.mobileSettings'),
+              icon: <Settings2 />,
+              href: '/settings',
+            },
+          ]}
+          onSelect={(id) => {
+            if (id === 'navigation') setMobileNavigationOpen(true);
+            else if (id === 'search') setCommandOpen(true);
+            else {
+              const href = id === 'settings' ? '/settings' : '/home';
+              void proceedAfterLeaveConfirm(href, t('shell.mobileNavigation')).then((proceed) => {
+                if (proceed) {
+                  markForwardRouteIntent();
+                  router.push(href, { ...resolveScrollOption() });
+                }
+              });
+            }
+          }}
+        />
       </div>
       <QuickPreferencesDrawer open={quickPreferencesOpen} onOpenChange={setQuickPreferencesOpen} />
     </ShellRoot>

@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go build -trimpath -buildvcs=false \
     -ldflags="-s -w -X main.buildVersion=${VERSION} -X main.buildCommit=${COMMIT} -X main.buildTime=${BUILD_TIME} -X main.buildDirty=${DIRTY}" \
     -o /out/clouddrive ./cmd/app
-RUN mkdir -p /out/data
+RUN mkdir -p /out/data && chmod 0700 /out/data
 
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:b5b9fd04c8dcf72a173183c0b7dee47e053e002246b308a59f3441db7b8b9cc4 AS runtime
 
@@ -39,7 +39,9 @@ LABEL org.opencontainers.image.title="clouddrive" \
 WORKDIR /app
 COPY --chown=nonroot:nonroot --from=build /out/clouddrive /app/clouddrive
 COPY --chown=nonroot:nonroot config.example.yaml /app/config.yaml
-COPY --chown=nonroot:nonroot --from=build /out/data /app/.data
+COPY --chown=nonroot:nonroot locales/ /app/locales/
+COPY --chown=nonroot:nonroot internal/module/todo/binding/i18n/locales/ /app/internal/module/todo/binding/i18n/locales/
+COPY --chown=nonroot:nonroot --chmod=0700 --from=build /out/data /app/.data
 
 USER nonroot:nonroot
 EXPOSE 8080 9090

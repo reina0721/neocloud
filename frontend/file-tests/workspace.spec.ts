@@ -48,7 +48,12 @@ async function selectTarget(page: Page, name: string) {
   await expect(d.getByText(new RegExp(name))).toBeVisible();
   await expect(d.getByRole('button', { name: '使用此位置', exact: true })).toBeEnabled();
 }
-test.beforeEach(async ({ page }) => login(page));
+test.beforeEach(async ({ page }) => {
+  await login(page);
+  // 这组用例验证展开导航的工作流；新账号默认的图标侧轨另有移动/桌面用例覆盖。
+  const expand = page.getByRole('button', { name: '展开文件导航', exact: true });
+  if (await expand.isVisible()) await expand.click();
+});
 test('F221–225：六页共用导航、分类、回收站和原生链接', async ({ page }) => {
   for (const [label, path] of [
     ['我的分享', 'shares'],
@@ -59,14 +64,16 @@ test('F221–225：六页共用导航、分类、回收站和原生链接', asyn
   ] as const) {
     await page
       .getByRole('navigation', { name: '我的文件', exact: true })
-      .getByRole('link', { name: label, exact: true })
+      .locator('.ui-navigation-item')
+      .and(page.getByRole('link', { name: label, exact: true }))
       .click();
     await expect(page).toHaveURL(new RegExp('/home/' + path + '$'));
     await expect(page.getByRole('main')).toHaveCount(1);
     await expect(
       page
         .getByRole('navigation', { name: '我的文件', exact: true })
-        .getByRole('link', { name: label, exact: true }),
+        .locator('.ui-navigation-item')
+        .and(page.getByRole('link', { name: label, exact: true })),
     ).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('button', { name: '新建', exact: true })).toBeEnabled();
     await expect(page.getByRole('button', { name: '刷新存储空间', exact: true })).toBeVisible();
@@ -86,10 +93,16 @@ test('F221–225：六页共用导航、分类、回收站和原生链接', asyn
   await page.getByRole('link', { name: '回收站', exact: true }).click();
   await expect(page.getByRole('button', { name: '新建', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: '清空回收站', exact: true })).toBeVisible();
-  await page.getByRole('link', { name: '我的文件', exact: true }).click();
+  await page
+    .getByRole('navigation', { name: '我的文件', exact: true })
+    .getByRole('link', { name: '我的文件', exact: true })
+    .click();
+  // 浏览器中键打开没有 opener 的原生标签页；等待它完成首次文档加载。
   const popup = page.context().waitForEvent('page');
   await page.getByRole('link', { name: '我的分享', exact: true }).click({ button: 'middle' });
   const tab = await popup;
+  await tab.bringToFront();
+  await tab.waitForLoadState('domcontentloaded');
   await expect(tab).toHaveURL(/\/home\/shares$/);
   await tab.close();
 });

@@ -1,6 +1,6 @@
-import { Switch } from '@heroui/react/switch';
+'use client';
+import Switch from '@mui/material/Switch';
 import { useId } from 'react';
-
 export type SwitchFieldProps = Readonly<{
   label: string;
   description: string;
@@ -18,31 +18,32 @@ export function SwitchField({
   onCheckedChange,
   presentation = 'card',
 }: SwitchFieldProps) {
+  const id = useId();
   const descriptionId = useId();
   return (
-    <Switch
-      aria-label={label}
-      {...(description ? { 'aria-describedby': descriptionId } : {})}
-      className="group w-full min-w-0"
-      isDisabled={disabled}
-      isSelected={checked}
-      onChange={onCheckedChange}
+    <label
+      htmlFor={id}
+      data-disabled={disabled || undefined}
+      className={`ui-switch-content flex w-full min-w-0 items-center justify-between gap-4 ${presentation === 'row' ? 'px-3 py-2' : 'rounded-panel border border-border bg-surface p-4'}`}
     >
-      <Switch.Content
-        className={`ui-switch-content ${presentation === 'row' ? 'px-3 py-2' : 'rounded-panel border border-border bg-surface p-4'}`}
-      >
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-ink">{label}</span>
-          {description ? (
-            <span id={descriptionId} className="mt-1 block text-xs leading-5 text-ink-muted">
-              {description}
-            </span>
-          ) : null}
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-ink">{label}</span>
+        <span id={descriptionId} className="mt-1 block text-xs leading-5 text-ink-muted">
+          {description}
         </span>
-        <Switch.Control className="flex h-6 w-11 shrink-0 items-center rounded-full bg-border-strong p-0.5 transition-colors group-data-[selected=true]:bg-brand">
-          <Switch.Thumb className="ms-0 size-5 rounded-full bg-surface shadow-sm group-data-[selected=true]:ms-5" />
-        </Switch.Control>
-      </Switch.Content>
-    </Switch>
+      </span>
+      <Switch
+        id={id}
+        className="ui-switch"
+        checked={checked}
+        disabled={disabled}
+        onChange={(_, value) => onCheckedChange(value)}
+        slotProps={{
+          thumb: { className: 'ui-switch-thumb' },
+          track: { className: 'ui-switch-track' },
+          input: { role: 'switch', 'aria-label': label, 'aria-describedby': descriptionId },
+        }}
+      />
+    </label>
   );
 }

@@ -126,7 +126,7 @@ async function fixture(page: Page, displayName?: string) {
 }
 
 async function select(page: Page, scope: Locator, label: string, option: string) {
-  await scope.getByRole('button', { name: new RegExp(label + '$') }).click();
+  await scope.getByRole('combobox', { name: label, exact: true }).click();
   await page.getByRole('option', { name: option, exact: true }).click();
 }
 async function openPolicy(page: Page, name: string) {
@@ -164,7 +164,8 @@ test('F281–289：UI创建禁止匿名、精确账号能力和真实登录返�
   await addTarget(page, create, '账号', f.credentials.username);
   await create
     .getByRole('region', { name: '账号规则', exact: true })
-    .locator('legend')
+    .getByRole('group')
+    .first()
     .scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('audience-editor-desktop.png') });
   await create.getByRole('button', { name: '创建分享链接', exact: true }).click();
@@ -237,7 +238,7 @@ test('F285–290：角色精确规则、账号拒绝优先与设置冲突保留�
     dialog = page.getByRole('dialog', { name: '修改分享设置', exact: true });
     await addTarget(page, dialog, '账号', f.credentials.username);
     const rules = dialog.getByRole('region', { name: '账号规则', exact: true });
-    await rules.getByRole('button').first().click();
+    await rules.getByRole('combobox').first().click();
     await page.getByRole('option', { name: '拒绝访问', exact: true }).click();
     await save(dialog, '保存设置');
     await member.reload();
@@ -277,7 +278,7 @@ test('F291–298：目录独立权限、继承来源、实际预览、恢复与�
   await select(page, child, '权限来源', '独立设置');
   const fileRights = child.getByRole('group', { name: '本项默认能力', exact: true });
   await select(page, fileRights, '分享权限', '可编辑');
-  await expect(fileRights.getByRole('button', { name: /可编辑.*分享权限/ })).toBeVisible();
+  await expect(fileRights.getByRole('combobox', { name: '分享权限', exact: true })).toBeVisible();
   await expect(
     fileRights.getByText('可查看、下载和编辑文字，也可重命名、移动、复制或移入回收站。', {
       exact: true,

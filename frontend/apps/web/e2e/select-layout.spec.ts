@@ -4,8 +4,8 @@ import { waitForVisualReadiness } from './visual-readiness';
 
 async function expectSeparateIndicator(trigger: Locator) {
   const geometry = await trigger.evaluate((button) => {
-    const value = button.querySelector('[data-slot="select-value"]');
-    const indicator = button.querySelector('[data-slot="select-default-indicator"]');
+    const value = button.querySelector('.ui-select-value');
+    const indicator = button.parentElement?.querySelector('.MuiSelect-icon');
     if (!value || !indicator) throw new Error('Missing select value or indicator');
     const text = value.getBoundingClientRect();
     const arrow = indicator.getBoundingClientRect();
@@ -46,8 +46,8 @@ for (const scenario of [
       { preferences: defaultPreferences, version: PREFERENCES_VERSION, ...scenario },
     );
     await page.goto('/audit-logs');
-    const density = page.getByRole('button', {
-      name: scenario.language === 'en' ? /Row density/ : /表格密度/,
+    const density = page.getByRole('combobox', {
+      name: scenario.language === 'en' ? 'Row density' : '表格密度',
     });
     await expect(density).toBeVisible();
     await expectSeparateIndicator(density);
@@ -75,7 +75,7 @@ for (const scenario of [
     );
     await waitForVisualReadiness(page);
     const section = heading.locator('xpath=ancestor::section[1]');
-    const triggers = section.getByRole('button');
+    const triggers = section.getByRole('combobox');
     await expect(triggers).toHaveCount(3);
     const content = await section
       .locator(':scope > [data-reveal-item]')
@@ -100,8 +100,8 @@ for (const scenario of [
     }
     await expect(triggers.nth(2)).toBeDisabled();
     const truncated = await triggers.nth(1).evaluate((button) => {
-      const value = button.querySelector('[data-slot="select-value"]');
-      const label = value?.querySelector('[data-slot="label"]');
+      const value = button.querySelector('.ui-select-value');
+      const label = value?.querySelector('.ui-select-label');
       if (!value || !label) throw new Error('Missing selected label');
       return {
         labelRight: label.getBoundingClientRect().right,

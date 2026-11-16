@@ -1,39 +1,45 @@
-import { Spinner as HeroSpinner } from '@heroui/react/spinner';
-import { Toast, type ToastQueue, type ToastContentValue } from '@heroui/react/toast';
+import SnackbarContent from '@mui/material/SnackbarContent';
+import CircularProgress from '@mui/material/CircularProgress';
+import IconButton from '@mui/material/IconButton';
+import Button from '@mui/material/Button';
+import { forwardRef } from 'react';
+import type { FeedbackMessage } from './feedback-context';
 
-/** Presentation is loaded on first feedback; the owning provider keeps the vendor queue alive. */
-export function FeedbackToastRegion({
-  queue,
-  closeLabel,
-}: Readonly<{ queue: ToastQueue<ToastContentValue>; closeLabel: string }>) {
+export const FeedbackToastRegion = forwardRef<
+  HTMLDivElement,
+  Readonly<{
+    message: FeedbackMessage;
+    closeLabel: string;
+    loadingLabel: string;
+    onDismiss: () => void;
+  }>
+>(function FeedbackToastRegion({ message, closeLabel, loadingLabel, onDismiss }, ref) {
   return (
-    <Toast.Provider className="z-toast" maxVisibleToasts={3} placement="bottom end" queue={queue}>
-      {({ toast }) => {
-        const content = toast.content;
-        return (
-          <Toast
-            className="border-border bg-surface-raised text-ink shadow-overlay"
-            toast={toast}
-            variant={content.variant}
-          >
-            {content.isLoading ? (
-              <Toast.Indicator variant={content.variant}>
-                <HeroSpinner aria-hidden="true" size="sm" />
-              </Toast.Indicator>
-            ) : (
-              <Toast.Indicator variant={content.variant} />
-            )}
-            <Toast.Content>
-              {content.title ? <Toast.Title>{content.title}</Toast.Title> : null}
-              {content.description ? (
-                <Toast.Description>{content.description}</Toast.Description>
-              ) : null}
-            </Toast.Content>
-            {content.actionProps?.children ? <Toast.ActionButton {...content.actionProps} /> : null}
-            <Toast.CloseButton aria-label={closeLabel} />
-          </Toast>
-        );
-      }}
-    </Toast.Provider>
+    <SnackbarContent
+      ref={ref}
+      role={message.tone === 'danger' ? 'alert' : 'status'}
+      className="ui-toast border border-border bg-surface-raised text-ink shadow-overlay"
+      message={
+        <span className="flex items-start gap-3">
+          {message.loading ? <CircularProgress aria-label={loadingLabel} size={20} /> : null}
+          <span>
+            <strong className="block text-sm">{message.title}</strong>
+            {message.description ? (
+              <span className="mt-1 block text-xs text-ink-muted">{message.description}</span>
+            ) : null}
+          </span>
+        </span>
+      }
+      action={
+        <>
+          {message.action ? (
+            <Button onClick={message.action.onPress}>{message.action.label}</Button>
+          ) : null}
+          <IconButton aria-label={closeLabel} onClick={onDismiss}>
+            <span aria-hidden="true">×</span>
+          </IconButton>
+        </>
+      }
+    />
   );
-}
+});

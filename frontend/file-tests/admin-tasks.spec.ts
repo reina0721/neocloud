@@ -134,12 +134,11 @@ test('管理员过滤并清理成员的终态归档任务，保留发布文件',
     await page.getByRole('button', { name: '清理已结束记录', exact: true }).first().click();
     const criteria = page.getByRole('dialog', { name: '清理已结束记录', exact: true });
     for (const [name, value] of [
-      [/^(年|year),/i, '2000'],
-      [/^(月|month),/i, '01'],
-      [/^(日|day),/i, '01'],
+      [/^(年份|年|year)(?:,|$)/i, '2000'],
+      [/^(月份|月|month)(?:,|$)/i, '01'],
+      [/^(日期|日|day)(?:,|$)/i, '01'],
     ] as const) {
       const segment = criteria.getByRole('spinbutton', { name });
-      await segment.press('ControlOrMeta+a');
       await segment.pressSequentially(value);
       await segment.press('Tab');
     }
@@ -221,7 +220,7 @@ test('管理员可以筛选调度器生成的系统维护记录', async ({ page 
   await page.getByRole('button', { name: '筛选与排序', exact: true }).click();
   const filters = page.getByRole('dialog', { name: '筛选与排序', exact: true });
   await filters.getByLabel('任务 ID', { exact: true }).fill(run!.id);
-  await filters.getByRole('button', { name: '来源', exact: false }).click();
+  await filters.getByRole('combobox', { name: '来源', exact: true }).click();
   await page.getByRole('option', { name: '系统维护', exact: true }).click();
   await filters.getByRole('button', { name: '应用', exact: true }).click();
   const list = page.getByRole('list', { name: '后台任务管理', exact: true });

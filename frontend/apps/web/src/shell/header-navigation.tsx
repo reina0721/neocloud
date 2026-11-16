@@ -18,7 +18,7 @@ import { resolveScrollOption } from '../host/scroll-preference';
  *   第二套导航真相；叶子仍走 Next Router + 离开确认 + 方向过渡。
  * - horizontal：每个分组是一个可展开菜单（单叶分组直接跳转）；
  * - mixed：分组是切换按钮，侧栏显示当前分组的下级菜单。
- * - 键盘与焦点由 HeroUI MenuButton / 原生 button 承担，不自行实现 Overlay。
+ * - 键盘与焦点由 MUI MenuButton / 原生 button 承担，不自行实现 Overlay。
  */
 export function HeaderNavigation({
   groups,

@@ -1,28 +1,11 @@
-import { tv } from '@heroui/styles';
-import { Button as HeroButton } from '@heroui/react/button';
+'use client';
+import Button from '@mui/material/Button';
 import type { ReactNode } from 'react';
-
-/**
- * OverlayTriggerAction —— Overlay Trigger 的共享语义按钮。
- *
- * Overlay Trigger 只负责打开 Dialog / Drawer / Command / Popover 等浮层：
- * 点击后真正的状态变化发生在 Overlay 本身，Trigger 不应临时切换成 Brand Primary。
- *
- * 实现要点：
- * - 底层 HeroButton 显式 `variant="ghost"`：HeroUI buttonVariants 默认 variant="primary"
- *   会把 --button-bg* 指向 --accent（HeroUI 默认主题的蓝）；ghost 的 --button-bg* 是透明/
- *   中性，杜绝 Brand Blue 注入。
- * - 语义色由本项目 tv 定义：default 为中性 secondary 外观，danger 保持 danger 语义；
- *   pressed / hover 只做同语义的深浅反馈，不换语义色。
- * - focus-visible 保留项目 focus-ring（可访问性反馈不因“不变蓝”被删除）。
- */
-
 type OverlayTriggerBehavior = Readonly<{
   type?: 'button';
   onPress?: () => void;
   disabled?: boolean;
 }>;
-
 export type OverlayTriggerActionProps = Readonly<{
   children: ReactNode;
   /** 语义 tone：default = 中性 trigger；danger = 危险语义 trigger。 */
@@ -30,28 +13,6 @@ export type OverlayTriggerActionProps = Readonly<{
   fullWidth?: boolean;
 }> &
   OverlayTriggerBehavior;
-
-const overlayTriggerStyles = tv({
-  base: 'inline-flex min-h-control items-center justify-center gap-2 rounded-action px-4 text-sm font-medium shadow-none outline-none transition-colors',
-  defaultVariants: {
-    fullWidth: false,
-    tone: 'default',
-  },
-  variants: {
-    fullWidth: {
-      false: '',
-      true: 'w-full',
-    },
-    tone: {
-      // Material outlined：保持同一语义的状态层。
-      default:
-        'border border-border-strong bg-transparent text-brand hover:bg-surface-muted data-[hovered=true]:bg-surface-muted data-[pressed=true]:bg-surface-muted focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2',
-      // 危险：保持 danger 语义；pressed/hover 用 danger-soft，绝不切 Brand。
-      danger:
-        'border border-danger/30 bg-surface text-danger hover:bg-danger-soft data-[hovered=true]:bg-danger-soft data-[pressed=true]:bg-danger-soft focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2',
-    },
-  },
-});
 
 export function OverlayTriggerAction({
   children,
@@ -62,14 +23,16 @@ export function OverlayTriggerAction({
   onPress,
 }: OverlayTriggerActionProps) {
   return (
-    <HeroButton
-      className={overlayTriggerStyles({ fullWidth, tone })}
-      isDisabled={disabled}
+    <Button
+      className={`ui-overlay-trigger ${tone === 'danger' ? 'ui-overlay-trigger-danger text-danger border-danger/30 hover:bg-danger-soft' : ''}`}
+      fullWidth={fullWidth}
+      disabled={disabled}
       type={type}
-      variant="ghost"
-      {...(onPress ? { onPress } : {})}
+      onClick={onPress}
+      variant="outlined"
+      color={tone === 'danger' ? 'error' : 'primary'}
     >
       {children}
-    </HeroButton>
+    </Button>
   );
 }

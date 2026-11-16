@@ -27,6 +27,7 @@
     "./icon-action": "./src/icon-action.tsx",
     "./identity": "./src/identity.tsx",
     "./menu-button": "./src/menu-button.tsx",
+    "./mobile-navigation": "./src/mobile-navigation.tsx",
     "./navigation": "./src/navigation.tsx",
     "./navigation-flyout": "./src/navigation-flyout.tsx",
     "./overlays": "./src/overlays.tsx",
@@ -42,18 +43,26 @@
     "./step-navigation": "./src/step-navigation.tsx",
     "./tree": "./src/tree.tsx",
     "./toggle-group": "./src/toggle-group.tsx",
-    "./container-layout": "./src/container-layout.ts"
+    "./container-layout": "./src/container-layout.ts",
+    "./theme-provider": "./src/theme-provider.tsx",
+    "./destination-navigation": "./src/destination-navigation.tsx",
+    "./action-toolbar": "./src/action-toolbar.tsx"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@clouddrive/types": "workspace:*",
-    "@heroui/react": "^3.2.4",
-    "@heroui/styles": "^3.2.4",
-    "@internationalized/date": "3.12.4",
     "react": "^19.2.8",
-    "react-aria-components": "^1.22.1"
+    "react-aria-components": "^1.22.1",
+    "@mui/material": "9.5.0",
+    "@mui/x-date-pickers": "9.18.0",
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1",
+    "dayjs": "1.11.23",
+    "react-dom": "^19.2.8",
+    "notistack": "3.0.2",
+    "@clouddrive/design-system": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.2.7"

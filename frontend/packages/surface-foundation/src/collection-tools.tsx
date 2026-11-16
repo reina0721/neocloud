@@ -154,7 +154,7 @@ export type DensityToggleProps = Readonly<{
   disabled?: boolean;
 }>;
 
-/** 三档密度：工具条内联 Select（HeroUI 负责 Popup/Selection/Keyboard）。 */
+/** 三档密度：工具条内联 Select（MUI 负责 Popup/Selection/Keyboard）。 */
 export function DensityToggle({ label, value, labels, onChange, disabled }: DensityToggleProps) {
   return (
     <SelectField
@@ -185,7 +185,7 @@ export type ExportMenuProps = Readonly<{
   icon?: ReactNode;
 }>;
 
-/** 导出菜单：复用 MenuButton（HeroUI Dropdown 负责 Overlay/Focus/Keyboard）。 */
+/** 导出菜单：复用 MenuButton（MUI Dropdown 负责 Overlay/Focus/Keyboard）。 */
 export function ExportMenu({ label, menuLabel, items, icon }: ExportMenuProps) {
   return (
     <MenuButton

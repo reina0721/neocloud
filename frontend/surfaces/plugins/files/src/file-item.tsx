@@ -171,7 +171,10 @@ export function FileItem({
         onContext();
       }}
       data-file-cut={cut || undefined}
-      className={`${isList ? 'flex min-w-0 items-center gap-2 border-b border-border py-2' : 'min-w-0 rounded-panel border border-border p-3'} ${selected ? 'bg-brand-soft' : isList ? 'hover:bg-surface-muted' : 'bg-surface hover:bg-surface-muted'} ${cut ? 'opacity-50' : ''}`}
+      data-selected={selected || undefined}
+      data-file-view={view}
+      data-file-kind={entry.kind}
+      className={`surface-file-item ${isList ? 'flex min-w-0 items-center gap-2 border-b border-border py-2' : 'min-w-0 rounded-panel border border-transparent p-3 shadow-panel'} ${selected ? 'bg-brand-soft' : isList ? 'hover:bg-surface-muted' : 'bg-surface hover:bg-surface-muted'} ${cut ? 'opacity-50' : ''}`}
     >
       {isList ? (
         <>
@@ -215,17 +218,17 @@ export function FileItem({
             ) : null}
             {actions}
           </div>
-          <div className="flex min-w-0 flex-col items-center gap-2 py-1">
+          <div className="surface-file-preview flex min-w-0 items-center gap-2 py-1">
             {icon}
             <div className="min-w-0 max-w-full w-full">
               {title}
               {tags}
               {expiry}
-              <p className="mt-1 text-xs text-ink-muted">
+              <p className="surface-file-metadata mt-1 text-xs text-ink-muted">
                 {entry.kind === 'file' ? formatFileBytes(entry.sizeBytes) : kind}
               </p>
               <p
-                className="mt-1 truncate text-xs text-ink-muted"
+                className="surface-file-metadata mt-1 truncate text-xs text-ink-muted"
                 title={time.full(entry.trashedAt ?? entry.updatedAt)}
               >
                 {time.date(entry.trashedAt ?? entry.updatedAt)}

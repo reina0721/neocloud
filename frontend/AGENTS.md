@@ -20,7 +20,7 @@ Plugin 不导入 Host 私有实现，不持有会话、网络客户端、File/Bl
 
 ## 5. 成熟交互基础
 
-仅 UI Adapter 直接依赖 HeroUI；表单与语言运行分别经过 Form Foundation 和 i18n。保留成熟控件的键盘、Popup、Overlay 与 ARIA 语义，不以自制浮层或原生简化控件绕开既有契约。
+仅 UI Adapter 直接依赖 MUI；表单与语言运行分别经过 Form Foundation 和 i18n。保留成熟控件的键盘、Popup、Overlay 与 ARIA 语义，不以自制浮层或原生简化控件绕开既有契约。
 
 ## 6. 状态与数据
 

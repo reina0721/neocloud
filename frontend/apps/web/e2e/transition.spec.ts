@@ -43,8 +43,12 @@ async function startTransitionWatcher(page: Page) {
         // getAnimations() 中，若计入会污染后续用例（如后退不应出现 forward 动画）。
         if (animation.playState === 'finished') continue;
         if (!record.animationNames.includes(name)) record.animationNames.push(name);
-        if (name.includes('surface-enter-forward')) record.sawDirectionEnter = true;
-        if (name.includes('content-') || name === 'surface-item-enter')
+        if (name.includes('surface-screen-fade-slide')) record.sawDirectionEnter = true;
+        if (
+          name.includes('content-') ||
+          name.includes('surface-screen-') ||
+          name === 'surface-item-enter'
+        )
           record.sawRouteContentEnter = true;
         const duration = Number(effect?.getComputedTiming().duration ?? 0);
         if (Number.isFinite(duration)) {
@@ -139,7 +143,7 @@ test('无 Suspense 页面深入导航播放方向进入并恢复稳定', async (
   const record = await readTransitionRecord(page);
   // forward 导航播放方向进入动画（克制右入淡入，CSS token 驱动）
   expect(record.sawDirectionEnter).toBe(true);
-  expect(record.animationNames).toContain('surface-enter-forward');
+  expect(record.animationNames).toContain('surface-screen-fade-slide');
   expect(record.sawRouteContentEnter).toBe(true);
   expect(record.maxDurationMs).toBeLessThanOrEqual(500);
 

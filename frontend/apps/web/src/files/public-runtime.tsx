@@ -1,5 +1,6 @@
 'use client';
-import { useContext } from 'react';
+import { lazy, Suspense, useContext } from 'react';
+import { BusyIndicator } from '@clouddrive/ui-adapter/busy-indicator';
 import { AuthContext, useAuth } from '../auth/context';
 import { AuthStatusSurface } from '../auth/status-surface';
 import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
@@ -10,7 +11,9 @@ import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
 import { Cloud } from 'lucide-react';
 import { createPublicFilesRuntime } from './public-backend';
 import { AppLoadingSurface } from '../host/app-loading-surface';
-import { FileMediaView } from './media-view';
+const PublicMediaView = lazy(() =>
+  import('./media-view').then((module) => ({ default: module.FileMediaView })),
+);
 import { initializePublicFileMessages } from './messages';
 
 export function PublicFilesRuntime({ children }: Readonly<{ children: ReactNode }>) {
@@ -53,7 +56,14 @@ export function PublicFilesRuntime({ children }: Readonly<{ children: ReactNode 
   const Media = useMemo(
     () =>
       function PublicMediaRenderer(props: FileMediaProps) {
-        return <FileMediaView {...props} readContent={runtime.readMedia} />;
+        const { t } = useFrontendTranslation();
+        return (
+          <Suspense
+            fallback={<BusyIndicator label={props.labels?.loading ?? t('publicFiles.loading')} />}
+          >
+            <PublicMediaView {...props} readContent={runtime.readMedia} />
+          </Suspense>
+        );
       },
     [runtime],
   );

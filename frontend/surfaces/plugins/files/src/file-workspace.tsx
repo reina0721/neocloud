@@ -1,9 +1,12 @@
 'use client';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { CurrentSiteLogo, useSiteProfile } from '@clouddrive/surface/administration/runtime';
+import { ProductMasthead } from '@clouddrive/surface-foundation/layout';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
 import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
+import { NavigationItem, NavigationTabs } from '@clouddrive/ui-adapter/destination-navigation';
+import { MobileNavigation } from '@clouddrive/ui-adapter/mobile-navigation';
 import { DrawerSurface } from '@clouddrive/ui-adapter/overlays';
 import { ProgressMeter } from '@clouddrive/ui-adapter/progress-meter';
 import { SearchBox } from '@clouddrive/ui-adapter/search-box';
@@ -92,6 +95,7 @@ export function FileWorkspace({
     snapshot = useTransferSnapshot(),
     { t, locale } = useFrontendTranslation();
   const { profile } = useSiteProfile();
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const siteName = profile?.name || t('files.brand');
   const [revision, setRevision] = useWorkspaceRevision();
   const [historySettings, setHistorySettings] = useState(false);
@@ -170,6 +174,13 @@ export function FileWorkspace({
       : [];
   const isFiles = pathname === port.destinationHref('files'),
     isTransfers = pathname === port.destinationHref('transfers');
+  const focusSearchAfterNavigation = useRef(false);
+  useEffect(() => {
+    if (isFiles && focusSearchAfterNavigation.current) {
+      focusSearchAfterNavigation.current = false;
+      port.focusSearch();
+    }
+  }, [isFiles, port]);
   const isTrash = isFiles && query.trash === 'true';
   const collapsed = sidebarSettings.collapsed;
   const directoryParent =
@@ -293,7 +304,7 @@ export function FileWorkspace({
     }
   }
   const renderNavigation = (close: () => void, rail: boolean, mobile: boolean) => (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="surface-file-navigation flex h-full min-h-0 flex-col">
       <div
         className={
           rail
@@ -305,25 +316,22 @@ export function FileWorkspace({
           target="files"
           title={siteName}
           onNavigate={close}
-          className="flex min-w-0 items-center gap-2 px-1 py-2 text-base font-semibold"
+          className="flex min-w-0 items-center gap-3 px-4 py-2 text-base font-semibold"
         >
           <CurrentSiteLogo
-            className="size-7 shrink-0"
-            fallback={<Cloud className="size-7 shrink-0 text-brand" />}
+            className="size-6 shrink-0"
+            fallback={<Cloud className="size-6 shrink-0 text-brand" />}
           />
           <span className={rail ? 'sr-only' : 'truncate'}>{siteName}</span>
         </FileLink>
         {!mobile ? (
-          <Action
-            size="sm"
-            variant="quiet"
-            leadingIcon={<Menu className="size-4" />}
+          <IconAction
+            label={t(collapsed ? 'files.workspace.expand' : 'files.workspace.collapse')}
             onPress={toggleSidebar}
+            tooltip
           >
-            <span className="sr-only">
-              {t(collapsed ? 'files.workspace.expand' : 'files.workspace.collapse')}
-            </span>
-          </Action>
+            <Menu className="size-6" />
+          </IconAction>
         ) : null}
       </div>
       <nav aria-label={t('files.nav')} className={'mt-3 min-h-0 flex-1 overflow-y-auto space-y-1'}>
@@ -332,96 +340,85 @@ export function FileWorkspace({
             {t('files.workspace.library')}
           </h2>
         ) : null}
-        {categoryItems.map((item) => {
-          const active =
-            isFiles &&
-            query.trash !== 'true' &&
-            (query.category ?? '') === item.key &&
-            (item.key !== '' || !query.parent);
-          const link = (
-            <FileLink
-              key={item.key}
-              target="files"
-              query={{ category: item.key }}
-              title={t(item.label)}
-              onNavigate={close}
-              {...(active ? { 'aria-current': 'page' as const } : {})}
-              className={
-                'ui-navigation-focus flex min-h-control items-center gap-3 rounded-action py-2 text-sm transition-colors hover:bg-ink/8 ' +
-                (rail ? 'justify-center px-2 ' : 'px-4 ') +
-                (active ? 'bg-brand-soft text-brand font-semibold' : 'text-ink-muted')
-              }
-            >
-              <span className="size-5 shrink-0 overflow-hidden" aria-hidden="true">
-                {item.icon}
-              </span>
-              <span className={rail ? 'sr-only' : ''}>{t(item.label)}</span>
-            </FileLink>
-          );
-          return item.key === '' && !rail ? (
-            <Fragment key={item.key}>
-              <div className="flex min-w-0 items-center gap-1 [&>a]:flex-1">
-                <IconAction
-                  size="sm"
-                  expanded={directoryTree.snapshot.rootOpen}
-                  disabled={!directoryTree.snapshot.ready}
-                  label={t(
-                    directoryTree.snapshot.rootOpen
-                      ? 'files.tree.collapseRoot'
-                      : 'files.tree.expandRoot',
-                  )}
-                  onPress={directoryTree.controller.toggleRoot}
-                >
-                  {directoryTree.snapshot.rootOpen ? (
-                    <ChevronDown className="size-4" />
-                  ) : (
-                    <ChevronRight className="size-4" />
-                  )}
-                </IconAction>
-                {link}
-              </div>
-              {directoryTree.snapshot.rootOpen ? (
-                <Suspense
-                  fallback={
-                    <p role="status" className="text-xs text-ink-muted">
-                      {t('files.tree.loading')}
-                    </p>
-                  }
-                >
-                  <DirectoryTree
-                    snapshot={directoryTree.snapshot}
-                    controller={directoryTree.controller}
-                    currentParent={directoryParent}
-                    automatic={sidebarSettings.autoExpandTree}
-                    onAutomaticChange={(autoExpandTree) =>
-                      saveSidebar({ ...sidebarSettings, autoExpandTree })
+        {categoryItems
+          .filter((item) => mobile || !item.key)
+          .map((item) => {
+            const active =
+              isFiles &&
+              query.trash !== 'true' &&
+              (query.category ?? '') === item.key &&
+              (item.key !== '' || !query.parent);
+            const link = (
+              <NavigationItem
+                key={item.key}
+                href={port.destinationHref('files', { category: item.key })}
+                label={t(item.label)}
+                icon={item.icon}
+                selected={active}
+                compact={rail}
+                onNavigate={() => {
+                  port.navigate('files', { category: item.key });
+                  close();
+                }}
+              />
+            );
+            return item.key === '' && !rail ? (
+              <Fragment key={item.key}>
+                <div className="flex min-w-0 items-center gap-1 [&>a]:flex-1">
+                  {link}
+                  <IconAction
+                    expanded={directoryTree.snapshot.rootOpen}
+                    disabled={!directoryTree.snapshot.ready}
+                    label={t(
+                      directoryTree.snapshot.rootOpen
+                        ? 'files.tree.collapseRoot'
+                        : 'files.tree.expandRoot',
+                    )}
+                    onPress={directoryTree.controller.toggleRoot}
+                  >
+                    {directoryTree.snapshot.rootOpen ? (
+                      <ChevronDown className="size-4" />
+                    ) : (
+                      <ChevronRight className="size-4" />
+                    )}
+                  </IconAction>
+                </div>
+                {directoryTree.snapshot.rootOpen ? (
+                  <Suspense
+                    fallback={
+                      <p role="status" className="text-xs text-ink-muted">
+                        {t('files.tree.loading')}
+                      </p>
                     }
-                    onNavigate={close}
-                  />
-                </Suspense>
-              ) : null}
-            </Fragment>
-          ) : (
-            link
-          );
-        })}
-        <FileLink
-          target="files"
-          query={{ trash: 'true' }}
-          title={t('files.trash')}
-          onNavigate={close}
-          {...(isFiles && query.trash === 'true' ? { 'aria-current': 'page' as const } : {})}
-          className={
-            'ui-navigation-focus flex min-h-control items-center gap-3 rounded-action py-2 text-sm transition-colors hover:bg-ink/8 ' +
-            (rail ? 'justify-center px-2 ' : 'px-4 ') +
-            (isFiles && query.trash === 'true'
-              ? 'bg-brand-soft text-brand font-semibold'
-              : 'text-ink-muted')
-          }
-        >
-          <Trash2 className="size-5 shrink-0" />
-          <span className={rail ? 'sr-only' : ''}>{t('files.trash')}</span>
-        </FileLink>
+                  >
+                    <DirectoryTree
+                      snapshot={directoryTree.snapshot}
+                      controller={directoryTree.controller}
+                      currentParent={directoryParent}
+                      automatic={sidebarSettings.autoExpandTree}
+                      onAutomaticChange={(autoExpandTree) =>
+                        saveSidebar({ ...sidebarSettings, autoExpandTree })
+                      }
+                      onNavigate={close}
+                    />
+                  </Suspense>
+                ) : null}
+              </Fragment>
+            ) : (
+              link
+            );
+          })}
+        <NavigationItem
+          href={port.destinationHref('files', { trash: 'true' })}
+          label={t('files.trash')}
+          icon={<Trash2 />}
+          selected={isFiles && query.trash === 'true'}
+          compact={rail}
+          onNavigate={() => {
+            port.navigate('files', { trash: 'true' });
+            close();
+          }}
+        />
         {navigationGroups.map((group) => (
           <section key={group.id} aria-label={t('files.workspace.' + group.id)} className="pt-3">
             {!rail ? (
@@ -434,23 +431,18 @@ export function FileWorkspace({
             {group.items.map((item) => {
               const active = pathname === port.destinationHref(item.target);
               return (
-                <FileLink
+                <NavigationItem
                   key={item.target}
-                  target={item.target}
-                  title={t(item.label)}
-                  onNavigate={close}
-                  {...(active ? { 'aria-current': 'page' as const } : {})}
-                  className={
-                    'ui-navigation-focus flex min-h-control items-center gap-3 rounded-action py-2 text-sm transition-colors hover:bg-ink/8 ' +
-                    (rail ? 'justify-center px-2 ' : 'px-4 ') +
-                    (active ? 'bg-brand-soft text-brand font-semibold' : 'text-ink-muted')
-                  }
-                >
-                  <span className="size-5 shrink-0" aria-hidden="true">
-                    {item.icon}
-                  </span>
-                  <span className={rail ? 'sr-only' : ''}>{t(item.label)}</span>
-                </FileLink>
+                  href={port.destinationHref(item.target)}
+                  label={t(item.label)}
+                  icon={item.icon}
+                  selected={active}
+                  compact={rail}
+                  onNavigate={() => {
+                    port.navigate(item.target);
+                    close();
+                  }}
+                />
               );
             })}
           </section>
@@ -493,172 +485,212 @@ export function FileWorkspace({
       ) : null}
     </div>
   );
+  const creationControl = (
+    <>
+      {isTrash ? (
+        <>
+          <Action
+            size="sm"
+            variant="danger"
+            leadingIcon={<Trash2 className="size-4" />}
+            onPress={() => setEmptyTrash(true)}
+          >
+            {t('files.trashPurge.empty')}
+          </Action>
+          <Action
+            size="sm"
+            variant="quiet"
+            leadingIcon={<Settings className="size-4" />}
+            onPress={() => setTrashRetention(true)}
+          >
+            {t('files.trashRetention.title')}
+          </Action>
+        </>
+      ) : (
+        <MenuButton
+          ariaLabel={t('files.new')}
+          triggerSize="md"
+          triggerVariant={isFiles ? 'primary' : 'icon'}
+          label={
+            isFiles ? (
+              <span className="flex items-center gap-2">
+                <FolderPlus className="size-5" />
+                <span className="hidden md:inline">{t('files.new')}</span>
+              </span>
+            ) : (
+              <FolderPlus className="size-5" aria-hidden="true" />
+            )
+          }
+          items={[
+            { id: 'upload', label: t('files.upload') },
+            { id: 'directory', label: t('files.uploadDirectory') },
+            { id: 'clipboard', label: t('files.uploadClipboard') },
+            { id: 'folder', label: t('files.newFolder') },
+            ...templates.map(({ id, title }) => ({ id, label: title })),
+          ]
+            .map((item) => ({ ...item, disabled: !storage }))
+            .concat([
+              ...(storage && (!creationPolicy || creationPolicy === 'error')
+                ? [
+                    {
+                      id: 'creation-status',
+                      label:
+                        creationPolicy === 'error'
+                          ? locale.startsWith('zh')
+                            ? '无法读取新建文件映射，重新打开可重试。'
+                            : 'File mappings could not be loaded. Reopen the menu to retry.'
+                          : t('files.previewLoading'),
+                      disabled: true,
+                    },
+                  ]
+                : []),
+              { id: 'downloads', label: t('files.downloads.title'), disabled: false },
+            ])}
+          onOpenChange={loadCreationMenu}
+          onAction={(action) => {
+            if (action === 'downloads') port.navigate('downloads');
+            else if (action === 'clipboard') {
+              port.focusFiles();
+              setNotice(t('files.workspace.clipboard'));
+            } else if (action === 'folder' || action === 'upload' || action === 'directory')
+              setCreate({ action });
+            else {
+              const template = templates.find((item) => item.id === action);
+              if (template) setCreate({ action: template.action, template });
+            }
+          }}
+        />
+      )}
+    </>
+  );
   return (
     <div
       data-file-workspace
-      className="flex h-dvh flex-col overflow-hidden bg-canvas font-sans text-ink"
+      className="surface-file-mobile-root fixed inset-0 flex h-dvh flex-col overflow-clip bg-canvas font-sans text-ink"
     >
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <ExplorerNavigation collapsed={collapsed} onFocusFiles={port.focusFiles}>
+        <ExplorerNavigation
+          collapsed={collapsed}
+          onFocusFiles={port.focusFiles}
+          open={mobileNavigationOpen}
+          onOpenChange={setMobileNavigationOpen}
+        >
           {(close, mobile) => renderNavigation(close, collapsed && !mobile, mobile)}
         </ExplorerNavigation>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <ProductMasthead name={siteName} description={t('files.workspace.tagline')} />
           <header
             data-file-workspace-header
-            className="flex min-h-20 shrink-0 flex-wrap items-center gap-3 bg-canvas px-4 py-3"
+            className="surface-file-workspace-toolbar flex shrink-0 flex-wrap items-center gap-x-2 gap-y-0 bg-surface px-3 md:min-h-16 md:gap-3 md:px-4 md:py-3"
           >
-            {isTrash ? (
-              <>
-                <Action
-                  size="sm"
-                  variant="danger"
-                  leadingIcon={<Trash2 className="size-4" />}
-                  onPress={() => setEmptyTrash(true)}
-                >
-                  {t('files.trashPurge.empty')}
-                </Action>
-                <Action
-                  size="sm"
-                  variant="quiet"
-                  leadingIcon={<Settings className="size-4" />}
-                  onPress={() => setTrashRetention(true)}
-                >
-                  {t('files.trashRetention.title')}
-                </Action>
-              </>
-            ) : (
-              <MenuButton
-                ariaLabel={t('files.new')}
-                triggerSize="md"
-                triggerVariant={isFiles ? 'primary' : 'icon'}
-                label={
-                  isFiles ? (
-                    <span className="flex items-center gap-2">
-                      <FolderPlus className="size-5" />
-                      {t('files.new')}
-                    </span>
-                  ) : (
-                    <FolderPlus className="size-5" aria-hidden="true" />
-                  )
-                }
-                items={[
-                  { id: 'upload', label: t('files.upload') },
-                  { id: 'directory', label: t('files.uploadDirectory') },
-                  { id: 'clipboard', label: t('files.uploadClipboard') },
-                  { id: 'folder', label: t('files.newFolder') },
-                  ...templates.map(({ id, title }) => ({ id, label: title })),
-                ]
-                  .map((item) => ({ ...item, disabled: !storage }))
-                  .concat([
-                    ...(storage && (!creationPolicy || creationPolicy === 'error')
-                      ? [
-                          {
-                            id: 'creation-status',
-                            label:
-                              creationPolicy === 'error'
-                                ? locale.startsWith('zh')
-                                  ? '无法读取新建文件映射，重新打开可重试。'
-                                  : 'File mappings could not be loaded. Reopen the menu to retry.'
-                                : t('files.previewLoading'),
-                            disabled: true,
-                          },
-                        ]
-                      : []),
-                    { id: 'downloads', label: t('files.downloads.title'), disabled: false },
-                  ])}
-                onOpenChange={loadCreationMenu}
-                onAction={(action) => {
-                  if (action === 'downloads') port.navigate('downloads');
-                  else if (action === 'clipboard') {
-                    port.focusFiles();
-                    setNotice(t('files.workspace.clipboard'));
-                  } else if (action === 'folder' || action === 'upload' || action === 'directory')
-                    setCreate({ action });
-                  else {
-                    const template = templates.find((item) => item.id === action);
-                    if (template) setCreate({ action: template.action, template });
-                  }
-                }}
-              />
-            )}
-            {isFiles ? (
-              <form
-                data-file-workspace-search
-                className="order-last flex w-full min-w-0 items-center gap-1 md:order-none md:w-auto max-w-md md:flex-1"
-                onKeyDownCapture={(event) => {
-                  if (event.key === 'Escape') {
-                    event.preventDefault();
-                    setSearch(isFiles ? (query.search ?? '') : '');
-                    port.focusFiles();
-                  }
-                }}
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  port.navigate('files', searchQuery(search));
-                }}
+            <div className="surface-file-mobile-header order-0 flex h-14 min-w-0 flex-1 items-center gap-2 md:hidden">
+              <IconAction
+                label={t('files.explorer.navigation')}
+                onPress={() => setMobileNavigationOpen(true)}
               >
-                <SearchBox
-                  label={t('files.search')}
-                  placeholder={t('files.searchPlaceholder')}
-                  value={search}
-                  onValueChange={setSearch}
-                />
-                <Action
-                  type="submit"
-                  size="sm"
-                  variant="quiet"
-                  leadingIcon={<Search className="size-4" />}
+                <Menu />
+              </IconAction>
+              <CurrentSiteLogo
+                className="size-5 shrink-0"
+                fallback={<Cloud className="size-5 text-brand" />}
+              />
+              <span className="min-w-0 flex-1 truncate font-bold text-brand">{siteName}</span>
+            </div>
+            <div className="order-1 shrink-0 md:order-0">{creationControl}</div>
+            <div className="surface-file-account-actions order-2 flex shrink-0 items-center gap-1 md:order-3">
+              <FileAccountTools />
+            </div>
+            <div
+              aria-hidden="true"
+              className={isFiles ? 'order-3 basis-full md:hidden' : 'hidden'}
+            />
+            <div
+              className={`${isFiles ? 'flex' : 'hidden md:flex'} order-4 h-14 min-w-0 flex-1 items-center md:order-1 md:h-auto`}
+            >
+              {isFiles ? (
+                <form
+                  data-file-workspace-search
+                  className="flex min-w-0 flex-1 items-center gap-1 md:max-w-md"
+                  onKeyDownCapture={(event) => {
+                    if (event.key === 'Escape') {
+                      event.preventDefault();
+                      setSearch(isFiles ? (query.search ?? '') : '');
+                      port.focusFiles();
+                    }
+                  }}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    port.navigate('files', searchQuery(search));
+                  }}
                 >
-                  <span className="sr-only">{t('files.search')}</span>
-                </Action>
-                {search ? (
-                  <Action
-                    size="sm"
-                    variant="quiet"
-                    onPress={() => {
-                      setSearch('');
-                      port.navigate('files', searchQuery(''));
-                    }}
-                  >
-                    {t('files.explorer.clearSearch')}
-                  </Action>
-                ) : null}
-              </form>
-            ) : null}
-            <div className="ml-auto flex shrink-0 items-center gap-1">
-              <Action
-                size="sm"
-                variant="quiet"
+                  <SearchBox
+                    label={t('files.search')}
+                    placeholder={t('files.searchPlaceholder')}
+                    value={search}
+                    onValueChange={setSearch}
+                  />
+                  <span className="hidden md:contents">
+                    <Action
+                      type="submit"
+                      size="sm"
+                      variant="quiet"
+                      leadingIcon={<Search className="size-4" />}
+                    >
+                      <span className="sr-only">{t('files.search')}</span>
+                    </Action>
+                    {search ? (
+                      <Action
+                        size="sm"
+                        variant="quiet"
+                        onPress={() => {
+                          setSearch('');
+                          port.navigate('files', searchQuery(''));
+                        }}
+                      >
+                        {t('files.explorer.clearSearch')}
+                      </Action>
+                    ) : null}
+                  </span>
+                </form>
+              ) : null}
+            </div>
+            <div
+              className={`${isFiles ? 'flex' : 'hidden md:flex'} order-5 h-14 shrink-0 items-center gap-1 md:order-2 md:h-auto`}
+            >
+              <IconAction
+                label={`${t('files.workspace.queue')} ${t('files.workspace.queueCount', { count: activeCount })}`}
+                tooltip
                 onPress={() => {
                   if (isTransfers) port.focusFiles();
                   else setTray(pathname);
                 }}
-                leadingIcon={<Upload className="size-5" />}
               >
-                <span>
-                  <span className="sr-only">{t('files.workspace.queue')}</span>
-                  <span aria-hidden="true" className="hidden sm:inline">
-                    {t('files.workspace.queue')}
-                  </span>
-                  <span aria-hidden="true"> · {activeCount}</span>
-                  <span className="sr-only">
-                    {t('files.workspace.queueCount', { count: activeCount })}
-                  </span>
-                </span>
-              </Action>
+                <Upload className="size-5" />
+              </IconAction>
               {isFiles ? (
-                <Action
-                  size="sm"
-                  variant="quiet"
+                <IconAction
+                  label={t('files.retention.title')}
+                  tooltip
                   onPress={() => setHistorySettings(true)}
-                  leadingIcon={<Settings className="size-5" />}
                 >
-                  <span className="sr-only">{t('files.retention.title')}</span>
-                </Action>
+                  <Settings className="size-5" />
+                </IconAction>
               ) : null}
-              <FileAccountTools />
             </div>
           </header>
+          <div className="surface-category-tabs">
+            <NavigationTabs
+              label={t('files.workspace.categories')}
+              value={isFiles && !isTrash ? query.category || 'all' : undefined}
+              items={categoryItems.map((item) => ({
+                id: item.key || 'all',
+                label: t(item.key ? item.label : 'files.workspace.allFiles'),
+                href: port.destinationHref('files', { category: item.key }),
+                icon: item.icon,
+              }))}
+              onNavigate={(id) => port.navigate('files', { category: id === 'all' ? '' : id })}
+            />
+          </div>
           {notice || sidebarPreference.failed ? (
             <p role="status" className="px-4 py-2 text-sm">
               {notice || t('files.workspace.readFailed')}
@@ -668,7 +700,7 @@ export function FileWorkspace({
             id="main-content"
             tabIndex={-1}
             data-file-scroll-region
-            className="min-h-0 min-w-0 flex-1 overflow-auto rounded-t-shell bg-surface px-4 pb-4 pt-3 md:mr-3 md:rounded-shell md:mb-3"
+            className="surface-file-content min-h-0 min-w-0 flex-1 overflow-auto bg-canvas px-4 pb-4 pt-4 md:px-6"
           >
             <WorkspaceCreateContext value={(action) => setCreate({ action })}>
               {children}
@@ -676,6 +708,36 @@ export function FileWorkspace({
           </main>
         </div>
       </div>
+      <MobileNavigation
+        label={t('files.workspace.mobileNavigation')}
+        value={isTransfers ? 'transfers' : isFiles ? 'files' : undefined}
+        items={[
+          {
+            id: 'files',
+            label: t('files.workspace.allFiles'),
+            icon: <Home />,
+            href: port.destinationHref('files'),
+          },
+          { id: 'categories', label: t('files.workspace.mobileCategories'), icon: <Menu /> },
+          {
+            id: 'transfers',
+            label: t('files.transferCenter'),
+            icon: <Upload />,
+            href: port.destinationHref('transfers'),
+          },
+          { id: 'search', label: t('files.search'), icon: <Search /> },
+        ]}
+        onSelect={(id) => {
+          if (id === 'categories') setMobileNavigationOpen(true);
+          else if (id === 'search') {
+            if (isFiles) port.focusSearch();
+            else {
+              focusSearchAfterNavigation.current = true;
+              port.navigate('files');
+            }
+          } else port.navigate(id === 'transfers' ? 'transfers' : 'files');
+        }}
+      />
       {isTrash && emptyTrash ? (
         <Suspense>
           <TrashPurgeDialog

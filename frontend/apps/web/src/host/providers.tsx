@@ -1,5 +1,7 @@
 'use client';
 
+import { MaterialThemeProvider } from '@clouddrive/ui-adapter/theme-provider';
+import { useMotionPolicy } from '@clouddrive/surface-foundation/motion-policy-context';
 import { FeedbackProvider } from '@clouddrive/ui-adapter/feedback-provider';
 import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
 import { AlertTriangle } from 'lucide-react';
@@ -47,6 +49,15 @@ function readSystemDark() {
   return window.matchMedia(darkSchemeQuery).matches;
 }
 
+function subscribeSystemContrast(notify: () => void) {
+  const query = window.matchMedia('(prefers-contrast: more)');
+  query.addEventListener('change', notify);
+  return () => query.removeEventListener('change', notify);
+}
+function readSystemContrast() {
+  return window.matchMedia('(prefers-contrast: more)').matches;
+}
+
 function RuntimeProviders({ children }: Readonly<{ children: ReactNode }>) {
   const { t } = useFrontendTranslation();
   const preferences = useShellStore((state) => state.preferences);
@@ -63,6 +74,17 @@ function RuntimeProviders({ children }: Readonly<{ children: ReactNode }>) {
     if (location.hash) focusRouteAnchor(location.href);
   }, [hasHydrated, workspaceHasHydrated]);
 
+  const motionPolicy = useMotionPolicy();
+  const systemContrast = useSyncExternalStore(
+    subscribeSystemContrast,
+    readSystemContrast,
+    () => false,
+  );
+  const highContrast =
+    preferences.appearance.contrast === 'high' ||
+    ((preferences.appearance.contrast === 'system' ||
+      preferences.accessibility.followSystemAssistive) &&
+      systemContrast);
   const systemDark = useSyncExternalStore(subscribeSystemDark, readSystemDark, () => false);
   const themeMode = preferences.appearance.themeMode;
   const accent = preferences.appearance.accent;
@@ -174,53 +196,59 @@ function RuntimeProviders({ children }: Readonly<{ children: ReactNode }>) {
   ]);
 
   return (
-    <RuntimeSiteProfile theme={resolvedTheme}>
-      {!hasHydrated || !workspaceHasHydrated ? (
-        <AppLoadingSurface label="正在加载应用 / Loading application" />
-      ) : (
-        <PreferencesProvider port={preferencesPort}>
-          <NavigationAdminPortProvider>
-            <WorkspaceProvider port={workspacePort}>
-              <WorkbenchProvider port={workbenchPort}>
-                <CommandsProvider port={commandsPort}>
-                  <NotificationsProvider port={notificationsPort}>
-                    <LeaveConfirmProvider port={leaveConfirmPort}>
-                      <LeaveConfirmationGuard>
-                        <FeedbackProvider
-                          closeLabel={t('common.close')}
-                          loadingLabel={t('common.feedbackLoading')}
-                          toastDurationMs={toastDurationMs}
-                        >
-                          {hydrationIssue ? (
-                            <div className="mx-auto max-w-screen-2xl p-4 sm:p-6 xl:p-8">
-                              <AlertBanner
-                                actionLabel={t('shell.recoverDefaults')}
-                                announcement="urgent"
-                                description={hydrationIssue.reason}
-                                icon={<AlertTriangle className="size-4" aria-hidden="true" />}
-                                onAction={() => {
-                                  // 恢复默认：清除损坏记录并重载（不触碰收藏/通知/草稿等
-                                  // 独立 Store）。
-                                  window.localStorage.removeItem('clouddrive.shell');
-                                  window.location.reload();
-                                }}
-                                title={t('shell.hydrationIssueTitle')}
-                                tone="warning"
-                              />
-                            </div>
-                          ) : null}
-                          {children}
-                        </FeedbackProvider>
-                      </LeaveConfirmationGuard>
-                    </LeaveConfirmProvider>
-                  </NotificationsProvider>
-                </CommandsProvider>
-              </WorkbenchProvider>
-            </WorkspaceProvider>
-          </NavigationAdminPortProvider>
-        </PreferencesProvider>
-      )}
-    </RuntimeSiteProfile>
+    <MaterialThemeProvider
+      reducedMotion={motionPolicy.resolvedMode !== 'full'}
+      highContrast={highContrast}
+      motionScale={motionPolicy.scale}
+    >
+      <RuntimeSiteProfile theme={resolvedTheme}>
+        {!hasHydrated || !workspaceHasHydrated ? (
+          <AppLoadingSurface label="正在加载应用 / Loading application" />
+        ) : (
+          <PreferencesProvider port={preferencesPort}>
+            <NavigationAdminPortProvider>
+              <WorkspaceProvider port={workspacePort}>
+                <WorkbenchProvider port={workbenchPort}>
+                  <CommandsProvider port={commandsPort}>
+                    <NotificationsProvider port={notificationsPort}>
+                      <LeaveConfirmProvider port={leaveConfirmPort}>
+                        <LeaveConfirmationGuard>
+                          <FeedbackProvider
+                            closeLabel={t('common.close')}
+                            loadingLabel={t('common.feedbackLoading')}
+                            toastDurationMs={toastDurationMs}
+                          >
+                            {hydrationIssue ? (
+                              <div className="mx-auto max-w-screen-2xl p-4 sm:p-6 xl:p-8">
+                                <AlertBanner
+                                  actionLabel={t('shell.recoverDefaults')}
+                                  announcement="urgent"
+                                  description={hydrationIssue.reason}
+                                  icon={<AlertTriangle className="size-4" aria-hidden="true" />}
+                                  onAction={() => {
+                                    // 恢复默认：清除损坏记录并重载（不触碰收藏/通知/草稿等
+                                    // 独立 Store）。
+                                    window.localStorage.removeItem('clouddrive.shell');
+                                    window.location.reload();
+                                  }}
+                                  title={t('shell.hydrationIssueTitle')}
+                                  tone="warning"
+                                />
+                              </div>
+                            ) : null}
+                            {children}
+                          </FeedbackProvider>
+                        </LeaveConfirmationGuard>
+                      </LeaveConfirmProvider>
+                    </NotificationsProvider>
+                  </CommandsProvider>
+                </WorkbenchProvider>
+              </WorkspaceProvider>
+            </NavigationAdminPortProvider>
+          </PreferencesProvider>
+        )}
+      </RuntimeSiteProfile>
+    </MaterialThemeProvider>
   );
 }
 

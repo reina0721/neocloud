@@ -1,23 +1,22 @@
 'use client';
 import { useFrontendTranslation } from '@clouddrive/i18n';
-import { CurrentSiteLogo, useSiteProfile } from '@clouddrive/surface/administration/runtime';
-import { Action } from '@clouddrive/ui-adapter/action';
 import { DrawerSurface } from '@clouddrive/ui-adapter/overlays';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Cloud, Menu } from '../../../src/files/icons';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 export function ExplorerNavigation({
   children,
   collapsed = false,
   onFocusFiles,
+  open,
+  onOpenChange: setOpen,
 }: {
   children: (onNavigate: () => void, mobile: boolean) => ReactNode;
   collapsed?: boolean;
   onFocusFiles: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useFrontendTranslation();
-  const { profile } = useSiteProfile();
-  const [open, setOpen] = useState(false);
   const wasOpen = useRef(false);
   useEffect(() => {
     const closed = wasOpen.current && !open;
@@ -31,22 +30,12 @@ export function ExplorerNavigation({
     <>
       <aside
         className={
-          'hidden h-full min-h-0 py-4 md:block md:shrink-0 ' +
-          (collapsed ? 'px-1 md:w-20' : 'px-3 md:w-64')
+          'surface-file-sidebar hidden h-full min-h-0 py-4 md:block md:shrink-0 ' +
+          (collapsed ? 'px-2 md:w-20' : 'px-3 md:w-64')
         }
       >
         {children(() => {}, false)}
       </aside>
-      <div className="flex shrink-0 items-center gap-2 px-3 py-1 md:hidden">
-        <Action size="sm" variant="quiet" onPress={() => setOpen(true)} leadingIcon={<Menu />}>
-          {t('files.explorer.navigation')}
-        </Action>
-        <CurrentSiteLogo
-          className="size-5 shrink-0"
-          fallback={<Cloud className="size-5 text-brand" />}
-        />
-        <span className="truncate font-semibold">{profile?.name || t('files.brand')}</span>
-      </div>
       {open ? (
         <DrawerSurface
           placement="left"

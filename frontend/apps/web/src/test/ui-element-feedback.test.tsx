@@ -1,3 +1,4 @@
+import { TextField } from '@clouddrive/ui-adapter/form-field';
 import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
 import { FeedbackPresence } from '@clouddrive/ui-adapter/feedback-presence';
 import { FeedbackProvider } from '@clouddrive/ui-adapter/feedback-provider';
@@ -7,20 +8,23 @@ import { describe, expect, it, vi } from 'vitest';
 function FeedbackHarness({ onAction }: Readonly<{ onAction: () => void }>) {
   const { notify } = useFeedback();
   return (
-    <button
-      type="button"
-      onClick={() =>
-        notify({
-          title: '同步已完成',
-          description: '当前页面已获得最新状态。',
-          tone: 'success',
-          duration: 'persistent',
-          action: { label: '查看详情', onPress: onAction },
-        })
-      }
-    >
-      发送反馈
-    </button>
+    <>
+      <TextField label="未提交草稿" defaultValue="" />
+      <button
+        type="button"
+        onClick={() =>
+          notify({
+            title: '同步已完成',
+            description: '当前页面已获得最新状态。',
+            tone: 'success',
+            duration: 'persistent',
+            action: { label: '查看详情', onPress: onAction },
+          })
+        }
+      >
+        发送反馈
+      </button>
+    </>
   );
 }
 
@@ -33,14 +37,18 @@ describe('FeedbackProvider', () => {
       </FeedbackProvider>,
     );
 
+    const draft = screen.getByRole('textbox', { name: '未提交草稿' });
+    fireEvent.change(draft, { target: { value: '尚未保存的输入' } });
     fireEvent.click(screen.getByRole('button', { name: '发送反馈' }));
     expect(await screen.findByText('同步已完成')).toBeVisible();
+    expect(screen.getByRole('textbox', { name: '未提交草稿' })).toBe(draft);
+    expect(draft).toHaveValue('尚未保存的输入');
     expect(screen.getByText('当前页面已获得最新状态。')).toBeVisible();
 
     fireEvent.click(screen.getByRole('button', { name: '查看详情' }));
     expect(onAction).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByRole('button', { name: '关闭反馈' }));
-    expect(screen.queryByText('同步已完成')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText('同步已完成')).not.toBeInTheDocument());
   });
 
   it('FeedbackPresence 退出时立即脱离交互树，并支持快速反转', async () => {

@@ -1,6 +1,7 @@
 export const zhPDF = {
   imageBudget: '单张图像最多 {{pixels}} 像素，超限图像不显示；完整内容请下载原件。',
   title: 'PDF阅读器',
+  tools: '编辑与导出工具',
   hint: '标注导出为副本，原文件保持不变。',
   loading: '正在打开PDF…',
   retry: '重新打开',
@@ -90,6 +91,7 @@ export const enPDF = {
   imageBudget:
     'Images above {{pixels}} pixels are omitted. Download the original for complete content.',
   title: 'PDF reader',
+  tools: 'Editing and export tools',
   hint: 'Export annotations as a copy. Your original stays unchanged.',
   loading: 'Opening PDF…',
   retry: 'Open again',

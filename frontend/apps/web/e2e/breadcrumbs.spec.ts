@@ -12,7 +12,7 @@ test('面包屑默认开：详情页显示 参考资源 → 详情 面包屑', a
   await resetPreferences(page);
   await page.goto('/reference-resources/detail?id=resource-alpha');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
-  const trail = page.getByRole('list', { name: '面包屑' });
+  const trail = page.getByRole('navigation', { name: '面包屑' });
   await expect(trail).toBeVisible();
   await expect(trail.getByText('参考资源', { exact: true })).toBeVisible();
 });
@@ -30,5 +30,5 @@ test('关闭 显示面包屑：详情页不再显示面包屑', async ({ page })
 
   await page.goto('/reference-resources/detail?id=resource-alpha');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
-  await expect(page.getByRole('list', { name: '面包屑' })).not.toBeVisible();
+  await expect(page.getByRole('navigation', { name: '面包屑' })).not.toBeVisible();
 });

@@ -14,8 +14,8 @@ async function resetPreferences(page: Page) {
 async function goToPage3(page: Page) {
   await page.getByRole('button', { name: '第 3 页' }).click();
   await expect(page.getByRole('button', { name: '第 3 页' })).toHaveAttribute(
-    'data-active',
-    'true',
+    'aria-current',
+    'page',
   );
 }
 
@@ -34,8 +34,8 @@ test('记住分页位置默认关：离开再回列表回到第 1 页', async ({
   await goToPage3(page);
   await awayAndBack(page);
   await expect(page.getByRole('button', { name: '第 1 页' })).toHaveAttribute(
-    'data-active',
-    'true',
+    'aria-current',
+    'page',
   );
 });
 
@@ -55,7 +55,7 @@ test('开启 记住分页位置：离开再回列表仍在第 3 页', async ({ p
   await goToPage3(page);
   await awayAndBack(page);
   await expect(page.getByRole('button', { name: '第 3 页' })).toHaveAttribute(
-    'data-active',
-    'true',
+    'aria-current',
+    'page',
   );
 });

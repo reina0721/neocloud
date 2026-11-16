@@ -1,11 +1,16 @@
-import { Popover } from '@heroui/react/popover';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import Popper from '@mui/material/Popper';
+import Paper from '@mui/material/Paper';
+import Fade from '@mui/material/Fade';
+import { useTheme } from '@mui/material/styles';
+import { designParameters } from '@clouddrive/design-system/parameters';
+import ClickAwayListener from '@mui/material/ClickAwayListener';
+import ButtonBase from '@mui/material/ButtonBase';
+import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 
 export { default as NavigationHint } from './navigation-hint';
 
-const navigationFlyoutCloseDelayMs = 140;
+const navigationFlyoutCloseDelayMs = designParameters.duration.fast;
 // Compact Navigation 属于非模态子菜单；Pointer 打开时保持当前焦点，键盘打开时仍进入 Overlay。
-const navigationFlyoutTrigger = 'SubmenuTrigger';
 
 export type NavigationFlyoutProps = Readonly<{
   label: string;
@@ -24,6 +29,13 @@ export function NavigationFlyout({
   children,
   onOpenChange,
 }: NavigationFlyoutProps) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const keyboardOpen = useRef(false);
+  const attachContent = useCallback((node: HTMLDivElement | null) => {
+    contentRef.current = node;
+    if (keyboardOpen.current) node?.querySelector<HTMLElement>('a,button,[tabindex="0"]')?.focus();
+  }, []);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const openRef = useRef(isOpen);
   const ignoreNextPressCloseRef = useRef(false);
@@ -31,9 +43,7 @@ export function NavigationFlyout({
   const pointerOverContentRef = useRef(false);
   const pinnedRef = useRef(false);
   const focusWithinContentRef = useRef(false);
-  // 父级（Compact Shell 的 openBranchId）直接关闭时不会经过 requestOpenChange，internalClose 保持 false；
-  // 此时跳过 Popover 退出动画，避免旧菜单退出层与新菜单进入层短暂叠加。
-  const [internalClose, setInternalClose] = useState(false);
+  const theme = useTheme();
   // 渲染后同步的 isOpen 快照：延迟关闭回调在计时器触发时读取最新值，
   // 避免闭包捕获旧 isOpen 导致父级已关闭后仍向上冒泡误关新菜单。
   const isOpenRef = useRef(isOpen);
@@ -44,7 +54,10 @@ export function NavigationFlyout({
     if (!isOpen) pinnedRef.current = false;
   }, [isOpen]);
 
-  const skipExitAnimation = !isOpen && !internalClose;
+  useEffect(() => {
+    if (isOpen && keyboardOpen.current)
+      contentRef.current?.querySelector<HTMLElement>('a,button,[tabindex="0"]')?.focus();
+  }, [isOpen]);
 
   const cancelScheduledClose = () => {
     if (closeTimerRef.current) {
@@ -58,9 +71,6 @@ export function NavigationFlyout({
     // 否则会把新打开的兄弟菜单误关。
     if (!open && !isOpenRef.current) return;
     openRef.current = open;
-    // 只有真正由本 Flyout 内部发起的关闭（指针离开计时器、RAC 用户关闭）才播放退出动画；
-    // 父级直接替换 openBranchId 的关闭保持 internalClose=false，跳过退出动画。
-    setInternalClose(!open);
     onOpenChange(open);
   };
   const scheduleClose = () => {
@@ -87,26 +97,52 @@ export function NavigationFlyout({
       ignoreNextPressCloseRef.current = false;
       return;
     }
-    // RAC 在父级已通过 isOpen prop 关闭后也会回调 onOpenChange(false)；
-    // 此时关闭由父级发起，不再向上冒泡，避免旧菜单的回调误关新打开的兄弟菜单。
+    // 父级切换兄弟菜单后，旧实例的延迟关闭不能影响新实例。
     if (!open && !isOpenRef.current) return;
     if (!open) pinnedRef.current = false;
     requestOpenChange(open);
   };
 
+  const enterFromKeyboard = () => {
+    keyboardOpen.current = true;
+    pinnedRef.current = true;
+    ignoreNextPressCloseRef.current = false;
+    cancelScheduledClose();
+    requestOpenChange(true);
+    contentRef.current?.querySelector<HTMLElement>('a,button,[tabindex="0"]')?.focus();
+  };
+
   useEffect(() => () => cancelScheduledClose(), []);
 
   return (
-    <Popover isOpen={isOpen} onOpenChange={handleOpenChange}>
-      <Popover.Trigger<'button'>
+    <>
+      <ButtonBase
+        ref={triggerRef}
+        type="button"
         aria-label={label}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
         className="ui-navigation-icon-trigger"
         data-active={active || undefined}
         data-open={isOpen || undefined}
         data-navigation-control
-        render={(triggerProps) => <button {...triggerProps} type="button" />}
+        onClick={(event) => {
+          if (event.detail === 0) enterFromKeyboard();
+          else handleOpenChange(!isOpen);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            enterFromKeyboard();
+          }
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            requestOpenChange(false);
+          }
+        }}
         onPointerEnter={(event) => {
           if (event.pointerType !== 'mouse') return;
+          keyboardOpen.current = false;
           pointerOverTriggerRef.current = true;
           cancelScheduledClose();
           requestOpenChange(true);
@@ -125,55 +161,66 @@ export function NavigationFlyout({
         <span aria-hidden="true" className="ui-navigation-icon">
           {icon}
         </span>
-        <svg
-          aria-hidden="true"
-          className="absolute end-1 bottom-1 size-3"
-          viewBox="0 0 16 16"
-          fill="none"
-        >
-          <path
-            d="m6 4 4 4-4 4"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </Popover.Trigger>
-      <Popover.Content
-        aria-label={label}
-        className="ui-overlay-surface w-72 p-2"
-        isNonModal
-        placement="right top"
-        shouldSkipAnimation={skipExitAnimation}
-        trigger={navigationFlyoutTrigger}
-        shouldCloseOnInteractOutside={(element) => !element.closest('[data-navigation-control]')}
-        onPointerEnter={() => {
-          pointerOverContentRef.current = true;
-          cancelScheduledClose();
-        }}
-        onPointerLeave={() => {
-          pointerOverContentRef.current = false;
-          scheduleClose();
-        }}
+        <span aria-hidden="true" className="absolute end-1 bottom-1 text-xs">
+          ›
+        </span>
+      </ButtonBase>
+      <Popper
+        open={isOpen}
+        anchorEl={() => triggerRef.current!}
+        placement="right-start"
+        modifiers={[{ name: 'offset', options: { offset: [0, 8] } }]}
+        style={{ zIndex: 'var(--z-index-overlay)' }}
       >
-        <Popover.Arrow className="fill-surface-raised stroke-border" />
-        <div
-          onFocusCapture={() => {
-            focusWithinContentRef.current = true;
-            cancelScheduledClose();
-          }}
-          onBlurCapture={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget)) {
-              focusWithinContentRef.current = false;
-              scheduleClose();
-            }
+        <ClickAwayListener
+          onClickAway={(event) => {
+            const target = event.target;
+            if (target instanceof Element && target.closest('[data-navigation-control]')) return;
+            handleOpenChange(false);
           }}
         >
-          <p className="border-b border-border px-3 py-2 text-sm font-semibold text-ink">{label}</p>
-          {children}
-        </div>
-      </Popover.Content>
-    </Popover>
+          <Fade in={isOpen} timeout={theme.transitions.duration.standard}>
+            <Paper
+              ref={attachContent}
+              role="dialog"
+              aria-modal="false"
+              aria-label={label}
+              className="ui-overlay-surface ui-menu-surface w-72 p-2"
+              data-navigation-flyout
+              onPointerEnter={() => {
+                pointerOverContentRef.current = true;
+                cancelScheduledClose();
+              }}
+              onPointerLeave={() => {
+                pointerOverContentRef.current = false;
+                scheduleClose();
+              }}
+              onFocusCapture={() => {
+                focusWithinContentRef.current = true;
+                cancelScheduledClose();
+              }}
+              onBlurCapture={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                  focusWithinContentRef.current = false;
+                  scheduleClose();
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  handleOpenChange(false);
+                  triggerRef.current?.focus();
+                }
+              }}
+            >
+              <p className="border-b border-border px-3 py-2 text-sm font-semibold text-ink">
+                {label}
+              </p>
+              {children}
+            </Paper>
+          </Fade>
+        </ClickAwayListener>
+      </Popper>
+    </>
   );
 }

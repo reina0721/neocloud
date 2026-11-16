@@ -100,7 +100,7 @@ test('关闭后跳转策略选择器存在并持久化（右邻优先）', async
   await page.goto('/settings/navigation');
   await page.getByRole('heading', { name: '导航' }).first().scrollIntoViewIfNeeded();
   // 选择 右邻优先。
-  const select = page.getByRole('button', { name: /关闭当前标签后跳转/ });
+  const select = page.getByRole('combobox', { name: '关闭当前标签后跳转', exact: true });
   await select.click();
   await page.getByRole('option', { name: '右邻优先' }).click();
   await page.waitForTimeout(300);
@@ -108,7 +108,7 @@ test('关闭后跳转策略选择器存在并持久化（右邻优先）', async
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   await page.getByRole('heading', { name: '导航' }).first().scrollIntoViewIfNeeded();
-  await expect(page.getByRole('button', { name: /右邻优先/ })).toBeVisible();
+  await expect(select).toContainText('右邻优先');
 });
 
 test('恢复上次打开的标签：重载后标签保持（默认关时清除）', async ({ page }) => {

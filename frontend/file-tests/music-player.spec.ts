@@ -139,6 +139,11 @@ test('顶部播放器保留进度、验证元信息、队列和循环并释放�
   const player = page.getByRole('dialog', { name: '音乐播放器', exact: true });
   const button = (name: string) => player.getByRole('button', { name, exact: true });
   const audio = page.locator('audio');
+  await expect(player).toHaveCount(1);
+  await expect(audio).toHaveCount(1);
+  await expect(
+    page.getByRole('button', { name: '音乐播放器', exact: true, includeHidden: true }),
+  ).toHaveCount(1);
   await expect(player.getByRole('alert')).toBeVisible();
   await button('重试').click();
   await expect(audio).toHaveAttribute('src', /^blob:/);
@@ -177,7 +182,52 @@ test('顶部播放器保留进度、验证元信息、队列和循环并释放�
 
   await button('播放').click();
   await expect(button('暂停')).toBeVisible();
-  await page.keyboard.press('Escape');
+  // 响应式布局只重排同一套入口，不允许隐藏的第二播放器抢占播放状态。
+  for (const width of [648, 320, 1440]) {
+    const beforeResize = await audio.evaluate((node: HTMLAudioElement) => node.currentTime);
+    await page.setViewportSize({ width, height: 844 });
+    await expect(player).toHaveCount(1);
+    await expect(audio).toHaveCount(1);
+    await expect(
+      page.getByRole('button', { name: '音乐播放器', exact: true, includeHidden: true }),
+    ).toHaveCount(1);
+    expect(await audio.evaluate((node, original) => node === original, retainedNode)).toBe(true);
+    await expect(audio).toHaveAttribute('src', sourceURL ?? '');
+    await expect
+      .poll(() => audio.evaluate((node: HTMLAudioElement) => node.currentTime))
+      .toBeGreaterThan(beforeResize);
+    await expect.poll(async () => (await player.boundingBox())!.x).toBeGreaterThanOrEqual(8);
+    await expect
+      .poll(async () => {
+        const bounds = (await player.boundingBox())!;
+        return bounds.x + bounds.width;
+      })
+      .toBeLessThanOrEqual(width - 8);
+    const playBounds = await button('暂停').boundingBox();
+    expect(playBounds!.width).toBe(44);
+    expect(playBounds!.height).toBe(44);
+    if (width < 768) {
+      expect((await page.locator('[data-file-workspace-header]').boundingBox())!.height).toBe(112);
+      const creation = await page
+        .getByRole('button', { name: '新建', exact: true, includeHidden: true })
+        .boundingBox();
+      expect(creation!.width).toBe(44);
+      expect(creation!.height).toBe(44);
+    }
+    await page.screenshot({ path: info.outputPath(`music-responsive-${width}.png`) });
+  }
+  await button('关闭').click();
+  await expect(player).toHaveCount(0);
+  await page.getByRole('link', { name: '传输中心', exact: true }).click();
+  await expect(page).toHaveURL(/\/home\/transfers$/);
+  await expect(audio).toHaveCount(1);
+  expect(await audio.evaluate((node, original) => node === original, retainedNode)).toBe(true);
+  await expect(audio).toHaveAttribute('src', sourceURL ?? '');
+  await page.getByRole('button', { name: '音乐播放器', exact: true }).click();
+  await expect(player.getByText('North Shore', { exact: true })).toBeVisible();
+  await button('关闭').click();
+  await page.goBack();
+  await expect(page).toHaveURL(/parent=/);
   await expect(player).toHaveCount(0);
   const before = await audio.evaluate((node: HTMLAudioElement) => node.currentTime);
   await expect
@@ -228,7 +278,11 @@ test('顶部播放器保留进度、验证元信息、队列和循环并释放�
   await expect(player).toBeVisible();
   const playPosition = await button('暂停').boundingBox();
   const queuePosition = await button('隐藏播放队列').boundingBox();
-  expect(Math.abs((playPosition?.y ?? 0) - (queuePosition?.y ?? -100))).toBeLessThan(4);
+  expect(
+    Math.abs(
+      playPosition!.y + playPosition!.height / 2 - (queuePosition!.y + queuePosition!.height / 2),
+    ),
+  ).toBeLessThan(1);
   await page.screenshot({ path: info.outputPath('music-player-mobile.png') });
   await button('停止播放器').click();
   await expect(audio).toHaveCount(0);

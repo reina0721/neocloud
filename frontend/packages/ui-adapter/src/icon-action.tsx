@@ -1,11 +1,11 @@
-import { tv } from '@heroui/styles';
-import { Button as HeroButton } from '@heroui/react/button';
+'use client';
+import Button from '@mui/material/IconButton';
+import CircularProgress from '@mui/material/CircularProgress';
+import Tooltip from '@mui/material/Tooltip';
 import type { ReactNode, Ref } from 'react';
-
 type IconActionBehavior =
   | Readonly<{ onPress: () => void; disabled?: boolean }>
   | Readonly<{ onPress?: never; disabled: true }>;
-
 export type IconActionProps = Readonly<{
   label: string;
   ref?: Ref<HTMLButtonElement>;
@@ -16,40 +16,11 @@ export type IconActionProps = Readonly<{
   loading?: boolean;
   size?: 'sm' | 'md';
   tone?: 'neutral' | 'danger';
+  variant?: 'standard' | 'filled';
   tooltip?: boolean | string;
   tooltipPlacement?: 'top' | 'bottom' | 'left' | 'right';
 }> &
   IconActionBehavior;
-
-const iconActionStyles = tv({
-  base: 'ui-action shrink-0 rounded-action border-0 outline-none transition-colors',
-  compoundVariants: [
-    {
-      active: true,
-      class: 'bg-brand-soft text-brand',
-      tone: 'neutral',
-    },
-  ],
-  defaultVariants: {
-    active: false,
-    size: 'md',
-    tone: 'neutral',
-  },
-  variants: {
-    active: {
-      false: '',
-      true: '',
-    },
-    size: {
-      md: 'size-control min-w-control',
-      sm: 'size-control-sm min-w-control-sm',
-    },
-    tone: {
-      danger: 'bg-danger-soft text-danger hover:bg-danger/15',
-      neutral: 'bg-transparent text-ink-muted hover:bg-ink/8 hover:text-ink',
-    },
-  },
-});
 
 export function IconAction({
   label,
@@ -63,33 +34,29 @@ export function IconAction({
   loading = false,
   size = 'md',
   tone = 'neutral',
+  variant = 'standard',
   tooltip = false,
+  tooltipPlacement = 'top',
 }: IconActionProps) {
-  const tooltipText = typeof tooltip === 'string' ? tooltip : tooltip ? label : undefined;
-
-  return (
-    <HeroButton
+  const button = (
+    <Button
       ref={ref}
-      aria-busy={loading || undefined}
       aria-label={label}
-      className={iconActionStyles({ active, size, tone })}
-      isDisabled={disabled}
-      isIconOnly
-      isPending={loading}
-      variant="ghost"
-      {...(tooltipText ? { title: tooltipText } : {})}
-      {...(controls ? { 'aria-controls': controls } : {})}
-      {...(expanded === undefined ? {} : { 'aria-expanded': expanded })}
-      {...(onPress ? { onPress } : {})}
+      aria-controls={controls}
+      aria-expanded={expanded}
+      aria-busy={loading || undefined}
+      disabled={disabled || loading}
+      onClick={onPress}
+      className={`ui-action shrink-0 rounded-action ${size === 'sm' ? 'size-control-sm min-w-control-sm' : 'size-control min-w-control'} ${variant === 'filled' ? (tone === 'danger' ? 'bg-danger text-on-danger' : 'bg-brand text-on-brand hover:bg-brand-strong') : tone === 'danger' ? 'bg-danger-soft text-danger' : active ? 'bg-brand-soft text-brand' : 'bg-transparent text-ink-muted hover:bg-ink/8 hover:text-ink'}`}
     >
-      {loading ? (
-        <span
-          aria-hidden="true"
-          className="size-icon-sm animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none"
-        />
-      ) : (
-        children
-      )}
-    </HeroButton>
+      {loading ? <CircularProgress size="1rem" color="inherit" aria-hidden="true" /> : children}
+    </Button>
+  );
+  return tooltip ? (
+    <Tooltip title={typeof tooltip === 'string' ? tooltip : label} placement={tooltipPlacement}>
+      <span className="inline-flex">{button}</span>
+    </Tooltip>
+  ) : (
+    button
   );
 }

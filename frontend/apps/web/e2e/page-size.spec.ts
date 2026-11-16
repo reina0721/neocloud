@@ -10,7 +10,7 @@ async function resetPreferences(page: Page) {
 
 async function setPageSize(page: Page, size: string) {
   await page.goto('/settings/data-display');
-  const select = page.getByRole('button', { name: /每页数量/ });
+  const select = page.getByRole('combobox', { name: '默认每页数量', exact: true });
   await select.click();
   await page.getByRole('option', { name: size, exact: true }).click();
   await page.waitForTimeout(300);

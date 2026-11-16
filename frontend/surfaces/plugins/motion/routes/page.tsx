@@ -105,7 +105,7 @@ export default function MotionPage() {
             title="Motion policy"
             description="系统 reduced-motion 偏好会关闭非必要位移。"
           >
-            Overlay 继续由 HeroUI 主持 Enter/Exit，页面不得再次包裹动画容器。
+            Overlay 继续由 MUI 主持 Enter/Exit，页面不得再次包裹动画容器。
           </DisclosurePanel>
         </div>
       </Section>

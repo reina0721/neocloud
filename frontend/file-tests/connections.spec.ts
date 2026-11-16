@@ -28,6 +28,9 @@ test('连接管理、一次性凭据、真实同源WebDAV与窄屏布局', async
   await page.getByRole('menuitem', { name: '创建文件夹', exact: true }).click();
   await page.getByRole('dialog').getByLabel('名称', { exact: true }).fill(rootName);
   await page.getByRole('dialog').getByRole('button', { name: '确认', exact: true }).click();
+  // 持久测试空间可能已超过一页；用产品搜索定位刚创建的目录。
+  await page.getByRole('searchbox', { name: '搜索文件', exact: true }).fill(rootName);
+  await page.getByRole('searchbox', { name: '搜索文件', exact: true }).press('Enter');
   await expect(page.getByRole('button', { name: rootName, exact: true })).toBeVisible();
   await page.getByRole('link', { name: '连接与挂载', exact: true }).first().click();
   await expect(page).toHaveURL(/\/home\/connections$/);
@@ -35,7 +38,15 @@ test('连接管理、一次性凭据、真实同源WebDAV与窄屏布局', async
   await page.getByRole('button', { name: '创建连接', exact: true }).click();
   let dialog = page.getByRole('dialog');
   await dialog.getByLabel('备注名称', { exact: true }).fill(name);
-  await dialog.getByRole('button', { name: rootName + '/', exact: true }).click();
+  const rootChoice = dialog.getByRole('button', { name: rootName + '/', exact: true });
+  for (let index = 0; index < 20 && !(await rootChoice.count()); index++) {
+    const next = dialog.getByRole('button', { name: '下一页', exact: true });
+    await expect(dialog.getByRole('button', { name: '创建', exact: true })).toBeEnabled();
+    if (!(await next.count()) || !(await next.isEnabled())) break;
+    await next.click();
+    await expect(dialog.getByRole('button', { name: '创建', exact: true })).toBeEnabled();
+  }
+  await rootChoice.click();
   await expect(dialog).toContainText('当前选择: /' + rootName);
   await expect(dialog.getByRole('button', { name: '创建', exact: true })).toBeEnabled();
   await dialog.getByRole('button', { name: '创建', exact: true }).click();

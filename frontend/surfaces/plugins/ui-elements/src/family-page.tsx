@@ -20,7 +20,7 @@ const uiElementFamilies = [
   { id: 'feedback', labelKey: 'uiElements.nav.feedback', count: 4 },
   { id: 'status-async', labelKey: 'uiElements.nav.statusAsync', count: 7 },
   { id: 'identity-display', labelKey: 'uiElements.nav.identityDisplay', count: 4 },
-  { id: 'navigation', labelKey: 'uiElements.nav.navigation', count: 7 },
+  { id: 'navigation', labelKey: 'uiElements.nav.navigation', count: 9 },
   { id: 'data', labelKey: 'uiElements.nav.data', count: 1 },
   { id: 'surfaces', labelKey: 'uiElements.nav.surfaces', count: 2 },
   { id: 'forms', labelKey: 'uiElements.nav.forms', count: 10 },

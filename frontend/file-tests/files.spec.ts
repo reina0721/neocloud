@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { openReadingFixtureFolder } from './reading-fixture';
 
 async function newAction(page: Page, label: string) {
   await page.getByRole('button', { name: '新建', exact: true }).click();
@@ -33,6 +34,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('多选部分失败逐项呈现，键盘选择和已成功移动的结果保持一致', async ({ page }) => {
+  const fixture = await openReadingFixtureFolder(page, 'MUI整理-');
   const suffix = Date.now().toString(36);
   const first = `批量目标-${suffix}`;
   const second = `批量子项-${suffix}`;
@@ -47,6 +49,7 @@ test('多选部分失败逐项呈现，键盘选择和已成功移动的结果�
   await expect(firstCheckbox).toBeChecked();
   await page.getByRole('checkbox', { name: `选择 ${second}`, exact: true }).press('Space');
   await page.getByRole('button', { name: '移动', exact: true }).first().click();
+  await page.getByRole('dialog').getByRole('button', { name: fixture.name, exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: first, exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: '确认', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('1 项未完成');
@@ -152,13 +155,16 @@ test('真实文件闭环：目录、队列、预览、下载、移动、多选�
   expect(runtimeErrors).toEqual([]);
 });
 
-test('桌面和窄屏视觉、无横向溢出、2 MiB 实际上传与未登录隔离', async ({ page, browser }) => {
+test('桌面和窄屏视觉、无横向溢出、2 MiB 实际上传与未登录隔离', async ({ page, browser }, info) => {
   const name = `large-${Date.now()}.txt`;
   const choose = page.waitForEvent('filechooser');
   await newAction(page, '上传文件');
   await (
     await choose
   ).setFiles({ name, mimeType: 'text/plain', buffer: Buffer.alloc(2 << 20, 'a') });
+  const queue = page.getByRole('dialog', { name: '上传队列', exact: true });
+  await expect(queue).toContainText('上传完成');
+  await queue.getByRole('button', { name: '关闭', exact: true }).click();
   await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
   const listing = await page.evaluate(async () => {
     const response = await fetch('/api/console/v1/native/files');
@@ -176,12 +182,12 @@ test('桌面和窄屏视觉、无横向溢出、2 MiB 实际上传与未登录�
   expect(response.status()).toBe(401);
   await anonymous.close();
   await page.setViewportSize({ width: 1440, height: 960 });
-  await page.screenshot({ path: 'test-results/files-desktop.png', fullPage: true });
+  await page.screenshot({ path: info.outputPath('files-desktop.png'), fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await page.screenshot({ path: 'test-results/files-mobile.png', fullPage: true });
+  await page.screenshot({ path: info.outputPath('files-mobile.png'), fullPage: true });
 });
 
 test('拖拽上传使用同一队列，等待项可以取消并保持未提交状态', async ({ page }) => {

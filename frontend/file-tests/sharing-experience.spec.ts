@@ -43,13 +43,14 @@ async function openShare(page: Page) {
   await page.getByRole('button', { name: name + ' 的操作', exact: true }).click();
   await page.getByRole('menuitem', { name: '分享', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: '分享', exact: true });
-  await expect(dialog.getByRole('button', { name: /谁可以访问/ })).toBeVisible();
+  await expect(dialog.getByRole('combobox', { name: /谁可以访问/ })).toBeVisible();
   return { dialog, name, id };
 }
 
 async function select(page: Page, within: Locator, label: string, value: string) {
-  await within.getByRole('button', { name: new RegExp(label) }).click();
+  await within.getByRole('combobox', { name: label, exact: true }).click();
   await page.getByRole('option', { name: value, exact: true }).click();
+  await expect(page.locator('[role="listbox"]')).toHaveCount(0);
 }
 
 async function noAccessibilityErrors(page: Page) {
@@ -279,7 +280,12 @@ test('分享的深色英文与复杂选项在窄屏仍清晰可用', async ({ pa
         await page.getByRole('button', { name: '当前用户', exact: true }).click();
       }
       await page.getByRole('menuitem', { name: /^主题 / }).click();
-      await page.getByRole('menuitemradio', { name: originalTheme, exact: true }).click();
+      await page
+        .getByRole('menuitemradio', {
+          name: originalTheme.replace(/\s*✓\s*$/, '').trim(),
+          exact: true,
+        })
+        .click();
     }
   }
 });

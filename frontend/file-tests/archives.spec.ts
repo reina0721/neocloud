@@ -328,7 +328,7 @@ test('F241/243–251：真实ZIP浏览、搜索排序选择、安全预览和两
       .evaluate((el: HTMLImageElement) => el.naturalWidth),
   ).toBe(1);
   await d.getByRole('button', { name: '关闭包内预览', exact: true }).click();
-  await d.getByRole('button', { name: '名称升序 包内排序', exact: true }).click();
+  await d.getByRole('combobox', { name: '包内排序', exact: true }).click();
   await page.getByRole('option', { name: '大小降序', exact: true }).click();
   await expect(d.locator('[data-archive-path]').first()).toHaveAttribute(
     'data-archive-path',
@@ -358,7 +358,7 @@ test('F252/254–260：指定位置、包裹目录、冲突策略、回执及打
     await e.getByRole('button', { name: '进入 ' + target, exact: true }).click();
     await expect(e.getByRole('button', { name: '开始解压', exact: true })).toBeEnabled();
     if (conflict) {
-      await e.getByRole('button', { name: '拒绝整次操作 同名处理', exact: true }).click();
+      await e.getByRole('combobox', { name: '同名处理', exact: true }).click();
       await page.getByRole('option', { name: conflict, exact: true }).click();
     }
     return e;

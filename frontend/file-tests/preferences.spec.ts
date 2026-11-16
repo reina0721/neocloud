@@ -49,6 +49,7 @@ async function options(page: Page) {
   await page.getByRole('button', { name: '视图', exact: true }).click();
   await page.getByRole('menuitem', { name: '视图选项', exact: true }).click();
   await expect(page.getByRole('dialog', { name: '视图选项', exact: true })).toBeVisible();
+  await expect(page.locator('[role="region"][aria-label="视图"]')).toHaveCount(0);
 }
 async function save(page: Page) {
   await page
@@ -121,7 +122,7 @@ test('F321/F322/F333：服务器发布、完整视图保存与关闭同步', asy
   await dialog.getByLabel('同步到服务器', { exact: true }).press('Space');
   await dialog.getByLabel('目录优先', { exact: true }).press('Space');
   await dialog.getByLabel('类型', { exact: true }).press('Space');
-  await dialog.getByRole('button', { name: /每页条目/ }).click();
+  await dialog.getByRole('combobox', { name: '每页条目', exact: true }).click();
   await page.getByRole('option', { name: '100', exact: true }).click();
   await save(page);
   const remote = await read(page);
@@ -267,7 +268,7 @@ test('F335–F338：单击选中、双击、键盘及单击打开', async ({ pag
   await options(page);
   await page
     .getByRole('dialog', { name: '视图选项', exact: true })
-    .getByRole('button', { name: /文件夹单击操作/ })
+    .getByRole('combobox', { name: '文件夹单击操作', exact: true })
     .click();
   await page.getByRole('option', { name: '选中文件夹（双击打开）', exact: true }).click();
   await save(page);
@@ -284,7 +285,7 @@ test('F335–F338：单击选中、双击、键盘及单击打开', async ({ pag
   await options(page);
   await page
     .getByRole('dialog', { name: '视图选项', exact: true })
-    .getByRole('button', { name: /文件夹单击操作/ })
+    .getByRole('combobox', { name: '文件夹单击操作', exact: true })
     .click();
   await page.getByRole('option', { name: '打开文件夹', exact: true }).click();
   await save(page);
@@ -323,7 +324,7 @@ test('F339：真实revision冲突显示失败且可重载', async ({ page }) => 
   await expect(
     page
       .getByRole('dialog', { name: '视图选项', exact: true })
-      .getByRole('button', { name: /文件夹单击操作/ }),
+      .getByRole('combobox', { name: '文件夹单击操作', exact: true }),
   ).toContainText('选中');
 });
 

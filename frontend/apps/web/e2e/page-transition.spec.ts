@@ -36,8 +36,10 @@ async function resetPreferences(page: Page) {
 async function pickTransition(page: Page, value: string) {
   await ready(page, '/settings');
   const field = page.locator('.ui-field').filter({ hasText: '页面切换动画' });
-  await field.getByRole('button').click();
-  await page.locator(`[id$="-option-${value}"]`).click();
+  await field.getByRole('combobox').click();
+  const label =
+    OPTIONS.find((option) => option.value === value)?.label ?? (value === 'none' ? '关闭' : '默认');
+  await page.getByRole('option', { name: label, exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-page-transition', value);
 }
 
@@ -76,20 +78,22 @@ async function waitForAnimation(page: Page, expected: string) {
 }
 
 test.describe('page transition preference', () => {
-  test('默认值保留项目现行方向进入（标题轻量过渡，整页不重放）', async ({ page }) => {
+  test('默认值在前向导航时播放内容进入，标题由内容统一承载', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await resetPreferences(page);
     await expect(page.locator('html')).toHaveAttribute('data-page-transition', 'default');
 
     await navigateToFoundations(page);
     await page.waitForTimeout(400);
-    expect(await animationName(page, '.surface-route-content > .surface-page-stack')).toBe('none');
+    expect(await animationName(page, '.surface-route-content > .surface-page-stack')).toBe(
+      'surface-screen-fade-slide',
+    );
     expect(
       await animationName(
         page,
         '.surface-route-content > .surface-page-stack:not(:has([data-route-content])) > header',
       ),
-    ).toMatch(/^(content-rise-in|surface-enter-forward)$/);
+    ).toBe('none');
   });
 
   test('旧存储记录（无 pageTransition 字段）仍落在默认动画', async ({ page }) => {

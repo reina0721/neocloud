@@ -6,3 +6,10 @@ export const ControlWeekStartContext = createContext<ControlWeekStart | undefine
 export function useControlWeekStart() {
   return useContext(ControlWeekStartContext);
 }
+
+export const ControlLocaleContext = createContext<
+  Readonly<{ locale: string; weekStart?: ControlWeekStart }>
+>({ locale: 'zh-CN' });
+export function useControlLocale() {
+  return useContext(ControlLocaleContext);
+}

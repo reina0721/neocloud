@@ -23,6 +23,11 @@ async function login(page: Page) {
   await page.getByLabel('密码', { exact: true }).fill(access.password);
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
+  if ((page.viewportSize()?.width ?? 1280) >= 768) {
+    await expect(page.getByRole('button', { name: /^(展开|收起)文件导航$/ })).toBeVisible();
+    const expand = page.getByRole('button', { name: '展开文件导航', exact: true });
+    if (await expand.isVisible()) await expand.click();
+  }
   return access;
 }
 async function mutate(page: Page, path: string, method: string, body?: unknown) {
@@ -309,7 +314,7 @@ test('保存引用检索地址恢复、游标翻页和失败重试', async ({ pa
     await expect(page.getByRole('heading', { name: new RegExp('^' + prefix) })).toHaveCount(1);
     await page.goForward();
     await expect(page.getByRole('heading', { name: new RegExp('^' + prefix) })).toHaveCount(20);
-    await page.getByRole('button', { name: /分享状态/ }).click({ timeout: 10_000 });
+    await page.getByRole('combobox', { name: '分享状态', exact: true }).click({ timeout: 10_000 });
     await page.getByRole('option', { name: '需要密码', exact: true }).click();
     await expect(
       page.getByRole('heading', { name: '没有符合条件的快捷方式', exact: true }),
@@ -322,7 +327,7 @@ test('保存引用检索地址恢复、游标翻页和失败重试', async ({ pa
     await expect(page.getByRole('searchbox', { name: '搜索快捷方式', exact: true })).toHaveValue(
       prefix,
     );
-    await page.getByRole('button', { name: /分享状态/ }).click({ timeout: 10_000 });
+    await page.getByRole('combobox', { name: '分享状态', exact: true }).click({ timeout: 10_000 });
     await page.getByRole('option', { name: '可访问', exact: true }).click();
     await expect(page.getByRole('heading', { name: new RegExp('^' + prefix) })).toHaveCount(20);
     await page.route('**/native/files/shortcuts?*', (route) =>
@@ -390,7 +395,9 @@ test('保存引用检索地址恢复、游标翻页和失败重试', async ({ pa
     const searchBounds = await page
       .getByRole('searchbox', { name: '搜索快捷方式', exact: true })
       .boundingBox();
-    const filterBounds = await page.getByRole('button', { name: /分享状态/ }).boundingBox();
+    const filterBounds = await page
+      .getByRole('combobox', { name: '分享状态', exact: true })
+      .boundingBox();
     expect(searchBounds).not.toBeNull();
     expect(filterBounds).not.toBeNull();
     expect(filterBounds!.y).toBeGreaterThan(searchBounds!.y + searchBounds!.height);

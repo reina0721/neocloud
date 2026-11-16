@@ -5,7 +5,7 @@ Universal Foundation 只承载跨 Product Surface 成立的契约。
 | Workspace         | 当前职责                                                                                                                 |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `design-system`   | Light/Dark、Density、Contrast、Layout 与 Motion Token；跨 Surface Motion Primitive                                       |
-| `ui-adapter`      | UI Element、Overlay、Accessibility、Keyboard、Focus；唯一 HeroUI/React Aria 边界                                         |
+| `ui-adapter`      | UI Element、Overlay、Accessibility、Keyboard、Focus；唯一 MUI/React Aria 边界                                            |
 | `form-foundation` | Schema 驱动的 dirty/pending/reset/首错聚焦/字段桥接；唯一 RHF/Resolver 边界                                              |
 | `i18n`            | runtime、Provider、translation hook 与日期/数字/相对时间格式化                                                           |
 | `core`            | 不依赖 React/Host/数据源的纯语义判断                                                                                     |
@@ -38,10 +38,7 @@ Patch（内容哈希 etag 并发冲突）、确定性生成与 freshness：
 
 Vendor 类型不得穿透公共 Contract；具体 Surface 通过内容、状态、资源和 Port 组合这些能力。
 
-HeroUI 的 Trigger 与 React Aria Components 的 Provider 必须解析到同一个 `react-aria`
-交互实例。仅满足各自的版本范围不足以保证上下文相连；`dependency:check` 会检查实际安装图。
-UI Adapter 的 RAC 当前由锁文件解析为 `1.22.1`，与 HeroUI 的交互实例一致。紧凑侧栏的 hover、
-focus、Escape 和原生链接导航由同一浏览器用例验收，禁止以自制 Tooltip 绕过失联问题。
+MUI 与 Host 的 Next SSR Cache 必须解析到同一个 Emotion 实例，`dependency:check` 检查实际安装图。MUI 组件与样式引擎只进入 UI Adapter；Host 根 layout 可装配官方 `@mui/material-nextjs` cache provider。表格、树与值切换保留 React Aria 的集合键盘交互，MUI 提供主题和实际视觉控件，业务不依赖任一 vendor 的具体类型。
 
 ### 外观 Profile 的所有权
 
@@ -87,7 +84,7 @@ i18next 实例。所有语言在写入前按 supportedLocales 校验，非法资
 管理 Shell 也在自身运行时加载时注册。账户菜单的双语消息随菜单自身加载，文件工作区直接进入时不依赖管理 Shell 先挂载，也不提前载入整个管理 Shell 词典。启动仅保留启动、文件入口和认证实际使用的 Host 文案；
 登录页不加载快捷偏好、导航操作和锁屏说明。语言切换 API 不变。
 锁屏也随组件安装自己的双语消息；密码显隐与认证错误使用 Host Auth 的窄消息模块，由登录与会话密码复核共同消费。只携带会话 Cookie 的新运行时直接进入文件区，也能得到完整锁屏、空密码和服务不可用提示，不依赖之前打开认证页。验证见[文件入口锁屏回归](../file-tests/file-lock.spec.ts)。
-Host 的控件语言边界消费同一 i18n runtime 的当前 locale，并传入已选周起始日；UI Adapter 接到 React Aria 的 locale context 和日历起始日，不再让浏览器初始语言覆盖应用选择。日期分段、内置辅助名称与月份同步切换；日期事实及用户选择的纯日期输出格式分别保持原所有者。验证见[控件语言与审计日期](../apps/web/e2e/control-locale.spec.ts)。
+Host 的控件语言边界消费同一 i18n runtime 的当前 locale，并传入已选周起始日；UI Adapter 将语言传入 MUI X LocalizationProvider，并使用不可变的 Dayjs locale 设置日历起始日，不再让浏览器初始语言覆盖应用选择。日期分段、内置辅助名称与月份同步切换；日期事实及用户选择的纯日期输出格式分别保持原所有者。验证见[控件语言与审计日期](../apps/web/e2e/control-locale.spec.ts)。
 验证见 i18n 单元及认证双语言/两模式浏览器；不引入第二套翻译 Provider。
 
 页面自身拥有的补充文案使用 `FrontendMessages resources={模块常量}` 包住消费者。

@@ -8,6 +8,10 @@ container_name="clouddrive-smoke-${GITHUB_RUN_ID:-local}-$$"
 volume_name="${container_name}-data"
 
 cleanup() {
+  status=$?
+  if [[ "$status" != "0" ]]; then
+    docker logs "${container_name}" >&2 || true
+  fi
   docker rm -f "${container_name}" >/dev/null 2>&1 || true
   docker volume rm "${volume_name}" >/dev/null 2>&1 || true
 }

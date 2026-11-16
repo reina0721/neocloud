@@ -4,6 +4,7 @@ import { useFrontendTranslation } from '@clouddrive/i18n';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { CheckboxField, TextField, SelectField } from '@clouddrive/ui-adapter/form-field';
 import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { NumberedFilePagination } from './file-pagination';
 import { useConnections, useFiles } from '../../../src/files/runtime';
 import { FilesError, type FileListing } from '../../../src/files/model';
 import type {
@@ -32,11 +33,12 @@ export function CreateConnectionDialog({
   const [directory, setDirectory] = useState<FileListing>(),
     [failure, setFailure] = useState('');
   const [retry, setRetry] = useState(0);
+  const [page, setPage] = useState(1);
   useEffect(() => {
     const controller = new AbortController();
     void files
       .list(
-        { parent, category: '', search: '', trash: false, sort: 'name', desc: false },
+        { parent, category: '', search: '', trash: false, sort: 'name', desc: false, page },
         controller.signal,
       )
       .then((value) => {
@@ -47,11 +49,12 @@ export function CreateConnectionDialog({
           setFailure(t(`files.errors.${error instanceof FilesError ? error.code : 'unavailable'}`));
       });
     return () => controller.abort();
-  }, [files, parent, retry, t]);
+  }, [files, parent, page, retry, t]);
   function open(id: string) {
     setDirectory(undefined);
     setFailure('');
     setParent(id);
+    setPage(1);
     setRetry((value) => value + 1);
   }
   const ages = [
@@ -138,6 +141,17 @@ export function CreateConnectionDialog({
                 ))}
             </ul>
           )}
+          {directory && directory.total > directory.pageSize ? (
+            <NumberedFilePagination
+              page={directory.page}
+              pageSize={directory.pageSize}
+              total={directory.total}
+              onPage={(next) => {
+                setDirectory(undefined);
+                setPage(next);
+              }}
+            />
+          ) : null}
         </section>
         <CheckboxField
           label={t('files.connections.readOnly')}

@@ -10,7 +10,7 @@ test('名称规则在独立窗口试测，输入变化取消旧结果并保存�
   try {
     await section.getByRole('button', { name: '编辑名称规则', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: '编辑名称规则', exact: true });
-    const mode = dialog.getByRole('button', { name: /扩展名规则$/ });
+    const mode = dialog.getByRole('combobox', { name: '扩展名规则', exact: true });
     await mode.click();
     await page.getByRole('option', { name: '允许匹配', exact: true }).click();
     await dialog.getByRole('textbox', { name: '文件扩展名', exact: true }).fill('txt, MD');

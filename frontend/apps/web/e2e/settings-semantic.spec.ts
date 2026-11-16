@@ -105,9 +105,11 @@ test('Mobile category navigation honors scroll preference after drawer focus res
     await choose('通知');
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     const title = await page.getByRole('heading', { level: 1 }).boundingBox();
-    const header = await page.getByRole('banner').boundingBox();
+    const header = await page.locator('.surface-settings-nav').boundingBox();
     if (!title || !header) throw new Error('Missing navigation geometry');
-    expect(title.y).toBeGreaterThanOrEqual(header.y + header.height);
+    await expect(page.getByRole('banner')).toBeHidden();
+    expect(title.y).toBeGreaterThanOrEqual(header.y);
+    expect(title.y + title.height).toBeLessThanOrEqual(header.y + header.height);
     await choose('导航');
     const scrollPreference = page.getByRole('switch', {
       name: '跳转后自动滚动到顶部',
@@ -139,13 +141,13 @@ for (const width of [1440, 390, 320]) {
       await page.goto('/settings');
       await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
       const accent = page.getByRole('radiogroup', { name: '强调色', exact: true });
-      await expect(accent.locator('[data-accent-preview]')).toHaveCount(4);
+      await expect(accent.locator('[data-accent-preview]')).toHaveCount(5);
       const swatches = await accent
         .locator('[data-accent-preview]')
         .evaluateAll((elements) =>
           elements.map((element) => getComputedStyle(element).backgroundColor),
         );
-      expect(new Set(swatches).size).toBe(4);
+      expect(new Set(swatches).size).toBe(5);
       const blue = accent
         .locator('label')
         .filter({ has: page.getByRole('radio', { name: '蓝色', exact: true }) });

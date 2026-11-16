@@ -49,7 +49,7 @@ async function dav(
   data?: string,
   headers: Record<string, string> = {},
 ) {
-  if (connection.endpointOrigin !== 'http://127.0.0.1:8131') throw Error('只允许隔离WebDAV');
+  if (connection.endpointOrigin !== 'http://127.0.0.1:8130') throw Error('只允许隔离WebDAV');
   return page.request.fetch(connection.endpointOrigin + connection.endpointPath + name, {
     method,
     headers: {

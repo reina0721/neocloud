@@ -18,6 +18,10 @@ import {
   Redo2,
   Search,
   X,
+  Plus,
+  Minus,
+  PanelLeft,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { downloadBlob } from '../native-download';
 import { imageOverlayLimit, imageOverlayTypes } from '../image-overlay';
@@ -61,6 +65,7 @@ export function PDFReaderView(props: Props) {
     (key: string, values?: Record<string, string | number>) => t('files.pdf.' + key, values ?? {}),
     [t],
   );
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [phase, setPhase] = useState<'loading' | 'password' | 'ready' | 'error'>('loading');
   const [state, setState] = useState({ ...emptyPdfState });
   const stampImport = useImageOverlayImport();
@@ -384,13 +389,12 @@ export function PDFReaderView(props: Props) {
     submitted.wholeWord === wholeWord;
   return (
     <section aria-label={p('title')} className="flex h-full min-h-0 min-w-0 flex-col gap-2">
-      <div className="shrink-0 overflow-x-auto">
-        <div
-          className="flex items-center gap-2"
-          style={{ minWidth: 'max-content' }}
-          role="toolbar"
-          aria-label={p('title')}
-        >
+      <div
+        className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-control bg-surface-muted p-2"
+        role="toolbar"
+        aria-label={p('title')}
+      >
+        <div className="flex min-w-0 flex-wrap items-center gap-1">
           <IconAction
             label={p('previous')}
             tooltip
@@ -403,7 +407,7 @@ export function PDFReaderView(props: Props) {
             <ChevronLeft className="size-icon-sm" aria-hidden="true" />
           </IconAction>
           <form
-            className="flex items-center gap-2"
+            className="flex items-center gap-1"
             onSubmit={(event) => {
               event.preventDefault();
               const page = Number(pageDraft);
@@ -419,7 +423,7 @@ export function PDFReaderView(props: Props) {
               void act({ kind: 'page', page });
             }}
           >
-            <div className="w-16">
+            <div className="w-12">
               <TextField
                 label={p('page')}
                 presentation="control-only"
@@ -444,6 +448,19 @@ export function PDFReaderView(props: Props) {
           >
             <ChevronRight className="size-icon-sm" aria-hidden="true" />
           </IconAction>
+          <span className="whitespace-nowrap text-xs text-ink-muted" role="status">
+            {p('pageCount', { page: state.page, pages: state.pages })}
+          </span>
+        </div>
+        <div className="flex min-w-0 flex-wrap items-center gap-1">
+          <IconAction
+            label={p('zoomOut')}
+            size="sm"
+            disabled={!available || state.scale <= pdfMinScale}
+            onPress={() => displayAction('zoomOut')}
+          >
+            <Minus className="size-icon-sm" aria-hidden="true" />
+          </IconAction>
           <MenuButton
             triggerSize="sm"
             label={Math.round(state.scale * 100) + '%'}
@@ -451,9 +468,18 @@ export function PDFReaderView(props: Props) {
             items={displayItems}
             onAction={displayAction}
           />
+          <IconAction
+            label={p('zoomIn')}
+            size="sm"
+            disabled={!available || state.scale >= pdfMaxScale}
+            onPress={() => displayAction('zoomIn')}
+          >
+            <Plus className="size-icon-sm" aria-hidden="true" />
+          </IconAction>
           <MenuButton
             triggerSize="sm"
-            label={p('navigation')}
+            label={<PanelLeft className="size-icon-sm" aria-hidden="true" />}
+            triggerVariant="icon"
             ariaLabel={p('navigation')}
             items={['thumbnails', 'outline', 'hidePanel'].map((id) => ({
               id,
@@ -477,104 +503,123 @@ export function PDFReaderView(props: Props) {
           >
             <Search className="size-icon-sm" aria-hidden="true" />
           </IconAction>
-          <IconAction
-            label={p('back')}
-            tooltip
-            size="sm"
-            disabled={!available || !state.historyBack}
-            onPress={() => {
-              void act({ kind: 'history', direction: -1 });
-            }}
-          >
-            <ArrowLeft className="size-icon-sm" aria-hidden="true" />
-          </IconAction>
-          <IconAction
-            label={p('forward')}
-            tooltip
-            size="sm"
-            disabled={!available || !state.historyForward}
-            onPress={() => {
-              void act({ kind: 'history', direction: 1 });
-            }}
-          >
-            <ArrowRight className="size-icon-sm" aria-hidden="true" />
-          </IconAction>
-          <MenuButton
-            triggerSize="sm"
-            label={p('editor')}
-            ariaLabel={p('editor')}
-            items={readerModes.map((id) => ({
-              id,
-              label: p(id),
-              disabled: !available,
-            }))}
-            onAction={(id) => {
-              const mode = readerModes.find((item) => item === id);
-              if (mode) void act({ kind: 'editor', mode });
-            }}
-          />
-          <FileChoiceAction
-            acceptedTypes={imageOverlayTypes}
-            disabled={!available || stampLimitReached}
-            onSelect={chooseStamp}
-          >
-            {p('stamp')}
-          </FileChoiceAction>
-          <IconAction
-            label={p('undo')}
-            tooltip
-            size="sm"
-            disabled={!available || !state.undo}
-            onPress={() => {
-              void act({ kind: 'edit', action: 'undo' });
-            }}
-          >
-            <Undo2 className="size-icon-sm" aria-hidden="true" />
-          </IconAction>
-          <IconAction
-            label={p('redo')}
-            tooltip
-            size="sm"
-            disabled={!available || !state.redo}
-            onPress={() => {
-              void act({ kind: 'edit', action: 'redo' });
-            }}
-          >
-            <Redo2 className="size-icon-sm" aria-hidden="true" />
-          </IconAction>
-          <Action
-            size="sm"
-            variant={state.modified ? 'primary' : 'quiet'}
-            disabled={!available || !state.modified}
-            onPress={() => {
-              void act({ kind: 'save' }, async (value) => {
-                if (
-                  !(value.bytes instanceof ArrayBuffer) ||
-                  value.bytes.byteLength > limits.maxBytes ||
-                  new TextDecoder().decode(value.bytes.slice(0, 5)) !== '%PDF-'
-                )
-                  throw new PDFFrameError('invalid');
-                downloadBlob(
-                  new Blob([value.bytes], { type: 'application/pdf' }),
-                  entry.name.replace(/\.pdf$/i, '') + '.' + p('exportName') + '.pdf',
-                );
-                await session.current?.command({ kind: 'exported' });
-                setNotice(p('exported'));
-              });
-            }}
-          >
-            {p('export')}
-          </Action>
+          <span className="surface-pdf-tools-toggle">
+            <IconAction
+              label={p('tools')}
+              size="sm"
+              expanded={toolsOpen}
+              controls={searchId + '-tools'}
+              active={toolsOpen}
+              onPress={() => setToolsOpen((value) => !value)}
+            >
+              <SlidersHorizontal className="size-icon-sm" aria-hidden="true" />
+            </IconAction>
+          </span>
         </div>
       </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs" role="status">
-        <span>{p('pageCount', { page: state.page, pages: state.pages })}</span>
-        <span className="text-ink-muted">
+      <div
+        id={searchId + '-tools'}
+        data-open={toolsOpen}
+        className="surface-pdf-tools shrink-0 flex-wrap items-center gap-2 rounded-control border border-border p-2"
+      >
+        <IconAction
+          label={p('back')}
+          tooltip
+          size="sm"
+          disabled={!available || !state.historyBack}
+          onPress={() => {
+            void act({ kind: 'history', direction: -1 });
+          }}
+        >
+          <ArrowLeft className="size-icon-sm" aria-hidden="true" />
+        </IconAction>
+        <IconAction
+          label={p('forward')}
+          tooltip
+          size="sm"
+          disabled={!available || !state.historyForward}
+          onPress={() => {
+            void act({ kind: 'history', direction: 1 });
+          }}
+        >
+          <ArrowRight className="size-icon-sm" aria-hidden="true" />
+        </IconAction>
+        <MenuButton
+          triggerSize="sm"
+          label={p('editor')}
+          ariaLabel={p('editor')}
+          items={readerModes.map((id) => ({
+            id,
+            label: p(id),
+            disabled: !available,
+          }))}
+          onAction={(id) => {
+            const mode = readerModes.find((item) => item === id);
+            if (mode) void act({ kind: 'editor', mode });
+          }}
+        />
+        <FileChoiceAction
+          acceptedTypes={imageOverlayTypes}
+          disabled={!available || stampLimitReached}
+          onSelect={chooseStamp}
+        >
+          {p('stamp')}
+        </FileChoiceAction>
+        <IconAction
+          label={p('undo')}
+          tooltip
+          size="sm"
+          disabled={!available || !state.undo}
+          onPress={() => {
+            void act({ kind: 'edit', action: 'undo' });
+          }}
+        >
+          <Undo2 className="size-icon-sm" aria-hidden="true" />
+        </IconAction>
+        <IconAction
+          label={p('redo')}
+          tooltip
+          size="sm"
+          disabled={!available || !state.redo}
+          onPress={() => {
+            void act({ kind: 'edit', action: 'redo' });
+          }}
+        >
+          <Redo2 className="size-icon-sm" aria-hidden="true" />
+        </IconAction>
+        <Action
+          size="sm"
+          variant={state.modified ? 'primary' : 'quiet'}
+          disabled={!available || !state.modified}
+          onPress={() => {
+            void act({ kind: 'save' }, async (value) => {
+              if (
+                !(value.bytes instanceof ArrayBuffer) ||
+                value.bytes.byteLength > limits.maxBytes ||
+                new TextDecoder().decode(value.bytes.slice(0, 5)) !== '%PDF-'
+              )
+                throw new PDFFrameError('invalid');
+              downloadBlob(
+                new Blob([value.bytes], { type: 'application/pdf' }),
+                entry.name.replace(/\.pdf$/i, '') + '.' + p('exportName') + '.pdf',
+              );
+              await session.current?.command({ kind: 'exported' });
+              setNotice(p('exported'));
+            });
+          }}
+        >
+          {p('export')}
+        </Action>
+        <p className="basis-full text-xs text-ink-muted">
           {p('imageBudget', { pixels: limits.maxImagePixels.toLocaleString(locale) })}
-        </span>
-        {state.modified ? <span>{p('modified')}</span> : null}
-        {busy ? <span>{p('working')}</span> : null}
+        </p>
       </div>
+      {state.modified || busy ? (
+        <div className="flex shrink-0 flex-wrap gap-3 text-xs text-ink-muted" role="status">
+          {state.modified ? <span>{p('modified')}</span> : null}
+          {busy ? <span>{p('working')}</span> : null}
+        </div>
+      ) : null}
       {stampImport.loading ? (
         <div className="flex flex-wrap items-center gap-2">
           <p role="status">{p('stampReading')}</p>
@@ -654,14 +699,16 @@ export function PDFReaderView(props: Props) {
             find();
           }}
         >
-          <div className="flex min-w-0 flex-1 items-center gap-1">
-            <SearchBox
-              inputRef={searchInput}
-              label={p('query')}
-              placeholder={p('query')}
-              value={query}
-              onValueChange={(value) => setQuery(value.slice(0, pdfSearchMaxLength))}
-            />
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1 md:flex-nowrap">
+            <div className="min-w-0 flex-1 basis-full md:basis-36">
+              <SearchBox
+                inputRef={searchInput}
+                label={p('query')}
+                placeholder={p('query')}
+                value={query}
+                onValueChange={(value) => setQuery(value.slice(0, pdfSearchMaxLength))}
+              />
+            </div>
             <Action size="sm" type="submit" disabled={busy || state.searchPending}>
               {p('find')}
             </Action>

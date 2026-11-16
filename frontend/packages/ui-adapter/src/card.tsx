@@ -1,4 +1,4 @@
-import { tv } from '@heroui/styles';
+import Paper from '@mui/material/Paper';
 import type { HTMLAttributes, ReactNode } from 'react';
 
 export type CardProps = Readonly<{
@@ -7,23 +7,16 @@ export type CardProps = Readonly<{
 }> &
   Pick<HTMLAttributes<HTMLElement>, 'aria-label' | 'role'>;
 
-const cardStyles = tv({
-  base: 'overflow-hidden rounded-panel border text-ink',
-  defaultVariants: { appearance: 'elevated' },
-  variants: {
-    appearance: {
-      elevated: 'border-border bg-surface shadow-panel',
-      flat: 'border-transparent bg-surface-muted shadow-none',
-      outlined: 'border-border bg-surface shadow-none',
-    },
-  },
-});
-
 export function Card({ children, appearance = 'elevated', ...aria }: CardProps) {
   return (
-    <section className={cardStyles({ appearance })} {...aria}>
+    <Paper
+      component="section"
+      elevation={0}
+      className={`ui-card overflow-hidden rounded-panel border text-ink ${appearance === 'elevated' ? 'border-transparent bg-surface shadow-panel' : appearance === 'flat' ? 'border-transparent bg-surface-muted shadow-none' : 'border-border bg-surface shadow-none'}`}
+      {...aria}
+    >
       {children}
-    </section>
+    </Paper>
   );
 }
 
@@ -37,7 +30,7 @@ export function CardHeader({ title, description, action }: CardHeaderProps) {
   return (
     <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
       <div className="min-w-0">
-        <h3 className="text-base font-bold text-ink">{title}</h3>
+        <h3 className="text-base font-semibold text-brand">{title}</h3>
         {description ? (
           <p className="mt-1 text-sm leading-6 text-ink-muted">{description}</p>
         ) : null}

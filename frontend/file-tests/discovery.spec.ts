@@ -325,10 +325,7 @@ test('分页、列表列偏好、目录优先及当前页键盘范围选择', as
   await page.getByRole('dialog').getByLabel('类型', { exact: true }).press('Space');
   await page.getByRole('dialog').getByLabel('创建日期', { exact: true }).press('Space');
   await page.getByRole('dialog').getByLabel('显示缩略图', { exact: true }).press('Space');
-  await page
-    .getByRole('dialog')
-    .getByRole('button', { name: /每页条目/ })
-    .click();
+  await page.getByRole('dialog').getByRole('combobox', { name: '每页条目', exact: true }).click();
   await page.getByRole('option', { name: '100', exact: true }).click();
   await apply(page, '保存');
   await expect(entries(page)).toHaveCount(55);

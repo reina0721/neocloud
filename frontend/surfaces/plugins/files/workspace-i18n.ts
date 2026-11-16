@@ -1,5 +1,10 @@
 export const zhWorkspace = {
   library: '文件',
+  tagline: '珍藏每一份灵感，让美好有处安放。',
+  categories: '按文件类型浏览',
+  mobileNavigation: '主要目的地',
+  mobileCategories: '分类',
+  allFiles: '全部文件',
   collaboration: '协作',
   activity: '传输与任务',
   administration: '管理',
@@ -27,6 +32,11 @@ export const zhWorkspace = {
 };
 export const enWorkspace = {
   library: 'Library',
+  tagline: 'A little space for everything you love.',
+  categories: 'Browse by file type',
+  mobileNavigation: 'Main destinations',
+  mobileCategories: 'Categories',
+  allFiles: 'All files',
   collaboration: 'Collaboration',
   activity: 'Transfers & tasks',
   administration: 'Administration',

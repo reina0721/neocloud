@@ -61,7 +61,7 @@ describe('AppProviders hydration（clouddrive.shell v0 → v1）', () => {
     await waitFor(() => expect(document.documentElement).toHaveAttribute('data-hydrated', 'true'));
     expect(document.documentElement).toHaveAttribute('lang', 'en');
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
-    expect(document.documentElement).toHaveAttribute('data-accent', 'purple');
+    expect(document.documentElement).toHaveAttribute('data-accent', 'pink');
     expect(screen.getByText('en')).toBeVisible();
     // v0 显式 dark → themeMode=dark；collapsed → sidebarBehavior=collapsed（不套新默认）。
     const prefs = useShellStore.getState().preferences;

@@ -22,7 +22,7 @@ test('全局默认表格密度流入参考列表（数据展示 → 资源列表
   await page.goto('/page-archetypes/resource-list');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   // 密度 Select 触发按钮当前值 = 紧凑（来自全局默认偏好；accessible name 含字段标签）。
-  await expect(page.getByRole('button', { name: '紧凑 表格密度' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: '表格密度', exact: true })).toContainText('紧凑');
 });
 
 test('页面显式操作优先于全局默认（参考列表密度切换为舒适）', async ({ page }) => {
@@ -30,7 +30,7 @@ test('页面显式操作优先于全局默认（参考列表密度切换为舒�
   await page.goto('/page-archetypes/resource-list');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   // 页面显式切到舒适 → 覆盖全局默认。
-  await page.getByRole('button', { name: '紧凑 表格密度' }).click();
+  await page.getByRole('combobox', { name: '表格密度', exact: true }).click();
   await page.getByRole('option', { name: '舒适' }).click();
-  await expect(page.getByRole('button', { name: '舒适 表格密度' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: '表格密度', exact: true })).toContainText('舒适');
 });

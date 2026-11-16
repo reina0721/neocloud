@@ -92,10 +92,7 @@ test('扩展名图标保存、主题渲染、外部图片失败回退与恢复�
     await expect(page.getByRole('heading', { name: '文件图标', exact: true })).toBeVisible();
   }
   async function shape(name: string) {
-    await page
-      .getByRole('dialog')
-      .getByRole('button', { name: /图标类型/ })
-      .click();
+    await page.getByRole('dialog').getByRole('combobox', { name: '图标类型', exact: true }).click();
     await page.getByRole('option', { name, exact: true }).click();
   }
   const add = page.getByRole('button', { name: '添加图标', exact: true });

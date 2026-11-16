@@ -20,16 +20,15 @@ test('RangeSlider keeps track edges on the fill role through themes and keyboard
     await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
     await waitForVisualReadiness(page);
     const colors = await page
-      .locator('[data-slot="slider-track"]')
+      .locator('.ui-slider-track')
       .first()
       .evaluate((track) => {
-        const fill = track.querySelector('[data-slot="slider-fill"]')!;
         const style = getComputedStyle(track);
-        return { edge: style.borderInlineStartColor, fill: getComputedStyle(fill).backgroundColor };
+        return { edge: style.borderInlineStartColor, fill: style.backgroundColor };
       });
     expect(colors.edge).toBe(colors.fill);
     const focus = await page
-      .locator('[data-slot="slider-thumb"]')
+      .locator('.ui-slider-thumb')
       .first()
       .evaluate((thumb) => {
         const probe = document.createElement('span');
@@ -46,11 +45,11 @@ test('RangeSlider keeps track edges on the fill role through themes and keyboard
   await slider.press('End');
   await expect(slider).toHaveValue('100');
   const endColors = await page
-    .locator('[data-slot="slider-track"]')
+    .locator('.ui-slider-track')
     .first()
     .evaluate((track) => ({
       edge: getComputedStyle(track).borderInlineEndColor,
-      fill: getComputedStyle(track.querySelector('[data-slot="slider-fill"]')!).backgroundColor,
+      fill: getComputedStyle(track).backgroundColor,
     }));
   expect(endColors.edge).toBe(endColors.fill);
   const disabled = page.getByRole('slider').nth(1);

@@ -80,6 +80,14 @@ test('阅读内容在窄屏、侧栏和查找打开时保持可用，键盘能�
   await page.setViewportSize({ width: 1280, height: 720 });
   const d = await upload(page, fixture('reader.pdf'));
   await expect(d.frameLocator('iframe').locator('canvas').first()).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(async () => (await d.locator('iframe').boundingBox())?.height ?? 0)
+    .toBeGreaterThanOrEqual(844 * 0.7);
+  await expect
+    .poll(async () => (await d.locator('iframe').boundingBox())?.width ?? 0)
+    .toBeGreaterThanOrEqual(390 - 24);
+  await page.setViewportSize({ width: 1280, height: 720 });
   const search = d.getByRole('button', { name: '查找文字', exact: true });
   await search.click();
   const input = d.getByRole('searchbox', { name: '全文查找', exact: true });
@@ -100,9 +108,10 @@ test('阅读内容在窄屏、侧栏和查找打开时保持可用，键盘能�
       size.height < 400 ? 100 : size.width < 400 ? 360 : 360,
     );
     expect(bounds?.width).toBeGreaterThanOrEqual(240);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-      true,
-    );
+    expect((await input.boundingBox())?.width).toBeGreaterThanOrEqual(120);
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+      .toBe(true);
   }
   await page.setViewportSize({ width: 320, height: 800 });
   const before = await d.locator('iframe').boundingBox();
@@ -243,8 +252,14 @@ async function chooseStamp(
   mimeType = 'image/png',
   button = '图片标注',
 ) {
+  const stamp = dialog.getByRole('button', { name: button, exact: true });
+  if (!(await stamp.isVisible())) {
+    await dialog
+      .getByRole('button', { name: /^(编辑与导出工具|Editing and export tools)$/ })
+      .click();
+  }
   const pending = page.waitForEvent('filechooser');
-  await dialog.getByRole('button', { name: button, exact: true }).click();
+  await stamp.click();
   await (await pending).setFiles({ name, buffer, mimeType });
 }
 
@@ -620,7 +635,12 @@ test('历史PDF按明确revision读取，当前已换成加密PDF仍可打开原
   });
   const queue = page.getByRole('dialog', { name: '上传队列', exact: true });
   if (!(await queue.isVisible())) await page.getByRole('button', { name: /^上传队列/ }).click();
-  await expect(queue.getByText('上传完成', { exact: true })).toBeVisible();
+  await expect(
+    queue
+      .getByRole('listitem')
+      .filter({ hasText: '上传新版本' })
+      .getByText('上传完成', { exact: true }),
+  ).toBeVisible();
   await queue.getByRole('button', { name: '关闭', exact: true }).click();
   await page.getByRole('button', { name: name + ' 的操作', exact: true }).click();
   await page.getByRole('menuitem', { name: '版本历史', exact: true }).click();

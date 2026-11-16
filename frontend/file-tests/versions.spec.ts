@@ -4,6 +4,14 @@ import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 test.use({ actionTimeout: 15_000 });
+let originalHistoryRule: Record<string, unknown> | undefined;
+test.afterEach(async ({ page }) => {
+  if (!originalHistoryRule) return;
+  const original = originalHistoryRule;
+  originalHistoryRule = undefined;
+  const current = await api(page, '/preferences/history');
+  await api(page, '/preferences/history', 'PUT', { ...original, revision: current.revision });
+});
 async function login(page: Page) {
   const access = JSON.parse(
     (
@@ -50,6 +58,14 @@ async function api(
 
 async function fixture(page: Page, changes = 2) {
   await login(page);
+  // 此用例验证完整历史；临时调整隔离账号策略，结束后恢复原值。
+  originalHistoryRule = await api(page, '/preferences/history');
+  await api(page, '/preferences/history', 'PUT', {
+    ...originalHistoryRule,
+    enabled: true,
+    extensions: [],
+    maxVersions: 0,
+  });
   const suffix = randomUUID().slice(0, 8),
     root = await api(page, '/folders', 'POST', { name: '版本-' + suffix, parentId: '' });
   const file = await api(page, '/text', 'POST', {
@@ -96,7 +112,7 @@ test('版本时间线、分页、排序、原属性、当前标识和窄屏', as
   await page.getByRole('button', { name: '下一页版本', exact: true }).click();
   await expect(version(page, 1)).toBeVisible();
   await expect(version(page, 1).getByText(/原名称/)).toContainText(String(f.file.name));
-  await page.getByRole('button', { name: '最新在前 版本顺序', exact: true }).click();
+  await page.getByRole('combobox', { name: '版本顺序', exact: true }).click();
   await page.getByRole('option', { name: '最早在前', exact: true }).click();
   await expect(page.locator('[data-file-version]').first()).toHaveAttribute(
     'data-file-version',

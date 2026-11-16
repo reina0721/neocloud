@@ -47,7 +47,7 @@ describe('设备侧栏偏好的迁移和隔离', () => {
     });
     const two = createFileSidebarPreferences('two', vi.fn());
     one.saveSidebarPreferences({ collapsed: true, autoExpandTree: false });
-    expect(two.loadSidebarPreferences()).toEqual({ collapsed: false, autoExpandTree: true });
+    expect(two.loadSidebarPreferences()).toEqual({ collapsed: true, autoExpandTree: true });
     current = false;
     expect(() => one.loadSidebarPreferences()).toThrow(
       expect.objectContaining({ code: 'canceled' }),

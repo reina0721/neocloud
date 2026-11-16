@@ -26,6 +26,7 @@ import {
   Search,
   RefreshCw,
   Settings,
+  ArrowUp,
   ArrowUpDown,
   Menu,
   HardDrive,
@@ -55,6 +56,7 @@ export {
   Search,
   RefreshCw,
   Settings,
+  ArrowUp,
   ArrowUpDown,
   Menu,
   HardDrive,
@@ -141,7 +143,7 @@ export function FileGlyph({
                 : File);
   const tint = ruleShape ? rule?.light : kind === 'folder' ? color : undefined;
   const darkTint = ruleShape ? rule?.dark : undefined;
-  const className = size === 'small' ? 'size-5' : 'size-12';
+  const className = size === 'small' ? 'surface-file-glyph-small' : 'surface-file-glyph-large';
   const glyph = (
     <Icon
       aria-hidden="true"

@@ -8,354 +8,693 @@
   --surface-timeline-marker-size: 0.75rem;
   --surface-timeline-marker-offset: 0.375rem;
   --surface-timeline-marker-radius: 9999px;
-  --surface-shell-expanded-width: 16.5rem;
-  --surface-shell-compact-width: calc(var(--spacing-control-lg) + var(--spacing) * 8);
+  --surface-shell-expanded-width: 15rem;
+  --surface-file-pins-max-height: 16rem;
+  --surface-shell-compact-width: 4rem;
+  --surface-masthead-height: 8.5rem;
+  --surface-masthead-inset: 2.5rem;
+  --surface-rail-accent-width: 0.1875rem;
+  --surface-navigation-radius: 0.5rem;
 }
 
-@layer components {
-  .surface-shell-grid {
-    display: grid;
-    grid-template-columns: var(--surface-shell-expanded-width) minmax(0, 1fr);
-    transition: grid-template-columns var(--motion-duration-standard) var(--ease-product);
-  }
+@scope ([data-ui-system='kira']) {
+  @layer components {
+    .surface-shell-grid {
+      display: grid;
+      grid-template-columns: var(--surface-shell-expanded-width) minmax(0, 1fr);
+      transition: grid-template-columns var(--motion-duration-standard) var(--ease-product);
+    }
 
-  .surface-shell-grid[data-sidebar='collapsed'] {
-    grid-template-columns: var(--surface-shell-compact-width) minmax(0, 1fr);
-  }
+    .surface-shell-grid[data-sidebar='collapsed'] {
+      grid-template-columns: var(--surface-shell-compact-width) minmax(0, 1fr);
+    }
 
-  /* 顶部导航布局：不含侧栏列，内容区独占宽度（导航由 Host 注入 Header）。 */
-  .surface-shell-grid[data-layout='horizontal'] {
-    grid-template-columns: minmax(0, 1fr);
-  }
+    /* 顶部导航布局：不含侧栏列，内容区独占宽度（导航由 Host 注入 Header）。 */
+    .surface-shell-grid[data-layout='horizontal'] {
+      grid-template-columns: minmax(0, 1fr);
+    }
 
-  /* 紧凑 Rail 固定 80px 内宽：宽度过渡期间内容贴住 Rail，不在加宽轨道里漂移。 */
-  .surface-shell-compact-rail {
-    width: var(--surface-shell-compact-width);
-    align-items: center;
-  }
+    /* 紧凑 Rail 使用独立宽度 Token：宽度过渡期间内容贴住 Rail，不在加宽轨道里漂移。 */
+    .surface-shell-compact-rail {
+      width: var(--surface-shell-compact-width);
+      align-items: center;
+    }
 
-  .surface-shell-compact-group + .surface-shell-compact-group {
-    margin-block-start: calc(var(--spacing) * 3);
-    padding-block-start: calc(var(--spacing) * 3);
-    border-block-start: 1px solid var(--color-border);
-  }
+    .surface-shell-compact-group + .surface-shell-compact-group {
+      margin-block-start: calc(var(--spacing) * 3);
+      padding-block-start: calc(var(--spacing) * 3);
+      border-block-start: 1px solid var(--color-border);
+    }
 
-  .surface-shell-navigation-root-item {
-    padding-inline: calc((var(--spacing-control-lg) - var(--spacing-icon-sm)) / 2 + var(--spacing));
-  }
+    .surface-shell-navigation-root-item {
+      padding-inline: calc(
+        (var(--surface-shell-compact-width) - var(--spacing-icon-sm)) / 2 - var(--spacing) * 3
+      );
+    }
 
-  /* Shell 导航滚动视口：占 Sidebar 顶部/底部稳定区之间的剩余高度，独立纵向滚动。
+    /* Shell 导航滚动视口：占 Sidebar 顶部/底部稳定区之间的剩余高度，独立纵向滚动。
    * 隐藏浏览器原生 scrollbar 外观但保留完整滚动能力（滚轮、Touchpad、触摸、键盘 focus scroll）。
    * 只作用于 NavigationViewport，不影响 html/body、主内容区或其它 Scroll Container。 */
-  .surface-shell-navigation-viewport {
-    overflow-y: auto;
-    scrollbar-width: none;
-    scrollbar-color: transparent transparent;
-    -ms-overflow-style: none;
-  }
-
-  .surface-shell-navigation-viewport::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-    display: none;
-  }
-
-  .surface-shell-navigation-viewport::-webkit-scrollbar-track,
-  .surface-shell-navigation-viewport::-webkit-scrollbar-thumb {
-    background: transparent;
-  }
-
-  .surface-page-stack > :not(:last-child) {
-    margin-block-end: var(--surface-section-gap);
-  }
-
-  /* Region enter displacement must not grow page width. Clip adds no scroll owner. */
-  .surface-route-content {
-    overflow-x: clip;
-  }
-
-  /* 保留一项筛选控件的组合空间；空间不足时让次要操作换行，而不是压垮主输入。 */
-  .surface-toolbar-primary {
-    flex: 1 1 var(--surface-filter-min);
-  }
-
-  .surface-filter-grid {
-    display: grid;
-    gap: var(--surface-control-gap);
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--surface-filter-min)), 1fr));
-  }
-
-  .surface-timeline-item {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: var(--surface-control-gap);
-  }
-
-  .surface-split-view {
-    display: grid;
-    min-width: 0;
-    gap: var(--surface-section-gap);
-  }
-
-  .surface-split-detail,
-  .surface-settings-nav {
-    /* Resolve at the consumer: the Host supplies chrome height below :root. */
-    --surface-sticky-top: calc(var(--shell-chrome-height, 5rem) + var(--spacing) * 4);
-    min-width: 0;
-  }
-
-  .surface-settings-layout {
-    display: grid;
-    gap: var(--surface-section-gap);
-  }
-
-  @media (width < 80rem) {
-    .surface-settings-layout-persistent {
-      display: block;
+    .surface-shell-navigation-viewport {
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: none;
+      scrollbar-color: transparent transparent;
+      -ms-overflow-style: none;
     }
-    .surface-settings-layout-persistent > .surface-settings-nav {
-      position: sticky;
-      top: var(--shell-chrome-height, 5rem);
-      z-index: var(--z-index-shell);
-      padding-block: calc(var(--spacing) * 2);
-      background: var(--color-canvas);
-      border-bottom: 1px solid var(--color-border);
-      margin-bottom: var(--surface-section-gap);
+
+    .surface-shell-navigation-viewport::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
     }
-  }
 
-  .surface-timeline-marker {
-    margin-top: var(--surface-timeline-marker-offset);
-    width: var(--surface-timeline-marker-size);
-    height: var(--surface-timeline-marker-size);
-    border-radius: var(--surface-timeline-marker-radius);
-    background: var(--ds-border-strong);
-  }
+    .surface-shell-navigation-viewport::-webkit-scrollbar-track,
+    .surface-shell-navigation-viewport::-webkit-scrollbar-thumb {
+      background: transparent;
+    }
 
-  .surface-timeline-marker-success {
-    background: var(--ds-success);
-  }
-  .surface-timeline-marker-warning {
-    background: var(--ds-warning);
-  }
-  .surface-timeline-marker-danger {
-    background: var(--ds-danger);
-  }
+    .surface-page-stack > :not(:last-child) {
+      margin-block-end: var(--surface-section-gap);
+    }
 
-  /* Default-visible enhancement: observer failure/SSR never hides reading or controls. */
-  .surface-viewport-reveal[data-reveal-entry='true'],
-  [data-reveal-scope] [data-reveal-entry='true'] {
-    animation: surface-item-enter var(--motion-duration-feedback) var(--ease-product) backwards;
-  }
+    /* Region enter displacement must not grow page width. Clip adds no scroll owner. */
+    .surface-route-content {
+      overflow-x: clip;
+    }
 
-  [data-reveal-scope] [data-reveal-order][data-reveal-entry='true'] {
-    animation-delay: min(
-      calc(var(--motion-delay-reveal-step) * var(--surface-reveal-rank)),
-      calc(var(--motion-delay-reveal-max) * var(--surface-reveal-fraction))
-    );
-  }
+    /* 保留一项筛选控件的组合空间；空间不足时让次要操作换行，而不是压垮主输入。 */
+    .surface-toolbar-primary {
+      flex: 1 1 var(--surface-filter-min);
+    }
 
-  .surface-viewport-reveal:focus-within,
-  [data-reveal-scope] [data-reveal-entry]:focus-within {
-    animation: none;
-  }
+    .surface-filter-grid {
+      display: grid;
+      gap: var(--surface-control-gap);
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--surface-filter-min)), 1fr));
+    }
 
-  html[data-motion-reveal='off'] .surface-viewport-reveal,
-  html[data-motion-reveal='off'] [data-reveal-scope] [data-reveal-entry] {
-    opacity: 1;
-    transform: none;
-    animation-duration: 0.01ms;
-    animation-delay: 0ms;
-  }
+    .surface-timeline-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: var(--surface-control-gap);
+    }
 
-  /* Route switching owns only the title. Reading items own their viewport lifecycle. */
-  .surface-route-content[data-route-enter='true']
-    > .surface-page-stack:not(:has([data-route-content]))
-    > header {
-    animation: content-rise-in var(--motion-duration-fast) var(--ease-product) both;
-  }
-  .surface-route-content[data-route-enter='true'][data-route-kind='forward']
-    > .surface-page-stack:not(:has([data-route-content]))
-    > header {
-    animation: surface-enter-forward var(--motion-duration-fast) var(--ease-product) both;
-  }
-  html[data-motion-screen='off']
-    .surface-route-content[data-route-enter='true']
-    > .surface-page-stack:not(:has([data-route-content]))
-    > header {
-    animation: none;
-  }
-
-  /* 页面切换动画（117）：非默认模式改为整页进入，标题动画让位给 Screen Recipe。 */
-  html[data-page-transition]:not([data-page-transition='default'])
-    .surface-route-content[data-route-enter='true']
-    > .surface-page-stack:not(:has([data-route-content]))
-    > header {
-    animation: none;
-  }
-
-  html[data-page-transition='fade']
-    .surface-route-content[data-route-enter='true']
-    > .surface-page-stack:not(:has([data-route-content])) {
-    animation: surface-screen-fade var(--motion-duration-page) var(--ease-product) both;
-  }
-
-  html[data-page-transition='fade-slide']
-    .surface-route-content[data-route-enter='true']
-    > .surface-page-stack:not(:has([data-route-content])) {
-    animation: surface-screen-fade-slide var(--motion-duration-page) var(--ease-product) both;
-  }
-
-  html[data-page-transition='fade-up']
-    .surface-route-content[data-route-enter='true']
-    > .surface-page-stack:not(:has([data-route-content])) {
-    animation: surface-screen-fade-up var(--motion-duration-page) var(--ease-product) both;
-  }
-
-  html[data-page-transition='fade-down']
-    .surface-route-content[data-route-enter='true']
-    > .surface-page-stack:not(:has([data-route-content])) {
-    animation: surface-screen-fade-down var(--motion-duration-page) var(--ease-product) both;
-  }
-
-  /* 关闭页面切换动画 / 关闭 Screen 动效：值规则之后覆盖，保证后写优先。 */
-  html:is([data-page-transition='none'], [data-motion-screen='off'])
-    .surface-route-content[data-route-enter='true']
-    > .surface-page-stack {
-    animation: none;
-  }
-  .surface-state-region:is(
-      [data-state='ready'],
-      [data-state='refreshing'],
-      [data-state='background'],
-      [data-state='partial'],
-      [data-state='readonly']
-    )
-    > .surface-state-region-content {
-    animation:
-      content-fade-in var(--motion-duration-standard) var(--ease-product) both,
-      content-rise-in var(--motion-duration-standard) var(--ease-product) both;
-  }
-
-  html[data-motion-async='off'] .surface-state-region-content {
-    animation-duration: 0.01ms;
-  }
-
-  @media (min-width: 80rem) {
     .surface-split-view {
-      grid-template-columns: minmax(0, 2fr) minmax(var(--surface-detail-min), 1fr);
+      display: grid;
+      min-width: 0;
+      gap: var(--surface-section-gap);
     }
 
     .surface-split-detail,
     .surface-settings-nav {
-      position: sticky;
-      top: var(--surface-sticky-top);
-      align-self: start;
+      /* Resolve at the consumer: the Host supplies chrome height below :root. */
+      --surface-sticky-top: calc(var(--shell-chrome-height, 5rem) + var(--spacing) * 4);
+      min-width: 0;
     }
 
     .surface-settings-layout {
-      grid-template-columns: minmax(var(--surface-settings-nav), 0.3fr) minmax(0, 1fr);
+      display: grid;
+      gap: var(--surface-section-gap);
     }
 
-    .surface-settings-nav {
-      max-height: calc(100dvh - var(--surface-sticky-top) - var(--spacing) * 4);
-      overflow-y: auto;
+    @media (width < 80rem) {
+      .surface-settings-layout-persistent {
+        display: block;
+      }
+      .surface-settings-layout-persistent > .surface-settings-nav {
+        position: sticky;
+        top: var(--shell-chrome-height, 5rem);
+        z-index: var(--z-index-shell);
+        padding-block: calc(var(--spacing) * 2);
+        background: var(--color-canvas);
+        border-bottom: 1px solid var(--color-border);
+        margin-bottom: var(--surface-section-gap);
+      }
+    }
+
+    .surface-timeline-marker {
+      margin-top: var(--surface-timeline-marker-offset);
+      width: var(--surface-timeline-marker-size);
+      height: var(--surface-timeline-marker-size);
+      border-radius: var(--surface-timeline-marker-radius);
+      background: var(--ds-border-strong);
+    }
+
+    .surface-timeline-marker-success {
+      background: var(--ds-success);
+    }
+    .surface-timeline-marker-warning {
+      background: var(--ds-warning);
+    }
+    .surface-timeline-marker-danger {
+      background: var(--ds-danger);
+    }
+
+    /* Default-visible enhancement: observer failure/SSR never hides reading or controls. */
+    .surface-viewport-reveal[data-reveal-entry='true'],
+    [data-reveal-scope] [data-reveal-entry='true'] {
+      animation: surface-item-enter var(--motion-duration-feedback) var(--ease-product) backwards;
+    }
+
+    [data-reveal-scope] [data-reveal-order][data-reveal-entry='true'] {
+      animation-delay: min(
+        calc(var(--motion-delay-reveal-step) * var(--surface-reveal-rank)),
+        calc(var(--motion-delay-reveal-max) * var(--surface-reveal-fraction))
+      );
+    }
+
+    .surface-viewport-reveal:focus-within,
+    [data-reveal-scope] [data-reveal-entry]:focus-within {
+      animation: none;
+    }
+
+    :scope[data-motion-reveal='off'] .surface-viewport-reveal,
+    :scope[data-motion-reveal='off'] [data-reveal-scope] [data-reveal-entry] {
+      opacity: 1;
+      transform: none;
+      animation-duration: 0.01ms;
+      animation-delay: 0ms;
+    }
+
+    /* 路由统一承载标题进入，避免标题首次揭示与整页动画重复。 */
+    .surface-route-content[data-route-enter='true']
+      > .surface-page-stack:not(:has([data-route-content]))
+      > header {
+      animation: none;
+    }
+
+    /* 页面切换让内容淡入；阅读项继续使用自己的首次可见生命周期。 */
+    .surface-route-content[data-route-enter='true']
+      > .surface-page-stack:not(:has([data-route-content])) {
+      animation: surface-screen-fade-up var(--motion-duration-page) var(--ease-product) both;
+    }
+    .surface-route-content[data-route-enter='true'][data-route-kind='forward']
+      > .surface-page-stack:not(:has([data-route-content])) {
+      animation: surface-screen-fade-slide var(--motion-duration-page) var(--ease-product) both;
+    }
+    :scope[data-page-transition='fade']
+      .surface-route-content[data-route-enter='true']
+      > .surface-page-stack:not(:has([data-route-content])) {
+      animation: surface-screen-fade var(--motion-duration-page) var(--ease-product) both;
+    }
+
+    :scope[data-page-transition='fade-slide']
+      .surface-route-content[data-route-enter='true']
+      > .surface-page-stack:not(:has([data-route-content])) {
+      animation: surface-screen-fade-slide var(--motion-duration-page) var(--ease-product) both;
+    }
+
+    :scope[data-page-transition='fade-up']
+      .surface-route-content[data-route-enter='true']
+      > .surface-page-stack:not(:has([data-route-content])) {
+      animation: surface-screen-fade-up var(--motion-duration-page) var(--ease-product) both;
+    }
+
+    :scope[data-page-transition='fade-down']
+      .surface-route-content[data-route-enter='true']
+      > .surface-page-stack:not(:has([data-route-content])) {
+      animation: surface-screen-fade-down var(--motion-duration-page) var(--ease-product) both;
+    }
+
+    /* 关闭页面切换动画 / 关闭 Screen 动效：值规则之后覆盖，保证后写优先。 */
+    :scope:is([data-page-transition='none'], [data-motion-screen='off'])
+      .surface-route-content[data-route-enter='true']
+      > .surface-page-stack:not(:has([data-route-content])) {
+      animation: none;
+    }
+    .surface-state-region:is(
+        [data-state='ready'],
+        [data-state='refreshing'],
+        [data-state='background'],
+        [data-state='partial'],
+        [data-state='readonly']
+      )
+      > .surface-state-region-content {
+      animation:
+        content-fade-in var(--motion-duration-standard) var(--ease-product) both,
+        content-rise-in var(--motion-duration-standard) var(--ease-product) both;
+    }
+
+    :scope[data-motion-async='off'] .surface-state-region-content {
+      animation-duration: 0.01ms;
+    }
+
+    @media (min-width: 80rem) {
+      .surface-split-view {
+        grid-template-columns: minmax(0, 2fr) minmax(var(--surface-detail-min), 1fr);
+      }
+
+      .surface-split-detail,
+      .surface-settings-nav {
+        position: sticky;
+        top: var(--surface-sticky-top);
+        align-self: start;
+      }
+
+      .surface-settings-layout {
+        grid-template-columns: minmax(var(--surface-settings-nav), 0.3fr) minmax(0, 1fr);
+      }
+
+      .surface-settings-nav {
+        max-height: calc(100dvh - var(--surface-sticky-top) - var(--spacing) * 4);
+        overflow-y: auto;
+      }
+    }
+
+    @media (width < 64rem) {
+      .surface-shell-grid,
+      .surface-shell-grid[data-sidebar='collapsed'] {
+        grid-template-columns: minmax(0, 1fr);
+      }
     }
   }
 
-  @media (width < 64rem) {
-    .surface-shell-grid,
-    .surface-shell-grid[data-sidebar='collapsed'] {
-      grid-template-columns: minmax(0, 1fr);
+  @layer utilities {
+    .surface-bulk-bar {
+      animation: surface-bulk-enter var(--motion-duration-feedback) var(--ease-product) both;
     }
   }
-}
 
-@layer utilities {
-  .surface-bulk-bar {
-    animation: surface-bulk-enter var(--motion-duration-feedback) var(--ease-product) both;
+  @keyframes surface-bulk-enter {
+    from {
+      opacity: 0;
+      transform: translateY(var(--motion-distance-reveal));
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-}
 
-@keyframes surface-bulk-enter {
-  from {
-    opacity: 0;
-    transform: translateY(var(--motion-distance-reveal));
+  /* Surface route-content 方向进入（forward）：克制右入，非手机重横滑；由 data-route-kind 选择。 */
+  @keyframes surface-item-enter {
+    from {
+      opacity: var(--motion-opacity-reveal-start);
+      transform: translateY(var(--motion-distance-reveal));
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-/* Surface route-content 方向进入（forward）：克制右入，非手机重横滑；由 data-route-kind 选择。 */
-@keyframes surface-item-enter {
-  from {
-    opacity: var(--motion-opacity-reveal-start);
-    transform: translateY(var(--motion-distance-reveal));
+  @keyframes surface-enter-forward {
+    from {
+      transform: translateX(var(--motion-distance-enter));
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
   }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
 
-@keyframes surface-enter-forward {
-  from {
-    transform: translateX(var(--motion-distance-enter));
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* 页面切换 Screen Recipe（117，Vben 对标）：只做 opacity/transform，
+  /* 页面切换 Screen Recipe（117，Vben 对标）：只做 opacity/transform，
  * 父层 `.surface-route-content` 已 overflow-x: clip，不产生横向滚动。 */
-@keyframes surface-screen-fade {
-  from {
-    opacity: 0;
+  @keyframes surface-screen-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
-  to {
-    opacity: 1;
-  }
-}
 
-@keyframes surface-screen-fade-slide {
-  from {
-    opacity: 0;
-    transform: translateX(calc(var(--motion-distance-enter) * -1));
+  @keyframes surface-screen-fade-slide {
+    from {
+      opacity: 0;
+      transform: translateX(calc(var(--motion-distance-enter) * -1));
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
 
-@keyframes surface-screen-fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(var(--motion-distance-enter));
+  @keyframes surface-screen-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(var(--motion-distance-enter));
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
 
-@keyframes surface-screen-fade-down {
-  from {
-    opacity: 0;
-    transform: translateY(calc(var(--motion-distance-enter) * -1));
+  @keyframes surface-screen-fade-down {
+    from {
+      opacity: 0;
+      transform: translateY(calc(var(--motion-distance-enter) * -1));
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .surface-bulk-bar {
-    animation: none;
+  @media (prefers-reduced-motion: reduce) {
+    .surface-bulk-bar {
+      animation: none;
+    }
+  }
+
+  /* Kira product language: all geometry belongs to this product layer, never vendor DOM. */
+
+  @layer components {
+    .surface-masthead {
+      position: relative;
+      isolation: isolate;
+      display: flex;
+      flex: 0 0 auto;
+      min-height: var(--surface-masthead-height);
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--surface-section-gap);
+      overflow: hidden;
+      padding: calc(var(--spacing) * 5) var(--surface-masthead-inset);
+      background: var(--ds-surface);
+      color: var(--ds-brand);
+    }
+    .surface-masthead::before,
+    .surface-masthead::after {
+      content: '';
+      position: absolute;
+      z-index: -1;
+      inset: 0;
+      pointer-events: none;
+    }
+    .surface-masthead::before {
+      background: linear-gradient(
+        145deg,
+        transparent 68%,
+        color-mix(in srgb, var(--ds-brand) 12%, transparent) 68% 74%,
+        transparent 74% 78%,
+        color-mix(in srgb, var(--ds-brand) 23%, transparent) 78% 86%,
+        transparent 86%
+      );
+    }
+    .surface-masthead::after {
+      inset: auto auto 0 0;
+      width: 12%;
+      height: 42%;
+      background: repeating-linear-gradient(
+        145deg,
+        transparent 0 1rem,
+        var(--ds-brand-soft) 1rem 1.25rem,
+        transparent 1.25rem 1.65rem
+      );
+    }
+    .surface-masthead-copy {
+      min-width: 0;
+      position: relative;
+      z-index: 1;
+    }
+    .surface-wordmark {
+      display: flex;
+      align-items: center;
+      gap: calc(var(--spacing) * 3);
+      font-size: clamp(1.75rem, 3.1vw, 2.75rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.055em;
+    }
+    .surface-wordmark > span {
+      font-size: 1.2em;
+      font-weight: 400;
+    }
+    .surface-masthead-description {
+      margin-top: calc(var(--spacing) * 2);
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      color: var(--ds-ink-muted);
+    }
+    .surface-masthead-orbit {
+      position: absolute;
+      right: -1rem;
+      top: -3.5rem;
+      width: 10rem;
+      aspect-ratio: 1;
+      border: 1px solid color-mix(in srgb, var(--ds-brand) 45%, transparent);
+      border-radius: 50%;
+    }
+    .surface-masthead-stars {
+      position: absolute;
+      right: 6%;
+      bottom: 12%;
+      font-size: 1rem;
+      line-height: 1.8;
+      letter-spacing: 1rem;
+      color: color-mix(in srgb, var(--ds-brand) 45%, transparent);
+    }
+    .surface-masthead-aside {
+      z-index: 1;
+      flex-shrink: 0;
+    }
+    .surface-page-header {
+      padding-block: calc(var(--spacing) * 2);
+    }
+    .surface-toolbar {
+      box-shadow: var(--shadow-panel);
+    }
+    .surface-management-sidebar,
+    .surface-file-sidebar {
+      border-right: 1px solid var(--ds-border);
+      box-shadow: 4px 0 24px color-mix(in srgb, var(--ds-brand) 4%, transparent);
+      z-index: var(--z-index-shell);
+      background: var(--ds-surface);
+    }
+    .surface-file-sidebar {
+      transition: width var(--motion-duration-standard) var(--ease-product);
+    }
+    .surface-shell-grid .ui-navigation-focus {
+      position: relative;
+      border-radius: var(--surface-navigation-radius);
+      font-weight: 500;
+    }
+    .surface-management-sidebar .ui-navigation-focus[aria-current='page']::after {
+      content: '';
+      position: absolute;
+      inset-block: 25%;
+      right: calc(var(--spacing) * -1);
+      width: var(--surface-rail-accent-width);
+      border-radius: var(--radius-action);
+      background: var(--ds-brand);
+    }
+    .surface-category-tabs {
+      display: block;
+      min-width: 0;
+      flex: 0 0 auto;
+      padding-inline: calc(var(--spacing) * 6);
+      background: var(--ds-surface);
+      border-bottom: 1px solid var(--ds-border);
+    }
+    .surface-pdf-tools {
+      display: flex;
+    }
+    .surface-pdf-tools-toggle {
+      display: none;
+    }
+    @media (width < 48rem), (height < 40rem) {
+      .surface-pdf-tools:not([data-open='true']) {
+        display: none;
+      }
+      .surface-pdf-tools-toggle {
+        display: inline-flex;
+      }
+    }
+    .surface-file-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--surface-control-gap);
+      padding: calc(var(--spacing) * 2) calc(var(--spacing) * 1);
+    }
+    .surface-file-item {
+      transition:
+        background-color var(--motion-duration-control) var(--ease-product),
+        box-shadow var(--motion-duration-control) var(--ease-product),
+        border-color var(--motion-duration-control) var(--ease-product);
+    }
+    .surface-file-item:not([data-file-view='list']):hover {
+      box-shadow: var(--shadow-overlay);
+      border-color: color-mix(in srgb, var(--ds-brand) 25%, transparent);
+    }
+    .surface-file-item[data-selected='true'] {
+      border-color: var(--ds-brand);
+    }
+    .surface-file-glyph-small {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+    .surface-file-glyph-large {
+      width: 3rem;
+      height: 3rem;
+    }
+    .surface-file-preview {
+      flex-direction: column;
+    }
+    .surface-file-preview > svg,
+    .surface-file-preview > img {
+      margin-block: var(--spacing);
+    }
+    .surface-auth-frame {
+      background: var(--ds-canvas);
+    }
+    .surface-auth-story {
+      position: relative;
+      overflow: hidden;
+    }
+    .surface-auth-story .surface-masthead {
+      padding-inline: 0;
+      background: transparent;
+    }
+    .surface-auth-card {
+      border-top: var(--surface-rail-accent-width) solid var(--ds-brand);
+    }
+    @media (width < 48rem) {
+      .surface-file-workspace-toolbar .ui-overlay-trigger {
+        width: var(--spacing-control);
+        min-width: var(--spacing-control);
+        padding-inline: 0;
+      }
+      .surface-file-collection > .surface-toolbar {
+        border-radius: 0;
+        box-shadow: none;
+      }
+      .surface-file-collection .surface-toolbar-primary {
+        width: 100%;
+        flex-wrap: nowrap;
+        justify-content: space-between;
+      }
+      .surface-file-item[data-file-kind='folder'][data-file-view='grid'] .surface-file-preview {
+        flex-direction: row;
+        align-items: center;
+        gap: calc(var(--spacing) * 2);
+      }
+      .surface-file-item[data-file-kind='folder'][data-file-view='grid']
+        .surface-file-preview
+        > :first-child {
+        width: 1.75rem;
+        height: 1.75rem;
+        flex-shrink: 0;
+      }
+      .surface-file-item[data-file-kind='folder'][data-file-view='grid'] .surface-file-metadata {
+        display: none;
+      }
+      [data-shell-section='settings'] > [data-shell-chrome],
+      [data-shell-section='settings'] > .ui-mobile-navigation,
+      [data-shell-section='settings'] > .ui-mobile-navigation-spacer {
+        display: none;
+      }
+      .surface-settings-layout-persistent > .surface-settings-nav {
+        top: 0;
+        padding: 0;
+        margin-bottom: calc(var(--spacing) * 3);
+        border: 0;
+      }
+      [data-file-workspace] .surface-masthead,
+      [data-file-workspace] .surface-category-tabs,
+      .surface-shell-grid > div > .surface-masthead {
+        display: none;
+      }
+      .surface-masthead {
+        --surface-masthead-height: 6rem;
+        --surface-masthead-inset: 1.25rem;
+      }
+      .surface-category-tabs {
+        gap: calc(var(--spacing) * 2);
+        padding-inline: calc(var(--spacing) * 3);
+      }
+      .surface-masthead-stars {
+        display: none;
+      }
+    }
+    @media (height < 44rem) {
+      [data-file-workspace] .surface-masthead {
+        --surface-masthead-height: 4.5rem;
+        padding-block: calc(var(--spacing) * 3);
+      }
+      [data-file-workspace] .surface-masthead-description {
+        display: none;
+      }
+    }
+  }
+
+  @layer components {
+    .surface-file-navigation [data-file-pins-region] {
+      max-height: var(--surface-file-pins-max-height);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    .surface-file-navigation > nav {
+      overflow-x: hidden;
+      scrollbar-width: none;
+    }
+    .surface-file-navigation > nav::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+      display: none;
+    }
+    .surface-route-content[data-route-enter='true'] [data-file-scroll-region] > * {
+      animation: surface-screen-fade-up var(--motion-duration-page) var(--ease-product) both;
+    }
+    :scope:is([data-page-transition='none'], [data-motion-screen='off'])
+      .surface-route-content
+      [data-file-scroll-region]
+      > * {
+      animation: none;
+    }
+    .surface-public-share {
+      max-width: 90rem;
+      margin-inline: auto;
+    }
+    .surface-palette-preview {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 5rem;
+      padding: calc(var(--spacing) * 4);
+      border-radius: var(--radius-control);
+      background: var(--ds-brand-soft);
+      color: var(--ds-brand);
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .surface-theme-preview {
+      display: grid;
+      grid-template-columns: 0.5rem 1fr;
+      gap: calc(var(--spacing) * 2);
+      min-height: 5rem;
+      padding: calc(var(--spacing) * 2);
+      border-radius: var(--radius-control);
+      background: var(--ds-surface-inset);
+      color: var(--ds-brand);
+    }
+    .surface-theme-preview[data-preview-theme='dark'] {
+      background: var(--ds-ink);
+    }
+    .surface-theme-preview[data-preview-theme='system'] {
+      background: linear-gradient(135deg, var(--ds-surface-inset) 50%, var(--ds-ink) 50%);
+    }
+    .surface-theme-preview > span:first-child {
+      border-radius: var(--radius-control);
+      background: currentColor;
+      opacity: 0.6;
+    }
+    .surface-theme-preview-content {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: calc(var(--spacing) * 1.5);
+    }
+    .surface-theme-preview-content > span {
+      background: var(--ds-surface);
+      opacity: 0.8;
+      border-radius: var(--radius-control);
+    }
+    .surface-theme-preview-content > span:first-child {
+      grid-column: 1 / -1;
+      background: currentColor;
+    }
   }
 }

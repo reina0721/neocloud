@@ -1,5 +1,7 @@
-import { Tooltip } from '@heroui/react/tooltip';
-
+'use client';
+import Tooltip from '@mui/material/Tooltip';
+import Button from '@mui/material/Button';
+import { useState } from 'react';
 export type TooltipActionProps = Readonly<{
   label: string;
   tooltip: string;
@@ -7,16 +9,19 @@ export type TooltipActionProps = Readonly<{
 }>;
 
 export function TooltipAction({ label, tooltip, defaultOpen = false }: TooltipActionProps) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <Tooltip defaultOpen={defaultOpen} delay={100}>
-      <Tooltip.Trigger className="ui-overlay-trigger">{label}</Tooltip.Trigger>
-      <Tooltip.Content
-        className="rounded-control border border-border bg-ink px-3 py-2 text-xs font-medium text-surface shadow-overlay"
-        placement="top"
-        showArrow
-      >
-        {tooltip}
-      </Tooltip.Content>
+    <Tooltip
+      title={tooltip}
+      open={open}
+      onOpen={() => setOpen(true)}
+      onClose={() => setOpen(false)}
+      enterDelay={100}
+      arrow
+    >
+      <Button className="ui-overlay-trigger" variant="outlined">
+        {label}
+      </Button>
     </Tooltip>
   );
 }

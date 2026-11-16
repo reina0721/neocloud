@@ -44,9 +44,9 @@ async function readMotionRecord(page: Page): Promise<MotionRecord> {
   });
 }
 
-// 场景状态选择器：按钮名随当前值变化，用"场景状态"后缀匹配
+// MUI Select 的可访问名称保持字段标签，当前值不混入名称。
 async function setSceneMode(page: Page, optionName: string) {
-  await page.getByRole('button', { name: /场景状态$/ }).click();
+  await page.getByRole('combobox', { name: '场景状态', exact: true }).click();
   await page.getByRole('option', { name: optionName, exact: true }).click();
 }
 

@@ -79,7 +79,7 @@ test('first viewport items have bounded stagger and offscreen items wait for scr
   await page.goto('/settings');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   const rows = page.locator('[id^=settings-appearance][data-reveal="revealed"]');
-  await expect(page.locator('#settings-appearance-density')).toHaveAttribute(
+  await expect(page.locator('#settings-appearance-accent')).toHaveAttribute(
     'data-reveal',
     'revealed',
   );
@@ -158,7 +158,7 @@ test('all primary routes use independent semantic reveal units and retain layout
     await page.goto(route);
     await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
     await expect(page.getByRole('navigation', { name: '主导航' })).toBeVisible();
-    await expect(page.locator('main h1')).toBeVisible();
+    await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     if (route === '/ui-elements/forms')
       await expect(page.getByRole('group', { name: 'DatePicker', exact: true })).toBeVisible();

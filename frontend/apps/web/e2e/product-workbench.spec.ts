@@ -25,7 +25,7 @@ test('Product IA retains old links, search targets, page tabs and history', asyn
   await page.keyboard.press('Space');
   await expect(tabsToggle).toBeChecked();
   await page.getByRole('button', { name: '按 Ctrl K 搜索' }).click();
-  await page.getByRole('searchbox', { name: '搜索命令', exact: true }).fill('Icon');
+  await page.getByRole('combobox', { name: '搜索命令', exact: true }).fill('Icon');
   await page.getByRole('option', { name: /Icon 大全/ }).click();
   await expect(page).toHaveURL(/\/system-tools\/icons$/);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

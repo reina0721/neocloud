@@ -24,14 +24,14 @@ test('记住筛选条件默认关：状态筛选后重载回默认全部', async
   await expect(page.getByRole('grid').getByRole('row')).toHaveCount(21);
   const full = await fullRowCount(page);
   // 状态 = 需关注。
-  await page.getByRole('button', { name: '全部 状态', exact: true }).click();
+  await page.getByRole('combobox', { name: '状态', exact: true }).click();
   await page.getByRole('option', { name: '需关注' }).click();
-  await expect(page.getByRole('button', { name: '需关注 状态', exact: true })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: '状态', exact: true })).toContainText('需关注');
   await page.waitForTimeout(300);
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   // 默认关：回全部（行数恢复完整）。
-  await expect(page.getByRole('button', { name: '全部 状态', exact: true })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: '状态', exact: true })).toContainText('全部');
   expect(await fullRowCount(page)).toBe(full);
 });
 
@@ -48,14 +48,14 @@ test('开启 记住筛选条件：状态筛选后重载仍保持', async ({ page
 
   await page.goto('/page-archetypes/resource-list');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
-  await page.getByRole('button', { name: '全部 状态', exact: true }).click();
+  await page.getByRole('combobox', { name: '状态', exact: true }).click();
   await page.getByRole('option', { name: '需关注' }).click();
-  await expect(page.getByRole('button', { name: '需关注 状态', exact: true })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: '状态', exact: true })).toContainText('需关注');
   const filtered = await fullRowCount(page);
   expect(filtered).toBeLessThan(20);
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   // 筛选保持。
-  await expect(page.getByRole('button', { name: '需关注 状态', exact: true })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: '状态', exact: true })).toContainText('需关注');
   expect(await fullRowCount(page)).toBe(filtered);
 });

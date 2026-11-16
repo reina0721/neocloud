@@ -85,7 +85,10 @@ test('Routes retain titles and main content on mobile and desktop', async ({ pag
           ? '?id=resource-alpha'
           : '');
       await page.goto(href);
-      await expect(page.locator('main h1').first(), `${width}: ${href}`).toBeVisible();
+      await expect(
+        page.getByRole('main').getByRole('heading', { level: 1 }),
+        `${width}: ${href}`,
+      ).toBeVisible();
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
         `${width}: ${href}`,
@@ -136,7 +139,7 @@ test('Workbench cell content stays within column boundaries at each layout size'
     await page.goto('/page-archetypes/resource-list');
     const rows = page.getByRole('grid').getByRole('row');
     await expect(rows).toHaveCount(21);
-    const cells = rows.nth(1).locator('[data-slot="table-cell"]');
+    const cells = rows.nth(1).locator('[role="gridcell"], [role="rowheader"]');
     await expect(cells).toHaveCount(width === 390 ? 2 : 6);
     const spills = await cells.evaluateAll((cells) =>
       cells.flatMap((cell, column) => {
@@ -158,7 +161,7 @@ test('Column resizing preserves pointer and keyboard widths through reload', asy
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/page-archetypes/resource-list');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
-  const handle = page.locator('[data-slot="table-column-resizer"]').first();
+  const handle = page.locator('.ui-column-resizer').first();
   await handle.scrollIntoViewIfNeeded();
   const range = handle.locator('input');
   await expect
@@ -183,9 +186,7 @@ test('Column resizing preserves pointer and keyboard widths through reload', asy
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   await expect
-    .poll(async () =>
-      Number(await page.locator('[data-slot="table-column-resizer"] input').first().inputValue()),
-    )
+    .poll(async () => Number(await page.locator('.ui-column-resizer input').first().inputValue()))
     .toBe(width);
 });
 
@@ -302,7 +303,7 @@ for (const density of ['compact', 'standard', 'comfortable'] as const) {
     ]) {
       await page.goto('/ui-elements/' + family);
       await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-      await expect(page.locator('main h1')).toBeVisible();
+      await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toBeVisible();
       const longText = page.getByRole('switch', { name: /^Expanded text/ }).first();
       await longText.focus();
       await page.keyboard.press('Space');

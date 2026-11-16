@@ -2,7 +2,13 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { CurrentSiteLogo, useSiteProfile } from '@clouddrive/surface/administration/runtime';
-import { Page, PageHeader, Section, Toolbar } from '@clouddrive/surface-foundation/layout';
+import {
+  Page,
+  PageHeader,
+  ProductMasthead,
+  Section,
+  Toolbar,
+} from '@clouddrive/surface-foundation/layout';
 import { Action } from '@clouddrive/ui-adapter/action';
 import {
   CheckboxField,
@@ -143,8 +149,12 @@ export function PublicSharePage() {
     refresh();
   };
   return (
-    <main id="main-content" className="min-h-screen bg-canvas p-5 text-ink">
+    <main
+      id="main-content"
+      className="surface-public-share min-h-screen bg-canvas p-4 text-ink sm:p-6"
+    >
       <Page>
+        <ProductMasthead name={siteName} description={t('publicFiles.title')} />
         <Toolbar
           label={t('publicFiles.title')}
           primary={

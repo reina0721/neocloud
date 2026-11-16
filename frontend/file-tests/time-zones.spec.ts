@@ -72,8 +72,9 @@ async function fixture(page: Page) {
   return { root, file };
 }
 async function select(page: Page, label: string, option: string, scope: Page | Locator = page) {
-  await scope.getByRole('button', { name: new RegExp(label + '$') }).click();
+  await scope.getByRole('combobox', { name: label, exact: true }).click();
   await page.getByRole('option', { name: option, exact: true }).click();
+  await expect(page.locator('[role="listbox"]')).toHaveCount(0);
 }
 async function zone(page: Page, value: string, dateFormat = 'YYYY-MM-DD') {
   await page.goto('/settings/locale');
@@ -120,12 +121,11 @@ async function customShare(page: Page, file: Entry) {
 async function calendarDate(dialog: Locator, day: string) {
   const [year, month, date] = day.split('-');
   for (const [name, value] of [
-    [/^(年|year),/i, year],
-    [/^(月|month),/i, month],
-    [/^(日|day),/i, date],
+    [/^(年份|年|year)(?:,|$)/i, year],
+    [/^(月份|月|month)(?:,|$)/i, month],
+    [/^(日期|日|day)(?:,|$)/i, date],
   ] as const) {
     const segment = dialog.getByRole('spinbutton', { name });
-    await segment.press('ControlOrMeta+a');
     await segment.pressSequentially(value!);
     await segment.press('Tab');
     await expect(segment).toHaveAttribute('aria-valuenow', String(Number(value)));

@@ -19,6 +19,8 @@ import { NavigationIcon } from '@clouddrive/surface/icon-presentation';
 import { PageHeader } from '@clouddrive/surface-foundation/layout';
 import { DrawerSurface } from '@clouddrive/ui-adapter/overlays';
 import { Action } from '@clouddrive/ui-adapter/action';
+import { IconAction } from '@clouddrive/ui-adapter/icon-action';
+import { Menu, X } from 'lucide-react';
 import { Panel } from '@clouddrive/ui-adapter/panel';
 import { SearchBox } from '@clouddrive/ui-adapter/search-box';
 
@@ -202,7 +204,7 @@ export function SettingsContentFrame({
   children,
 }: Readonly<{ banner?: ReactNode; children: ReactNode }>) {
   return (
-    <div className="min-w-0 space-y-5">
+    <div className="min-w-0 space-y-5 px-3 md:px-0">
       {banner}
       {children}
     </div>
@@ -226,9 +228,26 @@ export function SettingsResponsiveNavigation({ meta }: Readonly<{ meta: Settings
         <SettingsSidebar active={meta.categoryKey} query={query} onQueryChange={setQuery} />
       </div>
       <div className="xl:hidden">
-        <Action fullWidth variant="secondary" onPress={() => setOpen(true)}>
-          {t('settings.switchCategory')}
-        </Action>
+        <div className="flex h-14 items-center gap-2 border-b border-border bg-surface px-3 md:hidden">
+          <IconAction label={t('settings.switchCategory')} onPress={() => setOpen(true)}>
+            <Menu className="size-5" />
+          </IconAction>
+          <h1 className="min-w-0 flex-1 truncate text-lg font-bold text-brand">
+            {t(meta.labelKey)}
+          </h1>
+          <RouteLink
+            target={route('files')}
+            ariaLabel={t('common.close')}
+            className="ui-navigation-focus grid size-control shrink-0 place-items-center rounded-full text-ink-muted"
+          >
+            <X className="size-5" aria-hidden="true" />
+          </RouteLink>
+        </div>
+        <div className="hidden md:block">
+          <Action fullWidth variant="secondary" onPress={() => setOpen(true)}>
+            {t('settings.switchCategory')}
+          </Action>
+        </div>
         <DrawerSurface
           triggerLabel={t('settings.switchCategory')}
           title={t('settings.navLabel')}
@@ -253,13 +272,15 @@ export function SettingsResponsiveNavigation({ meta }: Readonly<{ meta: Settings
 export function SettingsCategoryHeader({ meta }: Readonly<{ meta: SettingsCategoryMeta }>) {
   const { t } = useFrontendTranslation();
   return (
-    <PageHeader
-      eyebrow={t('settings.eyebrow')}
-      title={t(meta.labelKey)}
-      description={t('settings.categoryDescription', {
-        scope: t(`settings.categoryIntro.${meta.shortId}`),
-      })}
-    />
+    <div className="hidden md:block">
+      <PageHeader
+        eyebrow={t('settings.eyebrow')}
+        title={t(meta.labelKey)}
+        description={t('settings.categoryDescription', {
+          scope: t(`settings.categoryIntro.${meta.shortId}`),
+        })}
+      />
+    </div>
   );
 }
 

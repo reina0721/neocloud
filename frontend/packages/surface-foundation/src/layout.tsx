@@ -1,3 +1,4 @@
+import { ActionToolbar } from '@clouddrive/ui-adapter/action-toolbar';
 import { BreadcrumbTrail } from '@clouddrive/ui-adapter/navigation';
 import { Panel } from '@clouddrive/ui-adapter/panel';
 import type { ReactNode } from 'react';
@@ -35,7 +36,10 @@ export function PageHeader({
   actions,
 }: PageHeaderProps) {
   return (
-    <header data-reveal-item className="surface-route-region space-y-4">
+    <header
+      data-reveal-item
+      className="surface-page-header surface-route-region space-y-2 sm:space-y-4"
+    >
       {breadcrumbs && breadcrumbLabel ? (
         <BreadcrumbTrail
           items={breadcrumbs.map((item, index) => ({
@@ -49,14 +53,18 @@ export function PageHeader({
       <div className="flex flex-wrap items-end justify-between gap-5">
         <div className="min-w-0 max-w-3xl">
           {eyebrow ? (
-            <p className="text-xs font-bold uppercase tracking-widest text-brand">{eyebrow}</p>
+            <p className="hidden text-xs font-bold uppercase tracking-widest text-brand sm:block">
+              {eyebrow}
+            </p>
           ) : null}
           <h1
-            className={`${eyebrow ? 'mt-3' : ''} text-balance text-3xl font-extrabold tracking-tight text-ink sm:text-4xl`}
+            className={`${eyebrow ? 'sm:mt-3' : ''} text-balance text-xl font-bold tracking-tight text-brand sm:text-3xl`}
           >
             {title}
           </h1>
-          <p className="mt-3 text-sm leading-7 text-ink-muted sm:text-base">{description}</p>
+          <p className="mt-1 text-sm leading-6 text-ink-muted sm:mt-2 sm:leading-7">
+            {description}
+          </p>
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
@@ -70,17 +78,15 @@ export function Toolbar({
   secondary,
 }: Readonly<{ label: string; primary: ReactNode; secondary?: ReactNode }>) {
   return (
-    <div
-      aria-label={label}
-      className="flex flex-wrap items-center justify-between gap-3 rounded-panel bg-surface-muted p-3"
-      role="toolbar"
-    >
-      <div className="surface-toolbar-primary flex min-w-0 flex-wrap items-center gap-2">
-        {primary}
-      </div>
-      {secondary ? (
-        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">{secondary}</div>
-      ) : null}
+    <div className="surface-toolbar rounded-panel bg-surface p-3">
+      <ActionToolbar label={label}>
+        <div className="surface-toolbar-primary flex min-w-0 flex-wrap items-center gap-2">
+          {primary}
+        </div>
+        {secondary ? (
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">{secondary}</div>
+        ) : null}
+      </ActionToolbar>
     </div>
   );
 }
@@ -99,7 +105,7 @@ export function FilterBar({ children }: Readonly<{ children: ReactNode }>) {
  * 避免各调用方手写 px/py。
  */
 export function SectionBody({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="px-5 py-5 sm:px-6">{children}</div>;
+  return <div className="px-3 py-3 sm:px-6 sm:py-5">{children}</div>;
 }
 
 export type SectionProps = Readonly<{
@@ -133,7 +139,7 @@ export function Section({
         className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4"
       >
         <div className="min-w-0">
-          <h2 className="text-base font-bold text-ink">{title}</h2>
+          <h2 className="text-base font-semibold text-brand">{title}</h2>
           {description ? (
             <p className="mt-1 text-sm leading-6 text-ink-muted">{description}</p>
           ) : null}
@@ -167,5 +173,33 @@ export function StickyActions({ children }: Readonly<{ children: ReactNode }>) {
     <footer className="sticky bottom-3 z-shell flex flex-wrap items-center justify-end gap-3 rounded-panel border border-border bg-surface/95 px-4 py-3 shadow-overlay backdrop-blur-xl">
       {children}
     </footer>
+  );
+}
+
+/** 产品横幅只拥有视觉与内容槽；品牌、文案及业务动作由消费方提供。 */
+export function ProductMasthead({
+  name,
+  description,
+  aside,
+}: Readonly<{
+  name: string;
+  description: string;
+  aside?: ReactNode;
+}>) {
+  return (
+    <div className="surface-masthead">
+      <div className="surface-masthead-copy">
+        <p className="surface-wordmark">
+          {name}
+          <span aria-hidden="true">✦</span>
+        </p>
+        <p className="surface-masthead-description">{description}</p>
+      </div>
+      {aside ? <div className="surface-masthead-aside">{aside}</div> : null}
+      <span className="surface-masthead-orbit" aria-hidden="true" />
+      <span className="surface-masthead-stars" aria-hidden="true">
+        ＋ ＋ ＋<br />＋ ＋ ＋
+      </span>
+    </div>
   );
 }

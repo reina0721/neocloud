@@ -1,5 +1,6 @@
 'use client';
 import './install-translations';
+import { ProductMasthead } from '@clouddrive/surface-foundation/layout';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Cloud, Upload, FileText, Folder, Languages, Moon, Share2, Sun } from 'lucide-react';
@@ -18,7 +19,10 @@ export function AuthFrame({ children }: Readonly<{ children: ReactNode }>) {
   const setLocale = useShellStore((state) => state.setLocale);
   const setTheme = useShellStore((state) => state.setTheme);
   return (
-    <main id="main-content" className="min-h-screen bg-canvas px-4 py-6 sm:px-8 lg:py-10">
+    <main
+      id="main-content"
+      className="surface-auth-frame min-h-screen bg-canvas px-4 py-6 sm:px-8 lg:py-10"
+    >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 pb-8">
         <Link
           href="/"
@@ -55,9 +59,10 @@ export function AuthFrame({ children }: Readonly<{ children: ReactNode }>) {
       </div>
       <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-16">
         <section
-          className="hidden min-h-128 flex-col justify-center gap-8 rounded-panel bg-brand-soft p-10 lg:flex"
+          className="surface-auth-story hidden min-h-128 flex-col justify-center gap-8 p-10 lg:flex"
           aria-label={profile?.name || t('auth.brandTitle')}
         >
+          <ProductMasthead name={name} description={t('brand.edition')} />
           <div>
             <p className="text-sm font-semibold text-brand">
               {profile?.name || t('auth.brandEyebrow')}
@@ -104,7 +109,7 @@ export function AuthFrame({ children }: Readonly<{ children: ReactNode }>) {
             ))}
           </ul>
         </section>
-        <div className="mx-auto w-full min-w-0 max-w-md rounded-panel border border-border bg-surface p-6 sm:p-8">
+        <div className="surface-auth-card mx-auto w-full min-w-0 max-w-md rounded-panel bg-surface p-6 shadow-overlay sm:p-8">
           {children}
           <EnvironmentNotice />
           {profile?.termsUrl || profile?.privacyUrl ? (

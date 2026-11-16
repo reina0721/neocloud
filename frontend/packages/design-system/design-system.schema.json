@@ -104,7 +104,7 @@
               },
               "generator": {
                 "type": "string",
-                "enum": ["css-token-regions-v1", "css-motion-language-v1"]
+                "enum": ["css-token-regions-v1", "css-motion-language-v1", "ts-token-values-v1"]
               },
               "options": {
                 "type": "object"
@@ -324,9 +324,13 @@
         },
         "delayReveal": {
           "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/cssValue" }
+          "additionalProperties": {
+            "$ref": "#/$defs/cssValue"
+          }
         },
-        "revealOpacity": { "$ref": "#/$defs/cssValue" },
+        "revealOpacity": {
+          "$ref": "#/$defs/cssValue"
+        },
         "durationBase": {
           "type": "object",
           "additionalProperties": {
@@ -700,18 +704,18 @@
             "chart-5"
           ],
           "light": {
-            "canvas": "#f0f1f7",
-            "surface": "#f9f9ff",
-            "surface-raised": "#eceef4",
-            "surface-muted": "#f0f1f7",
-            "surface-inset": "#e1e2e9",
-            "border": "#c4c6d0",
-            "border-strong": "#74777f",
-            "ink": "#191c20",
-            "ink-muted": "#44474e",
-            "brand": "#415f91",
-            "brand-strong": "#284777",
-            "brand-soft": "#d6e3ff",
+            "canvas": "#fffafb",
+            "surface": "#ffffff",
+            "surface-raised": "#ffffff",
+            "surface-muted": "#faf5f7",
+            "surface-inset": "#f3eaee",
+            "border": "#eee5e9",
+            "border-strong": "#a58d98",
+            "ink": "#30272d",
+            "ink-muted": "#71616a",
+            "brand": "#b83264",
+            "brand-strong": "#98234f",
+            "brand-soft": "#fce8ef",
             "success": "#10703f",
             "success-soft": "#e8f7ef",
             "warning": "#b54708",
@@ -725,27 +729,27 @@
             "on-warning": "#2b1600",
             "on-danger": "#ffffff",
             "on-info": "#ffffff",
-            "focus-ring": "#415f91",
+            "focus-ring": "#b83264",
             "scrim": "rgb(15 23 42 / 0.38)",
-            "chart-1": "#5d49d6",
-            "chart-2": "#2463eb",
-            "chart-3": "#0f7f74",
-            "chart-4": "#b45309",
-            "chart-5": "#be3b6b"
+            "chart-1": "#b83264",
+            "chart-2": "#668bc2",
+            "chart-3": "#399b86",
+            "chart-4": "#c48c37",
+            "chart-5": "#9275bb"
           },
           "dark": {
-            "canvas": "#111318",
-            "surface": "#191c20",
-            "surface-raised": "#282a2f",
-            "surface-muted": "#202329",
-            "surface-inset": "#0c0e13",
-            "border": "#44474e",
-            "border-strong": "#8e9099",
-            "ink": "#e2e2e9",
-            "ink-muted": "#c4c6d0",
-            "brand": "#aac7ff",
-            "brand-strong": "#d6e3ff",
-            "brand-soft": "#284777",
+            "canvas": "#191619",
+            "surface": "#221e22",
+            "surface-raised": "#302930",
+            "surface-muted": "#2b242a",
+            "surface-inset": "#151215",
+            "border": "#44353f",
+            "border-strong": "#a08c98",
+            "ink": "#f5eaf0",
+            "ink-muted": "#c8b5c1",
+            "brand": "#f59cba",
+            "brand-strong": "#ffc4d7",
+            "brand-soft": "#512b3c",
             "success": "#57d08b",
             "success-soft": "#153827",
             "warning": "#f3b55a",
@@ -754,12 +758,12 @@
             "danger-soft": "#93000a",
             "info": "#78a5ff",
             "info-soft": "#192d55",
-            "on-brand": "#0a305f",
+            "on-brand": "#47182a",
             "on-success": "#082416",
             "on-warning": "#2a1800",
             "on-danger": "#690005",
             "on-info": "#0b1b3a",
-            "focus-ring": "#aac7ff",
+            "focus-ring": "#f59cba",
             "scrim": "rgb(0 0 0 / 0.58)",
             "chart-1": "#9b8cff",
             "chart-2": "#78a5ff",
@@ -769,7 +773,7 @@
           }
         },
         "accents": {
-          "order": ["purple", "blue", "green", "orange"],
+          "order": ["pink", "purple", "blue", "green", "orange"],
           "roles": ["brand", "brand-strong", "brand-soft", "on-brand", "focus-ring"],
           "palettes": {
             "purple": {
@@ -835,33 +839,54 @@
                 "on-brand": "#17122d",
                 "focus-ring": "#fdab6d"
               }
+            },
+            "pink": {
+              "light": {
+                "brand": "#b83264",
+                "brand-strong": "#98234f",
+                "brand-soft": "#fce8ef",
+                "on-brand": "#ffffff",
+                "focus-ring": "#b83264"
+              },
+              "dark": {
+                "brand": "#f59cba",
+                "brand-strong": "#ffc4d7",
+                "brand-soft": "#512b3c",
+                "on-brand": "#47182a",
+                "focus-ring": "#f59cba"
+              }
             }
           }
         },
         "theme": {
-          "fontSans": "'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif",
+          "fontSans": "'Inter Variable', Inter, 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif",
           "radii": {
-            "control": "0.25rem",
-            "panel": "1rem",
-            "shell": "1.75rem",
+            "control": "0.5rem",
+            "panel": "0.625rem",
+            "shell": "1.25rem",
             "action": "9999px"
           },
           "spacings": {
-            "control-sm": "2.5rem",
-            "control": "3rem",
+            "control-sm": "2.25rem",
+            "control": "2.75rem",
             "control-lg": "3rem",
             "progress-bar": "0.1875rem",
             "icon-sm": "1rem",
             "icon": "1.25rem",
             "icon-lg": "1.5rem",
+            "switch-width": "3.25rem",
+            "switch-height": "2rem",
+            "switch-thumb": "1.5rem",
+            "switch-inset": "0.25rem",
             "option": "3rem",
             "overlay": "18rem",
             "focus-ring-width": "0.125rem",
-            "focus-ring-offset": "0.125rem"
+            "focus-ring-offset": "0.125rem",
+            "mobile-navigation": "3.5rem"
           },
           "shadows": {
-            "panel": "0 1px 3px rgb(0 0 0 / 0.12), 0 1px 2px rgb(0 0 0 / 0.08)",
-            "overlay": "0 4px 8px rgb(0 0 0 / 0.16), 0 2px 4px rgb(0 0 0 / 0.12)"
+            "panel": "0 2px 8px rgb(74 30 49 / 0.055), 0 1px 2px rgb(74 30 49 / 0.035)",
+            "overlay": "0 12px 40px rgb(55 25 40 / 0.13), 0 2px 8px rgb(55 25 40 / 0.07)"
           },
           "easeProduct": "cubic-bezier(0.2, 0, 0, 1)",
           "defaultTransitionDuration": {
@@ -914,9 +939,9 @@
           },
           "revealOpacity": "0.96",
           "durationBase": {
-            "fast": "120ms",
-            "standard": "180ms",
-            "slow": "240ms"
+            "fast": "140ms",
+            "standard": "220ms",
+            "slow": "320ms"
           },
           "durationPurpose": {
             "doc": [
@@ -959,7 +984,7 @@
                 "doc": "内容/区域进场抬升位移（content.enter 配方消费；登记：未来 section.reveal）"
               },
               "enter": {
-                "value": "1.5rem",
+                "value": "1rem",
                 "doc": "页面内容方向进入位移（forward 方向 recipe 消费：右入克制位移，非手机重横滑）"
               }
             }
@@ -976,8 +1001,8 @@
             "--spacing-control-sm": "1.875rem",
             "--spacing-control": "2.25rem",
             "--spacing-control-lg": "2.5rem",
-            "--radius-control": "0.625rem",
-            "--radius-panel": "0.875rem"
+            "--radius-control": "0.375rem",
+            "--radius-panel": "0.5rem"
           },
           "densityComfortable": {
             "--spacing-control-sm": "2.625rem",
@@ -1548,6 +1573,28 @@
                   "template": "  {key}: {value};"
                 }
               ]
+            },
+            {
+              "regionId": "accent-pink-light",
+              "bindings": [
+                {
+                  "kind": "keyed",
+                  "keysPointer": "/x-clouddrive/source/tokens/accents/roles",
+                  "valuesPointer": "/x-clouddrive/source/tokens/accents/palettes/pink/light",
+                  "template": "  --ds-{key}: {value};"
+                }
+              ]
+            },
+            {
+              "regionId": "accent-pink-dark",
+              "bindings": [
+                {
+                  "kind": "keyed",
+                  "keysPointer": "/x-clouddrive/source/tokens/accents/roles",
+                  "valuesPointer": "/x-clouddrive/source/tokens/accents/palettes/pink/dark",
+                  "template": "  --ds-{key}: {value};"
+                }
+              ]
             }
           ]
         }
@@ -1584,6 +1631,34 @@
             "style": "bare-asterisk",
             "indent": 0
           }
+        }
+      },
+      {
+        "target": "packages/design-system/src/parameters.ts",
+        "generator": "ts-token-values-v1",
+        "options": {
+          "exportName": "designParameters",
+          "bindings": [
+            {
+              "path": ["duration", "fast"],
+              "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/durationBase/fast",
+              "format": "milliseconds"
+            },
+            {
+              "path": ["duration", "standard"],
+              "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/durationBase/standard",
+              "format": "milliseconds"
+            },
+            {
+              "path": ["duration", "slow"],
+              "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/durationBase/slow",
+              "format": "milliseconds"
+            },
+            {
+              "path": ["controlRadius"],
+              "sourcePointer": "/x-clouddrive/source/tokens/theme/radii/control"
+            }
+          ]
         }
       }
     ]

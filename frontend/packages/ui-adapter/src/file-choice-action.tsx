@@ -1,10 +1,7 @@
 'use client';
-
-import { Button as HeroButton } from '@heroui/react/button';
-import type { ReactNode } from 'react';
-import { FileTrigger } from 'react-aria-components/FileTrigger';
+import Button from '@mui/material/Button';
+import { useRef, type ReactNode } from 'react';
 import { actionStyles } from './action-styles';
-
 /** FileChoiceAction 通过同一按钮样式打开单文件选择，结果仅交给调用方。 */
 export function FileChoiceAction({
   children,
@@ -17,22 +14,30 @@ export function FileChoiceAction({
   disabled?: boolean;
   onSelect: (file: File) => void;
 }>) {
+  const input = useRef<HTMLInputElement>(null);
   return (
-    <FileTrigger
-      acceptedFileTypes={acceptedTypes}
-      onSelect={(files) => {
-        const file = files?.[0];
-        if (file) onSelect(file);
-      }}
-    >
-      <HeroButton
-        className={actionStyles({ size: 'sm', variant: 'secondary' })}
-        isDisabled={disabled}
+    <>
+      <Button
         type="button"
-        variant="ghost"
+        variant="outlined"
+        className={actionStyles({ size: 'sm', variant: 'secondary' })}
+        disabled={disabled}
+        onClick={() => input.current?.click()}
       >
-        <span>{children}</span>
-      </HeroButton>
-    </FileTrigger>
+        {children}
+      </Button>
+      <input
+        ref={input}
+        type="file"
+        hidden
+        accept={acceptedTypes.join(',')}
+        disabled={disabled}
+        onChange={(event) => {
+          const file = event.currentTarget.files?.[0];
+          event.currentTarget.value = '';
+          if (file) onSelect(file);
+        }}
+      />
+    </>
   );
 }
