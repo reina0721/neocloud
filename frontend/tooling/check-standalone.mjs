@@ -14,6 +14,16 @@ const config = loadWebConfig({ cwd: webRoot });
 if (config.deploymentMode !== 'server') throw new Error('Standalone check requires server mode.');
 const source = resolve(webRoot, config.distDir ?? 'dist', 'standalone');
 await access(join(source, 'apps/web/server.js'));
+const licenseInventory = JSON.parse(
+  await readFile(join(source, 'licenses/node/inventory.json'), 'utf8'),
+);
+assert.ok(licenseInventory.length > 0, 'Standalone dependency notices are missing');
+assert.ok(licenseInventory.some((pkg) => pkg.name === 'next' && pkg.files.length > 0));
+assert.ok(licenseInventory.some((pkg) => pkg.name === 'pdfjs-dist' && pkg.files.length > 0));
+assert.ok(
+  licenseInventory.some((pkg) => pkg.name === 'tslib' && pkg.files.includes('CopyrightNotice.txt')),
+  'Standalone tslib copyright notice is missing',
+);
 // Outside the repository: missing traced dependencies cannot resolve through the
 // developer's node_modules. Preserve the trace's relative symlinks on relocation.
 const temporary = await mkdtemp(join(tmpdir(), 'clouddrive-runtime-'));

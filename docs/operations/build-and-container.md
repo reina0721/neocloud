@@ -4,6 +4,14 @@
 
 Go 质量入口为 `scripts/Verify-Quality.ps1`，包括格式、生成物、测试、race、vet 和无 CGO 构建；前端入口 `scripts/Verify-WebUI.ps1` 执行工作区完整 `check`；文档入口 `scripts/Verify-Docs.ps1`。各项以实际退出结果为准，单项通过不能替代浏览器和部署验收。
 
+## 许可随包交付
+
+Go 归档包含根 LICENSE、NOTICE、SOURCES.json 和按目标平台收集的 `third-party/`；固定版本 `go-licenses save` 保留依赖许可、声明及该工具要求附带的源码，另附 Go 工具链许可。Go 镜像中位于 `/usr/share/licenses/clouddrive/`。
+
+Next standalone 在 `licenses/node/` 保存 pnpm 生产依赖的许可文件、上游 package.json、README 及 inventory.json，覆盖客户端打包依赖；Web 镜像在 `/usr/share/licenses/clouddrive/third-party/node/` 提供相同清单。根许可、来源和字体许可也随镜像交付；PDF 的主许可、字体、WASM、色彩配置与本地化许可继续随对应 public 资源保留。
+
+依赖使用自己的许可，根 Apache-2.0 声明不替代第三方条款。清单保留上游未知许可和缺少许可文件的事实，不能将元数据或 SBOM 当作完整许可审查；发布前须审阅缺口及再分发要求。基础镜像自带的软件也须结合镜像 SBOM 审阅。
+
 ## OCI image
 
 根目录 `Dockerfile` 只构建 Go 服务，`frontend/Dockerfile` 构建 Next 服务，两者构建上下文均为仓库根目录：

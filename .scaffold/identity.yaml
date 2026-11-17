@@ -4,7 +4,7 @@ source:
   repository: github.com/reina0721/clouddrive
   module: github.com/reina0721/clouddrive
   application_name: clouddrive
-  application_description: Go 后端服务与 CLI 工具基础设施脚手架
+  application_description: 自托管文件管理与分享协作工作区
   binary_name: clouddrive
   environment_prefix: APP_
   config_filename: config.yaml

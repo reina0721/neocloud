@@ -24,6 +24,8 @@ try {
     go install "golang.org/x/vuln/cmd/govulncheck@$($versions.GOVULNCHECK_VERSION)"
     go install "github.com/securego/gosec/v2/cmd/gosec@$($versions.GOSEC_VERSION)"
     go install "github.com/zricethezav/gitleaks/v8@$($versions.GITLEAKS_VERSION)"
+    go install "github.com/rhysd/actionlint/cmd/actionlint@$($versions.ACTIONLINT_VERSION)"
+    go install "github.com/google/go-licenses/v2@$($versions.GO_LICENSES_VERSION)"
 } finally {
     $env:GOBIN = $previousGoBin
 }

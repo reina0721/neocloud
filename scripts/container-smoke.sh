@@ -6,6 +6,7 @@ management_url="${CONTAINER_SMOKE_MANAGEMENT_URL:-http://127.0.0.1:9090}"
 business_url="${CONTAINER_SMOKE_BUSINESS_URL:-http://127.0.0.1:8080}"
 container_name="clouddrive-smoke-${GITHUB_RUN_ID:-local}-$$"
 volume_name="${container_name}-data"
+license_dir="$(mktemp -d)"
 
 cleanup() {
   status=$?
@@ -14,6 +15,11 @@ cleanup() {
   fi
   docker rm -f "${container_name}" >/dev/null 2>&1 || true
   docker volume rm "${volume_name}" >/dev/null 2>&1 || true
+  if ! rm -rf "${license_dir}"; then
+    echo 'Could not remove owned license verification directory' >&2
+    if [[ "$status" == 0 ]]; then status=1; fi
+  fi
+  exit "$status"
 }
 trap cleanup EXIT
 
@@ -27,6 +33,14 @@ docker run --detach --name "${container_name}" --network host \
   --cap-drop ALL --security-opt no-new-privileges \
   --mount "type=volume,src=${volume_name},dst=/app/.data" \
   "${image}" >/dev/null
+
+# 从实际镜像提取，而非仅相信 Dockerfile 或 OCI label。
+docker cp "${container_name}:/usr/share/licenses/clouddrive/." - \
+  | tar --extract --file - --directory "${license_dir}" --no-same-owner --no-same-permissions
+chmod -R u+rwX "${license_dir}"
+for file in LICENSE NOTICE SOURCES.json third-party/GO-LICENSE third-party/github.com/spf13/cobra/LICENSE.txt; do
+  test -s "${license_dir}/${file}"
+done
 
 for _ in $(seq 1 40); do
   if curl --fail --silent "${management_url}/readyz" >/dev/null; then

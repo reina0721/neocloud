@@ -27,6 +27,9 @@ builds:
         -X main.buildTime={{.Date}}
         -X main.buildDirty={{.IsGitDirty}}
     mod_timestamp: "{{ .CommitTimestamp }}"
+    hooks:
+      post:
+        - cmd: node scripts/prepare-go-licenses.mjs --output "{{ .Env.GORELEASER_DIST }}/licenses/{{ .Os }}_{{ .Arch }}" --goos {{ .Os }} --goarch {{ .Arch }}
 
 archives:
   - id: application
@@ -40,12 +43,18 @@ archives:
         formats:
           - zip
     files:
-      - README.md
+      - src: docs/operations/backend-archive.md
+        dst: README.md
+      - LICENSE
+      - NOTICE
       - config.example.yaml
       - api/openapi.yaml
-      - docs/operations/*.md
+      - locales/messages.zh-CN.yaml
+      - internal/module/todo/binding/i18n/locales/messages.zh-CN.yaml
       - api/console-openapi.json
       - SOURCES.json
+      - src: "{{ .Env.GORELEASER_DIST }}/licenses/{{ .Os }}_{{ .Arch }}/**"
+        dst: third-party
 
 checksum:
   name_template: checksums.txt
@@ -64,10 +73,20 @@ sboms:
       - SYFT_CHECK_FOR_APP_UPDATE=false
 
 snapshot:
-  version_template: "1.0.0-rc.1-local.{{ .ShortCommit }}"
+  version_template: "{{ incpatch .Version }}-next.{{ .ShortCommit }}"
 
 changelog:
-  disable: true
+  use: git
+  abbrev: 7
+  groups:
+    - title: 功能
+      regexp: '^feat(\([^)]*\))?!?:'
+      order: 0
+    - title: 修复
+      regexp: '^fix(\([^)]*\))?!?:'
+      order: 1
+    - title: 其他维护
+      order: 2
 
 release:
   draft: true
@@ -75,13 +94,13 @@ release:
   header: |
     CloudDrive 文件与管理工作区，采用 Material Design 组件，提供响应式文件管理、PDF 与媒体阅读，以及悬浮、底部面板和全屏音乐播放器。
 
-    Linux amd64 / arm64 推荐使用离线 Docker 安装包：目标机无需编译源码或访问镜像仓库。只绑定本机 127.0.0.1，首次访问 /setup 创建自己的管理员。
+    Linux amd64 / arm64 推荐使用离线 Docker 安装包：目标机无需编译源码或访问镜像仓库。无参数运行进入安装向导，默认安装到 ~/clouddrive、监听 0.0.0.0:4173，首次访问 /setup 创建自己的管理员。外网访问与 TLS 由部署方配置。
 
     ```bash
     curl -fL --proto '=https' --proto-redir '=https' https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
-    bash install.sh install --dir ./clouddrive
-    ./clouddrive/install.sh check-update
-    ./clouddrive/install.sh upgrade
+    bash install.sh
+    ~/clouddrive/install.sh check-update
+    ~/clouddrive/install.sh upgrade
     ```
 
     Go 归档为独立后端，不包含 Web 服务。Docker 包配有版本清单、SHA-256 校验和、SPDX SBOM 与 GitHub OIDC Sigstore 签名。

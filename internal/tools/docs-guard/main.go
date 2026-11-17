@@ -56,6 +56,7 @@ func main() {
 		fail(err)
 	}
 	issues := append([]string{}, staticIssues(root, cfg)...)
+	issues = append(issues, githubFormIssues(root)...)
 	if len(issues) > 0 {
 		fmt.Fprintln(os.Stderr, "docs-guard failed:")
 		for _, issue := range issues {

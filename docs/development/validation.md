@@ -68,4 +68,6 @@ SQLite 等私有数据夹具使用 `testkit.PrivateTempDir`，不依赖测试进
 
 ## CI
 
+Quality 的 `Repository configuration gates` 始终检查工作流语法、项目使用的 Issue 表单子集、文档链接与入口、GoReleaser 配置、安装与发布控制流程及产物清单，并进入最终汇总。工具版本见 `scripts/tool-versions.env`；本地可用 `actionlint`、`go run ./internal/tools/docs-guard`、渲染后的 `goreleaser check` 与现有 Node 测试重现。表单检查不代替 GitHub 完整 schema 或真实页面验收。
+
 Quality/Database/Container 只接收分支 push（以及各自声明的其它事件）；tag push 由 Release 按同一 SHA 检查并复用 `main` 的完整结果，正式镜像与安装仍重新构建和验收。Quality/Database 使用相同分类逻辑，PR 比较基分支，分支 push 比较 before。主分支和手动完整验证执行全量；release 使用完整入口。相关检查有稳定 job 和汇总结果，无关步骤明确跳过，失败和取消不能伪装成功。相同事件序列的新运行取消被取代的旧运行。安全检查保持原有覆盖，不修改远端分支保护或发布权限。

@@ -16,7 +16,7 @@ Push-Location $repositoryRoot
 try {
     $env:PATH = "$toolDirectory;$env:PATH"
     $env:SYFT_CHECK_FOR_APP_UPDATE = 'false'
-    foreach ($tool in @('goreleaser', 'syft', 'cosign')) {
+    foreach ($tool in @('goreleaser', 'syft', 'cosign', 'go-licenses')) {
         if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
             throw "Missing $tool; run scripts/Install-Tools.ps1 first"
         }

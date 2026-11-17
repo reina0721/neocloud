@@ -8,6 +8,8 @@
 
 生产采用 Next standalone，由部署环境分别管理 Web 与 Go。后端地址在运行时配置，构建时不绑定；API 代理、会话与 WebDAV 的地址边界见[部署说明](../docs/operations/clouddrive-deployment.md)。
 
+产品版本与变更以根仓库的 GitHub Release 为准；私有工作区 `package.json` 的版本仅为包元数据，不表示独立产品发布，也不要求随产品 tag 同步修改。
+
 ## 代码地图
 
 | 范围     | 拥有的职责                                          | 进入位置                                           |

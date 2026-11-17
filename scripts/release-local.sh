@@ -9,7 +9,7 @@ export PATH="${tool_dir}:${PATH}"
 export SYFT_CHECK_FOR_APP_UPDATE=false
 cd "${repository_root}"
 
-for tool in goreleaser syft cosign; do
+for tool in goreleaser syft cosign go-licenses; do
   command -v "${tool}" >/dev/null || { echo "missing ${tool}; run scripts/install-tools.sh" >&2; exit 1; }
 done
 

@@ -2,10 +2,14 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 const placeholder = 'dist: "{{ .Env.GORELEASER_DIST }}"';
-export function renderReleaseConfig(source, directory) {
+export function renderReleaseConfig(
+  source,
+  directory,
+  root = resolve(import.meta.dirname, ".."),
+) {
   assert.ok(
     typeof directory === "string" &&
       directory.trim() &&
@@ -17,7 +21,14 @@ export function renderReleaseConfig(source, directory) {
     2,
     "必须有且仅有一个受控 dist 占位符",
   );
-  return source.replace(placeholder, "dist: " + JSON.stringify(directory));
+  // GoReleaser 的归档 glob 使用相对路径；绝对路径会被 glob 库错误拼接。
+  const archiveGlob = `${relative(root, directory).split(sep).join("/")}/licenses/{{ .Os }}_{{ .Arch }}/**`;
+  return source
+    .replace(placeholder, "dist: " + JSON.stringify(directory))
+    .replace(
+      'src: "{{ .Env.GORELEASER_DIST }}/licenses/{{ .Os }}_{{ .Arch }}/**"',
+      "src: " + JSON.stringify(archiveGlob),
+    );
 }
 if (
   process.argv[1] &&

@@ -2,7 +2,7 @@
 
 ## 报告与分级
 
-正式公开 release 前，repository owner 必须配置私密漏洞报告渠道和响应责任人；当前仓库文档不虚构邮箱或 SLA。不要在公开 Issue 中提交凭据、利用细节或生产数据。
+公开报告渠道与版本支持政策以根[安全政策](../../SECURITY.md)为准。GitHub 私密漏洞报告已启用，由仓库维护者和 owner 接收；不承诺未建立的邮箱或 SLA。不要在公开 Issue 中提交凭据、利用细节或生产数据。
 
 收到报告后先固定受影响 tag/commit、可达调用路径和泄露范围，再区分：代码漏洞、依赖漏洞、凭据事件、配置误用和基础设施事件。日志、Problem Details、diagnostics、trace 和 SBOM 都只能作为证据，不能包含 Token、密钥或完整 DSN。
 

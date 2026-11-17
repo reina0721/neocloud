@@ -22,7 +22,10 @@ ENV CLOUDDRIVE_BACKEND_URL=http://backend:8080
 ENV HOSTNAME=0.0.0.0
 ENV PORT=4173
 WORKDIR /app
+COPY --chown=node:node LICENSE NOTICE SOURCES.json /usr/share/licenses/clouddrive/
+COPY --chown=node:node frontend/apps/web/public/fonts/licenses/ /usr/share/licenses/clouddrive/fonts/
 COPY --from=build --chown=node:node /app/frontend/apps/web/dist/standalone/ ./
+COPY --from=build --chown=node:node /app/frontend/apps/web/dist/standalone/licenses/ /usr/share/licenses/clouddrive/third-party/
 WORKDIR /app/apps/web
 USER node
 EXPOSE 4173

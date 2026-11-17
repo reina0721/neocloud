@@ -12,6 +12,9 @@ ARG DIRTY=true
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    GOBIN=/tmp/license-tools go install github.com/google/go-licenses/v2@v2.0.1
 COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
@@ -20,6 +23,10 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     -ldflags="-s -w -X main.buildVersion=${VERSION} -X main.buildCommit=${COMMIT} -X main.buildTime=${BUILD_TIME} -X main.buildDirty=${DIRTY}" \
     -o /out/clouddrive ./cmd/app
 RUN mkdir -p /out/runtime/.data && chmod 0700 /out/runtime/.data
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} /tmp/license-tools/go-licenses save ./cmd/app --save_path=/out/third-party \
+    && cp /usr/local/go/LICENSE /out/third-party/GO-LICENSE
 
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:b5b9fd04c8dcf72a173183c0b7dee47e053e002246b308a59f3441db7b8b9cc4 AS runtime
 
@@ -29,7 +36,7 @@ ARG BUILD_TIME=unknown
 ARG SOURCE=https://github.com/reina0721/neocloud
 
 LABEL org.opencontainers.image.title="clouddrive" \
-      org.opencontainers.image.description="Production-oriented Go HTTP API scaffold" \
+      org.opencontainers.image.description="CloudDrive file management and collaboration API" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${COMMIT}" \
       org.opencontainers.image.created="${BUILD_TIME}" \
@@ -37,6 +44,8 @@ LABEL org.opencontainers.image.title="clouddrive" \
       org.opencontainers.image.licenses="Apache-2.0"
 
 WORKDIR /app
+COPY --chown=nonroot:nonroot LICENSE NOTICE SOURCES.json /usr/share/licenses/clouddrive/
+COPY --chown=nonroot:nonroot --from=build /out/third-party/ /usr/share/licenses/clouddrive/third-party/
 COPY --chown=nonroot:nonroot --from=build /out/clouddrive /app/clouddrive
 COPY --chown=nonroot:nonroot config.example.yaml /app/config.yaml
 COPY --chown=nonroot:nonroot locales/ /app/locales/

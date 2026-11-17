@@ -6,7 +6,8 @@
 
 ## 1. 认识项目
 
-- [根 README](../README.md)：项目定位、五分钟启动、架构摘要和文档权威边界。
+- [贡献指南](../CONTRIBUTING.md)、[支持指南](../SUPPORT.md)与[安全政策](../SECURITY.md)：公开协作、问题反馈和私密漏洞报告入口。
+- [根 README](../README.md)：项目定位、部署与开发入口、架构摘要和文档权威边界。
 - [项目范围与当前状态](repository-scope.md)：当前构建范围、WebUI、frontend、排除目录、生产交付和身份边界。
 - [Agent 日常开发流程](development/agent-workflow.md)：AI Agent 协作规则、工程底线与风险分级。
 - [API 文档](../api/README.md)：当前 OpenAPI、operation inventory 和 code-first 契约生成入口。

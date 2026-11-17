@@ -1,6 +1,21 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { renderReleaseConfig } from "./release-config.mjs";
+import { resolve } from "node:path";
+
+test("许可归档 glob 使用仓库相对路径并保留平台模板", () => {
+  const root = resolve("release-fixture");
+  const source =
+    'dist: "{{ .Env.GORELEASER_DIST }}"\nfiles:\n  - src: "{{ .Env.GORELEASER_DIST }}/licenses/{{ .Os }}_{{ .Arch }}/**"\n';
+  const result = renderReleaseConfig(
+    source,
+    resolve(root, "release assets"),
+    root,
+  );
+  assert.ok(
+    result.includes('src: "release assets/licenses/{{ .Os }}_{{ .Arch }}/**"'),
+  );
+});
 test("发布目录替换为真实路径，保留 GoReleaser 其余模板", () => {
   const source =
     'version: 2\ndist: "{{ .Env.GORELEASER_DIST }}"\nheader: "{{ .Version }}"\n';

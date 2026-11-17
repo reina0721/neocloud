@@ -1,0 +1,27 @@
+name: 使用问题
+description: 询问安装、配置或使用方法
+title: "[Question] "
+body:
+  - type: markdown
+    attributes:
+      value: 请先查看 README、使用手册和 Release 说明。安全问题请私密报告，不要公开凭据或私人数据。
+  - type: input
+    id: version
+    attributes:
+      label: 版本或 commit
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: 目标与环境
+      description: 希望完成什么？使用什么系统、架构和部署方式？
+    validations:
+      required: true
+  - type: textarea
+    id: attempted
+    attributes:
+      label: 已查阅文档与尝试
+      description: 列出参考页面、执行步骤、预期结果和脱敏错误。
+    validations:
+      required: true

@@ -48,4 +48,9 @@ jobs:
         run: >-
           docker run --rm clouddrive-web:ci node -e
           'if (process.getuid() === 0) throw new Error("runtime must be nonroot");
-          require("node:fs").accessSync("server.js");'
+          const fs = require("node:fs");
+          fs.accessSync("server.js");
+          for (const file of ["LICENSE", "NOTICE", "SOURCES.json", "fonts/inter-OFL.txt", "fonts/noto-sans-sc-OFL.txt"])
+            if (fs.statSync("/usr/share/licenses/clouddrive/" + file).size === 0) throw new Error("empty license: " + file);
+          const inventory = JSON.parse(fs.readFileSync("/usr/share/licenses/clouddrive/third-party/node/inventory.json", "utf8"));
+          if (!inventory.some(pkg => pkg.name === "next" && pkg.files.length)) throw new Error("missing dependency licenses");'

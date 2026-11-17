@@ -15,7 +15,7 @@ import (
 
 const (
 	applicationName        = "clouddrive"
-	applicationDescription = "Go 后端服务与 CLI 工具基础设施脚手架"
+	applicationDescription = "自托管文件管理与分享协作工作区"
 	environmentPrefix      = "APP_"
 )
 

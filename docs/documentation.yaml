@@ -9,6 +9,9 @@ excluded_roots:
   - old-backend
 required_documents:
   - README.md
+  - CONTRIBUTING.md
+  - SUPPORT.md
+  - SECURITY.md
   - docs/README.md
   - docs/repository-scope.md
   - docs/getting-started/first-use.md

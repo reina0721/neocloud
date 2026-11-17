@@ -1,5 +1,19 @@
 # 发布
 
+## 版本与变更记录
+
+产品继续采用 `v0.MINOR.PATCH` annotated tag；修复递增 PATCH，新增能力或需要明确升级说明的兼容变化递增 MINOR。0.x 仍须说明不兼容影响，不因版本阶段而重置数据。预发布使用 `-rc.N`；本地快照从当前版本派生为下一 PATCH 的 `-next.<commit>`，不能当成正式发布。前端私有包版本是包元数据，不表示独立产品发布。
+
+[GitHub Releases](https://github.com/reina0721/neocloud/releases) 是产品版本变更的唯一来源。GoReleaser 从前一 tag 至当前 tag 的真实 Git 提交生成记录，分为功能、修复和其他维护，包含直接提交；维护者须审阅用户影响、迁移、升级和已知限制。不维护重复的 CHANGELOG，不补写未经核验的历史发布内容。
+
+## 仓库设置与发布前提
+
+截至 2026-11-17，`reina0721/neocloud` 为公开仓库，Issues 开启、Discussions 关闭；已配置产品简介及 Topics，私密漏洞报告已启用。协作入口见[贡献指南](../../CONTRIBUTING.md)、[支持指南](../../SUPPORT.md)和[安全政策](../../SECURITY.md)。CloudDrive 名称与既有 Go module 保留，GitHub 仓库路径不要求源码包路径迁移。
+
+本次核查没有 classic branch protection 或 ruleset；`release` environment 已存在，但没有 required reviewers、等待规则或部署分支限制。因此 environment 声明本身不表示有人审批；发布仍依靠工作流同 SHA 门禁及 tag 推送授权。每次正式发布前重新核对实际规则、维护责任与所需凭据。本次基础设置维护不修改分支保护、审批或发布权限。
+
+发布前确认 main 目标提交全量通过、审阅版本差异和生成说明、核验许可和签名附件，并确认备份及迁移恢复步骤。不得移动已发布 tag，源码修复使用新版本；本地准备不自动创建 tag、push 或公开 Release。
+
 ## 本地 release candidate
 
 先安装固定版本工具，再构建本地候选：
@@ -17,9 +31,9 @@ Linux 使用 `scripts/install-tools.sh` 与 `scripts/release-local.sh`。工具�
 
 ## 正式发布
 
-正式流程使用指向已验证提交的 annotated `v*` tag，保留 GitHub `release` environment 审批。推送 tag 前先确认 main 同一提交的独立门禁通过，不强制覆盖已存在的 tag。workflow 使用固定工具版本，首先按 SHA 核验 `main` 已完成的 Quality（含完整前端、Go、生成物、仓库产物及安全检查）、Database 和 Container 门禁，再以 GoReleaser 创建 draft，再使用 GitHub OIDC keyless identity 签名并验证 checksum bundle。Docs gate 不启动 Go 服务或 Playwright；确定性浏览器与契约用例也不等于全部真实后端、视觉人工审查或外部协议验收。
+正式流程使用指向已验证提交的 annotated `v*` tag，使用 GitHub `release` environment；是否需要人工审批取决于其实际保护规则。推送 tag 前先确认 main 同一提交的独立门禁通过，不强制覆盖已存在的 tag。workflow 使用固定工具版本，首先按 SHA 核验 `main` 已完成的 Quality（含完整前端、Go、生成物、仓库产物及安全检查）、Database 和 Container 门禁，再以 GoReleaser 创建 draft，再使用 GitHub OIDC keyless identity 签名并验证 checksum bundle。Docs gate 不启动 Go 服务或 Playwright；确定性浏览器与契约用例也不等于全部真实后端、视觉人工审查或外部协议验收。
 
-自动发布阶段和 environment 审批者按同一 tag/source commit 核对独立 workflow 与任务证据：
+自动发布阶段及维护者（若配置审批则包括审批者）按同一 tag/source commit 核对独立 workflow 与任务证据：
 
 - tag、source commit、`/build` 返回值和 archive build info 一致；
 - Windows/Linux Go quality、SQLite/PostgreSQL/MySQL 和 container jobs 全部通过，并确认这些独立 workflow 对应同一 commit；

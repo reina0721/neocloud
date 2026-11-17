@@ -43,6 +43,7 @@ jobs:
           GOBIN="${tool_dir}" go install github.com/goreleaser/goreleaser/v2@v2.17.1
           GOBIN="${tool_dir}" go install github.com/anchore/syft/cmd/syft@v1.50.0
           GOBIN="${tool_dir}" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
+          GOBIN="${tool_dir}" go install github.com/google/go-licenses/v2@v2.0.1
           echo "${tool_dir}" >> "${GITHUB_PATH}"
           echo "GORELEASER_DIST=$(node scripts/project-layout.mjs --field releaseRoot)" >> "${GITHUB_ENV}"
       - name: Verify exact source and completed main release gates
@@ -60,6 +61,17 @@ jobs:
         run: |
           node scripts/release-config.mjs --output "${RUNNER_TEMP}/goreleaser.yaml"
           goreleaser release --clean --skip=sign --config "${RUNNER_TEMP}/goreleaser.yaml"
+      - name: Verify archive license trees
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          tar -tzf "${GORELEASER_DIST}/clouddrive_${version}_linux_amd64.tar.gz" > "${RUNNER_TEMP}/linux-files.txt"
+          unzip -Z1 "${GORELEASER_DIST}/clouddrive_${version}_windows_amd64.zip" > "${RUNNER_TEMP}/windows-files.txt"
+          for list in linux-files windows-files; do
+            for file in README.md LICENSE NOTICE SOURCES.json locales/messages.zh-CN.yaml internal/module/todo/binding/i18n/locales/messages.zh-CN.yaml third-party/GO-LICENSE third-party/github.com/spf13/cobra/LICENSE.txt; do
+              grep -Fx "${file}" "${RUNNER_TEMP}/${list}.txt"
+            done
+          done
+          node scripts/test-go-archive.mjs --archive "${GORELEASER_DIST}/clouddrive_${version}_linux_amd64.tar.gz"
       - name: Sign and verify checksum bundle
         run: |
           checksum="${GORELEASER_DIST}/checksums.txt"
