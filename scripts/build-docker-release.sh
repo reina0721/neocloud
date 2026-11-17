@@ -30,7 +30,14 @@ elif [[ -n $api_source && -n $web_source ]]; then
   # 已构建的配套镜像用于重复打包；仍校验版本/平台/源码，不能伪造发布标签。
   d image tag "$api_source" "$api"; d image tag "$web_source" "$web"
 else echo '两个源镜像必须一起提供' >&2; exit 1; fi
-stage=$(mktemp -d); trap 'rm -rf "$stage"' EXIT
+stage=$(mktemp -d); probe=''
+cleanup() {
+  status=$?
+  if [[ -n $probe ]]; then d container rm "$probe" >/dev/null 2>&1 || true; fi
+  rm -rf "$stage"
+  return "$status"
+}
+trap cleanup EXIT
 cp "$root/compose.release.yaml" "$stage/compose.yaml"
 cp "$root/install.sh" "$stage/install.sh"
 printf 'API_IMAGE=%s\nWEB_IMAGE=%s\n' "$api" "$web" > "$stage/images.env"
@@ -41,6 +48,12 @@ for pair in "API:$api" "WEB:$web"; do
   [[ $identity == "linux|$arch|$version|$commit" ]] || { echo "镜像 $ref 的平台、版本或源码不匹配" >&2; exit 1; }
   printf '%s_ID=%s\n' "$kind" "$(d image inspect --format '{{.Id}}' "$ref")" >> "$stage/manifest.txt"
 done
+# 只创建容器并读取文件，不执行目标程序；模拟执行也不能掩盖错装的架构。
+probe=$(d container create --platform "linux/$arch" "$api")
+d container cp "$probe:/app/clouddrive" "$stage/api-binary"
+node "$root/scripts/verify-elf-platform.mjs" "$stage/api-binary" "$arch"
+d container rm "$probe" >/dev/null; probe=''
+rm "$stage/api-binary"
 d image save "$api" "$web" > "$stage/images.tar"
 # 由调用者重定向创建归档，避免 sudo Docker 创建仅 root 可读的文件。
 archive="clouddrive_${version}_linux_${arch}_docker.tar.gz"

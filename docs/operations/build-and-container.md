@@ -17,6 +17,8 @@ Next 的 server 构建输出为 `frontend/apps/web/dist/standalone/`；其中 `a
 
 Go 镜像同时携带默认配置引用的公共语言资源与 Todo 模块语言资源；默认数据目录归 nonroot 所有且权限为 `0700`。
 
+多架构构建通过 `docker buildx build --platform linux/amd64` 或 `linux/arm64` 选择目标；Dockerfile 的 `TARGETOS`、`TARGETARCH` 直接继承 BuildKit 自动参数，不设置覆盖目标架构的默认值。Container 门禁在 amd64、arm64 原生 runner 分别验证 Go 容器探针、迁移及停止。离线打包除检查 OCI 平台、版本和源码标签，还会读取镜像内 `/app/clouddrive` 的 ELF 文件头，拒绝程序架构与镜像平台不一致的包；两种架构仍须分别通过原生安装与持久化验收。
+
 运行时显式提供配置与可写数据库卷，management 监听仅暴露给受信网络。Go runtime 为 nonroot；探针使用 management `/startupz`、`/livez`、`/readyz`。`scripts/container-smoke.sh` 检查后端探针和 API 不回退 HTML，前端由独立部署和浏览器验收覆盖。迁移应在启动前显式执行，不隐藏在容器启动中。
 
 容器构建、外部数据库及线上发布必须分别验证；本地源码构建不证明这些检查已经通过。
