@@ -49,7 +49,7 @@ jobs:
       - name: Verify final backend registration landing repeatedly
         run: >-
           pnpm exec playwright test --project=backend-contract --reporter="list,github"
-          authentication-backend.spec.ts --grep "^Backend registration reports" --repeat-each=20
+          authentication-backend.spec.ts --grep "Backend registration reports" --repeat-each=20
       - name: Collect visual evidence without updating goldens
         run: >-
           pnpm exec playwright test --reporter="list,github"
