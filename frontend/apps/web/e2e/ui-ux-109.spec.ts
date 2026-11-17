@@ -452,6 +452,7 @@ test('Leaving during validation prevents a stale save and redirect', async ({ pa
     await expect(page.getByText('过期提交回归109', { exact: true })).toHaveCount(0);
   } finally {
     release();
+    await page.unrouteAll({ behavior: 'wait' });
   }
 });
 

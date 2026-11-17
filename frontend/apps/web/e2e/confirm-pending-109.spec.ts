@@ -47,5 +47,6 @@ test('Pending export confirmation blocks early close and duplicate submission', 
     expect(downloads).toBe(1);
   } finally {
     release();
+    await page.unrouteAll({ behavior: 'wait' });
   }
 });
