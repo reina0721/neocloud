@@ -12,9 +12,54 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { checkRuns, requiredAssets, verifyAssets } from "./verify-release.mjs";
+import {
+  checkRuns,
+  requiredAssets,
+  selectDraft,
+  verifyAssets,
+} from "./verify-release.mjs";
 const sha = "a".repeat(40),
   tag = "v0.1.0";
+test("从完整分页列表读取 draft，保留 REST 附件元数据", () => {
+  const draft = {
+    tag_name: tag,
+    draft: true,
+    prerelease: false,
+    assets: [{ name: "install.sh", size: 42 }],
+  };
+  assert.equal(
+    selectDraft([[{ tag_name: "v9.9.9", draft: false }], [], [draft]], tag),
+    draft,
+  );
+});
+test("缺失、重复、已发布或预发布 Release 均禁止提升 draft", () => {
+  const draft = { tag_name: tag, draft: true, prerelease: false };
+  assert.throws(() => selectDraft([[]], tag), /恰好找到一个/);
+  assert.throws(() => selectDraft([[draft], [draft]], tag), /恰好找到一个/);
+  assert.throws(
+    () => selectDraft([[{ ...draft, draft: false }]], tag),
+    /保持 draft/,
+  );
+  assert.throws(
+    () => selectDraft([[{ ...draft, prerelease: true }]], tag),
+    /预发布/,
+  );
+  assert.throws(() => selectDraft([draft], tag), /分页列表无效/);
+  assert.throws(() => selectDraft([[draft]], "v0.1.0-rc.1"), /仅正式版本/);
+});
+test("draft CLI 仅输出可被后续附件门禁直接读取的 JSON", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "release-pages-unit-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const draft = { tag_name: tag, draft: true, prerelease: false, assets: [] };
+  const path = join(directory, "pages.json");
+  await writeFile(path, JSON.stringify([[], [draft]]));
+  const output = execFileSync(
+    process.execPath,
+    ["scripts/verify-release.mjs", "draft", path, tag],
+    { encoding: "utf8" },
+  );
+  assert.deepEqual(JSON.parse(output), draft);
+});
 const runs = () => ({
   workflow_runs: ["quality.yml", "database.yml", "container.yml"].map(
     (path, id) => ({

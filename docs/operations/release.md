@@ -32,6 +32,8 @@ Linux 使用 `scripts/install-tools.sh` 与 `scripts/release-local.sh`。工具�
 
 `scripts/verify-release.mjs` 是发布附件与独立检查的门禁：拒绝缺少任一架构、SBOM、签名、未纳入 checksum 的附件、摘要错误或源码提交不一致的镜像清单。签名的密码学验证仍由固定版本 cosign 完成，不以文件存在代替签名有效。
 
+读取待发布 draft 时，使用具有仓库写权限的工作流令牌分页调用 [List releases](https://docs.github.com/en/rest/releases/releases#list-releases)，通过 `gh api --paginate --slurp` 收集所有页面，再按 tag 精确选择唯一的正式版本 draft；缺失、重复或状态不符均终止发布。`GET /releases/tags/{tag}` 只查询已发布版本，不能用于发布前的 draft 附件验收。
+
 安全门禁持续执行 govulncheck、gosec 与完整 Git 历史的 Gitleaks。协议规定的 SHA-1、随机 nonce API、公开权限标识和工具生成源码权限等静态误报，必须在对应语句说明依据；不得全局关闭规则。Gitleaks 对公开迁移摘要、RFC 测试向量与固定测试 UUID 的例外同时约束路径和值，不忽略整个文件或提交。
 
 clouddrive 发布包含 Go 与独立 Next 服务。Go archive 不内置前端，构建、同源代理及迁移按 [部署说明](clouddrive-deployment.md) 执行。
@@ -47,7 +49,7 @@ clouddrive 发布包含 Go 与独立 Next 服务。Go archive 不内置前端，
 ```bash
 bash scripts/build-docker-release.sh --version v1.0.0-rc.1 --arch amd64 --out dist/docker-amd64
 bash scripts/build-docker-release.sh --version v1.0.0-rc.1 --arch arm64 --out dist/docker-arm64
-node --test scripts/install.test.mjs scripts/verify-release.test.mjs scripts/release-config.test.mjs
+node --test scripts/install.test.mjs scripts/verify-release.test.mjs scripts/release-config.test.mjs scripts/verify-elf-platform.test.mjs
 node scripts/test-docker-release.mjs --release-dir dist/docker-amd64 --version v1.0.0-rc.1
 ```
 
@@ -75,4 +77,4 @@ cosign verify-blob --bundle checksums.txt.sigstore.json \
 
 上例版本应替换为实际下载的 tag。目标机安装、更新及失败处理见[下载版部署](clouddrive-deployment.md#release-下载版安装与升级)。
 
-2026-11-16 本地验收：amd64 原生与 ARM64 QEMU 容器均完成 `v0.0.0-test.1 → v0.0.0-test.2`，并以最终候选 `v0.0.0-test.1 → v0.0.0-test.3` 复验安装、重启和升级。上述失败场景及副本恢复均已实际执行；账号角色、数据库记录、文件摘要和存储绑定保持一致。ARM64 是模拟运行证据，原生 ARM runner 与远端 draft 工作流仍须在正式发布时执行。本次未创建远端 tag 或公开 Release，既有 `.data/ui-production` 未迁移或覆盖。
+安装和升级验收使用独立的临时目录与数据库副本，保持既有 `.data/ui-production` 独立。daemon 架构选择夹具或标注为 ARM64 的镜像不能证明程序确实以 ARM64 运行；须检查实际 ELF 架构，并以当前 tag 的原生 ARM runner 安装、操作及持久化结果为准。公开安装入口只以已发布的正式 Release 及其完整签名附件为准。

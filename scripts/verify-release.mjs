@@ -8,6 +8,19 @@ import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const workflows = ["quality.yml", "database.yml", "container.yml"];
+export function selectDraft(pages, tag) {
+  assert.match(tag, /^v\d+\.\d+\.\d+$/, "仅正式版本允许自动发布");
+  assert.ok(
+    Array.isArray(pages) && pages.every(Array.isArray),
+    "GitHub Release 分页列表无效",
+  );
+  const matches = pages.flat().filter((release) => release.tag_name === tag);
+  assert.equal(matches.length, 1, `必须恰好找到一个 ${tag} Release`);
+  assert.equal(matches[0].draft, true, "发布前必须保持 draft");
+  assert.equal(matches[0].prerelease, false, "不能发布预发布版本");
+  return matches[0];
+}
+
 export function checkRuns(payload, sha) {
   assert.match(sha, /^[a-f0-9]{40}$/);
   assert.ok(Array.isArray(payload.workflow_runs), "工作流列表无效");
@@ -182,12 +195,14 @@ if (
   try {
     const [command, input, arg, sha] = process.argv.slice(2);
     const payload = JSON.parse(await readFile(input, "utf8"));
-    if (command === "checks") {
+    if (command === "draft") {
+      console.log(JSON.stringify(selectDraft(payload, arg)));
+    } else if (command === "checks") {
       const state = checkRuns(payload, arg);
       console.log(`独立工作流：${state}`);
       if (state === "pending") process.exitCode = 75;
     } else {
-      assert.equal(command, "assets", "命令必须为 checks 或 assets");
+      assert.equal(command, "assets", "命令必须为 draft、checks 或 assets");
       await verifyAssets({
         release: payload,
         directory: resolve(arg),
