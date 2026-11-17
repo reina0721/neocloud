@@ -9,6 +9,8 @@
 ./scripts/Release-Local.ps1
 ```
 
+GoReleaser 的 `dist` 不支持模板，所有发布入口先通过 `scripts/release-config.mjs` 按布局生成临时配置，再用 `--config` 构建，避免归档、SBOM 和校验清单落入不同目录。临时配置由入口负责清理。
+
 Linux 使用 `scripts/install-tools.sh` 与 `scripts/release-local.sh`。工具目录和 release 输出目录由 `.scaffold/layout.json` 提供（当前输出位于忽略的 `dist/`），包括 Windows/Linux amd64 archive、`checksums.txt`、每个 archive 的 SPDX JSON SBOM，以及本轮临时密钥生成并立即验证的 checksum signature/bundle。临时私钥在脚本结束前删除；`local-rc.pub` 只证明该本地 artifact set 在本轮后未变化，不证明公开发布者身份。
 
 本地候选不创建 tag、不 push、不创建 GitHub Release、不上传 image 或 attestation。
@@ -45,7 +47,7 @@ clouddrive 发布包含 Go 与独立 Next 服务。Go archive 不内置前端，
 ```bash
 bash scripts/build-docker-release.sh --version v1.0.0-rc.1 --arch amd64 --out dist/docker-amd64
 bash scripts/build-docker-release.sh --version v1.0.0-rc.1 --arch arm64 --out dist/docker-arm64
-node --test scripts/install.test.mjs scripts/verify-release.test.mjs
+node --test scripts/install.test.mjs scripts/verify-release.test.mjs scripts/release-config.test.mjs
 node scripts/test-docker-release.mjs --release-dir dist/docker-amd64 --version v1.0.0-rc.1
 ```
 

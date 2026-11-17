@@ -14,11 +14,14 @@ for tool in goreleaser syft cosign; do
 done
 
 export GORELEASER_DIST="${release_dir}"
-goreleaser release --snapshot --clean --skip=sign,publish,announce
+temporary_config_dir="$(mktemp -d)"
+temporary_key_dir=
+cleanup() { rm -rf "${temporary_config_dir}"; [[ -z "${temporary_key_dir}" ]] || rm -rf "${temporary_key_dir}"; }
+trap cleanup EXIT
+node scripts/release-config.mjs --output "${temporary_config_dir}/goreleaser.yaml"
+goreleaser release --snapshot --clean --skip=sign,publish,announce --config "${temporary_config_dir}/goreleaser.yaml"
 
 temporary_key_dir="$(mktemp -d)"
-cleanup() { rm -rf "${temporary_key_dir}"; }
-trap cleanup EXIT
 export COSIGN_PASSWORD="$(printf '%s' "${RANDOM}-${RANDOM}-${RANDOM}-${RANDOM}" | sha256sum | cut -d' ' -f1)"
 cosign generate-key-pair --output-key-prefix "${temporary_key_dir}/local-rc" >/dev/null
 cosign sign-blob --yes --tlog-upload=false \

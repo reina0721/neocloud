@@ -199,22 +199,12 @@ func ExecuteRelay(ctx context.Context, input ResolvedRequest, policy RelayPolicy
 	start := time.Now()
 	response, err := client.Do(request)
 	if err != nil {
-		if ctx.Err() != nil {
-			kind := "aborted"
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				kind = "timeout"
-			}
-			return relayFailure(kind, "Request did not complete")
-		}
-		return relayFailure("network", "Unable to complete the upstream request")
+		return relayIOFailure(ctx, err, "Unable to complete the upstream request")
 	}
 	defer response.Body.Close()
 	bytes, err := io.ReadAll(io.LimitReader(response.Body, policy.MaxResponseBytes+1))
 	if err != nil {
-		if ctx.Err() != nil {
-			return relayContextFailure(ctx)
-		}
-		return relayFailure("network", "Unable to read upstream response")
+		return relayIOFailure(ctx, err, "Unable to read upstream response")
 	}
 	if int64(len(bytes)) > policy.MaxResponseBytes {
 		return relayFailure("unsupported", "Response exceeds the server limit")
@@ -226,6 +216,17 @@ func ExecuteRelay(ctx context.Context, input ResolvedRequest, policy RelayPolicy
 		}
 	}
 	return ExecutionResult{OK: true, Response: &ExecutedResponse{Status: response.StatusCode, StatusText: http.StatusText(response.StatusCode), DurationMS: time.Since(start).Milliseconds(), SizeBytes: len(bytes), Headers: headers, Body: string(bytes)}}
+}
+
+func relayIOFailure(ctx context.Context, err error, message string) ExecutionResult {
+	if ctx.Err() != nil {
+		return relayContextFailure(ctx)
+	}
+	var networkError net.Error
+	if errors.Is(err, context.DeadlineExceeded) || errors.As(err, &networkError) && networkError.Timeout() {
+		return relayFailure("timeout", "Request did not complete")
+	}
+	return relayFailure("network", message)
 }
 
 func relayContextFailure(ctx context.Context) ExecutionResult {

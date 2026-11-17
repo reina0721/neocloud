@@ -4,7 +4,52 @@ import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { isPublicationTemporaryFile, publishArtifacts } from './publish-artifacts.mjs';
+import {
+  isPublicationTemporaryFile,
+  publishArtifacts,
+  withPublicationRetry,
+} from './publish-artifacts.mjs';
+
+test('Windows sharing violations retry without replacing the atomic writer or hiding permanent errors', async () => {
+  let calls = 0;
+  const waits = [];
+  const options = { platform: 'win32', wait: async (milliseconds) => waits.push(milliseconds) };
+  const failure = Object.assign(new Error('sharing violation'), { code: 'EPERM' });
+  const result = await withPublicationRetry(async () => {
+    if (++calls < 3) throw failure;
+    return 'published';
+  }, options);
+  assert.equal(result, 'published');
+  assert.deepEqual(waits, [25, 50]);
+  calls = 0;
+  await assert.rejects(
+    withPublicationRetry(async () => {
+      calls++;
+      throw failure;
+    }, options),
+    (error) => error === failure,
+  );
+  assert.equal(calls, 20);
+  calls = 0;
+  await assert.rejects(
+    withPublicationRetry(
+      async () => {
+        calls++;
+        throw failure;
+      },
+      { ...options, platform: 'linux' },
+    ),
+    (error) => error === failure,
+  );
+  assert.equal(calls, 1);
+  const diskFailure = Object.assign(new Error('disk full'), { code: 'ENOSPC' });
+  await assert.rejects(
+    withPublicationRetry(async () => {
+      throw diskFailure;
+    }, options),
+    (error) => error === diskFailure,
+  );
+});
 
 test('a no-op reconcile preserves the files observed by module watchers', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'clouddrive-codegen-'));

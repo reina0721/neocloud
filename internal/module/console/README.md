@@ -15,4 +15,6 @@
 
 通知与工作区、历史、定时任务按账号隔离；工作区和任务使用版本条件写入。API relay 检查目标、DNS、重定向、请求头、取消、超时及大小预算，不执行任意 JavaScript，不提供虚假的代理或 TLS 指纹结果。
 
+Relay 将 context 截止时间和底层传输超时都映射为 `timeout`，不依赖两个计时器的触发顺序；调用方主动取消优先映射为 `aborted`。普通连接失败继续返回 `network`，不把响应头超时误报为网络错误。
+
 接口文档见根目录 `api/console-openapi.json`；跨模块真实 SQLite/HTTP 验收见 `internal/composition/console_e2e_test.go`；真实浏览器验收见 `frontend/integration/console.spec.ts`。

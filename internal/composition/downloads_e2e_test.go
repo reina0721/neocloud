@@ -66,6 +66,8 @@ func offlineFixtureSQL(t *testing.T, path string, work func(*gorm.DB) error) {
 
 func TestOfflineDownloadPersistentPauseResumePublicationAndRecordRemoval(t *testing.T) {
 	content := bytes.Repeat([]byte("download-source-"), (4<<20)/16)
+	// 由测试控制暂停窗口，避免 Windows 定时器精度把逐块限速放大成超时。
+	resumeSource := make(chan struct{})
 	var resumed atomic.Int64
 	var sourceRequests atomic.Int64
 	source := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -101,10 +103,12 @@ func TestOfflineDownloadPersistentPauseResumePublicationAndRecordRemoval(t *test
 			}
 			w.(http.Flusher).Flush()
 			offset = end
-			select {
-			case <-r.Context().Done():
-				return
-			case <-time.After(8 * time.Millisecond):
+			if start == 0 && offset >= 64<<10 {
+				select {
+				case <-r.Context().Done():
+					return
+				case <-resumeSource:
+				}
 			}
 		}
 	}))
@@ -219,6 +223,7 @@ func TestOfflineDownloadPersistentPauseResumePublicationAndRecordRemoval(t *test
 	offlineFixtureSQL(t, filepath.Join(directory, "downloads.db"), func(db *gorm.DB) error {
 		return db.Exec("CREATE TRIGGER offline_cleanup_fault BEFORE UPDATE OF cleanup_pending ON files_transfers WHEN OLD.cleanup_pending = 1 AND NEW.cleanup_pending = 0 AND OLD.source = 'offline' BEGIN SELECT RAISE(ABORT, 'fixture cleanup failure'); END").Error
 	})
+	close(resumeSource)
 	owner.request(t, "POST", path+"/resume", map[string]any{"revision": afterRestart["revision"]}, 200)
 	completed := waitDownloadState(t, owner, path, "completed")
 	if resumed.Load() == 0 || completed["resultAvailable"] != true || completed["receivedBytes"] != float64(len(content)) {

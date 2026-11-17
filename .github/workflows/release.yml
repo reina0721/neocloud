@@ -1,4 +1,4 @@
-name: Release candidate
+name: Release
 
 on:
   push:
@@ -43,7 +43,7 @@ jobs:
           echo "GORELEASER_DIST=$(node scripts/project-layout.mjs --field releaseRoot)" >> "${GITHUB_ENV}"
       - name: Verify release gates
         run: |
-          node --test scripts/install.test.mjs scripts/verify-release.test.mjs
+          node --test scripts/install.test.mjs scripts/verify-release.test.mjs scripts/release-config.test.mjs
           bash scripts/verify-docs.sh
           bash scripts/verify-webui.sh --prepare
           bash scripts/verify-quality.sh
@@ -53,7 +53,9 @@ jobs:
       - name: Build draft release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: goreleaser release --clean --skip=sign
+        run: |
+          node scripts/release-config.mjs --output "${RUNNER_TEMP}/goreleaser.yaml"
+          goreleaser release --clean --skip=sign --config "${RUNNER_TEMP}/goreleaser.yaml"
       - name: Sign and verify checksum bundle
         run: |
           checksum="${GORELEASER_DIST}/checksums.txt"

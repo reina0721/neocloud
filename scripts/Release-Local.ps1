@@ -11,6 +11,7 @@ $previousPath = $env:PATH
 $previousPassword = $env:COSIGN_PASSWORD
 $previousSyftUpdateCheck = $env:SYFT_CHECK_FOR_APP_UPDATE
 $previousGoReleaserDist = $env:GORELEASER_DIST
+$temporaryConfigFile = $null
 Push-Location $repositoryRoot
 try {
     $env:PATH = "$toolDirectory;$env:PATH"
@@ -22,7 +23,10 @@ try {
     }
 
     $env:GORELEASER_DIST = $releaseDirectory
-    goreleaser release --snapshot --clean '--skip=sign,publish,announce'
+    $temporaryConfigFile = New-TemporaryFile
+    node (Join-Path $repositoryRoot 'scripts\release-config.mjs') --output $temporaryConfigFile.FullName
+    if ($LASTEXITCODE -ne 0) { throw 'GoReleaser configuration rendering failed' }
+    goreleaser release --snapshot --clean '--skip=sign,publish,announce' --config $temporaryConfigFile.FullName
     if ($LASTEXITCODE -ne 0) { throw 'GoReleaser snapshot failed' }
 
     $temporaryKeyDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ("clouddrive-cosign-" + [guid]::NewGuid())
@@ -62,6 +66,10 @@ try {
         Pop-Location
     }
 } finally {
+    if ($null -ne $temporaryConfigFile) {
+        try { Remove-Item -LiteralPath $temporaryConfigFile.FullName -Force -ErrorAction Stop }
+        catch { Write-Warning "Could not remove temporary release configuration: $_" }
+    }
     $env:PATH = $previousPath
     $env:COSIGN_PASSWORD = $previousPassword
     $env:SYFT_CHECK_FOR_APP_UPDATE = $previousSyftUpdateCheck

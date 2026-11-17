@@ -2,12 +2,39 @@ package httpbinding
 
 import (
 	"context"
+	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestRelayTransportTimeoutDoesNotRequireContextTimerToFireFirst(t *testing.T) {
+	timeout := &net.OpError{Op: "read", Net: "tcp", Err: os.ErrDeadlineExceeded}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	for _, scenario := range []struct {
+		name string
+		ctx  context.Context
+		err  error
+		kind string
+	}{
+		{"transport deadline", t.Context(), timeout, "timeout"},
+		{"wrapped context deadline", t.Context(), context.DeadlineExceeded, "timeout"},
+		{"caller cancellation takes precedence", ctx, timeout, "aborted"},
+		{"ordinary network error", t.Context(), errors.New("connection failed"), "network"},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			result := relayIOFailure(scenario.ctx, scenario.err, "upstream failure")
+			if result.OK || result.Failure == nil || result.Failure.Kind != scenario.kind {
+				t.Fatalf("failure classification = %+v, want %s", result.Failure, scenario.kind)
+			}
+		})
+	}
+}
 
 func TestRelayEnforcesTargetsBudgetsAndCancellation(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

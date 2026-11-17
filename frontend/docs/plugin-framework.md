@@ -317,6 +317,7 @@ collision`（deterministic fail，不覆盖）；stale 删除只针对 owned art
   已删除 Route 的残留、不应存在的 Host entry（通用 ownership marker 扫描，
   无具体插件特判）、手工修改 generated 文件、物理 ownership collision。
 - 原子发布保证单个模块的读者看到完整旧版或新版；不保证整批模块的一致快照。
+- Windows 读者或杀毒程序短暂阻止 rename 时，仅对 `EPERM`、`EACCES`、`EBUSY` 有限退避重试，最多 20 次；仍由 `write-file-atomic` 管理临时文件和替换，不删除旧模块后再写入。最终错误保持原样，其它平台和错误不重试。
   本工具不提供 mutation 开始后的整批 transaction commit/rollback。
 
 ## 7. Host Deployment Mode（static / static-enumerated / server）

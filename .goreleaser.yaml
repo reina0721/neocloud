@@ -2,7 +2,7 @@ version: 2
 
 project_name: clouddrive
 
-# 发布目录由 scripts/Release-Local 与 CI 从 .scaffold/layout.json 注入。
+# dist 本身不支持 GoReleaser 模板；scripts/release-config.mjs 从布局渲染此占位符，调用方通过 --config 使用临时配置。
 dist: "{{ .Env.GORELEASER_DIST }}"
 
 builds:
