@@ -343,9 +343,18 @@ test('PDF 本机图片标注可跨页编辑、缩放、撤销并导出真实副�
   await expect(stamps(2)).toHaveCount(0);
   await chooseStamp(page, d, 'overlay.jpg', Buffer.from(jpeg, 'base64'), 'image/jpeg');
   await expect(d.getByText('已在第 2 页添加图片标注。', { exact: true })).toBeVisible();
+  await expect(stamps(2)).toHaveCount(1);
+  const previousStampIds = await stamps(2).evaluateAll((nodes) => nodes.map((node) => node.id));
   await chooseStamp(page, d, 'overlay.webp', Buffer.from(webp, 'base64'), 'image/webp');
   await expect(stamps(2).locator('canvas')).toHaveCount(2);
-  const recent = stamps(2).last();
+  // PDF.js 会重排选中标注的 DOM；按新建身份定位，避免 last() 指向下方的旧图片。
+  const addedStampIds = await stamps(2).evaluateAll(
+    (nodes, previous) => nodes.map((node) => node.id).filter((id) => !previous.includes(id)),
+    previousStampIds,
+  );
+  expect(addedStampIds).toHaveLength(1);
+  const stampSelector = await page.evaluate((id) => '#' + CSS.escape(id), addedStampIds[0]!);
+  const recent = pageAt(2).locator(stampSelector);
   await recent.click();
   await recent.getByRole('button', { name: '移除图像', exact: true }).click();
   await expect(stamps(2)).toHaveCount(1);
