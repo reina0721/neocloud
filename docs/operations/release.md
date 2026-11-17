@@ -28,7 +28,7 @@ Linux 使用 `scripts/install-tools.sh` 与 `scripts/release-local.sh`。工具�
 - OpenAPI breaking 结论、migration/rollback 说明和已知限制已审阅；
 - 项目源码和 Dockerfile 的 OCI `org.opencontainers.image.licenses` 均声明 `Apache-2.0`，与根 `LICENSE`、`NOTICE` 和 README 对齐；仍应在发布验收中确认最终镜像携带该 label。
 
-对 `v主版本.次版本.修订号` 正式 tag，最终 `publish` job 等待同一提交最新的 Quality、Database、Container push 运行全部成功，重新下载并校验完整附件与签名后，自动发布为非预发布的 latest。预发布 tag 保持 draft。任何失败、缺失或等待超时均不会提升 draft；需要源代码修复时使用新的 patch tag，不移动旧 tag。推送正式 tag 即进入该自动发布流程，应在明确发布授权下执行；environment 规则仍可要求指定审批者。
+对 `v主版本.次版本.修订号` 正式 tag，最终 `publish` job 等待同一提交在 `main` 上最新的 Quality、Database、Container push 运行全部成功（其它分支或 tag 的局部检查不能替代主分支全量检查），重新下载并校验完整附件与签名后，自动发布为非预发布的 latest。预发布 tag 保持 draft。任何失败、缺失或等待超时均不会提升 draft；需要源代码修复时使用新的 patch tag，不移动旧 tag。推送正式 tag 即进入该自动发布流程，应在明确发布授权下执行；environment 规则仍可要求指定审批者。
 
 `scripts/verify-release.mjs` 是发布附件与独立检查的门禁：拒绝缺少任一架构、SBOM、签名、未纳入 checksum 的附件、摘要错误或源码提交不一致的镜像清单。签名的密码学验证仍由固定版本 cosign 完成，不以文件存在代替签名有效。
 

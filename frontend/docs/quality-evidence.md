@@ -9,6 +9,8 @@
 - Playwright 的 mock、拦截式 backend-contract、真实文件预览分别报告，不混称真实后端全量通过。
 - 视觉基线仍须人工审阅，保持原有阈值；真实设备、外部服务和未执行平台独立列明。
 
+搬迁夹具保留 Next 追踪目录内的模块链接拓扑；Windows junction 保存绝对路径，复制时必须重建为新目录内的 junction，不能原样复制旧路径或物化链接打破 pnpm 的同级依赖解析。所有链接先验证目标属于追踪目录，外部或缺失依赖立即失败；服务仍在仓库外运行，不回退到开发机 node_modules。Linux Docker 产物继续保留原生相对链接。
+
 ## 浏览器服务隔离
 
 默认 Playwright 配置分别构建并启动两个 Next standalone 生产服务：`WEB_PORT` 为演示模式，相邻端口为拦截式 backend-contract 模式。两者显式传入认证模式、监听地址与端口，独立目录位于 `.next/playwright-<端口>/mock-production` 或 `backend-production`，包含各自的公共和静态资产。验收使用编译后的运行时，避免把按路由冷编译和 HMR 等待混入页面行为；断言超时与截图阈值不变。启动预算包含生产构建时间，测试仍不复用已经运行的服务器：HTTP 就绪不证明认证模式正确；端口被占用时直接失败，保留原服务。

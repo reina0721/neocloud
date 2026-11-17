@@ -18,6 +18,7 @@ export function checkRuns(payload, sha) {
         (r) =>
           r.path === `.github/workflows/${workflow}` &&
           r.head_sha === sha &&
+          r.head_branch === "main" &&
           r.event === "push",
       )
       .sort((a, b) => b.id - a.id)[0];

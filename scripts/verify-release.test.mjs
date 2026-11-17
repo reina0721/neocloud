@@ -21,6 +21,7 @@ const runs = () => ({
       id,
       path: ".github/workflows/" + path,
       head_sha: sha,
+      head_branch: "main",
       event: "push",
       status: "completed",
       conclusion: "success",
@@ -43,6 +44,19 @@ test("自动发布必须等待同一提交的三个独立工作流", () => {
   assert.throws(() => checkRuns(latest, sha), /quality.yml 未通过/);
   latest.workflow_runs[3].status = "in_progress";
   assert.equal(checkRuns(latest, sha), "pending");
+});
+test("其它分支或 tag 的局部门禁不能代替 main 全量验收", () => {
+  const payload = runs();
+  payload.workflow_runs[0].conclusion = "failure";
+  payload.workflow_runs.push({
+    ...payload.workflow_runs[0],
+    id: 99,
+    head_branch: "codex/partial",
+    conclusion: "success",
+  });
+  assert.throws(() => checkRuns(payload, sha), /quality.yml 未通过/);
+  payload.workflow_runs.shift();
+  assert.equal(checkRuns(payload, sha), "pending");
 });
 test("预发布标签不能自动提升为正式版本", () => {
   assert.throws(() => requiredAssets("v0.1.0-rc.1"), /仅正式版本/);

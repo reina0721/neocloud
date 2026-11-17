@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer } from 'node:http';
-import { access, cp, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { loadWebConfig } from '@clouddrive/config/node';
+import { copyStandalone } from './copy-standalone.mjs';
 
 const webRoot = resolve(import.meta.dirname, '../apps/web');
 const config = loadWebConfig({ cwd: webRoot });
@@ -110,7 +111,7 @@ async function start(upstream) {
 }
 
 try {
-  await cp(source, runtime, { recursive: true, verbatimSymlinks: true });
+  await copyStandalone(source, runtime);
   const upstreamA = await backend('a');
   const upstreamB = await backend('b');
   const originA = await start(upstreamA);
