@@ -21,9 +21,9 @@ try {
     $operationInventory = (& node scripts/project-layout.mjs --field operationInventoryOutput).Trim()
     git diff --exit-code -- $openapi $operationInventory frontend/apps/web/src/generated/native-openapi.json
     if ($LASTEXITCODE -ne 0) { throw 'generated files are not clean' }
-    & $GoExecutable test ./... -count=1
+    & $GoExecutable test -p 1 ./... -count=1
     if ($LASTEXITCODE -ne 0) { throw 'go test failed' }
-    & $GoExecutable test -race ./... -count=1
+    & $GoExecutable test -race -p 1 ./... -count=1
     if ($LASTEXITCODE -ne 0) { throw 'go test -race failed' }
     & $GoExecutable vet ./...
     if ($LASTEXITCODE -ne 0) { throw 'go vet failed' }

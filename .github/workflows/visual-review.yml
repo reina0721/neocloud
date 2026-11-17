@@ -52,10 +52,10 @@ jobs:
           fonts.spec.ts authentication.spec.ts data-display.spec.ts navigation.spec.ts
           overlays.spec.ts reference-resources.spec.ts surface-foundation.spec.ts visual.spec.ts
       - name: Preserve screenshots for individual review
-        if: ${{ !cancelled() }}
+        if: ${{ failure() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: visual-review-${{ matrix.os }}-${{ github.sha }}
           path: frontend/test-results/**/*.png
-          if-no-files-found: error
+          if-no-files-found: ignore
           retention-days: 7

@@ -17,7 +17,7 @@ Linux 使用 `scripts/install-tools.sh` 与 `scripts/release-local.sh`。工具�
 
 ## 正式发布
 
-正式流程使用指向已验证提交的 annotated `v*` tag，保留 GitHub `release` environment 审批。推送 tag 前先确认 main 同一提交的独立门禁通过，不强制覆盖已存在的 tag。workflow 使用固定工具版本，先运行文档、完整前端及 Go/生成物/仓库产物门禁，以 GoReleaser 创建 draft，再使用 GitHub OIDC keyless identity 签名并验证 checksum bundle。Docs gate 不启动 Go 服务或 Playwright；确定性浏览器与契约用例也不等于全部真实后端、视觉人工审查或外部协议验收。
+正式流程使用指向已验证提交的 annotated `v*` tag，保留 GitHub `release` environment 审批。推送 tag 前先确认 main 同一提交的独立门禁通过，不强制覆盖已存在的 tag。workflow 使用固定工具版本，首先按 SHA 核验 `main` 已完成的 Quality（含完整前端、Go、生成物、仓库产物及安全检查）、Database 和 Container 门禁，再以 GoReleaser 创建 draft，再使用 GitHub OIDC keyless identity 签名并验证 checksum bundle。Docs gate 不启动 Go 服务或 Playwright；确定性浏览器与契约用例也不等于全部真实后端、视觉人工审查或外部协议验收。
 
 自动发布阶段和 environment 审批者按同一 tag/source commit 核对独立 workflow 与任务证据：
 
@@ -40,7 +40,7 @@ clouddrive 发布包含 Go 与独立 Next 服务。Go archive 不内置前端，
 
 正式工作流在 Go draft 创建后，分别使用 `ubuntu-24.04` 和 `ubuntu-24.04-arm` 原生 runner 构建、运行 Docker 包。两种镜像必须具有同一版本和 source commit；包内固定镜像 ID、架构和版本，不使用可漂移的 `latest` 镜像标签。ARM64 交叉构建本身不算运行验收。
 
-完整门禁结束后仅还原 Next 自动生成的 `next-env.d.ts` 临时路由引用，并要求工作树干净，避免临时验收路径阻断 GoReleaser 或进入发布源码。其它生成物变化仍会阻断发布。
+完整检查由分支 push 的独立工作流执行；tag push 只运行 Release，按不可变 SHA 复用 `main` 的完整证据，避免相同输入再重复全套测试。Release 在创建 draft 与正式发布前均检查独立门禁，不接受其它分支或 tag 的局部结果；仍重新构建全部正式包并运行原生安装、持久化与最终附件验收。构建要求干净的源码 checkout，生成物不得进入发布源码。
 
 维护者可在本地构建候选（不会创建 tag、上传镜像或发布 Release）：
 

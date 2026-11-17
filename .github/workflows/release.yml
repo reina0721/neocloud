@@ -15,6 +15,10 @@ jobs:
     if: github.repository == 'reina0721/neocloud'
     runs-on: ubuntu-latest
     environment: release
+    permissions:
+      contents: write
+      id-token: write
+      actions: read
     steps:
       - name: Checkout full history
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -41,14 +45,14 @@ jobs:
           GOBIN="${tool_dir}" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
           echo "${tool_dir}" >> "${GITHUB_PATH}"
           echo "GORELEASER_DIST=$(node scripts/project-layout.mjs --field releaseRoot)" >> "${GITHUB_ENV}"
-      - name: Verify release gates
+      - name: Verify exact source and completed main release gates
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          test "$(git cat-file -t "${GITHUB_REF_NAME}")" = tag
+          test "$(git rev-parse "${GITHUB_REF_NAME}^{commit}")" = "${GITHUB_SHA}"
+          bash scripts/wait-release-gates.sh
           node --test scripts/install.test.mjs scripts/verify-release.test.mjs scripts/release-config.test.mjs
-          bash scripts/verify-docs.sh
-          bash scripts/verify-webui.sh --prepare
-          bash scripts/verify-quality.sh
-          # Next 会把本次验收的临时路由类型目录写入该自动生成文件。
-          git restore -- frontend/apps/web/next-env.d.ts
           test -z "$(git status --porcelain)"
       - name: Build draft release
         env:
@@ -179,19 +183,7 @@ jobs:
         run: |
           test "$(git cat-file -t "${GITHUB_REF_NAME}")" = tag
           test "$(git rev-parse "${GITHUB_REF_NAME}^{commit}")" = "${GITHUB_SHA}"
-          checks_passed=false
-          for attempt in $(seq 1 120); do
-            gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${GITHUB_SHA}&per_page=100" > "${RUNNER_TEMP}/release-runs.json"
-            if node scripts/verify-release.mjs checks "${RUNNER_TEMP}/release-runs.json" "${GITHUB_SHA}"; then
-              checks_passed=true
-              break
-            else
-              status=$?
-              test "${status}" = 75 || exit "${status}"
-            fi
-            sleep 30
-          done
-          test "${checks_passed}" = true
+          bash scripts/wait-release-gates.sh
       - name: Download and verify complete signed asset set
         run: |
           gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" > "${RUNNER_TEMP}/release.json"

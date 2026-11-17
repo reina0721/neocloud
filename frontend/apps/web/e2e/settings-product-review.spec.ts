@@ -99,10 +99,12 @@ for (const category of [
           const labels = await theme
             .locator('.ui-choice-content .font-semibold')
             .evaluateAll((elements) =>
-              elements.map(
-                (element) =>
+              elements.map((element) =>
+                // 浏览器布局量有浮点舍入；换行数是整数，避免把两行的 2.0000007 误判成三行。
+                Math.round(
                   element.getBoundingClientRect().height /
-                  Number.parseFloat(getComputedStyle(element).lineHeight),
+                    Number.parseFloat(getComputedStyle(element).lineHeight),
+                ),
               ),
             );
           expect(labels).toHaveLength(3);

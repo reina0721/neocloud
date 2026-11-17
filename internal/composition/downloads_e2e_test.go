@@ -44,7 +44,7 @@ func waitDownloadStateWhen(t *testing.T, owner *consoleTestClient, path, state s
 		}
 		select {
 		case <-deadline.C:
-			t.Fatalf("离线任务未就绪，预期状态 %s，当前 %v，待清理 %v", state, value["state"], value["cleanupPending"])
+			t.Fatalf("离线任务未就绪，预期状态 %s，当前 %v，尝试 %v，分类 %v，待清理 %v", state, value["state"], value["attempts"], value["failureCode"], value["cleanupPending"])
 		case <-ticker.C:
 		}
 	}

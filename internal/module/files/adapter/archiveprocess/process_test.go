@@ -4,11 +4,13 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -49,11 +51,15 @@ func TestArchiveMemoryProcess(t *testing.T) {
 	if _, err := io.ReadFull(os.Stdin, one); err != nil {
 		os.Exit(2)
 	}
-	allocation := make([]byte, 1<<30)
+	allocation := make([]byte, 2*service.MinArchiveWorkerMemoryBytes)
 	for i := 0; i < len(allocation); i += 4096 {
 		allocation[i] = 1
 	}
-	_, _ = os.Stdout.Write(allocation[:1])
+	// 若限制失效，返回有效协议，让父端成功；测试不能把损坏响应误当作内存隔离通过。
+	if err := json.NewEncoder(os.Stdout).Encode(wireResponse{}); err != nil {
+		os.Exit(2)
+	}
+	runtime.KeepAlive(allocation)
 	os.Exit(0)
 }
 func processForTest(t *testing.T, name string, timeout time.Duration) *Processor {
@@ -180,6 +186,8 @@ func TestProcessDeadlineMemoryAndParentSurvival(t *testing.T) {
 		t.Fatal("子进程未及时退出")
 	}
 	limited := processForTest(t, "TestArchiveMemoryProcess", 5*time.Second)
+	// Windows 资源限制由父进程安装，须与子进程请求的最小内存预算一致。
+	limited.options.Policy.WorkerMemoryBytes = service.MinArchiveWorkerMemoryBytes
 	if _, err := limited.Process(context.Background(), request); !errors.Is(err, service.ErrArchiveWorker) {
 		t.Fatalf("超额内存未失败关闭: %v", err)
 	}
