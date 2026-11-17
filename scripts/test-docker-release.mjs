@@ -357,7 +357,17 @@ try {
         join(clone, "runtime.env"),
         originalEnvironment
           .toString()
-          .replace(/^WEB_PORT=.*$/m, "WEB_PORT=" + clonePort),
+          .replace(/^WEB_PORT=.*$/m, "WEB_PORT=" + clonePort)
+          // 故障副本只使用自己的回环入口，不继承原实例的公网 Origin 或监听地址。
+          .replace(/^WEB_BIND=.*$/m, "WEB_BIND=127.0.0.1")
+          .replace(
+            /^PUBLIC_ORIGIN=.*$/m,
+            `PUBLIC_ORIGIN=http://127.0.0.1:${clonePort}`,
+          )
+          .replace(
+            /^ALLOWED_ORIGINS=.*$/m,
+            `ALLOWED_ORIGINS='${JSON.stringify([`http://127.0.0.1:${clonePort}`, `http://localhost:${clonePort}`])}'`,
+          ),
         { mode: 0o600 },
       );
       await writeFile(
