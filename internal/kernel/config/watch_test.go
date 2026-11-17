@@ -6,64 +6,76 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 )
 
 func TestWatchFilesDebouncesChanges(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "config.yaml")
-	if err := os.WriteFile(path, []byte("value: one\n"), 0o600); err != nil {
-		t.Fatalf("write initial config: %v", err)
-	}
-
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	changes := make(chan struct{}, 2)
-	ready := make(chan struct{})
-	errors := make(chan error, 1)
-	go func() {
-		errors <- WatchFiles(ctx, []string{path}, 50*time.Millisecond, WatchCallbacks{
-			OnReady:  func() { close(ready) },
-			OnChange: func() { changes <- struct{}{} },
-		})
-	}()
-
-	select {
-	case <-ready:
-	case err := <-errors:
-		t.Fatalf("WatchFiles() returned before ready: %v", err)
-	case <-time.After(3 * time.Second):
-		t.Fatal("timed out waiting for watcher ready")
-	}
-	for _, value := range []string{"two", "three", "four"} {
-		if err := os.WriteFile(path, []byte("value: "+value+"\n"), 0o600); err != nil {
-			t.Fatalf("rewrite config: %v", err)
+	synctest.Test(t, func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		backend := &fakeWatchBackend{events: make(chan fsnotify.Event), errors: make(chan error)}
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		changes := make(chan struct{}, 2)
+		ready := make(chan struct{})
+		done := make(chan error, 1)
+		go func() {
+			done <- watchFiles(ctx, []string{path}, 50*time.Millisecond, WatchCallbacks{
+				OnReady: func() { close(ready) }, OnChange: func() { changes <- struct{}{} },
+			}, func() (watchBackend, error) { return backend, nil })
+		}()
+		synctest.Wait()
+		select {
+		case <-ready:
+		default:
+			t.Fatal("watcher did not register before changes")
 		}
-	}
-
-	select {
-	case <-changes:
-	case err := <-errors:
-		t.Fatalf("WatchFiles() returned early: %v", err)
-	case <-time.After(3 * time.Second):
-		t.Fatal("timed out waiting for debounced change")
-	}
-	select {
-	case <-changes:
-		t.Fatal("WatchFiles() emitted more than one debounced change")
-	case <-time.After(150 * time.Millisecond):
-	}
-
-	cancel()
-	select {
-	case err := <-errors:
-		if err != nil {
-			t.Fatalf("WatchFiles() shutdown error = %v", err)
+		assertQuiet := func() {
+			t.Helper()
+			select {
+			case <-changes:
+				t.Fatal("watcher emitted a change before the quiet interval or repeated a debounced change")
+			default:
+			}
 		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("timed out stopping config watcher")
-	}
+		// 虚拟时钟明确证明三次事件都在防抖区间内，不假定 CI 能在 50ms 内完成三次磁盘写入。
+		for range 3 {
+			backend.events <- fsnotify.Event{Name: path, Op: fsnotify.Write}
+			synctest.Wait()
+			assertQuiet()
+			time.Sleep(10 * time.Millisecond)
+		}
+		time.Sleep(39 * time.Millisecond)
+		synctest.Wait()
+		assertQuiet()
+		time.Sleep(time.Millisecond)
+		synctest.Wait()
+		select {
+		case <-changes:
+		default:
+			t.Fatal("watcher did not emit after the quiet interval")
+		}
+		time.Sleep(150 * time.Millisecond)
+		synctest.Wait()
+		assertQuiet()
+		// 区间结束后的真实新事件必须产生下一次通知，不能被错误去重。
+		backend.events <- fsnotify.Event{Name: path, Op: fsnotify.Write}
+		synctest.Wait()
+		time.Sleep(50 * time.Millisecond)
+		synctest.Wait()
+		select {
+		case <-changes:
+		default:
+			t.Fatal("watcher dropped a later change")
+		}
+		cancel()
+		synctest.Wait()
+		if err := <-done; err != nil {
+			t.Fatalf("watcher shutdown: %v", err)
+		}
+	})
 }
 
 func TestWatchFilesReportsReadyBeforeChangesAndSupportsRenameSave(t *testing.T) {
