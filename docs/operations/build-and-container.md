@@ -15,7 +15,7 @@ docker build -f frontend/Dockerfile -t clouddrive-web .
 
 Next 的 server 构建输出为 `frontend/apps/web/dist/standalone/`；其中 `apps/web/server.js` 连同追踪依赖、页面静态资源及本地 PDF worker 可整体迁移。Web 镜像不复制完整源码工作区，运行时通过 `CLOUDDRIVE_BACKEND_URL` 配置 Go Origin。`pnpm --dir frontend standalone:check` 会把产物复制到仓库外验证依赖与资源闭包，并以两个不同上游检查真实代理传输。该检查同时进入 `pnpm check` 和 Web 镜像构建，Container CI 分别验证两种镜像。
 
-Go 镜像同时携带默认配置引用的公共语言资源与 Todo 模块语言资源；默认数据目录归 nonroot 所有且权限为 `0700`。
+Go 镜像同时携带默认配置引用的公共语言资源与 Todo 模块语言资源；默认数据目录归 nonroot 所有且权限为 `0700`。构建阶段预制包含 `.data` 的目录树，再将其内容复制到 `/app/`，保留子目录的私有权限，避免依赖不同 BuildKit 后端对空目标目录的 `COPY --chmod` 行为。
 
 多架构构建通过 `docker buildx build --platform linux/amd64` 或 `linux/arm64` 选择目标；Dockerfile 的 `TARGETOS`、`TARGETARCH` 直接继承 BuildKit 自动参数，不设置覆盖目标架构的默认值。Container 门禁在 amd64、arm64 原生 runner 分别验证 Go 容器探针、迁移及停止。离线打包除检查 OCI 平台、版本和源码标签，还会读取镜像内 `/app/clouddrive` 的 ELF 文件头，拒绝程序架构与镜像平台不一致的包；两种架构仍须分别通过原生安装与持久化验收。
 
