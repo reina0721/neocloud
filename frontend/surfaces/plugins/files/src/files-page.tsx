@@ -814,7 +814,7 @@ export function FilesPage({
             <h1 className="min-w-0 truncate text-lg font-bold text-brand md:text-xl">{title}</h1>
           </div>
           {listing ? (
-            <span className="text-xs text-ink-muted">
+            <span className="shrink-0 whitespace-nowrap text-xs text-ink-muted">
               {t('files.workspace.library')} · {listing.total}
             </span>
           ) : null}

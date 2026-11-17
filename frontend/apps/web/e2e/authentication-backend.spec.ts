@@ -175,6 +175,8 @@ test('Backend registration reports pending/success and failed logout keeps all p
   completeRegistration?.();
   await expect(page.getByText('账户已创建', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '开始使用', exact: true }).click();
+  // 继续会整页导航；避免在旧注册文档上打开菜单，再被新文档替换。
+  await expect(page).toHaveURL(/\/$/);
   await page.getByRole('button', { name: '当前用户', exact: true }).click();
   await page.getByRole('menuitem', { name: '退出登录', exact: true }).click();
   await expect(
