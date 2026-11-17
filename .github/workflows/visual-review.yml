@@ -13,7 +13,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# 截图取证任务；不替代 main 的 Quality 全量检查，也不自动接受任何基线。
+# 原生浏览器取证；先重复验证跨文档账号入口，再采集截图。不替代 main 全量门禁。
 jobs:
   review:
     name: Native visual evidence / ${{ matrix.os }}
@@ -46,6 +46,10 @@ jobs:
           if ($IsWindows) { & pnpm exec playwright install chromium }
           else { & pnpm exec playwright install --with-deps chromium }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify final backend registration landing repeatedly
+        run: >-
+          pnpm exec playwright test --project=backend-contract --reporter="list,github"
+          authentication-backend.spec.ts --grep "^Backend registration reports" --repeat-each=20
       - name: Collect visual evidence without updating goldens
         run: >-
           pnpm exec playwright test --reporter="list,github"
@@ -56,6 +60,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: visual-review-${{ matrix.os }}-${{ github.sha }}
-          path: frontend/test-results/**/*.png
+          path: |
+            frontend/test-results/**/*.png
+            frontend/test-results/**/trace.zip
+            frontend/test-results/**/error-context.md
           if-no-files-found: ignore
           retention-days: 7
