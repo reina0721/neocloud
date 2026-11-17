@@ -601,6 +601,7 @@ test("IPv6 监听使用 Compose 的方括号格式，HTTPS 默认保持安全 Co
     "https://files.example.test",
   ]);
   assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /https:\/\/files\.example\.test\/setup/);
   const configuration = await readFile(join(f.root, "runtime.env"), "utf8");
   assert.match(configuration, /^WEB_BIND=\[::\]$/m);
   assert.match(configuration, /^ALLOW_INSECURE_HTTP=false$/m);

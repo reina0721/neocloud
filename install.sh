@@ -342,7 +342,8 @@ if [[ $command_name == install ]]; then
   probe "$version" || fail '安装后就绪/版本检查未通过'
   atomic_current "$version"; rm -f -- "$root/.control/candidate"; stop_recovery=false
   install_manager
-  printf '安装完成：%s\nWeb 端口：%s:%s；访问 http://<服务器地址>:%s/setup 创建管理员。\n设置令牌保存在 %s/.control/setup-token（不输出令牌）。\n管理入口：%s/install.sh\n' "$root" "$bind" "$port" "$port" "$root" "$root"
+  local setup_origin=${public_origin:-"http://<服务器地址>:$port"}
+  printf '安装完成：%s\nWeb 端口：%s:%s；访问 %s/setup 创建管理员。\n设置令牌保存在 %s/.control/setup-token（不输出令牌）。\n管理入口：%s/install.sh\n' "$root" "$bind" "$port" "$setup_origin" "$root" "$root"
   exit 0
 fi
 managed
