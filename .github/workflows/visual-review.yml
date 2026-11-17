@@ -26,6 +26,8 @@ jobs:
           go-version-file: go.mod
       - name: Repeat saved-share restart and terminal drain under race
         run: go test -race -p 1 ./internal/composition -run '^TestSavedSharesLifecyclePinCASAuthorizationAndRestart$' -count=20
+      - name: Repeat watched configuration publication and locked-reader preservation
+        run: go test -race -p 1 ./internal/kernel -run '^(TestWatchRecoversAfterRestartRequiredCandidateIsRestored|TestRecoveryPublishPreservesBothFilesWhenReaderKeepsDeleteLocked)$' -count=20
   review:
     name: Native visual evidence / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -66,6 +68,10 @@ jobs:
           pnpm exec playwright test --project=chromium --reporter="list,github"
           ui-ux-109.spec.ts confirm-pending-109.spec.ts
           --grep "Leaving during validation prevents|Pending export confirmation" --repeat-each=20
+      - name: Verify settled mobile calendar and bulk confirmation accessibility repeatedly
+        run: >-
+          pnpm exec playwright test --project=chromium --reporter="list,github"
+          management-completion.spec.ts --grep "Mobile management filters and bulk confirmation" --repeat-each=20
       - name: Collect visual evidence without updating goldens
         run: >-
           pnpm exec playwright test --reporter="list,github"

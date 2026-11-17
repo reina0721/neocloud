@@ -189,6 +189,8 @@ for (const width of [320, 390])
     );
     await calendarTrigger.click();
     await expect(page.getByRole('grid')).toBeVisible();
+    // DatePicker 的 Grow 入场与确认框一样，待有限过渡结束后检查实际呈现的对比度。
+    await waitForVisualReadiness(page);
     expect(
       (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
         .violations,

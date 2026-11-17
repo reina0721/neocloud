@@ -818,12 +818,7 @@ func writeWatchRecoveryFile(t *testing.T, path, version, other string) {
 	if err := os.WriteFile(temporary, content, 0o600); err != nil {
 		t.Fatalf("write recovery config %s/%s: %v", version, other, err)
 	}
-	if err := os.Rename(temporary, path); err != nil {
-		if removeErr := os.Remove(path); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
-			t.Fatalf("remove previous recovery config: %v", removeErr)
-		}
-		if retryErr := os.Rename(temporary, path); retryErr != nil {
-			t.Fatalf("publish recovery config %s/%s: %v", version, other, retryErr)
-		}
+	if err := renameWatchRecoveryConfig(temporary, path); err != nil {
+		t.Fatalf("publish recovery config %s/%s: %v", version, other, err)
 	}
 }
