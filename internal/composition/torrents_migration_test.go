@@ -14,6 +14,8 @@ import (
 	filesmigration "github.com/reina0721/clouddrive/internal/module/files/binding/migration"
 	"github.com/reina0721/clouddrive/internal/module/files/model"
 	"gorm.io/gorm"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func torrentMigrationSnapshot(db *gorm.DB, tables []string) (map[string][]string, error) {
@@ -37,7 +39,7 @@ func torrentMigrationSnapshot(db *gorm.DB, tables []string) (map[string][]string
 }
 
 func TestTorrentV17PreservesV16RowsAndRejectsDestructiveRollback(t *testing.T) {
-	offlineFixtureSQL(t, filepath.Join(t.TempDir(), "v16-to-v17.db"), func(db *gorm.DB) error {
+	offlineFixtureSQL(t, filepath.Join(testkit.PrivateTempDir(t), "v16-to-v17.db"), func(db *gorm.DB) error {
 		set := filesmigration.Set()
 		paths, err := fs.Glob(set.FS, "sqlite/*.up.sql")
 		if err != nil {

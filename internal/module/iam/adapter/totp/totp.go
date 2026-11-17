@@ -10,6 +10,7 @@ package totp
 import (
 	"crypto/hmac"
 	"crypto/rand"
+	// #nosec G505 -- RFC 6238 互通要求 HMAC-SHA1，不用于密码摘要。
 	"crypto/sha1"
 	"encoding/base32"
 	"encoding/binary"
@@ -62,7 +63,11 @@ func CodeAt(secret string, at time.Time) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	counter := uint64(at.Unix() / PeriodSeconds)
+	seconds := at.Unix()
+	if seconds < 0 {
+		return "", fmt.Errorf("TOTP time precedes Unix epoch")
+	}
+	counter := uint64(seconds) / PeriodSeconds
 	message := make([]byte, 8)
 	binary.BigEndian.PutUint64(message, counter)
 	mac := hmac.New(sha1.New, key)
@@ -90,7 +95,11 @@ func Validate(secret, code string, at time.Time, window int) (bool, error) {
 		window = DefaultWindow
 	}
 	for step := -window; step <= window; step++ {
-		candidate, err := CodeAt(secret, at.Add(time.Duration(step*PeriodSeconds)*time.Second))
+		candidateTime := at.Add(time.Duration(step*PeriodSeconds) * time.Second)
+		if candidateTime.Unix() < 0 {
+			continue
+		}
+		candidate, err := CodeAt(secret, candidateTime)
 		if err != nil {
 			return false, err
 		}

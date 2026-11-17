@@ -9,10 +9,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestAnnotationsHTTPPersistencePrivacyAndAtomicity(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	setup, err := idgen.UUID().New()
 	if err != nil {

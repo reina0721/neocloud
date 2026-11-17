@@ -15,6 +15,8 @@ import (
 )
 
 const maxConnectionNameRunes = 128
+
+// #nosec G101 -- 凭据派生用途的公开 domain separation 标识，不是密钥。
 const connectionCredentialDomain = "webdav-connection"
 
 var (

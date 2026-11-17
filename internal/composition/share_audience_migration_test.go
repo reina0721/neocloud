@@ -8,12 +8,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestShareAudienceV13DefaultsAndRollbackGuard(t *testing.T) {
 	config := database.DefaultConfig()
 	config.Driver = database.DriverSQLite
-	config.DSN = filepath.Join(t.TempDir(), "v12-to-v13.db")
+	config.DSN = filepath.Join(testkit.PrivateTempDir(t), "v12-to-v13.db")
 	resource, err := database.NewGORM(t.Context(), &config)
 	if err != nil {
 		t.Fatal(err)

@@ -18,6 +18,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 // uploadFileHTTP 通过唯一的分块协议覆盖 Cookie/CSRF、内容校验及最终发布。
@@ -85,7 +87,7 @@ func uploadFileHTTP(ctx context.Context, client *consoleTestClient, parent, name
 	return detail.Entry, err
 }
 func TestFilesHTTPConcurrentUploadsOwnershipRestartAndStorageGuard(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	token, err := idgen.UUID().New()
 	if err != nil {

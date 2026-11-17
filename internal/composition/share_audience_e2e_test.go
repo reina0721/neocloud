@@ -18,6 +18,8 @@ import (
 	"github.com/reina0721/clouddrive/internal/module/files/service"
 	iamservice "github.com/reina0721/clouddrive/internal/module/iam/service"
 	"github.com/reina0721/clouddrive/pkg/idgen"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 // audienceHTTP 复用真实会话，诊断只输出状态，不输出分享地址、票据或请求体。
@@ -74,7 +76,7 @@ func audienceHTTP(t *testing.T, client *consoleTestClient, method, path string, 
 
 func newAudienceFixture(t *testing.T) (*consoleTestClient, *consoleTestClient, string) {
 	t.Helper()
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	setup, err := idgen.UUID().New()
 	if err != nil {

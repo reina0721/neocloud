@@ -16,6 +16,8 @@ import (
 
 	"github.com/reina0721/clouddrive/internal/module/files/service"
 	"github.com/reina0721/clouddrive/pkg/idgen"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 const exclusiveDAVLockXML = `<lockinfo xmlns="DAV:"><lockscope><exclusive/></lockscope><locktype><write/></locktype><owner><href>editor</href></owner></lockinfo>`
@@ -23,7 +25,7 @@ const exclusiveDAVLockXML = `<lockinfo xmlns="DAV:"><lockscope><exclusive/></loc
 // writeLockServer 创建临时真实数据库；重装服务后继续使用同一数据库和账号。
 func writeLockServer(t *testing.T) (*consoleTestClient, string, map[string]any, func()) {
 	t.Helper()
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	setup, err := idgen.UUID().New()
 	if err != nil {
 		t.Fatal(err)

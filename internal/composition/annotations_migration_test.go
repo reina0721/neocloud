@@ -10,12 +10,14 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestAnnotationsV9PreservesAppliedRowsAndGuardsRollback(t *testing.T) {
 	config := database.DefaultConfig()
 	config.Driver = database.DriverSQLite
-	config.DSN = filepath.Join(t.TempDir(), "v8-to-v9.db")
+	config.DSN = filepath.Join(testkit.PrivateTempDir(t), "v8-to-v9.db")
 	resource, err := database.NewGORM(t.Context(), &config)
 	if err != nil {
 		t.Fatal(err)

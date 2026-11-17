@@ -15,6 +15,8 @@ import (
 	"github.com/reina0721/clouddrive/pkg/database"
 	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
 	"github.com/reina0721/clouddrive/pkg/idgen"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestDepartmentTreeCycleAndReferenceRules(t *testing.T) {
@@ -124,7 +126,7 @@ func newService(t *testing.T, accounts service.AccountDirectory) (*service.Servi
 	t.Helper()
 	config := database.DefaultConfig()
 	config.Driver = database.DriverSQLite
-	config.DSN = filepath.Join(t.TempDir(), "organization.db")
+	config.DSN = filepath.Join(testkit.PrivateTempDir(t), "organization.db")
 	runner, err := dbmigrate.New(t.Context(), dbmigrate.Config{Database: config, LockTimeout: 5 * time.Second}, migrationbinding.Set())
 	if err != nil {
 		t.Fatal(err)

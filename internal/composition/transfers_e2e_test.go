@@ -18,6 +18,8 @@ import (
 	"github.com/reina0721/clouddrive/pkg/database"
 	"github.com/reina0721/clouddrive/pkg/idgen"
 	"gorm.io/gorm"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 // transferBytes 保留真实协议状态和响应头，不以 JSON 解码掩盖 Range 或空响应。
@@ -50,7 +52,7 @@ func transferBytes(t *testing.T, client *consoleTestClient, method, path string,
 }
 
 func TestResumableTransfersLargeFileRestartRetargetAndRange(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	setup, err := idgen.UUID().New()
 	if err != nil {
 		t.Fatal(err)

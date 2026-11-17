@@ -16,6 +16,8 @@ import (
 	"github.com/reina0721/clouddrive/pkg/database"
 	"github.com/reina0721/clouddrive/pkg/idgen"
 	"gorm.io/gorm"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 // shortcutRedirect 验证真实303与片段，不跟随到由独立前端承载的分享页。
@@ -47,7 +49,7 @@ func shortcutRedirect(t *testing.T, client *consoleTestClient, id string, status
 }
 
 func TestSavedSharesLifecyclePinCASAuthorizationAndRestart(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	dbPath := filepath.Join(directory, "shortcuts.db")
 	configPath := filepath.Join(directory, "config.yaml")
 	setup, err := idgen.UUID().New()

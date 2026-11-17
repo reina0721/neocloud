@@ -20,10 +20,12 @@ import (
 	kernellogging "github.com/reina0721/clouddrive/internal/kernel/logging"
 	pkgdatabase "github.com/reina0721/clouddrive/pkg/database"
 	pkglogger "github.com/reina0721/clouddrive/pkg/logger"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestHostReloadsRealSQLiteAndKeepsCrossComponentTransactionAtomic(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	databaseV1 := filepath.Join(directory, "database-v1.db")
 	databaseV2 := filepath.Join(directory, "database-v2.db")

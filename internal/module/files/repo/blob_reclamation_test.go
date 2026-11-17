@@ -16,6 +16,8 @@ import (
 	storageclient "github.com/reina0721/clouddrive/pkg/storage/client"
 	"github.com/reina0721/clouddrive/pkg/storage/local"
 	"gorm.io/gorm"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 type blobTestRemover func(context.Context, string) error
@@ -25,7 +27,7 @@ func (f blobTestRemover) Delete(ctx context.Context, key string) error { return 
 func TestPublishedBlobReclamation(t *testing.T) {
 	ctx := t.Context()
 	cfg := database.DefaultConfig()
-	cfg.Driver, cfg.DSN = database.DriverSQLite, filepath.Join(t.TempDir(), "reclamation.db")
+	cfg.Driver, cfg.DSN = database.DriverSQLite, filepath.Join(testkit.PrivateTempDir(t), "reclamation.db")
 	db, err := database.NewGORM(ctx, &cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +58,7 @@ func TestPublishedBlobReclamation(t *testing.T) {
 			apply(path)
 		}
 	}
-	store, err := local.New(local.Config{BasePath: t.TempDir()})
+	store, err := local.New(local.Config{BasePath: testkit.PrivateTempDir(t)})
 	if err != nil {
 		t.Fatal(err)
 	}

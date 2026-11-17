@@ -100,23 +100,24 @@ func parse(encoded string) (parameters, []byte, []byte, error) {
 	if err != nil {
 		return parameters{}, nil, nil, err
 	}
-	parsed := parameters{memoryKiB: uint32(memoryValue), iterations: uint32(iterationValue), parallelism: uint8(parallelismValue)}
-	if parsed.memoryKiB < minMemoryKiB || parsed.memoryKiB > maxMemoryKiB ||
-		parsed.iterations < minIterations || parsed.iterations > maxIterations ||
-		parsed.parallelism == 0 || parsed.parallelism > maxParallelism ||
-		parsed.memoryKiB < 8*uint32(parsed.parallelism) {
+	if memoryValue < minMemoryKiB || memoryValue > uint64(maxMemoryKiB) ||
+		iterationValue < minIterations || iterationValue > uint64(maxIterations) ||
+		parallelismValue == 0 || parallelismValue > maxParallelism ||
+		memoryValue < 8*parallelismValue {
 		return parameters{}, nil, nil, invalidHash("Argon2id resource parameters are outside the accepted budget")
 	}
+	parsed := parameters{memoryKiB: uint32(memoryValue), iterations: uint32(iterationValue), parallelism: uint8(parallelismValue)}
 	salt, err := base64.RawStdEncoding.Strict().DecodeString(parts[4])
 	if err != nil || len(salt) < minSaltLength || len(salt) > maxSaltLength {
 		return parameters{}, nil, nil, invalidHash("salt is malformed or outside the accepted range")
 	}
 	expected, err := base64.RawStdEncoding.Strict().DecodeString(parts[5])
-	if err != nil || len(expected) < minKeyLength || len(expected) > maxKeyLength {
+	keyLength := len(expected)
+	if err != nil || keyLength < minKeyLength || keyLength > maxKeyLength {
 		return parameters{}, nil, nil, invalidHash("digest is malformed or outside the accepted range")
 	}
 	parsed.saltLength = len(salt)
-	parsed.keyLength = uint32(len(expected))
+	parsed.keyLength = uint32(keyLength)
 	return parsed, salt, expected, nil
 }
 

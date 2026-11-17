@@ -17,6 +17,8 @@ const (
 	PermissionRead       permissioncatalog.Key = "iam:permission:read"
 	SessionRead          permissioncatalog.Key = "iam:session:read"
 	SessionRevoke        permissioncatalog.Key = "iam:session:revoke"
-	ApiTokenRead         permissioncatalog.Key = "iam:api-token:read"
-	ApiTokenWrite        permissioncatalog.Key = "iam:api-token:write"
+	// #nosec G101 -- 公开权限标识符，不是认证令牌。
+	ApiTokenRead permissioncatalog.Key = "iam:api-token:read"
+	// #nosec G101 -- 公开权限标识符，不是认证令牌。
+	ApiTokenWrite permissioncatalog.Key = "iam:api-token:write"
 )

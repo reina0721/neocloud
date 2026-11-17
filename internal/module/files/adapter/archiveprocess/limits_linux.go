@@ -2,7 +2,11 @@
 
 package archiveprocess
 
-import "golang.org/x/sys/unix"
+import (
+	"errors"
+
+	"golang.org/x/sys/unix"
+)
 
 type processGuard struct{}
 
@@ -12,5 +16,8 @@ func (*processGuard) Close() error                   { return nil }
 
 // RLIMIT_DATA在读取任何不可信输入前约束heap/mmap分配，设置失败即拒绝工作。
 func setWorkerMemory(memory int64) error {
+	if memory <= 0 {
+		return errors.New("archive worker memory limit must be positive")
+	}
 	return unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{Cur: uint64(memory), Max: uint64(memory)})
 }

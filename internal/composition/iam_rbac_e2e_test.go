@@ -13,13 +13,15 @@ import (
 	"time"
 
 	"github.com/reina0721/clouddrive/internal/module/iam/service"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 // TestIAMRBACSQLiteRuntimeFlow 验证真实 SQLite runtime 的授权闭环：
 // setup -> role -> 权限 -> account -> 分配角色 -> 首次改密 -> login ->
 // allow -> revoke -> deny，全程通过 HTTP operation gate 与 Casbin evaluator。
 func TestIAMRBACSQLiteRuntimeFlow(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	base := generationConfig(directory, 120, 1<<20, filepath.Join(directory, "iam-e2e.db"))
 	payload := strings.Replace(base, "auth:", "iam:\n  local:\n    setupToken: setup-secret\nauth:", 1)

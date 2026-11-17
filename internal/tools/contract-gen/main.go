@@ -116,10 +116,12 @@ func exportedName(value string) string {
 }
 func writeFile(path string, content []byte) error {
 	if dir := filepath.Dir(path); dir != "" && dir != "." {
+		// #nosec G301 -- 生成的是公开 API/源码契约，0755 目录及 0644 文件不含私有运行数据。
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("create output dir %s: %w", dir, err)
 		}
 	}
+	// #nosec G306 -- 生成的是公开 API/源码契约，0755 目录及 0644 文件不含私有运行数据。
 	if err := os.WriteFile(path, content, 0o644); err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}

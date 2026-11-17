@@ -33,6 +33,8 @@ import (
 	pkgdatabase "github.com/reina0721/clouddrive/pkg/database"
 	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
 	"github.com/reina0721/clouddrive/pkg/logger"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestApplicationGenerationKeepsTerminalCleanupFailure(t *testing.T) {
@@ -48,7 +50,7 @@ func TestApplicationGenerationKeepsTerminalCleanupFailure(t *testing.T) {
 }
 
 func TestApplicationGenerationReloadsTodoAndHTTPWithoutRestart(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	payload := generationConfig(directory, 120, 1<<20, filepath.Join(directory, "todo.db"))
 	writeGenerationConfig(t, configPath, payload)
@@ -143,7 +145,7 @@ func TestScheduleFailureUsesExistingGenerationFailureChannel(t *testing.T) {
 }
 
 func TestAllConfigurationSectionsCommitOneGeneration(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	payload := generationConfig(directory, 120, 1<<20, filepath.Join(directory, "todo.db"))
 	writeGenerationConfig(t, configPath, payload)
@@ -187,7 +189,7 @@ func TestAllConfigurationSectionsCommitOneGeneration(t *testing.T) {
 }
 
 func TestApplicationGenerationRejectsDatabaseWithoutSchemaAndKeepsCurrent(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	writeGenerationConfig(t, configPath, generationConfig(directory, 120, 1<<20, filepath.Join(directory, "current.db")))
 	coordinator, _ := newGenerationTestCoordinator(t, configPath)
@@ -215,7 +217,7 @@ func TestApplicationGenerationRejectsDatabaseWithoutSchemaAndKeepsCurrent(t *tes
 }
 
 func TestApplicationGenerationPinsOldDatabaseUntilRetire(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	firstDatabase := filepath.Join(directory, "first.db")
 	secondDatabase := filepath.Join(directory, "second.db")
 	configPath := filepath.Join(directory, "config.yaml")
@@ -295,7 +297,7 @@ func TestApplicationGenerationPinsOldDatabaseUntilRetire(t *testing.T) {
 }
 
 func TestApplicationGenerationReusesUnchangedTypedResources(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	writeGenerationConfig(t, configPath, generationConfig(directory, 120, 1<<20, filepath.Join(directory, "todo.db")))
 	prepareTodoSchema(t, filepath.Join(directory, "todo.db"))
@@ -376,7 +378,7 @@ func TestEachConfigurationSectionCreatesOneCompleteGeneration(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.section, func(t *testing.T) {
-			directory := t.TempDir()
+			directory := testkit.PrivateTempDir(t)
 			configPath := filepath.Join(directory, "config.yaml")
 			payload := generationConfig(directory, 120, 1<<20, filepath.Join(directory, "todo.db"))
 			writeGenerationConfig(t, configPath, payload)
@@ -405,7 +407,7 @@ func TestEachConfigurationSectionCreatesOneCompleteGeneration(t *testing.T) {
 }
 
 func TestApplicationGenerationAddressChangeAndBindFailure(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	payload := generationConfig(directory, 120, 1<<20, filepath.Join(directory, "todo.db"))
 	writeGenerationConfig(t, configPath, payload)
@@ -451,7 +453,7 @@ func TestApplicationGenerationAddressChangeAndBindFailure(t *testing.T) {
 }
 
 func TestApplicationGenerationWatcherRecoversAfterRejectedCandidate(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	payload := generationConfig(directory, 120, 1<<20, filepath.Join(directory, "todo.db"))
 	writeGenerationConfig(t, configPath, payload)
@@ -500,7 +502,7 @@ func TestApplicationGenerationWatcherRecoversAfterRejectedCandidate(t *testing.T
 }
 
 func TestServiceRuntimeReloadsInSameProcessAndStopsGracefully(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	payload := generationConfig(directory, 120, 1<<20, filepath.Join(directory, "todo.db"))
 	writeGenerationConfig(t, configPath, payload)
@@ -556,7 +558,7 @@ func TestServiceRuntimeReloadsInSameProcessAndStopsGracefully(t *testing.T) {
 }
 
 func TestServiceRuntimeSeparatesBusinessAndManagementSurfaces(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	databasePath := filepath.Join(directory, "todo.db")
 	writeGenerationConfig(t, configPath, generationConfig(directory, 120, 1<<20, databasePath))

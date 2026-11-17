@@ -50,19 +50,27 @@ const (
 	opPermissionRolesRead  = "iam.permissions.roles.list"
 	opSessionList          = "iam.sessions.list"
 	opSessionRevoke        = "iam.sessions.revoke"
-	opApiTokens            = "iam.api-tokens.list"
-	opApiTokenCreate       = "iam.api-tokens.create"
-	opApiTokenUpdate       = "iam.api-tokens.update"
-	opApiTokenRotate       = "iam.api-tokens.rotate"
-	opApiTokenDisable      = "iam.api-tokens.disable"
-	opApiTokenEnable       = "iam.api-tokens.enable"
-	opApiTokenRevoke       = "iam.api-tokens.revoke"
-	opApiTokenRevokeBatch  = "iam.api-tokens.revoke.batch"
-	opMFABegin             = "iam.self.mfa.begin"
-	opMFAStatus            = "iam.self.mfa.status"
-	opMFAConfirm           = "iam.self.mfa.confirm"
-	opMFADisable           = "iam.self.mfa.disable"
-	opMFAVerify            = "iam.login.mfa-verify"
+	// #nosec G101 -- 公开 API operation 标识，不是认证令牌。
+	opApiTokens = "iam.api-tokens.list"
+	// #nosec G101 -- 公开 API operation 标识，不是认证令牌。
+	opApiTokenCreate = "iam.api-tokens.create"
+	// #nosec G101 -- 公开 API operation 标识，不是认证令牌。
+	opApiTokenUpdate = "iam.api-tokens.update"
+	// #nosec G101 -- 公开 API operation 标识，不是认证令牌。
+	opApiTokenRotate = "iam.api-tokens.rotate"
+	// #nosec G101 -- 公开 API operation 标识，不是认证令牌。
+	opApiTokenDisable = "iam.api-tokens.disable"
+	// #nosec G101 -- 公开 API operation 标识，不是认证令牌。
+	opApiTokenEnable = "iam.api-tokens.enable"
+	// #nosec G101 -- 公开 API operation 标识，不是认证令牌。
+	opApiTokenRevoke = "iam.api-tokens.revoke"
+	// #nosec G101 -- 公开 API operation 标识，不是认证令牌。
+	opApiTokenRevokeBatch = "iam.api-tokens.revoke.batch"
+	opMFABegin            = "iam.self.mfa.begin"
+	opMFAStatus           = "iam.self.mfa.status"
+	opMFAConfirm          = "iam.self.mfa.confirm"
+	opMFADisable          = "iam.self.mfa.disable"
+	opMFAVerify           = "iam.login.mfa-verify"
 )
 
 type Handler struct {

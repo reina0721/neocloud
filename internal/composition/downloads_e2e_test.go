@@ -19,6 +19,8 @@ import (
 	"github.com/reina0721/clouddrive/pkg/database"
 	"github.com/reina0721/clouddrive/pkg/idgen"
 	"gorm.io/gorm"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func waitDownloadState(t *testing.T, owner *consoleTestClient, path, state string) map[string]any {
@@ -107,7 +109,7 @@ func TestOfflineDownloadPersistentPauseResumePublicationAndRecordRemoval(t *test
 		}
 	}))
 	t.Cleanup(source.Close)
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	setup, err := idgen.UUID().New()
 	if err != nil {
@@ -292,7 +294,7 @@ func TestOfflineDownloadFailureRetargetUnknownSizeBatchAndCancel(t *testing.T) {
 		}
 	}))
 	t.Cleanup(source.Close)
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	setup, err := idgen.UUID().New()
 	if err != nil {
@@ -392,7 +394,7 @@ func TestOfflineDownloadFailureRetargetUnknownSizeBatchAndCancel(t *testing.T) {
 func TestOfflineMetadataBudgetAndDisabledDispatcherStillAllowCleanup(t *testing.T) {
 	source := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.(http.Flusher).Flush(); <-r.Context().Done() }))
 	t.Cleanup(source.Close)
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	setup, err := idgen.UUID().New()
 	if err != nil {
@@ -481,7 +483,7 @@ func TestOfflineAutomaticCleanupStopsAtAttemptBudgetAndManualRemovalRecovers(t *
 		}
 	}))
 	t.Cleanup(source.Close)
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	dbPath := filepath.Join(directory, "cleanup-budget.db")
 	configPath := filepath.Join(directory, "config.yaml")
 	setup, err := idgen.UUID().New()

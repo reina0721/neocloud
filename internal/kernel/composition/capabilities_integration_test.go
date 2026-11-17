@@ -17,10 +17,12 @@ import (
 	pkgcache "github.com/reina0721/clouddrive/pkg/cache"
 	pkgi18n "github.com/reina0721/clouddrive/pkg/i18n"
 	pkgstorage "github.com/reina0721/clouddrive/pkg/storage"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestComposeSwapsI18nAndStorageAndPreflightsCacheRestart(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	databasePath := filepath.Join(directory, "app.db")
 	storageV1 := filepath.Join(directory, "storage-v1")

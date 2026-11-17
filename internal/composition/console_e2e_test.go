@@ -17,6 +17,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 type consoleTestClient struct {
@@ -89,7 +91,7 @@ func TestConsoleSQLiteDataIsolationAndRestart(t *testing.T) {
 		_, _ = w.Write([]byte("scheduled real response"))
 	}))
 	defer upstream.Close()
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	config := strings.Replace(generationConfig(directory, 120, 1<<20, filepath.Join(directory, "console.db")), "mode: development-anonymous", "mode: session", 1)
 	config = "iam:\n  local:\n    setupToken: console-setup-secret\nconsole:\n  siteOrigins: [" + testSitePrimary + ", " + testSiteAlternative + "]\n  relay:\n    allowedOrigins: [" + upstream.URL + "]\n" + strings.Replace(config, "enabled: false", "enabled: true", 1)

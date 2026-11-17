@@ -92,6 +92,20 @@ test("纯文档计划不包含业务测试和前端构建", () => {
   assert.equal(plan[0].name, "文档拓扑");
 });
 
+test("完整门禁预算覆盖浏览器长套件且仍有明确上限", () => {
+  const selection = classifyChanges([], workspaces, { full: true });
+  const plan = buildPlan(selection, parseArgs(["--full"]), "/repository");
+  const frontend = plan.find((step) => step.name === "完整前端");
+  const backend = plan.find((step) => step.name === "完整后端");
+  assert.ok(
+    frontend.timeoutMs > 31 * 60 * 1000 &&
+      frontend.timeoutMs <= 2 * 60 * 60 * 1000,
+  );
+  assert.ok(
+    backend.timeoutMs > 15 * 60 * 1000 && backend.timeoutMs <= 60 * 60 * 1000,
+  );
+});
+
 test("局部页面使用原生反向依赖过滤，不执行构建或完整浏览器", () => {
   const selected = classifyChanges(
     ["frontend/apps/web/src/page.tsx"],

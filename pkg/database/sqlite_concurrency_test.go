@@ -7,10 +7,12 @@ import (
 	"runtime"
 	"sync"
 	"testing"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestSQLiteReadThenWriteTransactionsSerializeWithoutSnapshotFailures(t *testing.T) {
-	resource, err := NewGORM(t.Context(), &Config{Driver: DriverSQLite, DSN: filepath.Join(t.TempDir(), "concurrency.db")})
+	resource, err := NewGORM(t.Context(), &Config{Driver: DriverSQLite, DSN: filepath.Join(testkit.PrivateTempDir(t), "concurrency.db")})
 	if err != nil {
 		t.Fatal(err)
 	}

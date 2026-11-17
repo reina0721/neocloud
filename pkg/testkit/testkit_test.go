@@ -1,9 +1,22 @@
 package testkit
 
 import (
+	"os"
+	"runtime"
 	"testing"
 	"time"
 )
+
+func TestPrivateTempDir(t *testing.T) {
+	directory := PrivateTempDir(t)
+	info, err := os.Stat(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !info.IsDir() || runtime.GOOS != "windows" && info.Mode().Perm() != 0o700 {
+		t.Fatalf("private temp directory mode = %v", info.Mode())
+	}
+}
 
 func TestTempConfigFile(t *testing.T) {
 	path := TempConfigFile(t, "server:\n  addr: :8080\n")

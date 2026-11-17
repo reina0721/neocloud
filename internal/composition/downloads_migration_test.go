@@ -12,6 +12,8 @@ import (
 	"github.com/reina0721/clouddrive/internal/module/files/model"
 	"github.com/reina0721/clouddrive/pkg/database"
 	"gorm.io/gorm"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 // v10TransferFixture 固定历史表的扁平事实，不让当前业务模型的新结构字段改变旧迁移夹具。
@@ -45,7 +47,7 @@ type v10TransferFixture struct {
 
 func TestOfflineV11PreservesExistingTransfersAndGuardsRollback(t *testing.T) {
 	config := database.DefaultConfig()
-	config.Driver, config.DSN = database.DriverSQLite, filepath.Join(t.TempDir(), "v10-to-v11.db")
+	config.Driver, config.DSN = database.DriverSQLite, filepath.Join(testkit.PrivateTempDir(t), "v10-to-v11.db")
 	resource, err := database.NewGORM(t.Context(), &config)
 	if err != nil {
 		t.Fatal(err)

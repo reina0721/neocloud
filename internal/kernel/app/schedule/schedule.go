@@ -341,7 +341,9 @@ func (r *resource) coordinate(task *taskRuntime) {
 	attempt := 0
 	for {
 		if err := r.ctx.Err(); err != nil {
-			task.removeJob()
+			if removeErr := task.removeJob(); removeErr != nil {
+				task.fail(fmt.Errorf("remove scheduler job during shutdown: %w", removeErr))
+			}
 			return
 		}
 		acquireCtx, cancel := context.WithTimeout(r.ctx, r.config.Coordination.AcquireTimeout)
@@ -753,6 +755,7 @@ func retryDelay(taskID pkgschedule.TaskID, attempt int, cfg CoordinationConfig) 
 	hash := fnv.New64a()
 	_, _ = hash.Write([]byte(fmt.Sprintf("%s:%d", taskID, attempt)))
 	// 在基准值的 90%-110% 内产生稳定抖动，避免实例同频争抢且便于测试。
+	// #nosec G115 -- window=delay/5 且为正；余数小于 2*window+1，严格位于 int64 范围内。
 	offset := time.Duration(hash.Sum64()%uint64(window*2+1)) - window
 	resolved := delay + offset/2
 	if resolved > cfg.RetryMax {

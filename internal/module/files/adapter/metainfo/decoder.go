@@ -3,6 +3,7 @@ package metainfo
 
 import (
 	"bytes"
+	// #nosec G505 -- BEP 3 的 v1 info-hash 要求 SHA-1，仅用于协议内容标识。
 	"crypto/sha1"
 	"encoding/base32"
 	"encoding/hex"
@@ -115,6 +116,7 @@ func (Decoder) Decode(raw []byte) (service.TorrentMetadata, error) {
 	if !validSegment(info.Name) || (info.UTF8Name != "" && info.UTF8Name != info.Name) || info.PieceLength < minPieceBytes || info.PieceLength > maxPieceBytes || info.PieceLength&(info.PieceLength-1) != 0 {
 		return service.TorrentMetadata{}, service.ErrTorrentMetadata
 	}
+	// #nosec G401 -- BEP 3 的 v1 info-hash 要求 SHA-1，仅用于协议内容标识。
 	digest := sha1.Sum(document.Info)
 	result := service.TorrentMetadata{InfoHash: hex.EncodeToString(digest[:]), Name: info.Name, Files: []service.TorrentFile{}}
 	if info.Files == nil {

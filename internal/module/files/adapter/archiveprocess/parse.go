@@ -8,6 +8,7 @@ import (
 	"hash/crc32"
 	"io"
 	"io/fs"
+	"math"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -78,7 +79,11 @@ func (i *archiveIndex) add(name string, mode fs.FileMode, size uint64, open func
 			return err
 		}
 	}
-	if size > uint64(i.maxBytes-i.total) {
+	if i.total < 0 || i.maxBytes < 0 || i.total > i.maxBytes || size > math.MaxInt64 {
+		return model.ErrTooLarge
+	}
+	sizeBytes := int64(size)
+	if sizeBytes > i.maxBytes-i.total {
 		return model.ErrTooLarge
 	}
 	if folder && size != 0 {
@@ -100,9 +105,9 @@ func (i *archiveIndex) add(name string, mode fs.FileMode, size uint64, open func
 	} else {
 		i.sources[name] = memberSource{open: open}
 	}
-	i.members[name] = service.ArchiveMember{Path: name, Kind: kind, SizeBytes: int64(size)}
+	i.members[name] = service.ArchiveMember{Path: name, Kind: kind, SizeBytes: sizeBytes}
 	i.explicit[name] = true
-	i.total += int64(size)
+	i.total += sizeBytes
 	if len(i.members) > i.maxMembers {
 		return model.ErrTooLarge
 	}

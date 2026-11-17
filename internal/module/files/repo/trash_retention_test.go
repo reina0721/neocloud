@@ -14,12 +14,14 @@ import (
 	"github.com/reina0721/clouddrive/pkg/database"
 	"github.com/reina0721/clouddrive/pkg/idgen"
 	"gorm.io/gorm"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestTrashRetentionUpgradeAndExpiry(t *testing.T) {
 	ctx := t.Context()
 	cfg := database.DefaultConfig()
-	cfg.Driver, cfg.DSN = database.DriverSQLite, filepath.Join(t.TempDir(), "trash-v19.db")
+	cfg.Driver, cfg.DSN = database.DriverSQLite, filepath.Join(testkit.PrivateTempDir(t), "trash-v19.db")
 	resource, err := database.NewGORM(ctx, &cfg)
 	if err != nil {
 		t.Fatal(err)

@@ -16,10 +16,12 @@ import (
 
 	"github.com/reina0721/clouddrive/internal/module/files/service"
 	"github.com/reina0721/clouddrive/pkg/idgen"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestStorageNameRulesEnforcedAfterRestart(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	id := func() string {
 		t.Helper()

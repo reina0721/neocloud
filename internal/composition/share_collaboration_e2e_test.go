@@ -19,6 +19,8 @@ import (
 
 	"github.com/reina0721/clouddrive/internal/module/files/service"
 	"github.com/reina0721/clouddrive/pkg/idgen"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 // collaborationObject 不把分享凭据或访客内容写入失败诊断。
@@ -58,7 +60,7 @@ func collaborationChunk(t *testing.T, base, path, grant, method string, offset i
 }
 
 func TestShareCollaborationScopeCASBatchPolicyAndUpload(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	setup, err := idgen.UUID().New()
 	if err != nil {

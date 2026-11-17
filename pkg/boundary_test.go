@@ -66,6 +66,12 @@ func TestOldConfigPackageIsRemoved(t *testing.T) {
 	root := repoRoot(t)
 	oldImport := strings.Join([]string{"github.com", "rin721", "clouddrive", "pkg", "config"}, "/")
 	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
+		if entry != nil && entry.IsDir() && path != root {
+			switch entry.Name() {
+			case ".git", ".data", ".tools", "node_modules", ".next", "dist", "test-results", "playwright-report":
+				return filepath.SkipDir
+			}
+		}
 		if walkErr != nil || entry.IsDir() || !(strings.HasSuffix(path, ".go") || strings.HasSuffix(path, ".md")) {
 			return walkErr
 		}

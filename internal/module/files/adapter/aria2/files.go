@@ -2,7 +2,6 @@ package aria2
 
 import (
 	"context"
-	"crypto/sha1"
 	"encoding/hex"
 	"errors"
 	"io"
@@ -24,6 +23,9 @@ const (
 	fileRequired filePresence = iota
 	partialMayBeMissing
 )
+
+// BEP 3 的 v1 info-hash 固定为 20 字节，此处仅校验协议长度。
+const torrentV1HashBytes = 20
 
 func (r canceledReader) Read(buffer []byte) (int, error) {
 	if err := r.ctx.Err(); err != nil {
@@ -110,7 +112,7 @@ func (c *Client) ReadMetadata(ctx context.Context, job service.TorrentJob, infoH
 		return nil, service.ErrTorrentBinding
 	}
 	digest, err := hex.DecodeString(infoHash)
-	if err != nil || len(digest) != sha1.Size || infoHash != strings.ToLower(infoHash) {
+	if err != nil || len(digest) != torrentV1HashBytes || infoHash != strings.ToLower(infoHash) {
 		return nil, service.ErrTorrentMetadata
 	}
 	progress, err := c.Progress(ctx, job)

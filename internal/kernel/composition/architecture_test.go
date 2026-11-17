@@ -81,6 +81,12 @@ func TestDatabaseUsesMigrationSQLAndConcreteRepositories(t *testing.T) {
 		}
 	}
 	err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if entry != nil && entry.IsDir() && path != root {
+			switch entry.Name() {
+			case ".git", ".data", ".tools", "node_modules", ".next", "dist", "test-results", "playwright-report":
+				return filepath.SkipDir
+			}
+		}
 		if walkErr != nil || entry.IsDir() || filepath.Ext(path) != ".go" || strings.HasSuffix(path, "_test.go") {
 			return walkErr
 		}
@@ -361,6 +367,12 @@ func validatePackageGraph(graph []packageNode) error {
 
 func validateLoggingSourceOwnership(root string) error {
 	return filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if entry != nil && entry.IsDir() && path != root {
+			switch entry.Name() {
+			case ".git", ".data", ".tools", "node_modules", ".next", "dist", "test-results", "playwright-report":
+				return filepath.SkipDir
+			}
+		}
 		if walkErr != nil || entry.IsDir() || filepath.Ext(path) != ".go" || strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, ".gen.go") {
 			return walkErr
 		}

@@ -5,3 +5,22 @@ useDefault = true
 description = "Configuration parser fixture containing a non-secret token-like value"
 paths = ['''internal/kernel/config/config_test\.go''']
 regexes = ['''APP_TOKEN=part=with=equals''']
+
+[[allowlists]]
+description = "Published migration SQL SHA-256 checksums, not credentials"
+condition = "AND"
+paths = ['''^internal/module/(auth|iam)/binding/migration/set\.go$''']
+regexTarget = "match"
+regexes = ['''[0-9]{6}_[a-z0-9_]+\.(up|down)\.sql":\s*"[a-f0-9]{64}"''']
+
+[[allowlists]]
+description = "RFC 6238 Appendix B public test vector"
+condition = "AND"
+paths = ['''^internal/module/iam/adapter/totp/totp_test\.go$''']
+regexes = ['''^GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ$''']
+
+[[allowlists]]
+description = "Public account and role UUIDs used only in access-policy fixtures"
+condition = "AND"
+paths = ['''^internal/module/files/model/access_test\.go$''']
+regexes = ['''^(5eb73070-6358-44a2-a3a5-aeb781e17fc1|00df8a0d-12f7-47d9-99bd-5823396564e6|4d83d204-0877-49c6-92bf-a8482e6f8fc8|8959bde8-cf31-4b20-a01f-d8e081a335bd)$''']

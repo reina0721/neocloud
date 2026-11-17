@@ -11,16 +11,17 @@ import (
 type WriteLockDepth string
 
 const (
-	WriteLockDepthZero        WriteLockDepth = "0"
-	WriteLockDepthInfinity    WriteLockDepth = "infinity"
-	WriteLockTokenPrefix                     = "urn:uuid:"
-	MaxWriteLocksPerOwner                    = 100
-	MaxWriteLockPathBytes                    = 4096
-	MaxWriteLockPathDepth                    = 64
-	MaxDAVConditionBytes                     = 8192
-	MaxWriteLockOwnerXMLBytes                = 8 << 10
-	MaxDAVConditionLists                     = 32
-	MaxDAVConditions                         = 64
+	WriteLockDepthZero     WriteLockDepth = "0"
+	WriteLockDepthInfinity WriteLockDepth = "infinity"
+	// #nosec G101 -- WebDAV 写锁令牌的公开 URN 前缀，不包含任何令牌值。
+	WriteLockTokenPrefix      = "urn:uuid:"
+	MaxWriteLocksPerOwner     = 100
+	MaxWriteLockPathBytes     = 4096
+	MaxWriteLockPathDepth     = 64
+	MaxDAVConditionBytes      = 8192
+	MaxWriteLockOwnerXMLBytes = 8 << 10
+	MaxDAVConditionLists      = 32
+	MaxDAVConditions          = 64
 )
 
 var ErrWriteLocked = errors.New("file write locked")

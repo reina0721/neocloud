@@ -17,6 +17,8 @@ import (
 	"github.com/reina0721/clouddrive/pkg/clock"
 	"github.com/reina0721/clouddrive/pkg/database"
 	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestDefaultsUpdateRevisionAndCycleRollback(t *testing.T) {
@@ -96,7 +98,7 @@ func newService(t *testing.T, catalog service.NavigationCatalog) (*service.Servi
 	t.Helper()
 	config := database.DefaultConfig()
 	config.Driver = database.DriverSQLite
-	config.DSN = filepath.Join(t.TempDir(), "navigation.db")
+	config.DSN = filepath.Join(testkit.PrivateTempDir(t), "navigation.db")
 	runner, err := dbmigrate.New(t.Context(), dbmigrate.Config{Database: config, LockTimeout: 5 * time.Second}, migrationbinding.Set())
 	if err != nil {
 		t.Fatal(err)

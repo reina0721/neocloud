@@ -32,6 +32,7 @@ archives:
   - id: application
     ids:
       - application
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     formats:
       - tar.gz
     format_overrides:
@@ -71,3 +72,17 @@ changelog:
 release:
   draft: true
   prerelease: auto
+  header: |
+    CloudDrive 文件与管理工作区，采用 Material Design 组件，提供响应式文件管理、PDF 与媒体阅读，以及悬浮、底部面板和全屏音乐播放器。
+
+    Linux amd64 / arm64 推荐使用离线 Docker 安装包：目标机无需编译源码或访问镜像仓库。只绑定本机 127.0.0.1，首次访问 /setup 创建自己的管理员。
+
+    ```bash
+    curl -fL --proto '=https' --proto-redir '=https' https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
+    bash install.sh install --dir ./clouddrive
+    ./clouddrive/install.sh check-update
+    ./clouddrive/install.sh upgrade
+    ```
+
+    Go 归档为独立后端，不包含 Web 服务。Docker 包配有版本清单、SHA-256 校验和、SPDX SBOM 与 GitHub OIDC Sigstore 签名。
+    [安装、升级与数据备份说明](https://github.com/reina0721/neocloud/blob/main/docs/operations/clouddrive-deployment.md#release-下载版安装与升级)

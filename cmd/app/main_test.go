@@ -16,10 +16,12 @@ import (
 	"time"
 
 	applicationcomposition "github.com/reina0721/clouddrive/internal/composition"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestProcessGeneratedConfigurationSupportsMigrationAndServiceStartup(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	outputPath := filepath.Join(directory, "generated", "config.yaml")
 	databasePath := filepath.Join(directory, "application.db")
 	storagePath := filepath.Join(directory, "storage")
@@ -168,7 +170,7 @@ func TestProcessGeneratedConfigurationSupportsMigrationAndServiceStartup(t *test
 func TestProcessServiceModePreservesMissingConfigError(t *testing.T) {
 	t.Parallel()
 
-	missingPath := filepath.Join(t.TempDir(), "missing.yaml")
+	missingPath := filepath.Join(testkit.PrivateTempDir(t), "missing.yaml")
 	process := newTestProcess(t, strings.NewReader(""), &bytes.Buffer{}, &bytes.Buffer{})
 	process.configPath = missingPath
 
@@ -185,7 +187,7 @@ func TestProcessServiceModePreservesMissingConfigError(t *testing.T) {
 }
 
 func TestProcessServiceModeStartsDefaultCapabilitiesWithoutExternalServices(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	databasePath := filepath.Join(directory, "app.db")
 	storagePath := filepath.Join(directory, "storage")
 	logPath := filepath.Join(directory, "application.log")
@@ -343,7 +345,7 @@ http:
 }
 
 func TestProcessTodoCLIUsesSQLiteAcrossInvocations(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	databasePath := filepath.Join(directory, "todo.db")
 	storagePath := filepath.Join(directory, "storage")
 	configPath := filepath.Join(directory, "config.yaml")
@@ -596,7 +598,7 @@ func TestExecuteCoversSuccessConfigAndCancellationExitCodes(t *testing.T) {
 		want int
 	}{
 		{name: "success", ctx: t.Context(), args: []string{"--help"}, want: applicationcomposition.ExitSuccess},
-		{name: "config", ctx: t.Context(), args: []string{"config", "init", "--output", filepath.Join(t.TempDir(), "config.txt")}, want: applicationcomposition.ExitConfig},
+		{name: "config", ctx: t.Context(), args: []string{"config", "init", "--output", filepath.Join(testkit.PrivateTempDir(t), "config.txt")}, want: applicationcomposition.ExitConfig},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -609,7 +611,7 @@ func TestExecuteCoversSuccessConfigAndCancellationExitCodes(t *testing.T) {
 	cancelled, cancel := context.WithCancel(t.Context())
 	cancel()
 	current := newTestProcess(t, strings.NewReader(""), &bytes.Buffer{}, &bytes.Buffer{})
-	if code := execute(cancelled, current, []string{"config", "init", "--output", filepath.Join(t.TempDir(), "cancelled.yaml")}); code != applicationcomposition.ExitInterrupted {
+	if code := execute(cancelled, current, []string{"config", "init", "--output", filepath.Join(testkit.PrivateTempDir(t), "cancelled.yaml")}); code != applicationcomposition.ExitInterrupted {
 		t.Fatalf("execute(cancelled) = %d, want %d", code, applicationcomposition.ExitInterrupted)
 	}
 }

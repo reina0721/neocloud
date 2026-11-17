@@ -16,6 +16,8 @@ import (
 	"github.com/reina0721/clouddrive/pkg/database"
 	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
 	"gorm.io/gorm"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestAuthorizationSnapshotNormalization(t *testing.T) {
@@ -220,7 +222,7 @@ func catalogForTest(t *testing.T) permissioncatalog.Catalog {
 
 func newStore(t *testing.T) (*repo.Store, database.Resource) {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "iam-repo.db")
+	path := filepath.Join(testkit.PrivateTempDir(t), "iam-repo.db")
 	cfg := database.DefaultConfig()
 	cfg.Driver = database.DriverSQLite
 	cfg.DSN = path

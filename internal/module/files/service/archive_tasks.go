@@ -168,6 +168,7 @@ func (s *ArchiveTasks) Create(ctx context.Context, owner, sourceID string, input
 	if err := s.archives.validateExtraction(input.extraction()); err != nil {
 		return ArchiveTask{}, err
 	}
+	// #nosec G117 -- ClientKey 是客户端提供的幂等键，不是认证密钥；任务恢复需要保存原请求。
 	request, err := json.Marshal(input)
 	if err != nil {
 		return ArchiveTask{}, err

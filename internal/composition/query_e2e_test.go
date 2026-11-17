@@ -13,10 +13,12 @@ import (
 	"github.com/reina0721/clouddrive/pkg/database"
 	"github.com/reina0721/clouddrive/pkg/idgen"
 	"gorm.io/gorm"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestAdvancedQueryHTTPOptionalBoundsOwnershipAndDatabaseBudget(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	dbPath := filepath.Join(directory, "query.db")
 	configPath := filepath.Join(directory, "config.yaml")
 	setup, err := idgen.UUID().New()

@@ -12,6 +12,8 @@ import (
 	"github.com/reina0721/clouddrive/internal/module/files/model"
 	"github.com/reina0721/clouddrive/pkg/database"
 	"gorm.io/gorm"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 // sharePolicyV12Record 固定历史表的标量投影，避免新业务模型字段改变旧迁移证据。
@@ -28,7 +30,7 @@ type sharePolicyV12Record struct {
 
 func TestSharePolicyV12PreservesReadOnlyLinksAndGuardsRollback(t *testing.T) {
 	config := database.DefaultConfig()
-	config.Driver, config.DSN = database.DriverSQLite, filepath.Join(t.TempDir(), "v11-to-v12.db")
+	config.Driver, config.DSN = database.DriverSQLite, filepath.Join(testkit.PrivateTempDir(t), "v11-to-v12.db")
 	resource, err := database.NewGORM(t.Context(), &config)
 	if err != nil {
 		t.Fatal(err)

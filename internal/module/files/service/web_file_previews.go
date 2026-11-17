@@ -172,6 +172,7 @@ func (s *WebFilePreviews) Launch(ctx context.Context, owner, entryID string, req
 	if err != nil {
 		return WebFilePreview{}, fmt.Errorf("encode web preview grant: %w", err)
 	}
+	// #nosec G407 -- NewGCMWithRandomNonce 自动生成并前缀保存随机 nonce，该 API 要求传入 nil。
 	token := base64.RawURLEncoding.EncodeToString(s.sealer.Seal(nil, nil, encoded, nil))
 	result := WebFilePreview{URLTemplate: app.URLTemplate, Origin: app.Origin, Name: entry.Name, NewTab: app.NewTab, Token: token}
 	if app.Protocol == FilePreviewWOPI {

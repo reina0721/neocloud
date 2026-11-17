@@ -60,6 +60,7 @@ func Load(repositoryRoot, manifestPath string) (Layout, error) {
 	} else if !filepath.IsAbs(manifestPath) {
 		manifestPath = filepath.Join(root, filepath.FromSlash(manifestPath))
 	}
+	// #nosec G304 -- 仅开发工具读取本地工作区路径，不接受 HTTP 或远程用户输入。
 	content, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return Layout{}, fmt.Errorf("read project layout %q: %w", filepath.ToSlash(manifestPath), err)

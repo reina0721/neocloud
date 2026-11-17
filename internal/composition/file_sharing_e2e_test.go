@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/reina0721/clouddrive/pkg/idgen"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 // publicShareRequest 使用无 Cookie 客户端，失败诊断不输出 capability URL 或票据。
@@ -58,7 +60,7 @@ func publicShareRequest(t *testing.T, base, method, path string, body any, grant
 }
 
 func TestFileSharingPublicPasswordScopeRevocationAndRestart(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	setup, err := idgen.UUID().New()
 	if err != nil {

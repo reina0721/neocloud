@@ -70,6 +70,7 @@ func loadConfig(root, path string) (config, error) {
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(root, filepath.FromSlash(path))
 	}
+	// #nosec G304 -- 仅开发工具读取本地工作区路径，不接受 HTTP 或远程用户输入。
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return config{}, fmt.Errorf("read config %s: %w", path, err)
@@ -219,6 +220,7 @@ func markdownFiles(root string, cfg config) ([]string, error) {
 }
 
 func parseLinks(root, path string) ([]link, error) {
+	// #nosec G304 -- 仅开发工具读取本地工作区路径，不接受 HTTP 或远程用户输入。
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read markdown %s: %w", rel(root, path), err)
@@ -302,6 +304,7 @@ func resolveTarget(root, from, target string) (string, string, error) {
 }
 
 func hasAnchor(path, wanted string) bool {
+	// #nosec G304 -- 仅开发工具读取本地工作区路径，不接受 HTTP 或远程用户输入。
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return false

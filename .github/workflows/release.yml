@@ -26,7 +26,7 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: go.sum
       - name: Set up Node
-        uses: actions/setup-node@1e60f620b9541dca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24.11.1
       - name: Set up pnpm
@@ -43,7 +43,7 @@ jobs:
           echo "GORELEASER_DIST=$(node scripts/project-layout.mjs --field releaseRoot)" >> "${GITHUB_ENV}"
       - name: Verify release gates
         run: |
-          node --test scripts/install.test.mjs
+          node --test scripts/install.test.mjs scripts/verify-release.test.mjs
           bash scripts/verify-docs.sh
           bash scripts/verify-webui.sh --prepare
           bash scripts/verify-quality.sh
@@ -85,7 +85,7 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@1e60f620b9541dca8642d1e84afbd3f7d6820020
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24.11.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
@@ -128,7 +128,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p dist/complete
-          gh release download "${GITHUB_REF_NAME}" --pattern checksums.txt --dir dist/complete
+          gh release download "${GITHUB_REF_NAME}" --pattern checksums.txt --pattern '*.spdx.json' --dir dist/complete
+          (cd dist/complete && sha256sum *.spdx.json >> checksums.txt)
           cd dist/docker
           sha256sum --check "checksums-amd64.txt"
           sha256sum --check "checksums-arm64.txt"
@@ -149,3 +150,60 @@ jobs:
           test "$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq .isDraft)" = true
           gh release upload "${GITHUB_REF_NAME}" dist/docker/clouddrive_*_docker.tar.gz dist/docker/install.sh \
             dist/docker/version.txt dist/docker/*.spdx.json dist/complete/checksums.txt dist/complete/checksums.txt.sigstore.json --clobber
+
+  publish:
+    name: Verify and publish stable release
+    needs: attach-docker
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: release
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.11.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - name: Verify immutable annotated tag and independent gates
+        run: |
+          test "$(git cat-file -t "${GITHUB_REF_NAME}")" = tag
+          test "$(git rev-parse "${GITHUB_REF_NAME}^{commit}")" = "${GITHUB_SHA}"
+          checks_passed=false
+          for attempt in $(seq 1 120); do
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${GITHUB_SHA}&per_page=100" > "${RUNNER_TEMP}/release-runs.json"
+            if node scripts/verify-release.mjs checks "${RUNNER_TEMP}/release-runs.json" "${GITHUB_SHA}"; then
+              checks_passed=true
+              break
+            else
+              status=$?
+              test "${status}" = 75 || exit "${status}"
+            fi
+            sleep 30
+          done
+          test "${checks_passed}" = true
+      - name: Download and verify complete signed asset set
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}" > "${RUNNER_TEMP}/release.json"
+          gh release download "${GITHUB_REF_NAME}" --dir "${RUNNER_TEMP}/release-assets"
+          node scripts/verify-release.mjs assets "${RUNNER_TEMP}/release.json" "${RUNNER_TEMP}/release-assets" "${GITHUB_SHA}"
+          GOBIN="${RUNNER_TEMP}/release-tools" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
+          "${RUNNER_TEMP}/release-tools/cosign" verify-blob \
+            --bundle "${RUNNER_TEMP}/release-assets/checksums.txt.sigstore.json" \
+            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/release.yml@${{ github.ref }}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "${RUNNER_TEMP}/release-assets/checksums.txt"
+      - name: Publish verified release as latest stable
+        run: |
+          node scripts/test-docker-release.mjs --release-dir "${RUNNER_TEMP}/release-assets" --version "${GITHUB_REF_NAME}"
+          gh release edit "${GITHUB_REF_NAME}" --draft=false --prerelease=false --latest
+          test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)" = "${GITHUB_REF_NAME}"
+          echo "正式版：https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}" >> "${GITHUB_STEP_SUMMARY}"

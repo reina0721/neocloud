@@ -2,7 +2,6 @@ package aria2
 
 import (
 	"context"
-	"crypto/sha1"
 	"encoding/hex"
 	"path/filepath"
 	"strconv"
@@ -62,7 +61,7 @@ func (c *Client) Progress(ctx context.Context, job service.TorrentJob) (service.
 	}
 	if actual.InfoHash != "" {
 		decoded, err := hex.DecodeString(actual.InfoHash)
-		if err != nil || len(decoded) != sha1.Size {
+		if err != nil || len(decoded) != torrentV1HashBytes {
 			return service.TorrentNodeProgress{}, service.ErrTorrentProtocol
 		}
 	}

@@ -16,6 +16,8 @@ import (
 	"github.com/reina0721/clouddrive/pkg/database"
 	"github.com/reina0721/clouddrive/pkg/idgen"
 	"gorm.io/gorm"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 // davRequest 使用真实HTTP而非直接调用业务，验证特殊方法可穿过公共中间件。
@@ -47,7 +49,7 @@ func davRequest(t *testing.T, owner *consoleTestClient, credential map[string]an
 }
 
 func TestWebDAVConnectionsFilesAndRevocation(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	setup, err := idgen.UUID().New()
 	if err != nil {
 		t.Fatal(err)

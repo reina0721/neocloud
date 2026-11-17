@@ -15,6 +15,8 @@ import (
 	"github.com/reina0721/clouddrive/pkg/clock"
 	"github.com/reina0721/clouddrive/pkg/database"
 	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 type noopAudit struct{}
@@ -52,7 +54,7 @@ func (a accessFor) WithinTx(ctx context.Context, use func(context.Context, datab
 
 func newTestStore(t *testing.T) (*authrepo.Store, database.Resource) {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "auth-audit.db")
+	path := filepath.Join(testkit.PrivateTempDir(t), "auth-audit.db")
 	cfg := database.DefaultConfig()
 	cfg.Driver = database.DriverSQLite
 	cfg.DSN = path

@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/reina0721/clouddrive/pkg/idgen"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestFilesystemSettingsApplyAfterRestart(t *testing.T) {
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	generate := func() string {
 		t.Helper()

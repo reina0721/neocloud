@@ -18,6 +18,8 @@ import (
 	"github.com/reina0721/clouddrive/pkg/database"
 	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
 	"gorm.io/gorm"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 var fixed = time.Date(2026, 8, 22, 1, 0, 0, 0, time.UTC)
@@ -368,7 +370,7 @@ func catalogForTest(t *testing.T) permissioncatalog.Catalog {
 
 func newStore(t *testing.T) (*repo.Store, database.Resource) {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "iam-runtime.db")
+	path := filepath.Join(testkit.PrivateTempDir(t), "iam-runtime.db")
 	cfg := database.DefaultConfig()
 	cfg.Driver = database.DriverSQLite
 	cfg.DSN = path

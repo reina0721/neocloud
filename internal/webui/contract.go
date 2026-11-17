@@ -1305,18 +1305,18 @@ func cloneBindings(values []Binding) []Binding {
 	result := make([]Binding, len(values))
 	copy(result, values)
 	for i := range result {
-		result[i].Entries = append([]Entry(nil), values[i].Entries...)
-		result[i].Routes = append([]Route(nil), values[i].Routes...)
-		result[i].Navigation = append([]Navigation(nil), values[i].Navigation...)
-		result[i].HeaderActions = append([]HeaderAction(nil), values[i].HeaderActions...)
-		result[i].SidebarPanels = append([]SidebarPanel(nil), values[i].SidebarPanels...)
-		result[i].PageHeaderItems = append([]PageHeaderItem(nil), values[i].PageHeaderItems...)
-		result[i].FooterStatusItems = append([]FooterStatusItem(nil), values[i].FooterStatusItems...)
-		result[i].ActionPermissions = append([]ActionPermission(nil), values[i].ActionPermissions...)
-		result[i].Locales = append([]Locale(nil), values[i].Locales...)
-		result[i].Requires = append([]SDKRequirement(nil), values[i].Requires...)
+		result[i].Entries = append([]Entry(nil), result[i].Entries...)
+		result[i].Routes = append([]Route(nil), result[i].Routes...)
+		result[i].Navigation = append([]Navigation(nil), result[i].Navigation...)
+		result[i].HeaderActions = append([]HeaderAction(nil), result[i].HeaderActions...)
+		result[i].SidebarPanels = append([]SidebarPanel(nil), result[i].SidebarPanels...)
+		result[i].PageHeaderItems = append([]PageHeaderItem(nil), result[i].PageHeaderItems...)
+		result[i].FooterStatusItems = append([]FooterStatusItem(nil), result[i].FooterStatusItems...)
+		result[i].ActionPermissions = append([]ActionPermission(nil), result[i].ActionPermissions...)
+		result[i].Locales = append([]Locale(nil), result[i].Locales...)
+		result[i].Requires = append([]SDKRequirement(nil), result[i].Requires...)
 		for routeIndex := range result[i].Routes {
-			result[i].Routes[routeIndex].DegradedCapabilities = append([]string(nil), values[i].Routes[routeIndex].DegradedCapabilities...)
+			result[i].Routes[routeIndex].DegradedCapabilities = append([]string(nil), result[i].Routes[routeIndex].DegradedCapabilities...)
 		}
 	}
 	return result

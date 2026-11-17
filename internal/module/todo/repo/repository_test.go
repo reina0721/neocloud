@@ -14,10 +14,12 @@ import (
 	"github.com/reina0721/clouddrive/pkg/database"
 	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
 	"github.com/reina0721/clouddrive/pkg/fault"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestRepositorySQLiteContract(t *testing.T) {
-	databasePath := filepath.Join(t.TempDir(), "todo.db")
+	databasePath := filepath.Join(testkit.PrivateTempDir(t), "todo.db")
 	migrationConfig := database.DefaultConfig()
 	migrationConfig.Driver = database.DriverSQLite
 	migrationConfig.DSN = databasePath

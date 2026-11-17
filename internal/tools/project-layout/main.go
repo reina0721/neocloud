@@ -33,6 +33,7 @@ func main() {
 }
 
 func validateIdentity(repositoryRoot string) error {
+	// #nosec G304 -- 仅开发工具读取本地工作区路径，不接受 HTTP 或远程用户输入。
 	content, err := os.ReadFile(filepath.Join(repositoryRoot, ".scaffold", "identity.yaml"))
 	if err != nil {
 		return fmt.Errorf("read identity metadata: %w", err)

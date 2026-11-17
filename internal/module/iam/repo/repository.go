@@ -11,13 +11,15 @@ import (
 )
 
 const (
-	accountTable         = "iam_accounts"
+	accountTable = "iam_accounts"
+	// #nosec G101 -- 固定数据库表名，不承载任何凭据。
 	credentialTable      = "iam_local_credentials"
 	roleTable            = "iam_roles"
 	accountRoleTable     = "iam_account_roles"
 	rolePermissionTable  = "iam_role_permissions"
 	sessionTable         = "iam_sessions"
 	passwordHistoryTable = "iam_password_history"
+	// #nosec G101 -- 固定数据库表名，不承载任何凭据。
 	apiTokenTable        = "iam_api_tokens"
 	mfaSecretTable       = "iam_totp_secrets"
 	mfaRecoveryCodeTable = "iam_mfa_recovery_codes"

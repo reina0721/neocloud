@@ -6,6 +6,21 @@ import (
 	"time"
 )
 
+func TestUnixEpochBoundary(t *testing.T) {
+	secret := "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+	if _, err := CodeAt(secret, time.Unix(-1, 0)); err == nil {
+		t.Fatal("TOTP accepted a negative Unix timestamp")
+	}
+	code, err := CodeAt(secret, time.Unix(0, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	matched, err := Validate(secret, code, time.Unix(0, 0), 1)
+	if err != nil || !matched {
+		t.Fatalf("epoch window validation = %v, %v", matched, err)
+	}
+}
+
 // TestRFC6238AppendixBVectors 使用 RFC 6238 附录 B 的官方测试向量验证实现
 // 与标准 TOTP（Google Authenticator 等）互通。
 func TestRFC6238AppendixBVectors(t *testing.T) {

@@ -17,6 +17,7 @@ func Set() dbmigrate.Set {
 	return dbmigrate.Set{
 		Name: "iam", FS: sqlFiles, CurrentVersion: CurrentVersion, MigrationsTable: TableName,
 		DriverPaths: map[database.Driver]string{database.DriverSQLite: "sqlite", database.DriverPostgres: "postgres", database.DriverMySQL: "mysql"},
+		// #nosec G101 -- 公开迁移 SQL 文件的 SHA-256 完整性摘要，不是凭据。
 		SHA256ByFile: map[string]string{
 			"sqlite/000013_preferences_version.up.sql":      "53b6cb18b420adc6e540d7f6dc081712469d8fe36c89a2211492a6f05dc0248c",
 			"sqlite/000013_preferences_version.down.sql":    "07248cdea492eb8b1911b386774185ae23a94c19ac9dd30485884bc33eae6a8d",

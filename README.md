@@ -4,13 +4,13 @@
 
 ## 当前项目目标语境
 
-当前处于本地整合阶段，没有对外发布兼容承诺。已导入源码快照，不导入上游数据库或凭据；本地数据库与文件必须保留，不因尚未发布而重置。当前范围与限制见[项目范围](docs/repository-scope.md)，具体使用方式以[文件管理](docs/operations/file-management.md)为准。
+项目采用 0.x 版本迭代，公开交付以 GitHub 正式 Release 及其配套清单为准。已导入源码快照，不导入上游数据库或凭据；已有数据库与文件必须保留，不因版本迭代而重置。当前范围与限制见[项目范围](docs/repository-scope.md)，具体使用方式以[文件管理](docs/operations/file-management.md)为准。
 
 Go 服务位于根目录，Next.js/pnpm 工作区位于 frontend/。网页默认 http://127.0.0.1:4173，同源代理访问 Go API 8080 与 management 9090；Go 不构建或托管旧前端。
 
 ## 本地启动
 
-需要 Go 1.26.10、Node >=22.18（验证工具采用 Node 24）、pnpm 10.22.0。完整前置与跨平台命令见[本地开发](docs/getting-started/local-development.md)。
+需要 Go 1.26.11、Node >=22.18（验证工具采用 Node 24）、pnpm 10.22.0。完整前置与跨平台命令见[本地开发](docs/getting-started/local-development.md)。
 
 ```bash
 node scripts/dev.mjs --prepare
@@ -24,7 +24,14 @@ node scripts/dev.mjs --prepare
 
 ## 下载版 Docker 部署
 
-面向 Linux amd64/arm64 的 Release 安装器支持安装、备份、版本检查及升级。目标机只需 Docker/Compose 与标准 Linux 工具，不编译源码；默认仅访问本机 `127.0.0.1:4173`。完整命令见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。公开直链须等待维护者发布包含两种架构 Docker 产物的正式 Release，draft 不能作为匿名下载入口。
+面向 Linux amd64/arm64 的 Release 安装器支持安装、备份、版本检查及升级。目标机只需 Docker/Compose 与标准 Linux 工具，不编译源码；默认仅访问本机 `127.0.0.1:4173`。完整命令见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。正式版通过 GitHub Actions 完成构建、原生运行、校验签名和发布；draft 不能作为匿名下载入口。
+
+```bash
+curl -fL --proto '=https' --proto-redir '=https' \
+  https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
+bash install.sh install --dir ./clouddrive
+./clouddrive/install.sh upgrade
+```
 
 ## 开发与验证
 

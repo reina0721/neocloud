@@ -28,6 +28,8 @@ import (
 	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
 	"github.com/reina0721/clouddrive/pkg/idgen"
 	"golang.org/x/crypto/argon2"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestSetupLoginRBACAndRevisionInvalidation(t *testing.T) {
@@ -448,7 +450,7 @@ func TestConcurrentOwnerDisableCannotRemoveEveryActiveOwner(t *testing.T) {
 
 func newService(t *testing.T) (*service.Service, database.Resource) {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "iam.db")
+	path := filepath.Join(testkit.PrivateTempDir(t), "iam.db")
 	cfg := database.DefaultConfig()
 	cfg.Driver = database.DriverSQLite
 	cfg.DSN = path
@@ -1386,7 +1388,7 @@ func TestListAccountsMultiFilter(t *testing.T) {
 // newPolicyService 使用显式密码策略构造 IAM Service（076 G5）。
 func newPolicyService(t *testing.T, policy model.PasswordPolicy) *service.Service {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "iam.db")
+	path := filepath.Join(testkit.PrivateTempDir(t), "iam.db")
 	cfg := database.DefaultConfig()
 	cfg.Driver = database.DriverSQLite
 	cfg.DSN = path
@@ -1451,7 +1453,7 @@ func TestPasswordPolicyComplexityOption(t *testing.T) {
 // newLimitService 使用显式口令策略与会话上限构造 IAM Service（077 P2）。
 func newLimitService(t *testing.T, policy model.PasswordPolicy, maxSessions int) *service.Service {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "iam.db")
+	path := filepath.Join(testkit.PrivateTempDir(t), "iam.db")
 	cfg := database.DefaultConfig()
 	cfg.Driver = database.DriverSQLite
 	cfg.DSN = path
@@ -1528,7 +1530,7 @@ func TestPasswordHistoryPreventsReuse(t *testing.T) {
 // 改密状态（MustChangePassword），改密后恢复普通会话（077 P1）。两个 Service
 // 共享同一数据库，用不同固定时钟构造「口令已过期」场景。
 func TestPasswordAgeForcesRestrictedChange(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "iam.db")
+	path := filepath.Join(testkit.PrivateTempDir(t), "iam.db")
 	cfg := database.DefaultConfig()
 	cfg.Driver = database.DriverSQLite
 	cfg.DSN = path
@@ -1861,7 +1863,7 @@ func TestBatchRevokeApiTokensIdempotent(t *testing.T) {
 // TestApiTokenExpiryViaLaterClock 用共享数据库 + 更晚固定时钟验证过期：
 // 创建（expiresAt=01:30）后，在 01:31 的实例上认证被拒绝且 status=expired。
 func TestApiTokenExpiryViaLaterClock(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "iam.db")
+	path := filepath.Join(testkit.PrivateTempDir(t), "iam.db")
 	cfg := database.DefaultConfig()
 	cfg.Driver = database.DriverSQLite
 	cfg.DSN = path
@@ -1926,7 +1928,7 @@ func TestApiTokenExpiryViaLaterClock(t *testing.T) {
 // newTokenService 使用显式 API 令牌上限与默认 TTL 构造 IAM Service（080）。
 func newTokenService(t *testing.T, maxPerAccount int, defaultTTL time.Duration) *service.Service {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "iam.db")
+	path := filepath.Join(testkit.PrivateTempDir(t), "iam.db")
 	cfg := database.DefaultConfig()
 	cfg.Driver = database.DriverSQLite
 	cfg.DSN = path

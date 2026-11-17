@@ -462,6 +462,8 @@ function fullStep(root, kind, options) {
     command: windows ? "pwsh" : "bash",
     args,
     cwd: root,
+    // 完整套件包含数百浏览器用例或全量 race，不能沿用日常单步骤的 15 分钟预算。
+    timeoutMs: (kind === "frontend" ? 90 : 45) * 60 * 1000,
   };
 }
 
@@ -723,6 +725,7 @@ export async function main(
           cwd: step.cwd,
           capture: step.formatCheck,
           signal: controller.signal,
+          timeoutMs: step.timeoutMs,
         });
         if (step.formatCheck && output.trim())
           throw new Error(`Go 文件格式不符合 gofmt：${output.trim()}`);

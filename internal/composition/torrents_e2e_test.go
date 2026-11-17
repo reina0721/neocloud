@@ -20,6 +20,8 @@ import (
 
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/reina0721/clouddrive/pkg/idgen"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 // torrentProtocolFixture 只验证产品事务与RPC边界，不作为真实peer交换的替代证据。
@@ -52,7 +54,7 @@ func newTorrentProtocolFixture(t *testing.T) *torrentProtocolFixture {
 		t.Fatal(err)
 	}
 	digest := sha1.Sum(info)
-	return &torrentProtocolFixture{jobs: map[string]*torrentProtocolJob{}, metadata: raw, hash: hex.EncodeToString(digest[:]), root: filepath.Clean(t.TempDir())}
+	return &torrentProtocolFixture{jobs: map[string]*torrentProtocolJob{}, metadata: raw, hash: hex.EncodeToString(digest[:]), root: filepath.Clean(testkit.PrivateTempDir(t))}
 }
 
 func (f *torrentProtocolFixture) handler(t *testing.T) http.HandlerFunc {
@@ -223,7 +225,7 @@ func TestTorrentProductSelectionIsolationAndAtomicPublication(t *testing.T) {
 	})
 	node := httptest.NewServer(fixture.handler(t))
 	t.Cleanup(node.Close)
-	directory := t.TempDir()
+	directory := testkit.PrivateTempDir(t)
 	setup, err := idgen.UUID().New()
 	if err != nil {
 		t.Fatal(err)

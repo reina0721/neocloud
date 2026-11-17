@@ -2,7 +2,7 @@
 
 ## 构建与进程
 
-使用 Go 1.26.10、Node 24 和 pnpm 10.22.0。Windows 可执行 `scripts/Build.ps1`；已安装工具链的 Linux 环境执行：
+使用 Go 1.26.11、Node 24 和 pnpm 10.22.0。Windows 可执行 `scripts/Build.ps1`；已安装工具链的 Linux 环境执行：
 
 ```bash
 go build -trimpath -buildvcs=false -o dist/clouddrive ./cmd/app

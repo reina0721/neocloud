@@ -81,6 +81,7 @@ func (p *Processor) Process(ctx context.Context, request service.ArchiveParseReq
 	}
 	defer func() { resultErr = errors.Join(resultErr, guard.Close()) }()
 	args := append(append([]string(nil), p.options.PrefixArguments...), WorkerArgument, strconv.FormatInt(p.options.Policy.WorkerMemoryBytes, 10))
+	// #nosec G204 -- Executable 来自 composition 的受信程序路径；固定 worker 参数经 argv 传递，不经过 shell。
 	command := exec.CommandContext(ctx, p.options.Executable, args...)
 	command.WaitDelay = workerWaitDelay
 	output := &limitedBuffer{limit: maxResponseBytes}
@@ -98,6 +99,7 @@ func (p *Processor) Process(ctx context.Context, request service.ArchiveParseReq
 	if err := guard.Attach(command.Process.Pid); err != nil {
 		return result, errors.Join(service.ErrArchiveWorker, err, stdin.Close(), command.Process.Kill(), command.Wait())
 	}
+	// #nosec G117 -- 归档口令仅经受限子进程的私有 stdin 管道传递，不写日志或持久存储。
 	header, err := json.Marshal(wireHeader{int64(len(request.Content)), request.Password, request.Mode, request.Paths, request.MaxBytes, request.MaxMembers})
 	var writeErr error
 	if err != nil {

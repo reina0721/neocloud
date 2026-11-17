@@ -15,9 +15,9 @@ Linux 使用 `scripts/install-tools.sh` 与 `scripts/release-local.sh`。工具�
 
 ## 正式发布
 
-正式流程只接受受保护的 `v*` tag，并进入 GitHub `release` environment 审批。workflow 使用固定工具版本，先运行 `scripts/verify-docs.sh` 的文档静态门禁，再运行 `scripts/verify-webui.sh --prepare` 的完整前端门禁，最后运行 `scripts/verify-quality.sh` 定义的 Go/生成物/仓库产物门禁，以 GoReleaser 创建 draft release，再使用 GitHub OIDC keyless identity 签名并验证 checksum bundle。Docs gate 检查当前 authority、链接、模块/能力索引和当前主题文档；它不启动 Go 服务或 Playwright。前端完整门禁包含确定性浏览器与契约用例，仍不等于全部真实后端、视觉人工审查或外部协议验收。
+正式流程使用指向已验证提交的 annotated `v*` tag，保留 GitHub `release` environment 审批。推送 tag 前先确认 main 同一提交的独立门禁通过，不强制覆盖已存在的 tag。workflow 使用固定工具版本，先运行文档、完整前端及 Go/生成物/仓库产物门禁，以 GoReleaser 创建 draft，再使用 GitHub OIDC keyless identity 签名并验证 checksum bundle。Docs gate 不启动 Go 服务或 Playwright；确定性浏览器与契约用例也不等于全部真实后端、视觉人工审查或外部协议验收。
 
-审批者必须按同一 tag/source commit 核对独立 workflow 与任务证据，而不是只看 release job 自身：
+自动发布阶段和 environment 审批者按同一 tag/source commit 核对独立 workflow 与任务证据：
 
 - tag、source commit、`/build` 返回值和 archive build info 一致；
 - Windows/Linux Go quality、SQLite/PostgreSQL/MySQL 和 container jobs 全部通过，并确认这些独立 workflow 对应同一 commit；
@@ -26,7 +26,11 @@ Linux 使用 `scripts/install-tools.sh` 与 `scripts/release-local.sh`。工具�
 - OpenAPI breaking 结论、migration/rollback 说明和已知限制已审阅；
 - 项目源码和 Dockerfile 的 OCI `org.opencontainers.image.licenses` 均声明 `Apache-2.0`，与根 `LICENSE`、`NOTICE` 和 README 对齐；仍应在发布验收中确认最终镜像携带该 label。
 
-workflow 只生成 draft，不替审批者发布。发布或撤销 release、tag、registry image 仍是外部副作用，必须另有明确授权。
+对 `v主版本.次版本.修订号` 正式 tag，最终 `publish` job 等待同一提交最新的 Quality、Database、Container push 运行全部成功，重新下载并校验完整附件与签名后，自动发布为非预发布的 latest。预发布 tag 保持 draft。任何失败、缺失或等待超时均不会提升 draft；需要源代码修复时使用新的 patch tag，不移动旧 tag。推送正式 tag 即进入该自动发布流程，应在明确发布授权下执行；environment 规则仍可要求指定审批者。
+
+`scripts/verify-release.mjs` 是发布附件与独立检查的门禁：拒绝缺少任一架构、SBOM、签名、未纳入 checksum 的附件、摘要错误或源码提交不一致的镜像清单。签名的密码学验证仍由固定版本 cosign 完成，不以文件存在代替签名有效。
+
+安全门禁持续执行 govulncheck、gosec 与完整 Git 历史的 Gitleaks。协议规定的 SHA-1、随机 nonce API、公开权限标识和工具生成源码权限等静态误报，必须在对应语句说明依据；不得全局关闭规则。Gitleaks 对公开迁移摘要、RFC 测试向量与固定测试 UUID 的例外同时约束路径和值，不忽略整个文件或提交。
 
 clouddrive 发布包含 Go 与独立 Next 服务。Go archive 不内置前端，构建、同源代理及迁移按 [部署说明](clouddrive-deployment.md) 执行。
 
@@ -41,7 +45,7 @@ clouddrive 发布包含 Go 与独立 Next 服务。Go archive 不内置前端，
 ```bash
 bash scripts/build-docker-release.sh --version v1.0.0-rc.1 --arch amd64 --out dist/docker-amd64
 bash scripts/build-docker-release.sh --version v1.0.0-rc.1 --arch arm64 --out dist/docker-arm64
-node --test scripts/install.test.mjs
+node --test scripts/install.test.mjs scripts/verify-release.test.mjs
 node scripts/test-docker-release.mjs --release-dir dist/docker-amd64 --version v1.0.0-rc.1
 ```
 
@@ -57,7 +61,7 @@ node scripts/test-docker-release.mjs \
 
 该脚本只创建和清理自己拥有的临时实例，验证管理员与角色、文件摘要、存储绑定、重启、备份和升级；损坏包、端口冲突及备份失败使用实际容器和文件权限验证。`--faults` 在独立数据库副本制造脏迁移，确认拒绝自动降级，再明确恢复该测试副本并核对文件内容。控制流程夹具的独立单元测试不冒充真实集成。`--keep` 可保留成功实例用于浏览器审查，失败现场始终保留；`--emulated-arch arm64` 仅用于已有 QEMU 的本地运行验收，并明确标注 daemon 架构选择夹具与模拟环境。
 
-Docker 工作流还生成两个镜像的 SPDX SBOM。最终附件任务合并 Go 与 Docker 的完整校验清单，重新进行 OIDC 签名与验证，再仅向仍为 draft 的 Release 上传。维护者发布前必须确认这一步及两种原生架构检查都通过；不能提前发布只有 Go 附件的中间 draft。
+Docker 工作流还生成两个镜像的 SPDX SBOM。最终附件任务合并 Go 与 Docker 的完整校验清单，包含六份 SPDX SBOM，重新进行 OIDC 签名与验证，再仅向仍为 draft 的 Release 上传。之后才进入自动发布阶段，不能提前发布只有 Go 附件的中间 draft。
 
 签名可用既有固定版本 cosign 验证：
 

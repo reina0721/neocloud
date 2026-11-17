@@ -11,12 +11,14 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/reina0721/clouddrive/pkg/testkit"
 )
 
 func TestWOPIV27PreservesDAVRowsAndGuardsRollback(t *testing.T) {
 	config := database.DefaultConfig()
 	config.Driver = database.DriverSQLite
-	config.DSN = filepath.Join(t.TempDir(), "v27.db")
+	config.DSN = filepath.Join(testkit.PrivateTempDir(t), "v27.db")
 	resource, err := database.NewGORM(t.Context(), &config)
 	if err != nil {
 		t.Fatal(err)
@@ -84,7 +86,7 @@ func TestWOPIV27PreservesDAVRowsAndGuardsRollback(t *testing.T) {
 func TestWriteLocksV16PreservesTransfersAndGuardsRollback(t *testing.T) {
 	config := database.DefaultConfig()
 	config.Driver = database.DriverSQLite
-	config.DSN = filepath.Join(t.TempDir(), "v16.db")
+	config.DSN = filepath.Join(testkit.PrivateTempDir(t), "v16.db")
 	resource, err := database.NewGORM(t.Context(), &config)
 	if err != nil {
 		t.Fatal(err)
