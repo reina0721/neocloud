@@ -15,8 +15,11 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 const installer = resolve("install.sh");
 const commit = "a".repeat(40);
-const apiID = "sha256:" + "1".repeat(64),
-  webID = "sha256:" + "2".repeat(64);
+const apiConfig =
+    '{"os":"linux","architecture":"amd64","config":{"Image":"api"}}',
+  webConfig = '{"os":"linux","architecture":"amd64","config":{"Image":"web"}}';
+const apiID = "sha256:" + createHash("sha256").update(apiConfig).digest("hex"),
+  webID = "sha256:" + createHash("sha256").update(webConfig).digest("hex");
 async function fixture(t) {
   const base = await mkdtemp(join(tmpdir(), "clouddrive-installer-unit-"));
   t.after(() => rm(base, { recursive: true, force: true }));
@@ -24,6 +27,15 @@ async function fixture(t) {
     log = join(base, "docker.log");
   await mkdir(bin);
   await writeFile(join(base, "app.db"), "fixture-database");
+  await mkdir(join(base, "exported/blobs/sha256"), { recursive: true });
+  await writeFile(
+    join(base, "exported/blobs/sha256", apiID.slice(7)),
+    apiConfig,
+  );
+  await writeFile(
+    join(base, "exported/blobs/sha256", webID.slice(7)),
+    webConfig,
+  );
   await writeFile(
     join(bin, "docker"),
     `#!/usr/bin/env bash
@@ -35,7 +47,8 @@ case "$1" in
  image)
    case "$2" in
      load) true ;;
-     inspect) ref=\${!#}; v=\${ref#*:}; v=\${v%-amd64}; id='${webID}'; [[ $ref != clouddrive-api:* ]] || id='${apiID}'; echo "$id|linux|amd64|$v|${commit}" ;;
+     inspect) ref=\${!#}; v=\${ref#*:}; v=\${v%-amd64}; id='${webID}'; [[ $ref != clouddrive-api:* ]] || id='${apiID}'; [[ \${FAKE_MANIFEST_IDS:-0} != 1 ]] || id='sha256:${"3".repeat(64)}'; echo "$id|linux|amd64|$v|${commit}" ;;
+     save) if [[ \${3:-} == --help ]]; then echo '--platform'; else tar -cf - -C "$FAKE_BASE/exported" blobs; fi ;;
    esac ;;
  compose)
    if [[ $* == *'version --short'* ]]; then echo 2.40.0
@@ -146,6 +159,42 @@ test("下载校验失败不会创建实例或执行迁移", async (t) => {
   assert.notEqual(r.status, 0);
   assert.match(r.stderr, /摘要不匹配/);
   assert.doesNotMatch(await readFile(f.log, "utf8"), /migrate| stop/);
+});
+test("containerd 显示 ID 不同仍以原始配置摘要验证镜像，损坏配置禁止迁移", async (t) => {
+  const f = await fixture(t),
+    source = await f.bundle("v1.0.0");
+  const args = [
+    "install",
+    "--dir",
+    f.root,
+    "--version",
+    "v1.0.0",
+    "--release-dir",
+    source,
+  ];
+  const result = f.run(args, { FAKE_MANIFEST_IDS: "1" });
+  assert.equal(result.status, 0, result.stderr);
+  const g = await fixture(t),
+    corrupt = await g.bundle("v1.0.0");
+  await writeFile(
+    join(g.base, "exported/blobs/sha256", apiID.slice(7)),
+    "corrupted",
+  );
+  const rejected = g.run(
+    [
+      "install",
+      "--dir",
+      g.root,
+      "--version",
+      "v1.0.0",
+      "--release-dir",
+      corrupt,
+    ],
+    { FAKE_MANIFEST_IDS: "1" },
+  );
+  assert.notEqual(rejected.status, 0);
+  assert.match(rejected.stderr, /配置内容摘要不匹配/);
+  assert.doesNotMatch(await readFile(g.log, "utf8"), /migrate| stop/);
 });
 test("安装不接管非空目录，端口冲突发生在迁移前", async (t) => {
   const f = await fixture(t);

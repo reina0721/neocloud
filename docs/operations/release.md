@@ -49,11 +49,13 @@ clouddrive 发布包含 Go 与独立 Next 服务。Go archive 不内置前端，
 ```bash
 bash scripts/build-docker-release.sh --version v1.0.0-rc.1 --arch amd64 --out dist/docker-amd64
 bash scripts/build-docker-release.sh --version v1.0.0-rc.1 --arch arm64 --out dist/docker-arm64
-node --test scripts/install.test.mjs scripts/verify-release.test.mjs scripts/release-config.test.mjs scripts/verify-elf-platform.test.mjs
+node --test scripts/install.test.mjs scripts/verify-release.test.mjs scripts/release-config.test.mjs scripts/verify-elf-platform.test.mjs scripts/docker-image-config-id.test.mjs
 node scripts/test-docker-release.mjs --release-dir dist/docker-amd64 --version v1.0.0-rc.1
 ```
 
-需要免密 sudo Docker 的开发机，可显式设置 `CLOUDDRIVE_DOCKER_SUDO=1`；目标安装脚本本身不会自动调用 sudo。已有配套镜像可用 `--api-image` 与 `--web-image` 重新打包，但版本、架构、源码及镜像 ID 必须通过校验，不能仅重打标签冒充另一版本。
+需要免密 sudo Docker 的开发机，可显式设置 `CLOUDDRIVE_DOCKER_SUDO=1`；目标安装脚本本身不会自动调用 sudo。已有配套镜像可用 `--api-image` 与 `--web-image` 重新打包，但版本、架构、源码及镜像配置摘要必须通过校验，不能仅重打标签冒充另一版本。
+
+包内 `API_ID`、`WEB_ID` 固定记录原始镜像配置 JSON 的 SHA-256；配置还引用各层的 `rootfs.diff_ids`。Docker 传统存储与 containerd 存储的显示 ID 定义不同，安装器在显示 ID 不匹配时仅从本地导出已载入的对应平台镜像，核对原始配置内容摘要，再继续检查架构、版本和源码。该步骤不访问镜像仓库、不增加目标机 Node 依赖，也不把版本 label 当成内容身份校验。
 
 两个候选版本的真实升级验收使用：
 

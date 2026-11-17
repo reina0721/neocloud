@@ -118,7 +118,7 @@ bash install.sh install --dir ./clouddrive --port 44173 --version v1.0.0
 
 首次安装默认查找最新正式稳定版，然后固定该 tag 下载配套产物。显式 `--version` 可以选择预发布版本。重复安装不会重建已有实例，重复升级到相同版本不会再次迁移。缺少依赖、目录非空且无安装器标记、端口冲突、校验失败或镜像身份不匹配时停止，不接管已有预览或用户目录。
 
-安装包按架构命名为 `clouddrive_vX.Y.Z_linux_amd64_docker.tar.gz` 或 `clouddrive_vX.Y.Z_linux_arm64_docker.tar.gz`，内含前后端镜像归档、Compose、版本/源码/镜像 ID 清单及管理脚本。安装时从已校验的包执行 `docker image load`，运行服务使用 `pull_policy: never`，不访问镜像仓库。`checksums.txt` 提供传输完整性检查；维护者还发布该清单的 Sigstore 签名，签名校验方法见[发布说明](release.md)。
+安装包按架构命名为 `clouddrive_vX.Y.Z_linux_amd64_docker.tar.gz` 或 `clouddrive_vX.Y.Z_linux_arm64_docker.tar.gz`，内含前后端镜像归档、Compose、版本/源码/镜像配置摘要清单及管理脚本。安装时从已校验的包执行 `docker image load`，同时兼容 Docker 传统存储与 containerd 存储的不同显示 ID；实际核对原始配置 SHA-256、架构、版本和源码。运行服务使用 `pull_policy: never`，不访问镜像仓库。`checksums.txt` 提供传输完整性检查；维护者还发布该清单的 Sigstore 签名，签名校验方法见[发布说明](release.md)。
 
 离线时把对应包、`checksums.txt`、`version.txt` 从同一 Release 拷到本机，用 `--release-dir /path/to/assets` 替代在线下载；也可以显式指定 `--version` 而不提供 `version.txt`。默认源码里的 `scripts/deploy-ui-test.mjs` 仍用于开发验收，不是下载版安装入口。
 

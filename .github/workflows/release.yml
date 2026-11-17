@@ -52,7 +52,7 @@ jobs:
           test "$(git cat-file -t "${GITHUB_REF_NAME}")" = tag
           test "$(git rev-parse "${GITHUB_REF_NAME}^{commit}")" = "${GITHUB_SHA}"
           bash scripts/wait-release-gates.sh
-          node --test scripts/install.test.mjs scripts/verify-release.test.mjs scripts/release-config.test.mjs scripts/verify-elf-platform.test.mjs
+          node --test scripts/install.test.mjs scripts/verify-release.test.mjs scripts/release-config.test.mjs scripts/verify-elf-platform.test.mjs scripts/docker-image-config-id.test.mjs
           test -z "$(git status --porcelain)"
       - name: Build draft release
         env:

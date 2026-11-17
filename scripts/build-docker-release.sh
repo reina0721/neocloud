@@ -46,7 +46,6 @@ for pair in "API:$api" "WEB:$web"; do
   kind=${pair%%:*}; ref=${pair#*:}
   identity=$(d image inspect --format '{{.Os}}|{{.Architecture}}|{{index .Config.Labels "org.opencontainers.image.version"}}|{{index .Config.Labels "org.opencontainers.image.revision"}}' "$ref")
   [[ $identity == "linux|$arch|$version|$commit" ]] || { echo "镜像 $ref 的平台、版本或源码不匹配" >&2; exit 1; }
-  printf '%s_ID=%s\n' "$kind" "$(d image inspect --format '{{.Id}}' "$ref")" >> "$stage/manifest.txt"
 done
 # 只创建容器并读取文件，不执行目标程序；模拟执行也不能掩盖错装的架构。
 probe=$(d container create --platform "linux/$arch" "$api")
@@ -55,6 +54,11 @@ node "$root/scripts/verify-elf-platform.mjs" "$stage/api-binary" "$arch"
 d container rm "$probe" >/dev/null; probe=''
 rm "$stage/api-binary"
 d image save "$api" "$web" > "$stage/images.tar"
+for pair in "API:$api" "WEB:$web"; do
+  kind=${pair%%:*}; ref=${pair#*:}
+  config_id=$(node "$root/scripts/docker-image-config-id.mjs" "$stage/images.tar" "$ref" "$arch")
+  printf '%s_ID=%s\n' "$kind" "$config_id" >> "$stage/manifest.txt"
+done
 # 由调用者重定向创建归档，避免 sudo Docker 创建仅 root 可读的文件。
 archive="clouddrive_${version}_linux_${arch}_docker.tar.gz"
 tar --create --gzip --file "$out/$archive" --directory "$stage" compose.yaml images.env images.tar install.sh manifest.txt

@@ -127,6 +127,18 @@ fetch_asset() {
   else curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' --retry 2 --connect-timeout 15 --max-time 1800 "https://github.com/$REPOSITORY/releases/download/$version/$name" --output "$destination" || fail "下载 $name 失败"; fi
 }
 read_manifest() { sed -n "s/^$1=//p" "$work/bundle/manifest.txt"; }
+verify_config_identity() {
+  local ref=$1 expected=$2 saved="$work/$3-runtime.tar" digest
+  local -a platform_args=()
+  # containerd 的显示 ID 是 manifest/index；读取本地导出的原始配置摘要。
+  if [[ $(docker image save --help) == *--platform* ]]; then platform_args=(--platform "linux/$arch"); fi
+  docker image save "${platform_args[@]}" "$ref" > "$saved" || fail '无法核对已导入镜像配置'
+  if ! digest=$(tar -xOf "$saved" "blobs/sha256/${expected#sha256:}" 2>/dev/null | sha256sum); then
+    digest=$(tar -xOf "$saved" "${expected#sha256:}.json" 2>/dev/null | sha256sum) || fail '镜像配置摘要不存在'
+  fi
+  [[ "sha256:${digest%% *}" == "$expected" ]] || fail '镜像配置内容摘要不匹配'
+  rm -- "$saved"
+}
 prepare_release() {
   local name="clouddrive_${version}_linux_${arch}_docker.tar.gz" digest listing
   work=$(mktemp -d)
@@ -151,7 +163,8 @@ prepare_release() {
     expected=$(read_manifest "${kind}_ID")
     [[ $expected =~ ^sha256:[a-f0-9]{64}$ ]] || fail '镜像 ID 无效'
     actual=$(docker image inspect --format '{{.Id}}|{{.Os}}|{{.Architecture}}|{{index .Config.Labels "org.opencontainers.image.version"}}|{{index .Config.Labels "org.opencontainers.image.revision"}}' "$ref")
-    [[ $actual == "$expected|linux|$arch|$version|$(read_manifest COMMIT)" ]] || fail '镜像身份、架构或源码版本不匹配'
+    [[ ${actual#*|} == "linux|$arch|$version|$(read_manifest COMMIT)" ]] || fail '镜像架构或源码版本不匹配'
+    if [[ ${actual%%|*} != "$expected" ]]; then verify_config_identity "$ref" "$expected" "$kind"; fi
   done
 }
 store_release() {
