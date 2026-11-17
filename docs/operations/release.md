@@ -57,7 +57,7 @@ node scripts/test-docker-release.mjs --release-dir dist/docker-amd64 --version v
 
 包内 `API_ID`、`WEB_ID` 固定记录原始镜像配置 JSON 的 SHA-256；配置还引用各层的 `rootfs.diff_ids`。Docker 传统存储与 containerd 存储的显示 ID 定义不同，安装器在显示 ID 不匹配时仅从本地导出已载入的对应平台镜像，核对原始配置内容摘要，再继续检查架构、版本和源码。该步骤不访问镜像仓库、不增加目标机 Node 依赖，也不把版本 label 当成内容身份校验。
 
-网络配置包在清单声明 `NETWORK=1`。原生发布任务分别验证默认回环模式和 `--network-host` 指定的 runner 非回环 IPv4 HTTP 模式，实际核对绑定地址、Cookie 名称/属性、初始化、文件、会话与重启。开发机可以给 `scripts/test-docker-release.mjs` 添加 `--network-host <当前机器IPv4>` 重现；不能以 localhost 的安全上下文代替普通 HTTP 浏览器验收。HTTP 的真实浏览器及 frp 检查需要额外在对应实际入口操作，不能由 Node HTTP 客户端通过推定。
+安装包保留 `NETWORK=1`，新增 `ENTRYPOINT=1` 表示支持自动同源入口。原生发布任务分别通过回环地址和 `--network-host` 指定的 runner 非回环 IPv4 访问默认安装，不传外部地址或 HTTP 开关；实际核对默认监听、Cookie、初始化、文件、WebDAV 地址与读写、伪造 Origin/CSRF 拒绝、会话与重启。开发机可以给 `scripts/test-docker-release.mjs` 添加 `--network-host <当前机器IPv4>` 重现；不能以 localhost 的安全上下文代替普通 HTTP 浏览器验收。HTTP 的真实浏览器操作需要额外验证，不能由 Node HTTP 客户端通过推定。
 
 两个候选版本的真实升级验收使用：
 

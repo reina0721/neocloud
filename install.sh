@@ -2,51 +2,105 @@
 # CloudDrive Release 安装管理入口；目标机只使用 Docker 和标准 Linux 工具。
 set -Eeuo pipefail
 umask 077
+main() {
 REPOSITORY=reina0721/neocloud
-command_name=${1:-help}
-[[ $# == 0 ]] || shift
-root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+command_name=
+if [[ $# -gt 0 && $1 != -* ]]; then command_name=$1; shift; fi
+script_directory=
+if [[ -n ${BASH_SOURCE[0]:-} ]]; then script_directory=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd); fi
+root=${HOME:?}/clouddrive
+if [[ -n $script_directory && -f $script_directory/.control/project ]]; then root=$script_directory; fi
 version=latest
 release_source=
 port=4173
-bind=127.0.0.1
+bind=0.0.0.0
 public_origin=
-allow_http=false
+allow_http=true
+explicit_http=false
 additional_origins=()
 network_options=false
 wait_timeout=120
 explicit_dir=false
+explicit_bind=false
+explicit_port=false
+yes=false
+follow=false
+tail_lines=100
 work=
 stop_recovery=false
 old_version=
 fail() { printf '错误：%s\n' "$*" >&2; exit 1; }
 usage() {
   cat <<'HELP'
-bash install.sh install [--dir ./clouddrive] [--port 4173] [--version vX.Y.Z]
-  [--bind 0.0.0.0] [--public-url http://服务器IP:4173] [--allow-http]
-  [--allow-origin https://另一个入口]（可重复）
-./clouddrive/install.sh status | check-update | upgrade | backup | start | stop
+bash install.sh                         首次安装向导；已安装实例显示管理菜单
+bash install.sh install [--dir ~/clouddrive] [--bind 0.0.0.0] [--port 4173]
+  [--version vX.Y.Z] [--yes]
+~/clouddrive/install.sh status | check-update | upgrade | update | backup | start | stop | restart
+~/clouddrive/install.sh logs [-f|--follow] [--tail 100]
 upgrade 支持 --version；install/upgrade/check-update 支持 --release-dir 离线产物目录。
+高级选项：--public-url HTTP(S)根地址、--allow-origin 精确Origin（可重复）、--allow-http。
 需要 Linux、本机 Docker Engine、Docker Compose >=2.20、curl、tar、gzip、sha256sum、flock。
-默认仅监听 127.0.0.1；可配置 IP、端口、外部 Origin；API 与 management 不映射宿主机端口。
+新安装默认 ~/clouddrive、0.0.0.0:4173、HTTP；API 与 management 不映射宿主机端口。
 HELP
 }
-[[ $command_name != help && $command_name != --help ]] || { usage; exit 0; }
+progress() { printf '[CloudDrive] %s\n' "$*" >&2; }
+open_terminal() { { exec 3<>/dev/tty; } 2>/dev/null; }
+prompt() {
+  local label=$1 default=$2 result=$3 answer
+  printf '%s [%s]：' "$label" "$default" >&3
+  IFS= read -r answer <&3 || fail '终端输入结束，操作已取消'
+  printf -v "$result" '%s' "${answer:-$default}"
+}
+management_menu() {
+  local choice operation
+  while true; do
+    printf '\nCloudDrive 管理 — %s\n1 状态  2 检查更新  3 更新  4 启动  5 停止  6 重启  7 日志  8 备份  0 退出\n' "$root" >&3
+    prompt '选择操作' 0 choice
+    case $choice in
+      0) return ;;
+      1) operation=status ;; 2) operation=check-update ;; 3) operation=upgrade ;;
+      4) operation=start ;; 5) operation=stop ;; 6) operation=restart ;;
+      7) operation=logs ;; 8) operation=backup ;;
+      *) printf '请输入 0–8。\n' >&3; continue ;;
+    esac
+    if ! "$root/install.sh" "$operation"; then printf '操作失败，请查看上方原因。\n' >&3; fi
+  done
+}
+[[ $command_name != help ]] || { usage; exit 0; }
 while [[ $# -gt 0 ]]; do
   case $1 in
+    -h|--help) usage; exit 0 ;;
+    -y|--yes) yes=true; shift ;;
     --dir) [[ $# -ge 2 ]] || fail '--dir 缺少路径'; root=$2; explicit_dir=true; shift 2 ;;
-    --port) [[ $# -ge 2 ]] || fail '--port 缺少数值'; port=$2; shift 2 ;;
-    --bind) [[ $# -ge 2 ]] || fail '--bind 缺少监听 IP'; network_options=true; bind=$2; shift 2 ;;
+    --port) [[ $# -ge 2 ]] || fail '--port 缺少数值'; port=$2; explicit_port=true; shift 2 ;;
+    --bind) [[ $# -ge 2 ]] || fail '--bind 缺少监听 IP'; network_options=true; explicit_bind=true; bind=$2; shift 2 ;;
     --public-url) [[ $# -ge 2 ]] || fail '--public-url 缺少外部 Origin'; network_options=true; public_origin=$2; shift 2 ;;
     --allow-origin) [[ $# -ge 2 ]] || fail '--allow-origin 缺少 Origin'; network_options=true; additional_origins+=("$2"); shift 2 ;;
-    --allow-http) network_options=true; allow_http=true; shift ;;
+    --allow-http) network_options=true; explicit_http=true; allow_http=true; shift ;;
+    -f|--follow) follow=true; shift ;;
+    --tail) [[ $# -ge 2 && $2 =~ ^[0-9]+$ && ${#2} -le 5 ]] || fail '--tail 需要 0–10000'; tail_lines=$((10#$2)); ((tail_lines <= 10000)) || fail '--tail 需要 0–10000'; shift 2 ;;
     --wait-timeout) [[ $# -ge 2 ]] || fail '--wait-timeout 缺少秒数'; wait_timeout=$2; shift 2 ;;
     --version) [[ $# -ge 2 ]] || fail '--version 缺少版本'; version=$2; shift 2 ;;
     --release-dir) [[ $# -ge 2 ]] || fail '--release-dir 缺少路径'; release_source=$(realpath -e -- "$2"); shift 2 ;;
     *) fail "未知参数：$1" ;;
   esac
 done
-case $command_name in install|upgrade|check-update|status|backup|start|stop) ;; *) fail "未知命令：$command_name" ;; esac
+if [[ -z $command_name ]]; then
+  if [[ $yes == true ]]; then command_name=install
+  elif open_terminal; then
+    if [[ -f $root/.control/current ]]; then management_menu; exit 0; fi
+    [[ $explicit_dir == true ]] || prompt '安装目录' "$root" root
+    [[ $explicit_bind == true ]] || prompt '监听地址' "$bind" bind
+    [[ $explicit_port == true ]] || prompt 'Web 端口' "$port" port
+    printf '\n安装目录：%s\n监听地址：%s:%s\n版本：%s\n' "$root" "$bind" "$port" "$version" >&3
+    prompt '开始安装？输入 y 继续' y confirmation
+    [[ $confirmation == y || $confirmation == Y ]] || { printf '已取消。\n' >&3; exit 0; }
+    command_name=install
+  else usage >&2; printf '没有交互终端；请使用 install 命令或 --yes。\n' >&2; exit 2; fi
+fi
+[[ $command_name != update ]] || command_name=upgrade
+case $command_name in install|upgrade|check-update|status|backup|start|stop|restart|logs) ;; *) fail "未知命令：$command_name" ;; esac
+if [[ $explicit_http == false && $public_origin == https://* ]]; then allow_http=false; fi
 [[ $network_options == false || $command_name == install ]] || fail '已有实例请编辑 runtime.env，再执行 stop/start；网络选项只用于首次 install'
 [[ $(uname -s) == Linux ]] || fail '当前安装包只支持 Linux'
 for dependency in docker curl tar gzip sha256sum flock realpath awk sed cmp od tr; do
@@ -62,7 +116,6 @@ endpoint=${DOCKER_HOST:-$(docker context inspect --format '{{.Endpoints.docker.H
 [[ $endpoint == unix://* ]] || fail '仅支持本机 Unix socket Docker，远程 daemon 无法使用本机持久目录'
 [[ $(docker info --format '{{.OSType}}') == linux ]] || fail 'Docker 必须使用 Linux 容器'
 case $(docker info --format '{{.Architecture}}') in x86_64|amd64) arch=amd64 ;; aarch64|arm64) arch=arm64 ;; *) fail '仅支持 amd64/arm64' ;; esac
-if [[ $command_name == install && $explicit_dir == false && ! -f $root/.control/project ]]; then root="$PWD/clouddrive"; fi
 root=$(realpath -m -- "$root")
 [[ $root != *$'\n'* && $root != *,* && $root != / ]] || fail '安装路径不能为根目录或包含换行、逗号'
 [[ $port =~ ^[0-9]+$ && ${#port} -le 5 ]] || fail '端口必须为数字'
@@ -85,12 +138,13 @@ network_configuration() {
       if(u.protocol==="http:"&&!["localhost","127.0.0.1","[::1]"].includes(u.hostname)&&http!=="true")throw Error("非本机 HTTP 入口需要显式 --allow-http");
       return u.origin;
     }
-    const origins=[...new Set([origin(primary),...extra.map(origin),`http://127.0.0.1:${port}`,`http://localhost:${port}`])];
+    const origins=[...new Set([...(primary?[origin(primary)]:[]),...extra.map(origin)])];
     if(origins.length>32)throw Error("最多允许 32 个 Origin");
-    console.log(`WEB_BIND=${net.isIP(ip)===6?`[${ip}]`:ip}\nPUBLIC_ORIGIN=${origin(primary)}\nALLOW_INSECURE_HTTP=${http}\nALLOWED_ORIGINS=\x27${JSON.stringify(origins)}\x27`);
+    console.log(`WEB_BIND=${net.isIP(ip)===6?`[${ip}]`:ip}\nPUBLIC_ORIGIN=${primary?origin(primary):""}\nALLOW_INSECURE_HTTP=${http}\nALLOWED_ORIGINS=\x27${JSON.stringify(origins)}\x27`);
   ' "$bind" "$port" "$public_origin" "$allow_http" "${additional_origins[@]}" > "$work/network.env" || fail '网络配置无效；尚未执行迁移'
 }
 resolve_version() {
+  progress '解析目标版本'
   if [[ $version == latest ]]; then
     if [[ -n $release_source ]]; then
       [[ -f $release_source/version.txt ]] || fail '离线目录缺少 version.txt，或显式指定 --version'
@@ -103,6 +157,7 @@ resolve_version() {
     fi
   fi
   valid_version "$version" || fail '版本必须为 v主版本.次版本.修订号，可带预发布后缀'
+  progress "目标版本：$version（$arch）"
 }
 managed() { [[ -f $root/.control/project && -f $root/.control/current ]] || fail '此目录不是安装器管理的实例；不会接管既有数据'; }
 compose_at() {
@@ -154,8 +209,11 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 fetch_asset() {
   local name=$1 destination=$2
+  local -a display=(--silent)
+  [[ ! -t 2 ]] || display=(--progress-bar)
+  progress "下载 $name"
   if [[ -n $release_source ]]; then cp -- "$release_source/$name" "$destination" || fail "离线目录缺少 $name";
-  else curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' --retry 2 --connect-timeout 15 --max-time 1800 "https://github.com/$REPOSITORY/releases/download/$version/$name" --output "$destination" || fail "下载 $name 失败"; fi
+  else curl --fail --location "${display[@]}" --show-error --proto '=https' --proto-redir '=https' --retry 2 --connect-timeout 15 --speed-limit 1024 --speed-time 30 --max-time 1800 "https://github.com/$REPOSITORY/releases/download/$version/$name" --output "$destination" || fail "下载 $name 失败"; fi
 }
 read_manifest() { sed -n "s/^$1=//p" "$work/bundle/manifest.txt"; }
 verify_config_identity() {
@@ -176,6 +234,7 @@ prepare_release() {
   fetch_asset checksums.txt "$work/checksums.txt"
   fetch_asset "$name" "$work/$name"
   digest=$(awk -v asset="$name" '$2 == asset {print $1}' "$work/checksums.txt")
+  progress '校验安装包与版本清单'
   [[ $digest =~ ^[a-f0-9]{64}$ ]] || fail '校验清单缺少唯一有效的目标产物摘要'
   printf '%s  %s\n' "$digest" "$work/$name" | sha256sum --check --status || fail '安装包摘要不匹配；现有服务保持不动'
   listing=$(tar -tzf "$work/$name" | LC_ALL=C sort)
@@ -187,9 +246,14 @@ prepare_release() {
   local needs_network=$network_options
   if [[ -f $root/runtime.env && -n $(sed -n 's/^WEB_BIND=//p' "$root/runtime.env") ]]; then needs_network=true; fi
   [[ $needs_network == false || $(read_manifest NETWORK) == 1 ]] || fail '目标 Release 不支持网络配置，请使用包含此功能的新版本；v0.1.2 仅支持本机入口'
+  local needs_entrypoint=false
+  if [[ $command_name == install && -z $public_origin ]]; then needs_entrypoint=true; fi
+  if [[ -f $root/runtime.env && -n $(sed -n 's/^WEB_BIND=//p' "$root/runtime.env") && -z $(sed -n 's/^PUBLIC_ORIGIN=//p' "$root/runtime.env") ]]; then needs_entrypoint=true; fi
+  [[ $needs_entrypoint == false || $(read_manifest ENTRYPOINT) == 1 ]] || fail '目标 Release 不支持自动同源入口；已有配置未修改，请选择支持此入口的新版本'
   [[ $(read_manifest COMMIT) =~ ^[a-f0-9]{40}$ ]] || fail '源码版本标识无效'
   api_image="clouddrive-api:$version-$arch"; web_image="clouddrive-web:$version-$arch"
   [[ $(cat "$work/bundle/images.env") == "API_IMAGE=$api_image"$'\n'"WEB_IMAGE=$web_image" ]] || fail '镜像引用不符合配套版本'
+  progress '导入配套 Docker 镜像'
   docker image load --input "$work/bundle/images.tar" >/dev/null
   for kind in API WEB; do
     local ref expected actual
@@ -251,10 +315,6 @@ if [[ $command_name == install ]]; then
   fi
   resolve_version
   prepare_release
-  if [[ -z $public_origin ]]; then
-    [[ $bind == 127.0.0.1 || $bind == ::1 ]] || fail '非默认监听 IP 需要显式 --public-url，填写浏览器实际访问的地址'
-    public_origin="http://127.0.0.1:$port"
-  fi
   network_configuration
   if [[ $resume == true ]]; then port=$(sed -n 's/^WEB_PORT=//p' "$root/runtime.env"); fi
   docker run --rm --pull never --network host "$web_image" node -e 'const s=require("node:net").createServer();s.once("error",()=>process.exit(1));s.listen(Number(process.argv[1]),process.argv[2].replace(/^\[|\]$/g,""),()=>s.close())' "$port" "$bind" || fail '监听 IP 不可用或端口已占用；尚未执行迁移'
@@ -274,13 +334,15 @@ if [[ $command_name == install ]]; then
   store_release
   if [[ $resume == false ]]; then docker run --rm --pull never --user 0:0 --mount "type=bind,source=$root/data,target=/data" "$web_image" node -e 'const f=require("node:fs");f.chmodSync("/data",0o700);f.chownSync("/data",65532,65532)'; fi
   stop_recovery=true
+  progress '执行数据库迁移与兼容性检查'
   compose_at "$version" run --rm --no-deps migrate
   migration_status "$version"
+  progress '启动服务并检查就绪状态'
   compose_at "$version" up --detach --pull never backend web
   probe "$version" || fail '安装后就绪/版本检查未通过'
   atomic_current "$version"; rm -f -- "$root/.control/candidate"; stop_recovery=false
   install_manager
-  printf '安装完成：%s/setup\n请自行创建管理员；设置令牌保存在 %s/.control/setup-token（不输出令牌）。\n' "$public_origin" "$root"
+  printf '安装完成：%s\nWeb 端口：%s:%s；访问 http://<服务器地址>:%s/setup 创建管理员。\n设置令牌保存在 %s/.control/setup-token（不输出令牌）。\n管理入口：%s/install.sh\n' "$root" "$bind" "$port" "$port" "$root" "$root"
   exit 0
 fi
 managed
@@ -289,12 +351,14 @@ project=$(cat "$root/.control/project")
 old_version=$(current); valid_version "$old_version" || fail '当前版本标记无效'
 case $command_name in
   status) printf '当前版本：%s\n安装目录：%s\n' "$old_version" "$root"; compose_at "$old_version" ps; exit 0 ;;
+  logs) log_args=(logs --tail "$tail_lines"); [[ $follow == false ]] || log_args+=(--follow); compose_at "$old_version" "${log_args[@]}" backend web; exit 0 ;;
   check-update) resolve_version; printf '当前版本：%s\n最新目标：%s\n' "$old_version" "$version"; exit 0 ;;
 esac
 exec 9>"$root/.control/lock"; flock -n 9 || fail '另一个管理操作正在执行'
 case $command_name in
   stop) compose_at "$old_version" stop; exit 0 ;;
   start) migration_status "$old_version"; compose_at "$old_version" up --detach --pull never backend web; probe "$old_version" || fail '启动检查未通过'; exit 0 ;;
+  restart) migration_status "$old_version"; compose_at "$old_version" stop; compose_at "$old_version" up --detach --pull never backend web; probe "$old_version" || fail '重启检查未通过'; exit 0 ;;
   backup)
     version=$old_version; stop_recovery=true
     compose_at "$old_version" stop
@@ -311,8 +375,10 @@ case $command_name in
     stop_recovery=true
     compose_at "$old_version" stop
     backup_data "$old_version"
+    progress '执行数据库迁移与兼容性检查'
     compose_at "$version" run --rm --no-deps migrate
     migration_status "$version"
+    progress '启动目标版本并检查就绪状态'
     compose_at "$version" up --detach --pull never backend web
     probe "$version" || fail '升级后就绪/版本检查未通过'
     atomic_current "$version"; stop_recovery=false
@@ -320,3 +386,5 @@ case $command_name in
     printf '升级完成：%s → %s。数据与挂载路径保持不变。\n' "$old_version" "$version"
     ;;
 esac
+}
+main "$@"

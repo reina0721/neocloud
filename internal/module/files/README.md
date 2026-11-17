@@ -27,3 +27,5 @@ service.Navigation 拥有分享引用和固定集合，使用消费方定义的 
 Sharing消费自有ShareAudienceAuthority，由composition适配IAM窄事实facet。model只实现有界受众优先级与分享根内最近祖先策略；请求局部索引不跨请求缓存身份。可空策略的Huma/JSON适配仅在HTTP绑定，持久JSON与ORM record只归repo。当前用户行为及预算统一见文件管理authority。
 
 HistoryPreferences归files模型和Preferences用例，独立于本机视图模式。repo的ChangeContent、分享/连接/传输事务快照携带同一owner锁内读取的规则，服务统一计算覆盖历史及逻辑占用；不增加第二客户端、worker或物理GC。预算与用户行为仍以文件管理手册为准。
+
+连接 URL 优先使用显式 `files.connections.publicOrigin`，否则采用 Web Host 规范化的展示地址或独立 Go 入口的请求地址。展示元数据不改变 Origin、CSRF、Cookie 或 DAV 目标授权；WebDAV 同源 Destination 在 Web Host 转发时转换成内部地址，后端继续执行原有连接和路径校验。

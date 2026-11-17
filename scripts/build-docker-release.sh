@@ -41,7 +41,7 @@ trap cleanup EXIT
 cp "$root/compose.release.yaml" "$stage/compose.yaml"
 cp "$root/install.sh" "$stage/install.sh"
 printf 'API_IMAGE=%s\nWEB_IMAGE=%s\n' "$api" "$web" > "$stage/images.env"
-printf 'FORMAT=1\nNETWORK=1\nVERSION=%s\nARCH=%s\nCOMMIT=%s\n' "$version" "$arch" "$commit" > "$stage/manifest.txt"
+printf 'FORMAT=1\nNETWORK=1\nENTRYPOINT=1\nVERSION=%s\nARCH=%s\nCOMMIT=%s\n' "$version" "$arch" "$commit" > "$stage/manifest.txt"
 for pair in "API:$api" "WEB:$web"; do
   kind=${pair%%:*}; ref=${pair#*:}
   identity=$(d image inspect --format '{{.Os}}|{{.Architecture}}|{{index .Config.Labels "org.opencontainers.image.version"}}|{{index .Config.Labels "org.opencontainers.image.revision"}}' "$ref")

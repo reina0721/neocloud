@@ -15,7 +15,7 @@ import {
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { tmpdir, networkInterfaces } from "node:os";
 import { join, resolve, dirname } from "node:path";
-import { createServer } from "node:net";
+import { createServer, createConnection } from "node:net";
 import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
 const { values } = parseArgs({
@@ -28,6 +28,7 @@ const { values } = parseArgs({
     keep: { type: "boolean", default: false },
     faults: { type: "boolean", default: false },
     "network-host": { type: "string" },
+    "legacy-entrypoint": { type: "boolean", default: false },
   },
 });
 assert.ok(
@@ -149,7 +150,7 @@ async function request(path, method = "GET", body) {
     signal: AbortSignal.timeout(30000),
   });
   for (const cookie of response.headers.getSetCookie()) {
-    if (networkHost) {
+    if (!values["legacy-entrypoint"] || networkHost) {
       assert.doesNotMatch(cookie, /^__Host-/);
       assert.doesNotMatch(cookie, /;\s*Secure(?:;|$)/i);
       assert.match(cookie, /;\s*HttpOnly(?:;|$)/i);
@@ -207,7 +208,7 @@ try {
     active,
     "--release-dir",
     source,
-    ...(networkHost
+    ...(values["legacy-entrypoint"]
       ? ["--bind", "0.0.0.0", "--public-url", origin, "--allow-http"]
       : []),
   );
@@ -220,6 +221,10 @@ try {
     "--release-dir",
     source,
   );
+  if (values["legacy-entrypoint"]) {
+    // 后续成功升级真正由旧包自带安装器执行，验证已发布管理入口的兼容性。
+    await cp(join(root, "install.sh"), bootstrap);
+  }
   const setupToken = (
     await readFile(join(root, ".control/setup-token"), "utf8")
   ).trim();
@@ -251,6 +256,136 @@ try {
   });
   const content = await request("/native/files/" + entry.id + "/content");
   assert.equal(sha(content), sha(Buffer.from(text)));
+  if (!values["legacy-entrypoint"]) {
+    const share = await request("/native/files/shares", "POST", {
+      rootId: entry.id,
+      title: "release-share",
+    });
+    const shareURL = origin + "/api/v1/file-shares/" + share.token;
+    const metadata = await fetch(shareURL, {
+      signal: AbortSignal.timeout(30000),
+    });
+    assert.equal(metadata.status, 200);
+    assert.equal((await metadata.json()).root.id, entry.id);
+    const grant = await fetch(shareURL + "/content/" + entry.id + "/download", {
+      method: "POST",
+      headers: { Origin: origin },
+      signal: AbortSignal.timeout(30000),
+    });
+    assert.equal(grant.status, 200);
+    const ticket = (await grant.json()).ticket;
+    const sharedFile = await fetch(
+      origin + "/api/v1/file-downloads/" + ticket,
+      { signal: AbortSignal.timeout(30000) },
+    );
+    assert.equal(sharedFile.status, 200);
+    assert.equal(
+      sha(Buffer.from(await sharedFile.arrayBuffer())),
+      sha(content),
+    );
+    const connection = await request("/native/files/connections", "POST", {
+      rootId: folder.id,
+      name: "release-dav",
+      readOnly: false,
+      blockSystemFiles: false,
+    });
+    assert.equal(
+      connection.endpointOrigin,
+      origin,
+      "连接地址必须使用当前 Web 入口，而不是容器地址",
+    );
+    const endpoint = new URL(connection.endpointPath, connection.endpointOrigin)
+      .href;
+    const davHeaders = {
+      Authorization:
+        "Basic " +
+        Buffer.from(connection.id + ":" + connection.password).toString(
+          "base64",
+        ),
+    };
+    let dav = await fetch(endpoint + "source.txt", {
+      method: "PUT",
+      headers: davHeaders,
+      body: "DAV persisted bytes",
+    });
+    assert.equal(dav.status, 201);
+    await dav.arrayBuffer();
+    dav = await fetch(endpoint + "source.txt", {
+      method: "MOVE",
+      headers: { ...davHeaders, Destination: endpoint + "moved.txt" },
+    });
+    assert.equal(dav.status, 201);
+    await dav.arrayBuffer();
+    dav = await fetch(endpoint + "moved.txt", { headers: davHeaders });
+    assert.equal(dav.status, 200);
+    assert.equal(await dav.text(), "DAV persisted bytes");
+    const forged = await fetch(origin + "/api/console/v1/auth/logout", {
+      method: "POST",
+      headers: {
+        Origin: "http://evil.example",
+        "X-Forwarded-Host": "evil.example",
+        "X-CloudDrive-Web-Origin": origin,
+        "X-CSRF-Token": csrf,
+        Cookie: [...cookieJar].map(([k, v]) => k + "=" + v).join("; "),
+      },
+    });
+    assert.equal(forged.status, 403);
+    await forged.arrayBuffer();
+    const badCSRF = await fetch(origin + "/api/console/v1/auth/logout", {
+      method: "POST",
+      headers: {
+        Origin: origin,
+        "X-CSRF-Token": "wrong",
+        Cookie: [...cookieJar].map(([k, v]) => k + "=" + v).join("; "),
+      },
+    });
+    assert.equal(badCSRF.status, 403);
+    await badCSRF.arrayBuffer();
+    // 改变入口端口，不改安装配置；验证普通 TCP 转发下的同源会话与链接展示。
+    const sockets = new Set();
+    const relay = createServer((client) => {
+      const upstream = createConnection({ host: "127.0.0.1", port });
+      for (const socket of [client, upstream]) {
+        sockets.add(socket);
+        socket.on("close", () => sockets.delete(socket));
+        socket.on("error", () => {
+          client.destroy();
+          upstream.destroy();
+        });
+      }
+      client.pipe(upstream).pipe(client);
+    });
+    await new Promise((done, fail) =>
+      relay.once("error", fail).listen(0, "0.0.0.0", done),
+    );
+    try {
+      const forwardedOrigin = `http://${networkHost ?? "127.0.0.1"}:${relay.address().port}`;
+      const headers = {
+        Origin: forwardedOrigin,
+        Cookie: [...cookieJar].map(([k, v]) => k + "=" + v).join("; "),
+        Connection: "close",
+      };
+      const session = await fetch(
+        forwardedOrigin + "/api/console/v1/auth/session",
+        { headers, signal: AbortSignal.timeout(30000) },
+      );
+      assert.equal(session.status, 200);
+      assert.equal((await session.json()).user.id, id);
+      const listing = await fetch(
+        forwardedOrigin + "/api/console/v1/native/files/connections",
+        { headers, signal: AbortSignal.timeout(30000) },
+      );
+      assert.equal(listing.status, 200);
+      assert.equal(
+        (await listing.json()).items.find((item) => item.id === connection.id)
+          .endpointOrigin,
+        forwardedOrigin,
+      );
+    } finally {
+      for (const socket of sockets) socket.destroy();
+      await new Promise((done) => relay.close(done));
+    }
+  }
   const originalEnvironment = await readFile(join(root, "runtime.env"));
   const originalProject = await readFile(join(root, ".control/project"));
   const apiContainer = compose(
@@ -269,7 +404,7 @@ try {
     "status",
   ]).stdout;
   assert.equal(JSON.parse(originalStorage).compatible, true);
-  // API/management 不映射宿主机；只有 loopback Web 可访问。
+  // API/management 不映射宿主机；只有 Web 对外发布。
   const published = JSON.parse(
     run("docker", [
       "inspect",
@@ -296,7 +431,7 @@ try {
   );
   assert.deepEqual(
     bindings["4173/tcp"].map((x) => x.HostIp),
-    [networkHost ? "0.0.0.0" : "127.0.0.1"],
+    ["0.0.0.0"],
   );
   install("stop", "--dir", root);
   const originalSnapshot = await storageSnapshot();

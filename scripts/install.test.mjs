@@ -91,7 +91,7 @@ esac
       encoding: "utf8",
       timeout: 25000,
     });
-  async function bundle(version, { network = true } = {}) {
+  async function bundle(version, { network = true, entrypoint = true } = {}) {
     const source = join(base, version),
       stage = join(source, "stage");
     await mkdir(stage, { recursive: true });
@@ -104,7 +104,7 @@ esac
     );
     await writeFile(
       join(stage, "manifest.txt"),
-      `FORMAT=1\n${network ? "NETWORK=1\n" : ""}VERSION=${version}\nARCH=amd64\nCOMMIT=${commit}\nAPI_ID=${apiID}\nWEB_ID=${webID}\n`,
+      `FORMAT=1\n${network ? "NETWORK=1\n" : ""}${entrypoint ? "ENTRYPOINT=1\n" : ""}VERSION=${version}\nARCH=amd64\nCOMMIT=${commit}\nAPI_ID=${apiID}\nWEB_ID=${webID}\n`,
     );
     const name = `clouddrive_${version}_linux_amd64_docker.tar.gz`;
     const packed = spawnSync("tar", [
@@ -138,7 +138,7 @@ esac
     ]);
     assert.equal(result.status, 0, result.stderr);
   };
-  return { base, root, log, run, bundle, install };
+  return { base, root, log, env, run, bundle, install };
 }
 test("下载校验失败不会创建实例或执行迁移", async (t) => {
   const f = await fixture(t),
@@ -359,7 +359,7 @@ test("目标版本启动超时仅在旧数据库兼容时恢复旧服务", async
   );
 });
 
-test("IP/frp 入口明确配置，HTTP 使用显式开关，升级保持网络配置", async (t) => {
+test("高级入口仍可明确配置，升级保持网络配置", async (t) => {
   const f = await fixture(t),
     source = await f.bundle("v1.0.0");
   const result = f.run([
@@ -389,7 +389,6 @@ test("IP/frp 入口明确配置，HTTP 使用显式开关，升级保持网络�
   );
   assert.match(configuration, /^ALLOW_INSECURE_HTTP=true$/m);
   assert.match(configuration, /https:\/\/files\.example\.test/);
-  assert.match(configuration, /http:\/\/localhost:44173/);
   const target = await f.bundle("v1.0.1");
   const upgrade = f.run([
     "upgrade",
@@ -409,8 +408,6 @@ test("IP/frp 入口明确配置，HTTP 使用显式开关，升级保持网络�
 
 test("拒绝不明确或可注入的入口，在迁移前终止", async (t) => {
   for (const options of [
-    ["--bind", "0.0.0.0"],
-    ["--public-url", "http://198.51.100.10:4173"],
     ["--public-url", "https://files.example.test/path"],
     ["--public-url", "https://user:secret@files.example.test"],
     ["--bind", "bad-ip", "--public-url", "https://files.example.test"],
@@ -436,6 +433,155 @@ test("拒绝不明确或可注入的入口，在迁移前终止", async (t) => {
       /run --rm --no-deps migrate/,
     );
   }
+});
+
+test("基础安装默认 HTTP 与所有地址，无需外部地址；管理命令定位自身目录", async (t) => {
+  const f = await fixture(t);
+  await f.install();
+  const configuration = await readFile(join(f.root, "runtime.env"), "utf8");
+  assert.match(configuration, /^WEB_BIND=0\.0\.0\.0$/m);
+  assert.match(configuration, /^WEB_PORT=4173$/m);
+  assert.match(configuration, /^ALLOW_INSECURE_HTTP=true$/m);
+  assert.match(configuration, /^PUBLIC_ORIGIN=$/m);
+  assert.match(configuration, /^ALLOWED_ORIGINS='\[\]'$/m);
+  const manager = join(f.root, "install.sh");
+  for (const args of [
+    ["status"],
+    ["restart"],
+    ["logs", "--tail", "12", "-f"],
+  ]) {
+    const result = spawnSync("bash", [manager, ...args], {
+      cwd: "/tmp",
+      env: { ...process.env, ...f.env },
+      encoding: "utf8",
+      timeout: 25000,
+    });
+    assert.equal(result.status, 0, result.stderr);
+  }
+  const log = await readFile(f.log, "utf8");
+  assert.match(log, /logs --tail 12 --follow backend web/);
+  assert.deepEqual(
+    await readFile(join(f.root, "runtime.env"), "utf8"),
+    configuration,
+  );
+  const target = await f.bundle("v1.0.1");
+  assert.equal(
+    f.run([
+      "update",
+      "--dir",
+      f.root,
+      "--version",
+      "v1.0.1",
+      "--release-dir",
+      target,
+    ]).status,
+    0,
+  );
+});
+
+test("新自动入口不能降级到缺少能力的包，校验发生在停服前", async (t) => {
+  const f = await fixture(t);
+  await f.install();
+  const old = await f.bundle("v1.0.1", { entrypoint: false });
+  await writeFile(f.log, "");
+  const result = f.run([
+    "upgrade",
+    "--dir",
+    f.root,
+    "--version",
+    "v1.0.1",
+    "--release-dir",
+    old,
+  ]);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /不支持自动同源入口/);
+  assert.doesNotMatch(
+    await readFile(f.log, "utf8"),
+    / stop|run --rm --no-deps migrate/,
+  );
+});
+
+function terminal(args, answers, env, piped = false) {
+  // 真实伪终端：覆盖 curl|bash 的 /dev/tty 输入，不把普通 stdin 冒充终端。
+  return spawnSync(
+    "python3",
+    [
+      "-c",
+      `
+import os,pty,select,sys,json,time,signal
+args,answers,piped=json.loads(sys.argv[1])
+pid,fd=pty.fork()
+if pid==0:
+    if piped:os.execvp('bash',['bash','-c','cat "$1" | bash -s -- "\u0024{@:2}"','_',*args])
+    os.execvp('bash',['bash',*args])
+os.write(fd,('\\n'.join(answers)+'\\n').encode())
+output=bytearray();deadline=time.monotonic()+22;status=None
+while time.monotonic()<deadline:
+    if select.select([fd],[],[],.1)[0]:
+        try:
+            chunk=os.read(fd,65536)
+            if not chunk:break
+            output.extend(chunk)
+        except OSError:break
+    ended,value=os.waitpid(pid,os.WNOHANG)
+    if ended:status=value;break
+if status is None:
+    ended,value=os.waitpid(pid,os.WNOHANG)
+    if not ended:
+        os.killpg(pid,signal.SIGKILL);os.waitpid(pid,0);sys.stdout.buffer.write(output);sys.exit(124)
+    status=value
+sys.stdout.buffer.write(output);sys.exit(os.waitstatus_to_exitcode(status))
+`,
+      JSON.stringify([args, answers, piped]),
+    ],
+    { env, encoding: "utf8", timeout: 25000 },
+  );
+}
+
+test("管道安装在真实终端询问三项，已安装脚本提供可重复管理菜单", async (t) => {
+  const f = await fixture(t),
+    source = await f.bundle("v1.0.0");
+  const result = terminal(
+    [installer, "--version", "v1.0.0", "--release-dir", source],
+    [f.root, "0.0.0.0", "44173", "y"],
+    { ...f.env, HOME: f.base },
+    true,
+  );
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /安装目录/);
+  assert.match(result.stdout, /安装完成/);
+  assert.match(
+    await readFile(join(f.root, "runtime.env"), "utf8"),
+    /^WEB_PORT=44173$/m,
+  );
+  const before = await readFile(join(f.root, "runtime.env"));
+  const menu = terminal([join(f.root, "install.sh")], ["1", "0"], f.env);
+  assert.equal(menu.status, 0, menu.stdout + menu.stderr);
+  assert.match(menu.stdout, /当前版本：v1.0.0/);
+  assert.deepEqual(await readFile(join(f.root, "runtime.env")), before);
+});
+
+test("无终端不等待输入；--yes 使用 HOME 下默认目录", async (t) => {
+  const f = await fixture(t),
+    source = await f.bundle("v1.0.0");
+  const noTerminal = spawnSync("setsid", ["bash", installer], {
+    env: f.env,
+    encoding: "utf8",
+    timeout: 3000,
+  });
+  assert.equal(noTerminal.status, 2, noTerminal.stderr);
+  assert.match(noTerminal.stderr, /没有交互终端/);
+  const installed = f.run(
+    ["--yes", "--version", "v1.0.0", "--release-dir", source],
+    { HOME: f.base },
+  );
+  assert.equal(installed.status, 0, installed.stderr);
+  assert.equal(
+    (
+      await readFile(join(f.base, "clouddrive/.control/current"), "utf8")
+    ).trim(),
+    "v1.0.0",
+  );
 });
 
 test("IPv6 监听使用 Compose 的方括号格式，HTTPS 默认保持安全 Cookie", async (t) => {

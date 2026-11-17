@@ -3,6 +3,7 @@ package httpbinding
 import (
 	"context"
 	"net/http"
+	"net/url"
 
 	"github.com/danielgtaylor/huma/v2"
 	webdavbinding "github.com/reina0721/clouddrive/internal/module/files/binding/webdav"
@@ -20,6 +21,21 @@ func connectionOrigin(ctx context.Context, h *handler.Handler) string {
 		return h.ConnectionOrigin
 	}
 	return ctx.Value(connectionOriginContextKey{}).(string)
+}
+
+// connectionRequestOrigin 只提供响应中的展示地址，不参与 Origin、CSRF、Cookie 或 DAV 授权。
+// Web Host 会覆盖客户端同名头；独立 Go 入口仍按实际 HTTP 请求生成地址。
+func connectionRequestOrigin(request *http.Request) string {
+	if value := request.Header.Get("X-CloudDrive-Web-Origin"); value != "" {
+		if parsed, err := url.Parse(value); err == nil && (parsed.Scheme == "http" || parsed.Scheme == "https") && parsed.Host != "" && parsed.User == nil && parsed.Path == "" && parsed.RawQuery == "" && parsed.Fragment == "" {
+			return value
+		}
+	}
+	scheme := "http"
+	if request.TLS != nil {
+		scheme = "https"
+	}
+	return scheme + "://" + request.Host
 }
 
 const maxConnectionControlBytes int64 = 4096
@@ -91,12 +107,7 @@ func registerConnections(api huma.API, h *handler.Handler, operation func(string
 			request, writer := humabinding.UnwrapHTTP(ctx)
 			writer.Header().Set("Cache-Control", "private, no-store")
 			writer.Header().Set("Referrer-Policy", "no-referrer")
-			scheme := "http"
-			if request.TLS != nil {
-				scheme = "https"
-			}
-			// 不采用未经信任的Forwarded头；HTTPS代理由publicOrigin明确声明。
-			next(huma.WithValue(ctx, connectionOriginContextKey{}, scheme+"://"+request.Host))
+			next(huma.WithValue(ctx, connectionOriginContextKey{}, connectionRequestOrigin(request)))
 		})
 		return op
 	}

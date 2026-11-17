@@ -124,6 +124,7 @@ try {
       '/api/echo?name=a%2Fb',
       '/wopi/files/a?access_token=test',
       '/management/healthz',
+      '/dav/test/a',
     ]) {
       const response = await fetch(origin + path, {
         method: 'POST',
@@ -142,7 +143,8 @@ try {
       assert.equal(echo.url, path);
       assert.equal(echo.method, 'POST');
       assert.equal(echo.headers.cookie, 'session=test');
-      assert.equal(echo.headers.origin, origin);
+      assert.equal(echo.headers.origin, new URL(echo.name === 'a' ? upstreamA : upstreamB).origin);
+      assert.equal(echo.headers['x-clouddrive-web-origin'], origin);
       assert.equal(echo.headers['x-csrf-token'], 'test');
       assert.equal(echo.body, 'streamed-body-' + 'x'.repeat(32 * 1024));
     }
@@ -155,6 +157,11 @@ try {
       Buffer.concat(Array.from({ length: 16 }, (_, index) => Buffer.alloc(8192, index))),
     );
   }
+  const spoofed = await fetch(originA + '/api/echo', {
+    method: 'POST',
+    headers: { Origin: 'https://evil.example', 'X-Forwarded-Host': 'evil.example' },
+  });
+  assert.equal(spoofed.status, 403, 'client forwarded headers must not approve a foreign origin');
   const html = await (await fetch(originA + '/login')).text();
   const assets = [...html.matchAll(/(?:src|href)="([^" ]*\/_next\/static\/[^" ]+)"/g)].map(
     (match) => match[1],

@@ -1,4 +1,97 @@
-# clouddrive 部署
+# CloudDrive Docker 安装与管理
+
+## Release 下载版安装与升级
+
+下载版支持 Linux amd64、arm64，使用 SQLite 和本地文件存储。目标机需预装本机 Docker Engine、Docker Compose >=2.20，以及 Bash、curl、GNU tar/coreutils、gzip、sha256sum、flock。当前账号应有 Docker 权限；脚本不安装系统软件、不自动提权，不需要源码、Git、Go、Node 或 pnpm。
+
+### 安装向导
+
+```bash
+curl -fL --proto '=https' --proto-redir '=https' \
+  https://github.com/reina0721/neocloud/releases/latest/download/install.sh | bash
+```
+
+向导只询问安装目录、监听地址和端口；默认 `~/clouddrive`、`0.0.0.0:4173`。安装器解析最新正式 Release，固定版本下载配套产物、检查摘要和镜像身份，执行 `docker image load`、数据库迁移、启动及就绪检查。下载与导入阶段显示进度，低速停滞会有界重试；下载失败不会停止已有服务。
+
+安装后访问 `http://服务器地址:4173/setup` 创建自己的管理员。设置令牌位于安装目录 `.control/setup-token`（0600），脚本仅提示路径，没有默认管理员或预置密码。HTTP 是该 Docker 配置的明确默认选择；Go 的通用 Cookie 策略默认值仍保留 HTTPS 保护。API 8080、management 9090 只在容器网络内，宿主机只发布 Web 端口。
+
+网络接入由项目外部管理。应用安装不询问公网 IP、域名或外部端口。
+
+### 自动化与离线安装
+
+```bash
+curl -fL https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
+bash install.sh install --dir "$HOME/clouddrive" --port 4173 --yes
+# 固定版本、监听地址或使用独立实例目录
+bash install.sh install --dir "$HOME/clouddrive-two" --bind 127.0.0.1 --port 44173 --version v0.1.4 --yes
+```
+
+显式 `install` 保持非交互行为；`--yes` 也支持省略 `install`。管道安装通过 `/dev/tty` 交互；没有终端且未明确使用命令或 `--yes` 时立即提示用法，不等待输入。
+
+离线时，从同一 Release 拷贝对应架构的 `clouddrive_vX.Y.Z_linux_amd64_docker.tar.gz` 或 `clouddrive_vX.Y.Z_linux_arm64_docker.tar.gz`、`checksums.txt`、`version.txt`，添加 `--release-dir /path/to/assets`。可以用 `--version` 替代 `version.txt`。目标机不拉取镜像仓库，也不编译源码。
+
+### 管理和更新
+
+以下示例使用默认目录，自定义目录时替换路径。脚本根据自身位置定位实例，无须先 `cd`：
+
+```bash
+~/clouddrive/install.sh                 # 管理菜单
+~/clouddrive/install.sh status
+~/clouddrive/install.sh logs --tail 100
+~/clouddrive/install.sh logs -f
+~/clouddrive/install.sh check-update
+~/clouddrive/install.sh upgrade         # update 是同义命令
+~/clouddrive/install.sh upgrade --version v0.1.4
+~/clouddrive/install.sh backup
+~/clouddrive/install.sh stop
+~/clouddrive/install.sh start
+~/clouddrive/install.sh restart
+```
+
+`restart` 会应用修改后的配置并检查就绪状态。更新成功后同时更新本实例的管理脚本；同版本更新不会重复迁移。重复安装不重建已有实例，目标目录非空且无实例标记时拒绝接管。不同实例使用独立 Compose project、配置和数据目录。
+
+主目录结构：
+
+```text
+clouddrive/
+├── install.sh          # 本实例管理入口
+├── runtime.env         # 用户配置，升级保留
+├── data/               # 数据库、文件与传输暂存
+├── releases/           # 已校验的版本编排和清单
+├── backups/            # 数据库及配置备份
+└── .control/           # 实例、当前版本、锁及设置令牌
+```
+
+### 高级应用配置
+
+编辑本实例的 `runtime.env`，随后执行 `restart`。升级逐字保留已有配置；原有实例不会被改成新安装默认值。
+
+| 变量 | 新安装默认值 | 用途 |
+| --- | --- | --- |
+| `WEB_BIND` | `0.0.0.0` | 宿主机监听 IP，IPv6 写作 `[::]` |
+| `WEB_PORT` | `4173` | 宿主机 Web 端口，1024–65535 |
+| `PUBLIC_ORIGIN` | 空 | 可选的绝对链接地址覆写；未设置时采用当前 Web 入口 |
+| `ALLOW_INSECURE_HTTP` | `true` | HTTP Cookie 模式；HTTPS Cookie 策略设为 `false` |
+| `ALLOWED_ORIGINS` | `'[]'` | 可选额外跨域白名单，JSON 精确 Origin 数组，不接受 `*` |
+| `SETUP_TOKEN` | 随机生成 | 首次管理员创建令牌 |
+
+首次安装仍兼容 `--public-url`、`--allow-origin`、`--allow-http` 高级参数；显式 HTTPS 地址且未提供 `--allow-http` 时使用 HTTPS Cookie。切换 Cookie 模式需重新登录，账号、文件与权限保留。
+
+Web Host 校验外部 Host/Origin，并向 Go 转发内部同源请求；额外跨域 Origin 仍由显式白名单约束。Go 继续独立执行会话、权限和 CSRF 校验。WOPI 保留协议自身的票据验证。Web Host 覆盖客户端转发头；用于连接 URL 展示的元数据不参与鉴权、Cookie 策略或 DAV 目标授权。
+
+安装包保持 `FORMAT=1`、`NETWORK=1` 和原五项文件集合；`ENTRYPOINT=1` 表示支持无固定外部地址的 Web 入口。旧安装器可以升级到新包；新安装器拒绝把自动入口实例更新到缺少该能力的包。签名、SBOM 与维护者发布验收见[发布说明](release.md)。
+
+### 数据与升级失败
+
+安装目录中的 `data/` 持久化数据库、文件和传输暂存；所有版本保持容器内 `/app/.data` 的挂载目标及工作目录不变。`runtime.env` 保留用户配置与设置令牌，`.control/` 记录当前版本和实例标记，`releases/` 保留已校验的 Compose 与镜像清单。
+
+升级先完成下载、摘要及配套镜像校验，再停止前后端，等待退出，备份 SQLite 主文件、存在的 WAL/SHM 及配置，然后执行目标镜像的迁移和严格兼容检查，最后启动并核对 `/readyz` 和 `/build` 版本。启动检查默认等待 120 秒，可通过 `--wait-timeout 180` 调整（5–600 秒）。
+
+备份位于 `backups/时间戳/`，包含 `database.tar`、`runtime.env`、原版本、实例标记和校验和。文件 Blob 留在原 `data/storage`，不在每次升级时重复复制全部大文件；外部灾难恢复仍需要独立的文件内容备份。
+
+下载或校验失败不会停止服务。备份失败不会执行目标迁移。后续失败会保留数据、候选版本和备份；只有旧镜像报告各迁移集精确兼容时才恢复旧服务。否则停止自动回退，按[迁移与回滚](migration-and-rollback.md)选择 forward-fix 或经所有者确认的备份恢复，不执行自动 `down`、删除版本记录或覆盖数据库。恢复前先停止实例、另存失败现场并校验备份，不在运行中的数据库上解包。
+
+首次初始化失败的目录保留安装器标记，可以使用相同安装命令重试；dirty migration 等数据库问题仍必须先按迁移规范解决。任意管理操作均使用实例锁，拒绝并发安装、备份或升级。
 
 ## 构建与进程
 
@@ -19,7 +112,7 @@ CLOUDDRIVE_BACKEND_URL=http://127.0.0.1:8080 HOSTNAME=127.0.0.1 PORT=4173 \
 
 PowerShell 对应设置 `$env:CLOUDDRIVE_BACKEND_URL`、`$env:HOSTNAME`、`$env:PORT` 后执行同一个入口。`PORT` / `HOSTNAME` 属于 standalone 进程，开发期的 `WEB_PORT` 不用于配置这个入口。
 
-`CLOUDDRIVE_BACKEND_URL` 在服务端处理请求时读取，同一份产物可在不同环境连接不同 Go 服务。值必须是 HTTP(S) 根 Origin，不含路径、凭据、query 或 fragment；默认 `http://127.0.0.1:8080`。Host 的 Next Proxy 只转发 `/api/`、`/wopi/`、`/management/`，保留原有请求、Cookie、CSRF 和范围响应；Go 继续执行认证授权。此变量不进入浏览器公开配置。`NEXT_PUBLIC_*` 仍属于构建期参数，不能在运行时切换认证产品形态。
+`CLOUDDRIVE_BACKEND_URL` 在服务端处理请求时读取，同一份产物可在不同环境连接不同 Go 服务。值必须是 HTTP(S) 根 Origin，不含路径、凭据、query 或 fragment；默认 `http://127.0.0.1:8080`。Host 的 Next Proxy 转发 `/api/`、`/wopi/`、`/dav/`、`/management/`；它校验浏览器 Host/Origin 并将合法同源请求规范化为内部同源。请求体、Cookie、CSRF、范围响应与取消语义保留，Go 继续执行认证授权。此变量不进入浏览器公开配置。`NEXT_PUBLIC_*` 仍属于构建期参数，不能在运行时切换认证产品形态。
 
 根 `Dockerfile` 仅构建 Go 镜像；`frontend/Dockerfile` 的运行层只复制上述独立产物，以 node 用户运行，默认监听 `0.0.0.0:4173`。构建上下文排除 `.env`、本地数据和依赖目录。镜像内默认后端为 `http://backend:8080`，通过运行时环境变量指向同一私有网络中的 Go 服务，无需为后端地址重新构建镜像。完整容器构建入口见[构建与容器](build-and-container.md)。
 
@@ -27,38 +120,6 @@ PowerShell 对应设置 `$env:CLOUDDRIVE_BACKEND_URL`、`$env:HOSTNAME`、`$env:
 
 静态导出模式仍生成静态站点，包含资源但不包含 Node Proxy；API 必须由部署方的同源反向代理提供。上述 standalone 启动与检查只适用于默认 server 模式。
 
-## 同源与会话
-
-生产只对外暴露 HTTPS 站点，反向代理 / 到 Next.js，/api/ 和 /management/ 到 Go 的业务端口8080；9090 只监听内网/loopback。Go 业务端口的 management facade 同样保留身份和 management:read 权限检查。公开探针按原后端配置开放；不要将 management 或 API 整段配置为免认证。
-
-```nginx
-server {
-  listen 443 ssl;
-  server_name clouddrive.example.com;
-  # 配置证书路径
-  location /api/ {
-    proxy_pass http://127.0.0.1:8080;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  }
-  location /management/ {
-    proxy_pass http://127.0.0.1:8080;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
-  location / {
-    proxy_pass http://127.0.0.1:4173;
-    proxy_set_header Host $host;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-  }
-}
-```
-
-配置 http.cors.allowedOrigins 为唯一真实站点 Origin，按实际代理配置 trusted proxy CIDR；保留 Cookie Secure/HttpOnly，不把会话凭据写入 localStorage。开发浏览器的 localhost/127.0.0.1 允许 Secure Cookie；生产必须 HTTPS。登录失效后页面返回登录流程。
-
-设置 logger.environment=production、auth.mode=session，设置随机 APP_IAM__LOCAL__SETUPTOKEN，创建管理员后移除设置令牌。注册默认关闭。凭据/数据库/本地配置不进入镜像或版本库。
 
 ## 站点信息
 
@@ -77,136 +138,3 @@ server {
 scheduler.enabled 默认 true；任务定义与下次运行时间保存在数据库，重启后重新加载。关闭调度器会保留任务并停止派发。任务由既有 execution 生命周期执行；每次执行重新检查账号状态与权限，执行权通过版本比较领取，避免重复派发。当前本地调度适用于单个后端实例；多实例上线前配置并验证既有协调能力。
 
 API 请求默认禁止私网、loopback、链路本地及元数据地址，重定向和 DNS 解析逐次验证。确需访问内部 API 时，管理员在 console.relay.allowedOrigins 中按协议、主机、端口显式许可，不接受来自浏览器的任意放行规则。默认最长30秒、响应体2MiB、请求体1MiB；服务端不执行任意 JavaScript。带脚本/提取器的集合不能新建服务端任务。UA/自定义允许头可用；代理和 TLS 指纹当前不支持，UI 禁用且接口返回 unsupported。
-
-## 验证记录
-
-验证结果必须记录实际命令、环境、范围和未通过项，见[验证策略](../development/validation.md)。容器、MySQL/PostgreSQL 外部实例和线上代理必须在目标环境再次验证，不能以 SQLite 验收代替。
-
-若使用独立 Go 工具目录执行 Verify-Quality.ps1，先将其 bin 加入当前终端 PATH。race 需要当前终端 CGO_ENABLED=1，并通过 CC 或 PATH 指定 C 编译器；本次使用用户目录中的 w64devkit，不修改全局工具。Start-Dev、Build、Test-Integration 支持 -GoExecutable，也会识别用户目录中的 clouddrive-tools/go。
-
-## Release 下载版安装与升级
-
-下载版面向 Linux amd64、arm64，默认 SQLite 与本地文件存储。目标机需要已安装并可由当前用户使用的本机 Docker Engine、Docker Compose >=2.20，以及 Bash、curl、GNU tar/coreutils、gzip、sha256sum、flock 等 Linux 工具；不需要源码、Git、Go、Node 或 pnpm。脚本不安装系统软件、不自动提权。
-
-公开下载依赖维护者先发布完整的正式 Release。Draft 和尚未发布的版本不能当作可匿名下载的安装入口。仓库地址使用 `reina0721/neocloud`，产品、命令与存储身份继续使用 CloudDrive。
-
-正式发布后，下载入口为：
-
-```bash
-curl -fL --proto '=https' --proto-redir '=https' \
-  https://github.com/reina0721/neocloud/releases/latest/download/install.sh \
-  -o install.sh
-bash install.sh install --dir ./clouddrive
-```
-
-访问 `http://127.0.0.1:4173/setup` 创建自己的管理员。设置令牌保存在安装目录 `.control/setup-token`，权限为 `0600`；没有默认管理员或预置密码。创建完成后可清空 `runtime.env` 中的 `SETUP_TOKEN`、删除该令牌文件，再执行 `stop` / `start`。安装目录应放在源码仓库之外，并按私有运行数据管理。
-
-安装器默认只映射 `127.0.0.1` 上的 Web 端口；API 8080 与 management 9090 留在实例的容器网络中。`localhost` 和 `127.0.0.1` 的同端口本机 Origin 均被允许。网络配置参数需要含 `NETWORK=1` 清单的安装包，`v0.1.2` 不支持这些参数；新版脚本会拒绝用旧包假装完成外部入口部署。
-
-```bash
-# 自选端口或固定版本
-bash install.sh install --dir ./clouddrive --port 44173 --version v1.0.0
-
-./clouddrive/install.sh status
-./clouddrive/install.sh check-update
-./clouddrive/install.sh upgrade
-./clouddrive/install.sh upgrade --version v1.0.1
-./clouddrive/install.sh backup
-./clouddrive/install.sh stop
-./clouddrive/install.sh start
-```
-
-首次安装默认查找最新正式稳定版，然后固定该 tag 下载配套产物。显式 `--version` 可以选择预发布版本。重复安装不会重建已有实例，重复升级到相同版本不会再次迁移。缺少依赖、目录非空且无安装器标记、端口冲突、校验失败或镜像身份不匹配时停止，不接管已有预览或用户目录。
-
-安装包按架构命名为 `clouddrive_vX.Y.Z_linux_amd64_docker.tar.gz` 或 `clouddrive_vX.Y.Z_linux_arm64_docker.tar.gz`，内含前后端镜像归档、Compose、版本/源码/镜像配置摘要清单及管理脚本。安装时从已校验的包执行 `docker image load`，同时兼容 Docker 传统存储与 containerd 存储的不同显示 ID；实际核对原始配置 SHA-256、架构、版本和源码。运行服务使用 `pull_policy: never`，不访问镜像仓库。`checksums.txt` 提供传输完整性检查；维护者还发布该清单的 Sigstore 签名，签名校验方法见[发布说明](release.md)。
-
-离线时把对应包、`checksums.txt`、`version.txt` 从同一 Release 拷到本机，用 `--release-dir /path/to/assets` 替代在线下载；也可以显式指定 `--version` 而不提供 `version.txt`。默认源码里的 `scripts/deploy-ui-test.mjs` 仍用于开发验收，不是下载版安装入口。
-
-### IP、frp 与 HTTPS 入口
-
-监听地址、宿主端口与浏览器访问地址是三个独立参数。`--bind` 接受 IPv4/IPv6（如 `0.0.0.0`、`::`），`--port` 是本机端口，`--public-url` 是浏览器实际使用的完整 Origin（协议、IP/域名、外部端口，不带路径或末尾斜杠）。`--allow-origin` 可重复添加其它精确入口，不支持 `*`。安装器不猜测公网 IP、不信任任意转发头。
-
-IP＋端口直接访问（在安装目录以外保存下载的 bootstrap；将示例 IP 换成真实地址）：
-
-```bash
-PUBLIC_IP=198.51.100.10
-bash install.sh install --dir ./clouddrive --bind 0.0.0.0 --port 4173 \
-  --public-url "http://${PUBLIC_IP}:4173" --allow-http
-./clouddrive/install.sh status
-```
-
-放行服务器防火墙和云安全组的 TCP 4173，然后访问 `http://服务器IP:4173/setup`。HTTP 模式是显式部署选择：使用无 `__Host-` 前缀的 HttpOnly Cookie，保留 SameSite、精确 Origin 与 CSRF 校验；明文链路不能保护登录凭据和文件，公网可在之后切换 HTTPS。UUID 仍使用浏览器 `crypto.getRandomValues` 的密码学随机源，不依赖只在安全上下文提供的 `crypto.randomUUID`。
-
-frp TCP 转发时，本机仍可只监听回环，但必须登记**外部 IP 和外部端口**：
-
-```bash
-FRPS_IP=198.51.100.20
-bash install.sh install --dir ./clouddrive --bind 127.0.0.1 --port 4173 \
-  --public-url "http://${FRPS_IP}:18080" --allow-http
-```
-
-已安装 frp 后，公网 frps 的 `frps.toml` 示例：
-
-```toml
-bindPort = 7000
-allowPorts = [{ single = 18080 }]
-auth.method = "token"
-auth.token = "REPLACE_WITH_YOUR_RANDOM_FRP_TOKEN"
-```
-
-CloudDrive 所在机器的 `frpc.toml`（替换 IP，两个 token 必须相同）：
-
-```toml
-serverAddr = "198.51.100.20"
-serverPort = 7000
-auth.method = "token"
-auth.token = "REPLACE_WITH_YOUR_RANDOM_FRP_TOKEN"
-
-[[proxies]]
-name = "clouddrive"
-type = "tcp"
-localIP = "127.0.0.1"
-localPort = 4173
-remotePort = 18080
-```
-
-分别在公网机器执行 `frps -c /path/to/frps.toml`、在应用机器执行 `frpc -c /path/to/frpc.toml`，并放行 frps 的 TCP 7000、18080。浏览器访问 `http://公网frpsIP:18080/setup`；只转发 Web，不单独转发 8080/9090。生产常驻可沿用已配置的 frp systemd 服务。frp 参数以[官方 TCP 配置](https://gofrp.org/en/docs/features/common/configure/)为准。
-
-HTTPS 反向代理或 frp 外侧 TLS 终结时，用 `--public-url https://drive.example.com`，省略 `--allow-http`，保留 Secure Cookie；仍将完整站点（含 `/api/`、`/wopi/`）转发到 Web。TCP frp 不改写 Host；HTTP 代理应保留原始 Host，外部 Origin 要与此处精确一致。
-
-### 修改入口与后续升级
-
-已安装实例直接编辑其 `runtime.env`，不要再用 `install` 修改网络配置，也不要编辑 `releases/` 下的版本文件。示例：
-
-```dotenv
-WEB_BIND=0.0.0.0
-WEB_PORT=4173
-PUBLIC_ORIGIN=http://198.51.100.10:4173
-ALLOW_INSECURE_HTTP=true
-ALLOWED_ORIGINS='["http://198.51.100.10:4173","http://127.0.0.1:4173","http://localhost:4173"]'
-```
-
-保留原来的 `SETUP_TOKEN` 和其它私有配置。frp 时 `WEB_BIND=127.0.0.1`、`PUBLIC_ORIGIN=http://公网IP:18080`，`ALLOWED_ORIGINS` 也写入这个外部 Origin。本机和公网入口需要同时使用时，把两个地址都放入 JSON 数组。切换 HTTP/HTTPS Cookie 模式后重新登录；已有数据库、账号及文件不变。
-
-```bash
-./clouddrive/install.sh stop
-./clouddrive/install.sh start
-./clouddrive/install.sh check-update
-./clouddrive/install.sh upgrade
-# 可选：固定一个已发布的新版本
-./clouddrive/install.sh upgrade --version vX.Y.Z
-```
-
-升级逐字保留 `runtime.env` 中的监听、端口、Origin 和 Cookie 模式。旧 `v0.1.2` 实例应先升级到支持网络配置的版本，再补充这些变量；启用新网络配置后，安装器拒绝回退到不认识这些变量的旧包。Cookie 约束见 [MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie)，Compose 变量格式见 [Docker 官方说明](https://docs.docker.com/reference/compose-file/interpolation/)。
-
-### 数据与升级失败
-
-安装目录中的 `data/` 持久化数据库、文件和传输暂存；所有版本保持容器内 `/app/.data` 的挂载目标及工作目录不变。`runtime.env` 保留用户配置与设置令牌，`.control/` 记录当前版本和实例标记，`releases/` 保留已校验的 Compose 与镜像清单。
-
-升级先完成下载、摘要及配套镜像校验，再停止前后端，等待退出，备份 SQLite 主文件、存在的 WAL/SHM 及配置，然后执行目标镜像的迁移和严格兼容检查，最后启动并核对 `/readyz` 和 `/build` 版本。启动检查默认等待 120 秒，可通过 `--wait-timeout 180` 调整（5–600 秒）。
-
-备份位于 `backups/时间戳/`，包含 `database.tar`、`runtime.env`、原版本、实例标记和校验和。文件 Blob 留在原 `data/storage`，不在每次升级时重复复制全部大文件；外部灾难恢复仍需要独立的文件内容备份。
-
-下载或校验失败不会停止服务。备份失败不会执行目标迁移。后续失败会保留数据、候选版本和备份；只有旧镜像报告各迁移集精确兼容时才恢复旧服务。否则停止自动回退，按[迁移与回滚](migration-and-rollback.md)选择 forward-fix 或经所有者确认的备份恢复，不执行自动 `down`、删除版本记录或覆盖数据库。恢复前先停止实例、另存失败现场并校验备份，不在运行中的数据库上解包。
-
-首次初始化失败的目录保留安装器标记，可以使用相同安装命令重试；dirty migration 等数据库问题仍必须先按迁移规范解决。任意管理操作均使用实例锁，拒绝并发安装、备份或升级。

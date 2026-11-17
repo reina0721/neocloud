@@ -24,13 +24,14 @@ node scripts/dev.mjs --prepare
 
 ## 下载版 Docker 部署
 
-面向 Linux amd64/arm64 的 Release 安装器支持安装、备份、版本检查及升级。目标机只需 Docker/Compose 与标准 Linux 工具，不编译源码；默认仅访问本机 `127.0.0.1:4173`；新版网络配置可通过 `--bind`、`--public-url` 与显式 `--allow-http` 支持 IP＋端口、frp 或 HTTPS 代理。完整命令见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。正式版通过 GitHub Actions 完成构建、原生运行、校验签名和发布；draft 不能作为匿名下载入口。
+面向 Linux amd64/arm64 的 Release 安装器从 GitHub 下载配套镜像包，导入 Docker 并启动；目标机只需 Docker/Compose 与标准 Linux 工具。无参数运行进入安装向导，默认目录 `~/clouddrive`、监听 `0.0.0.0:4173`，HTTP 开箱可用。安装后同一入口提供管理菜单、日志、备份、版本检查与升级。完整说明见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。外部网络接入由部署方管理；正式产物由 GitHub Actions 构建、验收并发布。
 
 ```bash
 curl -fL --proto '=https' --proto-redir '=https' \
-  https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
-bash install.sh install --dir ./clouddrive
-./clouddrive/install.sh upgrade
+  https://github.com/reina0721/neocloud/releases/latest/download/install.sh | bash
+# 安装后从任意目录管理实例
+~/clouddrive/install.sh
+~/clouddrive/install.sh upgrade
 ```
 
 ## 开发与验证

@@ -1,12 +1,19 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { backendDestination } from './backend-proxy';
+import { backendDestination, backendRequestHeaders } from './backend-proxy';
 
 // Keep transport, streaming and cookies in Next's proxy; Go owns authorization.
 // Read the upstream at runtime so the same artifact can move between deployments.
 export function proxy(request: NextRequest) {
-  return NextResponse.rewrite(backendDestination(request.url));
+  const destination = backendDestination(request.url);
+  let headers: Headers;
+  try {
+    headers = backendRequestHeaders(request.url, request.headers, destination);
+  } catch {
+    return NextResponse.json({ error: 'Invalid request origin or authority.' }, { status: 403 });
+  }
+  return NextResponse.rewrite(destination, { request: { headers } });
 }
 
 export const config = {
-  matcher: ['/api/:path*', '/wopi/:path*', '/management/:path*'],
+  matcher: ['/api/:path*', '/wopi/:path*', '/management/:path*', '/dav/:path*'],
 };
