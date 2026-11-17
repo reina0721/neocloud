@@ -49,8 +49,28 @@ const jsGzipSizes = await Promise.all(
   jsAssets.map(async (asset) => ({ asset, bytes: await gzipBytes(asset) })),
 );
 const jsGzipSizeByAsset = new Map(jsGzipSizes.map(({ asset, bytes }) => [resolve(asset), bytes]));
-const cssGzipBytes = (await Promise.all(cssAssets.map((asset) => gzipBytes(asset)))).reduce(
-  (sum, bytes) => sum + bytes,
+// 字体声明与应用样式分别预算；同时报告总 CSS，不能把自托管资源藏在统计之外。
+const cssMeasurements = await Promise.all(
+  cssAssets.map(async (asset) => {
+    const css = await readFile(asset, 'utf8');
+    const faces = css.match(/@font-face\s*\{[^}]*\}/g) ?? [];
+    return {
+      application: gzipSync(css.replace(/@font-face\s*\{[^}]*\}/g, ''), { level: 9 }).byteLength,
+      fonts: faces.length ? gzipSync(faces.join(''), { level: 9 }).byteLength : 0,
+      total: gzipSync(css, { level: 9 }).byteLength,
+    };
+  }),
+);
+const cssGzipBytes = cssMeasurements.reduce((sum, item) => sum + item.application, 0);
+const fontCssGzipBytes = cssMeasurements.reduce((sum, item) => sum + item.fonts, 0);
+const totalCssGzipBytes = cssMeasurements.reduce((sum, item) => sum + item.total, 0);
+const fontAssets = (
+  await Promise.all(
+    ['.woff2', '.woff', '.ttf', '.otf'].map((extension) => collectFiles(staticRoot, extension)),
+  )
+).flat();
+const fontAssetBytes = (await Promise.all(fontAssets.map((asset) => stat(asset)))).reduce(
+  (sum, item) => sum + item.size,
   0,
 );
 const totalJsGzipBytes = jsGzipSizes.reduce((sum, item) => sum + item.bytes, 0);
@@ -108,12 +128,16 @@ const budgets = {
   initialJsGzipBytes: 400 * 1024,
   maxRouteJsGzipBytes: 435 * 1024,
   cssGzipBytes: 48 * 1024,
+  fontCssGzipBytes: 40 * 1024,
+  fontAssetBytes: 6 * 1024 * 1024,
   largestJsChunkGzipBytes: 200 * 1024,
 };
 const measurements = {
   initialJsGzipBytes: homepageMeasurement.bytes,
   maxRouteJsGzipBytes: heaviestRoute.bytes,
   cssGzipBytes,
+  fontCssGzipBytes,
+  fontAssetBytes,
   largestJsChunkGzipBytes: largestJsChunk.bytes,
 };
 const violations = Object.entries(measurements)
@@ -122,7 +146,7 @@ const violations = Object.entries(measurements)
 
 if (violations.length > 0) {
   console.error(
-    `Performance budget failed: initial=${homepageMeasurement.bytes}, maxRoute=${heaviestRoute.route}:${heaviestRoute.bytes}, union=${totalJsGzipBytes}, css=${cssGzipBytes}, largest=${largestJsChunk.asset}:${largestJsChunk.bytes}.\n${violations.map((item) => `- ${item}`).join('\n')}`,
+    `Performance budget failed: initial=${homepageMeasurement.bytes}, maxRoute=${heaviestRoute.route}:${heaviestRoute.bytes}, union=${totalJsGzipBytes}, css=${cssGzipBytes}, fontCss=${fontCssGzipBytes}, totalCss=${totalCssGzipBytes}, fontAssets=${fontAssetBytes}, largest=${largestJsChunk.asset}:${largestJsChunk.bytes}.\n${violations.map((item) => `- ${item}`).join('\n')}`,
   );
   process.exitCode = 1;
 } else {
@@ -131,6 +155,6 @@ if (violations.length > 0) {
     0,
   );
   console.log(
-    `Performance budget passed: initial=${homepageMeasurement.bytes}, maxRoute=${heaviestRoute.route}:${heaviestRoute.bytes}, union=${totalJsGzipBytes}, css=${cssGzipBytes}, largest=${largestJsChunk.asset}:${largestJsChunk.bytes}, rawJs=${rawBytes}.`,
+    `Performance budget passed: initial=${homepageMeasurement.bytes}, maxRoute=${heaviestRoute.route}:${heaviestRoute.bytes}, union=${totalJsGzipBytes}, css=${cssGzipBytes}, fontCss=${fontCssGzipBytes}, totalCss=${totalCssGzipBytes}, fontAssets=${fontAssetBytes}, largest=${largestJsChunk.asset}:${largestJsChunk.bytes}, rawJs=${rawBytes}.`,
   );
 }

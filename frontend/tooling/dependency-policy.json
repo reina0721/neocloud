@@ -236,6 +236,14 @@
     "notistack": {
       "owner": "有界通知队列与生命周期",
       "allowed": ["packages/ui-adapter"]
+    },
+    "@fontsource-variable/inter": {
+      "owner": "Host 自托管拉丁可变字体，稳定产品与跨平台排版",
+      "allowed": ["apps/web"]
+    },
+    "@fontsource-variable/noto-sans-sc": {
+      "owner": "Host 自托管简体中文可变字体，按 unicode-range 加载",
+      "allowed": ["apps/web"]
     }
   }
 }

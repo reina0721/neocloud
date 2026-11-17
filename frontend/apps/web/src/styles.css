@@ -1,5 +1,7 @@
 /* Fix cascade order before Tailwind or vendor imports register their layers. */
 @layer theme, base, mui, components, utilities;
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/noto-sans-sc';
 @import 'tailwindcss';
 @import '@clouddrive/ui-adapter/styles.css';
 @import '@clouddrive/design-system/tokens.css';

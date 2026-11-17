@@ -859,7 +859,7 @@
           }
         },
         "theme": {
-          "fontSans": "'Inter Variable', Inter, 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif",
+          "fontSans": "'Inter Variable', 'Noto Sans SC Variable', ui-sans-serif, system-ui, sans-serif",
           "radii": {
             "control": "0.5rem",
             "panel": "0.625rem",

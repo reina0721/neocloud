@@ -3,3 +3,8 @@ go-scaffold-template
 Copyright 2026 Rin721
 
 Licensed under the Apache License, Version 2.0.
+
+Web fonts distributed with the application:
+Inter Variable (Fontsource 5.3.0) and Noto Sans SC Variable (Fontsource 5.3.1).
+Licensed under SIL Open Font License 1.1. Copyright notices and license texts
+are provided in frontend/apps/web/public/fonts/licenses/ and at /fonts/licenses/.

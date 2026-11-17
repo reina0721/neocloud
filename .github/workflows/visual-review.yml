@@ -1,0 +1,61 @@
+name: Visual review
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/release-platform-checks]
+    paths: [frontend/**, .github/workflows/visual-review.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# 截图取证任务；不替代 main 的 Quality 全量检查，也不自动接受任何基线。
+jobs:
+  review:
+    name: Native visual evidence / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.11.1
+      - name: Set up pinned pnpm
+        shell: pwsh
+        run: |
+          $pnpmRoot = Join-Path $env:RUNNER_TEMP 'clouddrive-pnpm'
+          & npm install --prefix $pnpmRoot --no-package-lock --no-save pnpm@10.22.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          (Join-Path $pnpmRoot 'node_modules/.bin') >> $env:GITHUB_PATH
+      - name: Prepare native browser
+        shell: pwsh
+        run: |
+          & pnpm install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($IsWindows) { & pnpm exec playwright install chromium }
+          else { & pnpm exec playwright install --with-deps chromium }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Collect visual evidence without updating goldens
+        run: >-
+          pnpm exec playwright test --reporter="list,github"
+          fonts.spec.ts authentication.spec.ts data-display.spec.ts navigation.spec.ts
+          overlays.spec.ts reference-resources.spec.ts surface-foundation.spec.ts visual.spec.ts
+      - name: Preserve screenshots for individual review
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: visual-review-${{ matrix.os }}-${{ github.sha }}
+          path: frontend/test-results/**/*.png
+          if-no-files-found: error
+          retention-days: 7

@@ -22,6 +22,12 @@ Material 的交互语义以 [MUI 组件](https://mui.com/material-ui/getting-sta
 
 `MaterialThemeProvider` 只映射 Token 与 MUI 的公开主题 API，不提供万能 props 转发。交互组件公开业务需要的语义接口，不向消费方暴露 vendor DOM、slot、具体类型或内部类名。
 
+## 字体与排版稳定性
+
+Host 随构建自托管 Inter Variable 5.3.0 和 Noto Sans SC Variable 5.3.1，均来自 Fontsource，使用 OFL-1.1；许可证随公共资源分发于 `/fonts/licenses/`。字体家族仍由 Design System Schema 的 `fontSans` 声明，根样式只装配资源，Adapter 与业务继承同一 Token。CSS 使用 unicode-range 按实际字符加载字形分片，不请求第三方字体服务。加载失败仍可使用系统回退字体，但正常产品与截图验收必须实际加载两种分发字体。
+
+应用样式保持原有 48KiB gzip 预算；自托管字体声明单独限制为 40KiB gzip，完整字体文件限制为 6MiB，同时报告总 CSS。登录首屏实际字体下载上限为 512KiB。浏览器契约验证真实 FontFace 加载与同源请求；视觉截图等待 `document.fonts.ready`。各平台基线逐张审阅，保持现有截图阈值，不能用机器上的系统字体差异代替产品字体交付。
+
 ## 色彩、形状与密度
 
 | 语义角色                       | Material 职责             | 产品用途             |

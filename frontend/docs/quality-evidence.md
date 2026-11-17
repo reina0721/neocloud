@@ -21,6 +21,10 @@
 
 日常开发仍在使用默认端口时，可在另一组三个连续空闲端口运行，例如 `WEB_PORT=4273 pnpm test:browser`（PowerShell 先设置 `$env:WEB_PORT=4273`）。不要通过复用开发实例来绕过端口冲突。真实 Go 文件验收继续使用独立的 `playwright.files.config.ts` 与预览凭据，不能用本配置的演示或拦截结果替代。
 
+## 原生视觉取证
+
+[Visual review 工作流](../../.github/workflows/visual-review.yml) 在 Linux／Windows 原生 runner 运行包含全部截图断言的相关 spec，并上传实际图、基线图和差异图供逐张审阅；不自动更新基线。该任务可手动运行，也用于 `codex/release-platform-checks` 检查分支，不能代替 `main` 的完整 Quality 门禁。
+
 ## 输出和追溯
 
 截图通过 `testInfo.outputPath()` 写入每用例产物目录，trace 与测试输出位于忽略的 test-results/playwright-report，调度耗时报告位于根 `.data/validation/`。不把结果写入文档任务目录，不凭旧成功自动跳过新检查。

@@ -8,7 +8,7 @@
 /* MUI 通过 JavaScript 消费角色变量，不能按 Tailwind class 使用量裁剪公开 Token。 */
 @theme static {
   /* @ds-region:theme-properties:start */
-  --font-sans: 'Inter Variable', Inter, 'Noto Sans SC', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter Variable', 'Noto Sans SC Variable', ui-sans-serif, system-ui, sans-serif;
   --color-canvas: var(--ds-canvas);
   --color-surface: var(--ds-surface);
   --color-surface-raised: var(--ds-surface-raised);
