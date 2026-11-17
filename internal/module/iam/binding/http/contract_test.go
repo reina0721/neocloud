@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reina0721/clouddrive/pkg/httpx"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -33,7 +34,7 @@ import (
 func TestHumaLoginSliceUsesTypedBodyAndSessionResponse(t *testing.T) {
 	iam, resource := testService(t)
 	defer resource.Close()
-	handler, err := NewHandler(iam, nil)
+	handler, err := NewHandler(iam, nil, httpx.CookiePolicy{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +57,7 @@ func TestHumaLoginSliceUsesTypedBodyAndSessionResponse(t *testing.T) {
 func TestSessionBoundaryPaginationAndStableConflicts(t *testing.T) {
 	iam, resource := testService(t)
 	defer resource.Close()
-	handler, err := NewHandler(iam, nil)
+	handler, err := NewHandler(iam, nil, httpx.CookiePolicy{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +111,7 @@ func TestSessionBoundaryPaginationAndStableConflicts(t *testing.T) {
 func TestBatchAccountMutationRequiresAndReplaysIdempotencyKey(t *testing.T) {
 	iam, resource := testService(t)
 	defer resource.Close()
-	handler, err := NewHandler(iam, nil)
+	handler, err := NewHandler(iam, nil, httpx.CookiePolicy{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +165,7 @@ func TestBatchAccountMutationRequiresAndReplaysIdempotencyKey(t *testing.T) {
 func TestApiTokenBatchRevokeContract(t *testing.T) {
 	iam, resource := testService(t)
 	defer resource.Close()
-	handler, err := NewHandler(iam, nil)
+	handler, err := NewHandler(iam, nil, httpx.CookiePolicy{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +228,7 @@ func TestApiTokenBatchRevokeContract(t *testing.T) {
 func TestDynamicAssignmentContractVersion409AndSnapshot(t *testing.T) {
 	iam, resource := testService(t)
 	defer resource.Close()
-	handler, err := NewHandler(iam, nil)
+	handler, err := NewHandler(iam, nil, httpx.CookiePolicy{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,7 +294,7 @@ func TestDynamicAssignmentContractVersion409AndSnapshot(t *testing.T) {
 func TestSelfPreferencesContract(t *testing.T) {
 	iam, resource := testService(t)
 	defer resource.Close()
-	handler, err := NewHandler(iam, nil)
+	handler, err := NewHandler(iam, nil, httpx.CookiePolicy{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -346,7 +347,7 @@ func TestSelfPreferencesContract(t *testing.T) {
 func TestListQueryContractRejectsInvalidSortAndPage(t *testing.T) {
 	iam, resource := testService(t)
 	defer resource.Close()
-	handler, err := NewHandler(iam, nil)
+	handler, err := NewHandler(iam, nil, httpx.CookiePolicy{})
 	if err != nil {
 		t.Fatal(err)
 	}

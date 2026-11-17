@@ -100,7 +100,7 @@ func composeIdentityAccess(ctx context.Context, input identityAccessInput) (iden
 	if err := iamModule.Administration.Compatible(ctx); err != nil {
 		return identityAccess{}, fmt.Errorf("verify iam catalog compatibility: %w", err)
 	}
-	sessionSource, err := newIAMSessionAuthAdapter(iamModule.Sessions)
+	sessionSource, err := newIAMSessionAuthAdapter(iamModule.Sessions, iamModule.SessionCookieName())
 	if err != nil {
 		return identityAccess{}, err
 	}

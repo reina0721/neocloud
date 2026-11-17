@@ -7,6 +7,7 @@ import (
 	"github.com/reina0721/clouddrive/internal/module/console/repo"
 	"github.com/reina0721/clouddrive/pkg/database"
 	"github.com/reina0721/clouddrive/pkg/execution"
+	"github.com/reina0721/clouddrive/pkg/httpx"
 	"github.com/reina0721/clouddrive/pkg/logger"
 	"net/http"
 )
@@ -87,6 +88,7 @@ type Access interface {
 	WithinTx(context.Context, func(context.Context, database.Client, database.Tx) error) error
 }
 type Dependencies struct {
+	Cookies      httpx.CookiePolicy
 	Runtime      func() RuntimeMetadata
 	IAM          IdentityAccess
 	CookieName   string
@@ -107,7 +109,7 @@ func New(dependencies Dependencies) (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	return httpbinding.New(httpbinding.Dependencies{Data: store, IAM: dependencies.IAM, CookieName: dependencies.CookieName, Native: dependencies.Native, Origins: dependencies.Origins, SiteOrigins: dependencies.SiteOrigins, Logger: dependencies.Logger, Relay: dependencies.Relay, Executor: dependencies.Executor, Authenticate: dependencies.Authenticate, Todos: dependencies.Todos, Navigation: dependencies.Navigation, Runtime: dependencies.Runtime})
+	return httpbinding.New(httpbinding.Dependencies{Cookies: dependencies.Cookies, Data: store, IAM: dependencies.IAM, CookieName: dependencies.CookieName, Native: dependencies.Native, Origins: dependencies.Origins, SiteOrigins: dependencies.SiteOrigins, Logger: dependencies.Logger, Relay: dependencies.Relay, Executor: dependencies.Executor, Authenticate: dependencies.Authenticate, Todos: dependencies.Todos, Navigation: dependencies.Navigation, Runtime: dependencies.Runtime})
 }
 func DefaultRelayPolicy() RelayPolicy { return httpbinding.DefaultRelayPolicy() }
 func WithSession(r *http.Request, value Session) *http.Request {

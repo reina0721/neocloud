@@ -22,6 +22,7 @@ type PasswordPolicy struct {
 }
 
 type Local struct {
+	AllowInsecureHTTP     bool           `mapstructure:"allowInsecureHTTP"`
 	SetupToken            string         `mapstructure:"setupToken"`
 	IdleTimeout           time.Duration  `mapstructure:"idleTimeout"`
 	AbsoluteTimeout       time.Duration  `mapstructure:"absoluteTimeout"`
@@ -88,6 +89,7 @@ func (defaults) Defaults(ctx context.Context) (config.Object, config.Control, er
 	}
 	v := Default()
 	return config.Object{config.FieldOf("local", config.ObjectValue(config.Object{
+		config.FieldOf("allowInsecureHTTP", config.Bool(v.Local.AllowInsecureHTTP)),
 		config.FieldOf("setupToken", config.String(v.Local.SetupToken)), config.FieldOf("idleTimeout", config.Duration(v.Local.IdleTimeout)), config.FieldOf("absoluteTimeout", config.Duration(v.Local.AbsoluteTimeout)),
 		config.FieldOf("maxFailedAttempts", mustNumber(v.Local.MaxFailedAttempts)), config.FieldOf("lockDuration", config.Duration(v.Local.LockDuration)),
 		config.FieldOf("maxSessionsPerAccount", mustNumber(v.Local.MaxSessionsPerAccount)),

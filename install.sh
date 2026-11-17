@@ -9,6 +9,11 @@ root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 version=latest
 release_source=
 port=4173
+bind=127.0.0.1
+public_origin=
+allow_http=false
+additional_origins=()
+network_options=false
 wait_timeout=120
 explicit_dir=false
 work=
@@ -18,10 +23,12 @@ fail() { printf '错误：%s\n' "$*" >&2; exit 1; }
 usage() {
   cat <<'HELP'
 bash install.sh install [--dir ./clouddrive] [--port 4173] [--version vX.Y.Z]
+  [--bind 0.0.0.0] [--public-url http://服务器IP:4173] [--allow-http]
+  [--allow-origin https://另一个入口]（可重复）
 ./clouddrive/install.sh status | check-update | upgrade | backup | start | stop
 upgrade 支持 --version；install/upgrade/check-update 支持 --release-dir 离线产物目录。
 需要 Linux、本机 Docker Engine、Docker Compose >=2.20、curl、tar、gzip、sha256sum、flock。
-仅开放 http://127.0.0.1:端口；API 与 management 不映射宿主机端口。
+默认仅监听 127.0.0.1；可配置 IP、端口、外部 Origin；API 与 management 不映射宿主机端口。
 HELP
 }
 [[ $command_name != help && $command_name != --help ]] || { usage; exit 0; }
@@ -29,6 +36,10 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     --dir) [[ $# -ge 2 ]] || fail '--dir 缺少路径'; root=$2; explicit_dir=true; shift 2 ;;
     --port) [[ $# -ge 2 ]] || fail '--port 缺少数值'; port=$2; shift 2 ;;
+    --bind) [[ $# -ge 2 ]] || fail '--bind 缺少监听 IP'; network_options=true; bind=$2; shift 2 ;;
+    --public-url) [[ $# -ge 2 ]] || fail '--public-url 缺少外部 Origin'; network_options=true; public_origin=$2; shift 2 ;;
+    --allow-origin) [[ $# -ge 2 ]] || fail '--allow-origin 缺少 Origin'; network_options=true; additional_origins+=("$2"); shift 2 ;;
+    --allow-http) network_options=true; allow_http=true; shift ;;
     --wait-timeout) [[ $# -ge 2 ]] || fail '--wait-timeout 缺少秒数'; wait_timeout=$2; shift 2 ;;
     --version) [[ $# -ge 2 ]] || fail '--version 缺少版本'; version=$2; shift 2 ;;
     --release-dir) [[ $# -ge 2 ]] || fail '--release-dir 缺少路径'; release_source=$(realpath -e -- "$2"); shift 2 ;;
@@ -36,6 +47,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 case $command_name in install|upgrade|check-update|status|backup|start|stop) ;; *) fail "未知命令：$command_name" ;; esac
+[[ $network_options == false || $command_name == install ]] || fail '已有实例请编辑 runtime.env，再执行 stop/start；网络选项只用于首次 install'
 [[ $(uname -s) == Linux ]] || fail '当前安装包只支持 Linux'
 for dependency in docker curl tar gzip sha256sum flock realpath awk sed cmp od tr; do
   command -v "$dependency" >/dev/null || fail "缺少 $dependency，请先安装；脚本不会自动修改系统软件"
@@ -59,6 +71,25 @@ port=$((10#$port))
 [[ $wait_timeout =~ ^[1-9][0-9]{0,2}$ ]] || fail '等待时间不合法'
 ((wait_timeout >= 5 && wait_timeout <= 600)) || fail '等待时间范围为 5–600 秒'
 valid_version() { [[ $1 =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; }
+network_configuration() {
+  # 使用已校验镜像中的 Node 标准库；目标机不需要安装 Node。
+  docker run --rm --pull never "$web_image" node -e '
+    const [bind,port,primary,http,...extra]=process.argv.slice(1), net=require("node:net");
+    const ip=bind.replace(/^\[|\]$/g, "");
+    if(!net.isIP(ip))throw Error("监听地址必须是 IPv4/IPv6，不能使用主机名或通配符");
+    function origin(value){
+      const u=new URL(value);
+      if(!["http:","https:"].includes(u.protocol)||u.username||u.password||u.pathname!=="/"||u.search||u.hash||value!==u.origin)throw Error("入口必须是规范 HTTP(S) Origin，不带路径、凭据或末尾斜杠");
+      if(!net.isIP(u.hostname.replace(/^\[|\]$/g,""))&&(u.hostname.length>253||!u.hostname.split(".").every(label=>/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label))))throw Error("入口主机必须是规范 IP 或 DNS 名称");
+      if(["0.0.0.0","[::]"].includes(u.hostname))throw Error("外部访问地址不能是 0.0.0.0 或 [::]");
+      if(u.protocol==="http:"&&!["localhost","127.0.0.1","[::1]"].includes(u.hostname)&&http!=="true")throw Error("非本机 HTTP 入口需要显式 --allow-http");
+      return u.origin;
+    }
+    const origins=[...new Set([origin(primary),...extra.map(origin),`http://127.0.0.1:${port}`,`http://localhost:${port}`])];
+    if(origins.length>32)throw Error("最多允许 32 个 Origin");
+    console.log(`WEB_BIND=${net.isIP(ip)===6?`[${ip}]`:ip}\nPUBLIC_ORIGIN=${origin(primary)}\nALLOW_INSECURE_HTTP=${http}\nALLOWED_ORIGINS=\x27${JSON.stringify(origins)}\x27`);
+  ' "$bind" "$port" "$public_origin" "$allow_http" "${additional_origins[@]}" > "$work/network.env" || fail '网络配置无效；尚未执行迁移'
+}
 resolve_version() {
   if [[ $version == latest ]]; then
     if [[ -n $release_source ]]; then
@@ -153,6 +184,9 @@ prepare_release() {
   mkdir "$work/bundle"
   tar --extract --gzip --file "$work/$name" --directory "$work/bundle" --no-same-owner --no-same-permissions
   [[ $(read_manifest FORMAT) == 1 && $(read_manifest VERSION) == "$version" && $(read_manifest ARCH) == "$arch" ]] || fail '安装包版本或架构不匹配'
+  local needs_network=$network_options
+  if [[ -f $root/runtime.env && -n $(sed -n 's/^WEB_BIND=//p' "$root/runtime.env") ]]; then needs_network=true; fi
+  [[ $needs_network == false || $(read_manifest NETWORK) == 1 ]] || fail '目标 Release 不支持网络配置，请使用包含此功能的新版本；v0.1.2 仅支持本机入口'
   [[ $(read_manifest COMMIT) =~ ^[a-f0-9]{40}$ ]] || fail '源码版本标识无效'
   api_image="clouddrive-api:$version-$arch"; web_image="clouddrive-web:$version-$arch"
   [[ $(cat "$work/bundle/images.env") == "API_IMAGE=$api_image"$'\n'"WEB_IMAGE=$web_image" ]] || fail '镜像引用不符合配套版本'
@@ -199,6 +233,7 @@ install_manager() {
 }
 if [[ $command_name == install ]]; then
   if [[ -f $root/.control/current ]]; then
+    [[ $network_options == false ]] || fail '已有实例请编辑 runtime.env，再执行 stop/start，不能用 install 修改网络配置'
     project=$(cat "$root/.control/project")
     printf '此实例已安装 %s；更新请使用 upgrade。\n' "$(current)"; exit 0
   fi
@@ -206,14 +241,23 @@ if [[ $command_name == install ]]; then
   if [[ -f $root/.control/project && -f $root/.control/candidate ]]; then
     resume=true
     project=$(cat "$root/.control/project")
+    port=$(sed -n 's/^WEB_PORT=//p' "$root/runtime.env")
+    bind=$(sed -n 's/^WEB_BIND=//p' "$root/runtime.env"); bind=${bind:-127.0.0.1}
+    public_origin=$(sed -n 's/^PUBLIC_ORIGIN=//p' "$root/runtime.env")
+    allow_http=$(sed -n 's/^ALLOW_INSECURE_HTTP=//p' "$root/runtime.env"); allow_http=${allow_http:-false}
     [[ $project =~ ^clouddrive-[a-f0-9]{12}$ ]] || fail '实例标记无效'
   else
     [[ ! -e $root || ( -d $root && -z $(ls -A -- "$root") ) ]] || fail '目标目录非空；不会覆盖既有文件或接管数据库'
   fi
   resolve_version
   prepare_release
+  if [[ -z $public_origin ]]; then
+    [[ $bind == 127.0.0.1 || $bind == ::1 ]] || fail '非默认监听 IP 需要显式 --public-url，填写浏览器实际访问的地址'
+    public_origin="http://127.0.0.1:$port"
+  fi
+  network_configuration
   if [[ $resume == true ]]; then port=$(sed -n 's/^WEB_PORT=//p' "$root/runtime.env"); fi
-  docker run --rm --pull never --network host "$web_image" node -e 'const s=require("node:net").createServer();s.once("error",()=>process.exit(1));s.listen(Number(process.argv[1]),"127.0.0.1",()=>s.close())' "$port" || fail '端口已占用；尚未执行迁移'
+  docker run --rm --pull never --network host "$web_image" node -e 'const s=require("node:net").createServer();s.once("error",()=>process.exit(1));s.listen(Number(process.argv[1]),process.argv[2].replace(/^\[|\]$/g,""),()=>s.close())' "$port" "$bind" || fail '监听 IP 不可用或端口已占用；尚未执行迁移'
   mkdir -p -- "$root/.control" "$root/releases" "$root/backups" "$root/data"
   exec 9>"$root/.control/lock"; flock -n 9 || fail '另一个安装/升级操作正在执行'
   if [[ -f $root/.control/current ]]; then printf '另一个安装操作已完成，此实例无需重复初始化。\n'; exit 0; fi
@@ -222,6 +266,7 @@ if [[ $command_name == install ]]; then
   printf '%s\n' "$project" > "$root/.control/project"
   token=$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')
   printf 'WEB_PORT=%s\nSETUP_TOKEN=%s\n' "$port" "$token" > "$root/runtime.env"
+  cat "$work/network.env" >> "$root/runtime.env"
   printf '%s\n' "$token" > "$root/.control/setup-token"
   fi
   printf '%s\n' "$version" > "$root/.control/candidate"
@@ -235,7 +280,7 @@ if [[ $command_name == install ]]; then
   probe "$version" || fail '安装后就绪/版本检查未通过'
   atomic_current "$version"; rm -f -- "$root/.control/candidate"; stop_recovery=false
   install_manager
-  printf '安装完成：http://127.0.0.1:%s/setup\n请自行创建管理员；设置令牌保存在 %s/.control/setup-token（不输出令牌）。\n' "$port" "$root"
+  printf '安装完成：%s/setup\n请自行创建管理员；设置令牌保存在 %s/.control/setup-token（不输出令牌）。\n' "$public_origin" "$root"
   exit 0
 fi
 managed

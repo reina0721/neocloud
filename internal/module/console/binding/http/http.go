@@ -28,6 +28,7 @@ const csrfCookie = "__Host-clouddrive_console_csrf"
 const nativeCSRFCookie = "__Host-clouddrive_native_csrf"
 
 type Handler struct {
+	cookies             httpx.CookiePolicy
 	runtime             func() RuntimeMetadata
 	iam                 IdentityAccess
 	cookieName          string
@@ -45,6 +46,7 @@ type Handler struct {
 }
 
 type Dependencies struct {
+	Cookies      httpx.CookiePolicy
 	Runtime      func() RuntimeMetadata
 	IAM          IdentityAccess
 	CookieName   string
@@ -67,6 +69,7 @@ func New(dependencies Dependencies) (*Handler, error) {
 		return nil, errors.New("console dependencies are incomplete")
 	}
 	h := &Handler{iam: iam, native: native, origins: map[string]bool{}, mux: http.NewServeMux()}
+	h.cookies = dependencies.Cookies
 	h.store = dependencies.Data
 	h.runtime = dependencies.Runtime
 	h.cookieName = dependencies.CookieName
@@ -98,7 +101,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			failure(w, http.StatusForbidden, "forbidden", "")
 			return
 		}
-		cookie, err := r.Cookie(csrfCookie)
+		cookie, err := r.Cookie(h.cookies.Name(csrfCookie))
 		if err != nil || cookie.Value == "" || subtle.ConstantTimeCompare([]byte(cookie.Value), []byte(r.Header.Get("X-CSRF-Token"))) != 1 {
 			failure(w, 403, "forbidden", "")
 			return
@@ -258,7 +261,7 @@ func (h *Handler) routes() {
 		reply(w, value)
 	})
 	h.mux.HandleFunc("GET "+Prefix+"/auth/csrf", func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie(csrfCookie)
+		cookie, err := r.Cookie(h.cookies.Name(csrfCookie))
 		token := ""
 		if err == nil {
 			token = cookie.Value
@@ -270,7 +273,7 @@ func (h *Handler) routes() {
 				return
 			}
 			token = hex.EncodeToString(bytes)
-			http.SetCookie(w, &http.Cookie{Name: csrfCookie, Value: token, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteStrictMode})
+			http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: csrfCookie, Value: token, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode}))
 		}
 		reply(w, map[string]string{"token": token})
 	})
@@ -334,8 +337,8 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) {
 			problem(w, err)
 			return
 		}
-		http.SetCookie(w, &http.Cookie{Name: h.cookieName, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
-		http.SetCookie(w, &http.Cookie{Name: nativeCSRFCookie, Path: "/", Secure: true, HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: -1})
+		http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: h.cookieName, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: -1}))
+		http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: nativeCSRFCookie, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: -1}))
 		w.WriteHeader(204)
 		return
 	}
@@ -404,8 +407,8 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) {
 		problem(w, err)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: h.cookieName, Value: session.ID, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode})
-	http.SetCookie(w, &http.Cookie{Name: nativeCSRFCookie, Value: session.CSRFToken, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
+	http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: h.cookieName, Value: session.ID, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode}))
+	http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: nativeCSRFCookie, Value: session.CSRFToken, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode}))
 	h.session(w, session)
 }
 
@@ -462,7 +465,7 @@ func (h *Handler) forwardNative(w http.ResponseWriter, r *http.Request) {
 	copy.URL.Path = NativeTargetPrefix + strings.TrimPrefix(r.URL.Path, NativePrefix)
 	if r.Method != "GET" && r.Method != "HEAD" {
 		// 登录时镜像 IAM 会话的 CSRF token；每次转发轮换会让并发上传互相失效。
-		csrf, err := r.Cookie(nativeCSRFCookie)
+		csrf, err := r.Cookie(h.cookies.Name(nativeCSRFCookie))
 		if err != nil || csrf.Value == "" {
 			failure(w, http.StatusUnauthorized, "unauthenticated", "")
 			return

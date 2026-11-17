@@ -16,17 +16,18 @@ import (
 // iamSessionAuthAdapter 是 IAM Session identity 到 Auth iam-rbac Principal
 // 的唯一装配适配器。
 type iamSessionAuthAdapter struct {
-	sessions iam.SessionResolver
+	sessions   iam.SessionResolver
+	cookieName string
 }
 
-func newIAMSessionAuthAdapter(sessions iam.SessionResolver) (auth.RequestAuthenticator, error) {
-	if sessions == nil {
+func newIAMSessionAuthAdapter(sessions iam.SessionResolver, cookieName string) (auth.RequestAuthenticator, error) {
+	if sessions == nil || cookieName == "" {
 		return nil, fmt.Errorf("iam session resolver is nil")
 	}
-	return iamSessionAuthAdapter{sessions: sessions}, nil
+	return iamSessionAuthAdapter{sessions: sessions, cookieName: cookieName}, nil
 }
 func (a iamSessionAuthAdapter) AuthenticateRequest(request *http.Request) (*http.Request, error) {
-	cookie, err := request.Cookie(service.SessionCookieName)
+	cookie, err := request.Cookie(a.cookieName)
 	if err != nil || cookie.Value == "" {
 		return nil, service.ErrSessionInvalid
 	}

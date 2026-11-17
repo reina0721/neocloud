@@ -36,7 +36,6 @@ import (
 	"github.com/reina0721/clouddrive/internal/module/iam"
 	iamconfig "github.com/reina0721/clouddrive/internal/module/iam/binding/config"
 	iamhttp "github.com/reina0721/clouddrive/internal/module/iam/binding/http"
-	iamservice "github.com/reina0721/clouddrive/internal/module/iam/service"
 	"github.com/reina0721/clouddrive/internal/module/navigation"
 	"github.com/reina0721/clouddrive/internal/module/navigation/binding/consolecatalog"
 	navigationhttp "github.com/reina0721/clouddrive/internal/module/navigation/binding/http"
@@ -544,7 +543,7 @@ func (f *applicationGenerationFactory) Prepare(
 	if err != nil {
 		return abort(err)
 	}
-	filesSessionAuth, err := newIAMSessionAuthAdapter(generation.iamModule.Sessions)
+	filesSessionAuth, err := newIAMSessionAuthAdapter(generation.iamModule.Sessions, generation.iamModule.SessionCookieName())
 	if err != nil {
 		return abort(err)
 	}
@@ -553,7 +552,7 @@ func (f *applicationGenerationFactory) Prepare(
 	blobPolicy := activeFilesystem.Blob
 	blobPolicy.Automatic = blobPolicy.Automatic && activeFilesystem.BlobScheduled
 	filesModule, err := files.New(files.Dependencies{
-		PublicAuthentication: fileOptionalSessionAuth{session: filesSessionAuth},
+		PublicAuthentication: fileOptionalSessionAuth{session: filesSessionAuth, cookieName: generation.iamModule.SessionCookieName()},
 		ArchiveProcessor:     archiveProcessor, ArchiveAuthority: fileAuthority, ArchiveDispatcherEnabled: archiveEnabled,
 		ShareAuthority: fileAuthority, SharePolicy: filesPolicy.SharePolicy(), Passwords: iam.NewCredentialDigests(),
 		OfflinePolicy: filesPolicy.Offline, OfflineDispatcherEnabled: offlineEnabled, TorrentDispatcherEnabled: torrentEnabled, OfflineAuthority: fileAuthority,
@@ -596,7 +595,7 @@ func (f *applicationGenerationFactory) Prepare(
 	if err != nil {
 		return abort(err)
 	}
-	consoleHandler, err := console.New(console.Dependencies{Runtime: generation.consoleRuntime, IAM: consoleIAMPort{generation.iamModule.Service}, CookieName: iamservice.SessionCookieName, Native: httptransport.IsolatedRoutes(apiRoutes), Origins: httpConfig.CORS.AllowedOrigins, SiteOrigins: consoleConfig.SiteOrigins, Database: databaseAccess, Logger: generation.logger.value(), Relay: consoleConfig.Relay, Executor: generation.execution.value(), Authenticate: consoleAuthenticate(generation.authModule.SessionSource.AuthenticateRequest), Todos: consoleTodoPort{generation.module.Operations}, Navigation: consoleNavigationPort{generation.navigationModule.Operations}})
+	consoleHandler, err := console.New(console.Dependencies{Runtime: generation.consoleRuntime, IAM: consoleIAMPort{generation.iamModule.Service}, CookieName: generation.iamModule.SessionCookieName(), Cookies: generation.iamModule.Cookies, Native: httptransport.IsolatedRoutes(apiRoutes), Origins: httpConfig.CORS.AllowedOrigins, SiteOrigins: consoleConfig.SiteOrigins, Database: databaseAccess, Logger: generation.logger.value(), Relay: consoleConfig.Relay, Executor: generation.execution.value(), Authenticate: consoleAuthenticate(generation.authModule.SessionSource.AuthenticateRequest), Todos: consoleTodoPort{generation.module.Operations}, Navigation: consoleNavigationPort{generation.navigationModule.Operations}})
 	if err != nil {
 		return abort(err)
 	}

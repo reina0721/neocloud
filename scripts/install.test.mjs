@@ -58,7 +58,7 @@ case "$1" in
    elif [[ $* == *' exec '* && \${FAKE_HEALTH_FAILURE:-0} == 1 && $* == *'v1.0.1'* ]]; then exit 1
    fi ;;
  run)
-   if [[ $* == *'process.stdin'* ]]; then
+   if [[ $* == *'process.stdin'* || $* == *'net.isIP'* ]]; then
      while [[ $1 != node ]]; do shift; done; shift
      exec '${process.execPath}' "$@"
    elif [[ $* == *'sh -ec'* ]]; then
@@ -91,7 +91,7 @@ esac
       encoding: "utf8",
       timeout: 25000,
     });
-  async function bundle(version) {
+  async function bundle(version, { network = true } = {}) {
     const source = join(base, version),
       stage = join(source, "stage");
     await mkdir(stage, { recursive: true });
@@ -104,7 +104,7 @@ esac
     );
     await writeFile(
       join(stage, "manifest.txt"),
-      `FORMAT=1\nVERSION=${version}\nARCH=amd64\nCOMMIT=${commit}\nAPI_ID=${apiID}\nWEB_ID=${webID}\n`,
+      `FORMAT=1\n${network ? "NETWORK=1\n" : ""}VERSION=${version}\nARCH=amd64\nCOMMIT=${commit}\nAPI_ID=${apiID}\nWEB_ID=${webID}\n`,
     );
     const name = `clouddrive_${version}_linux_amd64_docker.tar.gz`;
     const packed = spawnSync("tar", [
@@ -357,4 +357,148 @@ test("目标版本启动超时仅在旧数据库兼容时恢复旧服务", async
     await readFile(join(f.root, ".control/current"), "utf8"),
     "v1.0.0\n",
   );
+});
+
+test("IP/frp 入口明确配置，HTTP 使用显式开关，升级保持网络配置", async (t) => {
+  const f = await fixture(t),
+    source = await f.bundle("v1.0.0");
+  const result = f.run([
+    "install",
+    "--dir",
+    f.root,
+    "--version",
+    "v1.0.0",
+    "--release-dir",
+    source,
+    "--bind",
+    "0.0.0.0",
+    "--port",
+    "44173",
+    "--public-url",
+    "http://198.51.100.10:18080",
+    "--allow-http",
+    "--allow-origin",
+    "https://files.example.test",
+  ]);
+  assert.equal(result.status, 0, result.stderr);
+  const configuration = await readFile(join(f.root, "runtime.env"), "utf8");
+  assert.match(configuration, /^WEB_BIND=0\.0\.0\.0$/m);
+  assert.match(
+    configuration,
+    /^PUBLIC_ORIGIN=http:\/\/198\.51\.100\.10:18080$/m,
+  );
+  assert.match(configuration, /^ALLOW_INSECURE_HTTP=true$/m);
+  assert.match(configuration, /https:\/\/files\.example\.test/);
+  assert.match(configuration, /http:\/\/localhost:44173/);
+  const target = await f.bundle("v1.0.1");
+  const upgrade = f.run([
+    "upgrade",
+    "--dir",
+    f.root,
+    "--version",
+    "v1.0.1",
+    "--release-dir",
+    target,
+  ]);
+  assert.equal(upgrade.status, 0, upgrade.stderr);
+  assert.equal(
+    await readFile(join(f.root, "runtime.env"), "utf8"),
+    configuration,
+  );
+});
+
+test("拒绝不明确或可注入的入口，在迁移前终止", async (t) => {
+  for (const options of [
+    ["--bind", "0.0.0.0"],
+    ["--public-url", "http://198.51.100.10:4173"],
+    ["--public-url", "https://files.example.test/path"],
+    ["--public-url", "https://user:secret@files.example.test"],
+    ["--bind", "bad-ip", "--public-url", "https://files.example.test"],
+    ["--public-url", "https://files.example.test/"],
+    ["--public-url", "https://files.example.test\nWEB_BIND=0.0.0.0"],
+    ["--public-url", "https://files.example.test", "--allow-origin", "*"],
+  ]) {
+    const f = await fixture(t),
+      source = await f.bundle("v1.0.0");
+    const result = f.run([
+      "install",
+      "--dir",
+      f.root,
+      "--version",
+      "v1.0.0",
+      "--release-dir",
+      source,
+      ...options,
+    ]);
+    assert.notEqual(result.status, 0, JSON.stringify(options));
+    assert.doesNotMatch(
+      await readFile(f.log, "utf8"),
+      /run --rm --no-deps migrate/,
+    );
+  }
+});
+
+test("IPv6 监听使用 Compose 的方括号格式，HTTPS 默认保持安全 Cookie", async (t) => {
+  const f = await fixture(t),
+    source = await f.bundle("v1.0.0");
+  const result = f.run([
+    "install",
+    "--dir",
+    f.root,
+    "--version",
+    "v1.0.0",
+    "--release-dir",
+    source,
+    "--bind",
+    "::",
+    "--public-url",
+    "https://files.example.test",
+  ]);
+  assert.equal(result.status, 0, result.stderr);
+  const configuration = await readFile(join(f.root, "runtime.env"), "utf8");
+  assert.match(configuration, /^WEB_BIND=\[::\]$/m);
+  assert.match(configuration, /^ALLOW_INSECURE_HTTP=false$/m);
+});
+
+test("旧包不能假装支持外部入口，已有网络配置不向旧包升级", async (t) => {
+  const f = await fixture(t);
+  const old = await f.bundle("v1.0.0", { network: false });
+  const install = f.run([
+    "install",
+    "--dir",
+    f.root,
+    "--version",
+    "v1.0.0",
+    "--release-dir",
+    old,
+    "--public-url",
+    "http://198.51.100.10:4173",
+    "--allow-http",
+  ]);
+  assert.notEqual(install.status, 0);
+  assert.match(install.stderr, /不支持网络配置/);
+  assert.doesNotMatch(
+    await readFile(f.log, "utf8"),
+    /run --rm --no-deps migrate/,
+  );
+  await f.install();
+  const original = await readFile(join(f.root, "runtime.env"));
+  await writeFile(f.log, "");
+  const target = await f.bundle("v1.0.1", { network: false });
+  const upgrade = f.run([
+    "upgrade",
+    "--dir",
+    f.root,
+    "--version",
+    "v1.0.1",
+    "--release-dir",
+    target,
+  ]);
+  assert.notEqual(upgrade.status, 0);
+  assert.match(upgrade.stderr, /不支持网络配置/);
+  assert.doesNotMatch(
+    await readFile(f.log, "utf8"),
+    / stop|run --rm --no-deps migrate/,
+  );
+  assert.deepEqual(await readFile(join(f.root, "runtime.env")), original);
 });

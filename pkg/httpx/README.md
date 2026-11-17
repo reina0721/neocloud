@@ -229,3 +229,7 @@ func (g *Gateway) Find(ctx context.Context, id string, out any) error {
 长期 Service 使用 `ListenerHub` 独占物理 TCP listener。每个不可变 Application Generation 创建自己的 `Server` 和虚拟 listener route；候选先通过 `StartWithListener` 进入 Serve-ready，commit 再把新连接 dispatch 到新 route。旧 route 的 pending connection 先交付旧 Server，然后 `Shutdown` 排空 active connection/request。`ListenerHub` 是 composition owner 的基础设施，不应进入业务模块或作为运行时查询入口。
 
 基础 Client 不实现通用重试或熔断；Server 的 OpenAPI、安全和观测能力由各自现行文档说明。新增出站韧性必须在明确下游 failure domain 后单独设计，并继续保持业务侧只依赖项目契约。
+
+## Cookie 传输
+
+`CookiePolicy` 在标准库 `http.Cookie` 上统一应用 Secure 与 `__Host-` 名称策略；零值保持 HTTPS 保护，只有显式 `AllowInsecureHTTP` 才使用无前缀名称且关闭 Secure。Cookie 的 HttpOnly、Path、SameSite、过期时间仍由调用方按协议设置。IAM 与 Console 消费同一代实例策略，没有全局可变 Cookie 配置。

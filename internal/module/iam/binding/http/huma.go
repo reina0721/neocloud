@@ -322,7 +322,7 @@ func RegisterHuma(api huma.API, handler *Handler) {
 		if err != nil {
 			return nil, problem(ctx, err)
 		}
-		return sessionEnvelope(v), nil
+		return handler.sessionEnvelope(v), nil
 	})
 	login := public(opLogin, http.MethodPost, "/api/v1/iam/login")
 	login.Middlewares = huma.Middlewares{handler.requireOrigin}
@@ -335,7 +335,7 @@ func RegisterHuma(api huma.API, handler *Handler) {
 		if err != nil {
 			return nil, problem(ctx, err)
 		}
-		return &loginResultEnvelope{SetCookie: sessionCookie(v.ID), CacheControl: "no-store", Body: loginResultBodyFrom(v)}, nil
+		return &loginResultEnvelope{SetCookie: handler.sessionCookie(v.ID), CacheControl: "no-store", Body: loginResultBodyFrom(v)}, nil
 	})
 	huma.Register(api, protected(opSession, http.MethodGet, "/api/v1/iam/session", string(iampermission.SelfRead), "read"), func(ctx context.Context, _ *struct{}) (*sessionOutputEnvelope, error) {
 		id, current, ok := service.SessionFromContext(ctx)
@@ -347,7 +347,7 @@ func RegisterHuma(api huma.API, handler *Handler) {
 			return nil, httpx.NewProtocolProblemError(ctx, statusError(http.StatusUnauthorized, "unauthenticated", err))
 		}
 		current.CSRFToken = csrf
-		return sessionEnvelope(current), nil
+		return handler.sessionEnvelope(current), nil
 	})
 	logout := protected(opLogout, http.MethodPost, "/api/v1/iam/logout", string(iampermission.SelfRead), "execute")
 	logout.DefaultStatus = http.StatusNoContent
@@ -357,7 +357,7 @@ func RegisterHuma(api huma.API, handler *Handler) {
 		if err := handler.service.Logout(ctx, id); err != nil {
 			return nil, httpx.NewProtocolProblemError(ctx, statusError(http.StatusInternalServerError, "internal_server_error", err))
 		}
-		return &logoutOutput{SetCookie: expiredCookie()}, nil
+		return &logoutOutput{SetCookie: handler.expiredCookie()}, nil
 	})
 	verify := protected(opVerifyPassword, http.MethodPost, "/api/v1/iam/self/password/verify", string(iampermission.SelfRead), "execute")
 	verify.MaxBodyBytes = 2048
@@ -828,7 +828,7 @@ func RegisterHuma(api huma.API, handler *Handler) {
 		if err != nil {
 			return nil, problem(ctx, err)
 		}
-		return sessionEnvelope(v), nil
+		return handler.sessionEnvelope(v), nil
 	})
 }
 
@@ -862,14 +862,14 @@ func (handler *Handler) requireMutation(ctx huma.Context, next func(huma.Context
 	}
 	next(ctx)
 }
-func sessionEnvelope(v service.Session) *sessionOutputEnvelope {
-	return &sessionOutputEnvelope{SetCookie: sessionCookie(v.ID), CacheControl: "no-store", Body: sessionOutput(v)}
+func (h *Handler) sessionEnvelope(v service.Session) *sessionOutputEnvelope {
+	return &sessionOutputEnvelope{SetCookie: h.sessionCookie(v.ID), CacheControl: "no-store", Body: sessionOutput(v)}
 }
-func sessionCookie(id string) string {
-	return (&http.Cookie{Name: service.SessionCookieName, Value: id, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode}).String()
+func (h *Handler) sessionCookie(id string) string {
+	return h.cookies.Cookie(http.Cookie{Secure: true, Name: service.SessionCookieName, Value: id, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode}).String()
 }
-func expiredCookie() string {
-	return (&http.Cookie{Name: service.SessionCookieName, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode}).String()
+func (h *Handler) expiredCookie() string {
+	return h.cookies.Cookie(http.Cookie{Secure: true, Name: service.SessionCookieName, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteLaxMode}).String()
 }
 func jsonEnvelope[T any](body T) *jsonOutput[T] {
 	return &jsonOutput[T]{CacheControl: "no-store", Body: body}

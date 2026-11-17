@@ -77,7 +77,7 @@ Bootstrap CLI、migration one-shot、Todo CLI 和长期 Service 都必须识别�
 
 ## WebUI 托管
 
-- 同源请求不依赖 `http.cors.allowedOrigins`；Session Cookie 带 `Secure` 属性，纯 HTTP 仅限 loopback，生产部署需 TLS 终结。启动与切换步骤见 [WebUI 本地启动指南](../getting-started/webui.md)。
+- 同源请求不依赖 `http.cors.allowedOrigins`；Session Cookie 默认带 `Secure` 属性；显式 `iam.local.allowInsecureHTTP: true` 可启用非 loopback HTTP，Cookie 改用独立无前缀名称，仍为 HttpOnly 并保留 Origin/CSRF 校验。启动与切换步骤见 [WebUI 本地启动指南](../getting-started/webui.md)。
 
 ## HTTP 入口保护
 

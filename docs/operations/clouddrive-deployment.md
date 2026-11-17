@@ -101,7 +101,7 @@ bash install.sh install --dir ./clouddrive
 
 访问 `http://127.0.0.1:4173/setup` 创建自己的管理员。设置令牌保存在安装目录 `.control/setup-token`，权限为 `0600`；没有默认管理员或预置密码。创建完成后可清空 `runtime.env` 中的 `SETUP_TOKEN`、删除该令牌文件，再执行 `stop` / `start`。安装目录应放在源码仓库之外，并按私有运行数据管理。
 
-安装器只映射 `127.0.0.1` 上的 Web 端口；API 8080 与 management 9090 留在实例的容器网络中。`localhost` 和 `127.0.0.1` 的同端口本机 Origin 均被允许。远程使用可通过相同端口的 SSH 隧道访问；此入口不安装反向代理或证书，不支持直接用局域网明文地址代替本机地址。
+安装器默认只映射 `127.0.0.1` 上的 Web 端口；API 8080 与 management 9090 留在实例的容器网络中。`localhost` 和 `127.0.0.1` 的同端口本机 Origin 均被允许。网络配置参数需要含 `NETWORK=1` 清单的安装包，`v0.1.2` 不支持这些参数；新版脚本会拒绝用旧包假装完成外部入口部署。
 
 ```bash
 # 自选端口或固定版本
@@ -121,6 +121,83 @@ bash install.sh install --dir ./clouddrive --port 44173 --version v1.0.0
 安装包按架构命名为 `clouddrive_vX.Y.Z_linux_amd64_docker.tar.gz` 或 `clouddrive_vX.Y.Z_linux_arm64_docker.tar.gz`，内含前后端镜像归档、Compose、版本/源码/镜像配置摘要清单及管理脚本。安装时从已校验的包执行 `docker image load`，同时兼容 Docker 传统存储与 containerd 存储的不同显示 ID；实际核对原始配置 SHA-256、架构、版本和源码。运行服务使用 `pull_policy: never`，不访问镜像仓库。`checksums.txt` 提供传输完整性检查；维护者还发布该清单的 Sigstore 签名，签名校验方法见[发布说明](release.md)。
 
 离线时把对应包、`checksums.txt`、`version.txt` 从同一 Release 拷到本机，用 `--release-dir /path/to/assets` 替代在线下载；也可以显式指定 `--version` 而不提供 `version.txt`。默认源码里的 `scripts/deploy-ui-test.mjs` 仍用于开发验收，不是下载版安装入口。
+
+### IP、frp 与 HTTPS 入口
+
+监听地址、宿主端口与浏览器访问地址是三个独立参数。`--bind` 接受 IPv4/IPv6（如 `0.0.0.0`、`::`），`--port` 是本机端口，`--public-url` 是浏览器实际使用的完整 Origin（协议、IP/域名、外部端口，不带路径或末尾斜杠）。`--allow-origin` 可重复添加其它精确入口，不支持 `*`。安装器不猜测公网 IP、不信任任意转发头。
+
+IP＋端口直接访问（在安装目录以外保存下载的 bootstrap；将示例 IP 换成真实地址）：
+
+```bash
+PUBLIC_IP=198.51.100.10
+bash install.sh install --dir ./clouddrive --bind 0.0.0.0 --port 4173 \
+  --public-url "http://${PUBLIC_IP}:4173" --allow-http
+./clouddrive/install.sh status
+```
+
+放行服务器防火墙和云安全组的 TCP 4173，然后访问 `http://服务器IP:4173/setup`。HTTP 模式是显式部署选择：使用无 `__Host-` 前缀的 HttpOnly Cookie，保留 SameSite、精确 Origin 与 CSRF 校验；明文链路不能保护登录凭据和文件，公网可在之后切换 HTTPS。UUID 仍使用浏览器 `crypto.getRandomValues` 的密码学随机源，不依赖只在安全上下文提供的 `crypto.randomUUID`。
+
+frp TCP 转发时，本机仍可只监听回环，但必须登记**外部 IP 和外部端口**：
+
+```bash
+FRPS_IP=198.51.100.20
+bash install.sh install --dir ./clouddrive --bind 127.0.0.1 --port 4173 \
+  --public-url "http://${FRPS_IP}:18080" --allow-http
+```
+
+已安装 frp 后，公网 frps 的 `frps.toml` 示例：
+
+```toml
+bindPort = 7000
+allowPorts = [{ single = 18080 }]
+auth.method = "token"
+auth.token = "REPLACE_WITH_YOUR_RANDOM_FRP_TOKEN"
+```
+
+CloudDrive 所在机器的 `frpc.toml`（替换 IP，两个 token 必须相同）：
+
+```toml
+serverAddr = "198.51.100.20"
+serverPort = 7000
+auth.method = "token"
+auth.token = "REPLACE_WITH_YOUR_RANDOM_FRP_TOKEN"
+
+[[proxies]]
+name = "clouddrive"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 4173
+remotePort = 18080
+```
+
+分别在公网机器执行 `frps -c /path/to/frps.toml`、在应用机器执行 `frpc -c /path/to/frpc.toml`，并放行 frps 的 TCP 7000、18080。浏览器访问 `http://公网frpsIP:18080/setup`；只转发 Web，不单独转发 8080/9090。生产常驻可沿用已配置的 frp systemd 服务。frp 参数以[官方 TCP 配置](https://gofrp.org/en/docs/features/common/configure/)为准。
+
+HTTPS 反向代理或 frp 外侧 TLS 终结时，用 `--public-url https://drive.example.com`，省略 `--allow-http`，保留 Secure Cookie；仍将完整站点（含 `/api/`、`/wopi/`）转发到 Web。TCP frp 不改写 Host；HTTP 代理应保留原始 Host，外部 Origin 要与此处精确一致。
+
+### 修改入口与后续升级
+
+已安装实例直接编辑其 `runtime.env`，不要再用 `install` 修改网络配置，也不要编辑 `releases/` 下的版本文件。示例：
+
+```dotenv
+WEB_BIND=0.0.0.0
+WEB_PORT=4173
+PUBLIC_ORIGIN=http://198.51.100.10:4173
+ALLOW_INSECURE_HTTP=true
+ALLOWED_ORIGINS='["http://198.51.100.10:4173","http://127.0.0.1:4173","http://localhost:4173"]'
+```
+
+保留原来的 `SETUP_TOKEN` 和其它私有配置。frp 时 `WEB_BIND=127.0.0.1`、`PUBLIC_ORIGIN=http://公网IP:18080`，`ALLOWED_ORIGINS` 也写入这个外部 Origin。本机和公网入口需要同时使用时，把两个地址都放入 JSON 数组。切换 HTTP/HTTPS Cookie 模式后重新登录；已有数据库、账号及文件不变。
+
+```bash
+./clouddrive/install.sh stop
+./clouddrive/install.sh start
+./clouddrive/install.sh check-update
+./clouddrive/install.sh upgrade
+# 可选：固定一个已发布的新版本
+./clouddrive/install.sh upgrade --version vX.Y.Z
+```
+
+升级逐字保留 `runtime.env` 中的监听、端口、Origin 和 Cookie 模式。旧 `v0.1.2` 实例应先升级到支持网络配置的版本，再补充这些变量；启用新网络配置后，安装器拒绝回退到不认识这些变量的旧包。Cookie 约束见 [MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie)，Compose 变量格式见 [Docker 官方说明](https://docs.docker.com/reference/compose-file/interpolation/)。
 
 ### 数据与升级失败
 

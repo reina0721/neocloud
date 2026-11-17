@@ -91,10 +91,13 @@ func (a filesConnectionAuthority) FindAudienceTarget(ctx context.Context, kind f
 	return filesservice.AudienceTarget{ID: target.ID, Label: target.Label}, nil
 }
 
-type fileOptionalSessionAuth struct{ session auth.RequestAuthenticator }
+type fileOptionalSessionAuth struct {
+	session    auth.RequestAuthenticator
+	cookieName string
+}
 
 func (a fileOptionalSessionAuth) AuthenticateOptional(request *http.Request) (*http.Request, error) {
-	_, err := request.Cookie(iamservice.SessionCookieName)
+	_, err := request.Cookie(a.cookieName)
 	if errors.Is(err, http.ErrNoCookie) {
 		return request, nil
 	}

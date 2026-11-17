@@ -74,11 +74,12 @@ const (
 )
 
 type Handler struct {
+	cookies        httpx.CookiePolicy
 	service        *service.Service
 	allowedOrigins map[string]struct{}
 }
 
-func NewHandler(iam *service.Service, allowedOrigins []string) (*Handler, error) {
+func NewHandler(iam *service.Service, allowedOrigins []string, cookies httpx.CookiePolicy) (*Handler, error) {
 	if iam == nil {
 		return nil, errors.New("iam HTTP service is nil")
 	}
@@ -86,7 +87,7 @@ func NewHandler(iam *service.Service, allowedOrigins []string) (*Handler, error)
 	for _, origin := range allowedOrigins {
 		values[origin] = struct{}{}
 	}
-	return &Handler{service: iam, allowedOrigins: values}, nil
+	return &Handler{service: iam, allowedOrigins: values, cookies: cookies}, nil
 }
 
 func (h *Handler) originAllowed(r *http.Request) bool {

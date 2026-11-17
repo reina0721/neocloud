@@ -36,6 +36,10 @@ import { createHostWorkbenchPort } from './workbench-port';
 import { createHostWorkspacePort } from './workspace-port';
 import { focusRouteAnchor } from './anchor-focus';
 import { RuntimeSiteProfile } from './site-profile-provider';
+import { installUUIDCompatibility } from './crypto-compatibility';
+
+// Host 在客户端启动时同步补齐标准能力，早于子页面、文件和 PDF 会话初始化。
+if (typeof window !== 'undefined') installUUIDCompatibility();
 
 const darkSchemeQuery = '(prefers-color-scheme: dark)';
 

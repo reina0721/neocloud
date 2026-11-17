@@ -101,6 +101,8 @@ jobs:
         run: bash scripts/build-docker-release.sh --version "${GITHUB_REF_NAME}" --arch "${{ matrix.arch }}" --out dist/docker
       - name: Exercise installation and persistence on native architecture
         run: node scripts/test-docker-release.mjs --release-dir dist/docker --version "${GITHUB_REF_NAME}"
+      - name: Exercise explicit HTTP on a non-loopback IP
+        run: node scripts/test-docker-release.mjs --release-dir dist/docker --version "${GITHUB_REF_NAME}" --network-host "$(hostname -I | awk '{print $1}')"
       - name: Produce image SBOMs
         run: |
           GOBIN="${RUNNER_TEMP}/release-tools" go install github.com/anchore/syft/cmd/syft@v1.50.0

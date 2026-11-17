@@ -15,6 +15,7 @@ import (
 	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
 	pkgalerting "github.com/reina0721/clouddrive/pkg/alerting"
 	"github.com/reina0721/clouddrive/pkg/clock"
+	"github.com/reina0721/clouddrive/pkg/httpx"
 	"github.com/reina0721/clouddrive/pkg/idgen"
 )
 
@@ -48,6 +49,7 @@ type Module struct {
 	Contribution module.Contribution
 }
 type HTTPModule struct {
+	Cookies httpx.CookiePolicy
 	Module
 	Handler *httpbinding.Handler
 	// Service 是 HTTP profile 的完成品服务，供 composition 注入跨模块能力
@@ -93,9 +95,12 @@ func NewHTTP(dependencies HTTPDependencies) (HTTPModule, error) {
 	if err != nil {
 		return HTTPModule{}, err
 	}
-	handler, err := httpbinding.NewHandler(iamService, dependencies.AllowedOrigins)
+	cookies := httpx.CookiePolicy{AllowInsecureHTTP: dependencies.Config.Local.AllowInsecureHTTP}
+	handler, err := httpbinding.NewHandler(iamService, dependencies.AllowedOrigins, cookies)
 	if err != nil {
 		return HTTPModule{}, fmt.Errorf("compose iam HTTP handler: %w", err)
 	}
-	return HTTPModule{Module: core, Handler: handler, Service: iamService}, nil
+	return HTTPModule{Module: core, Handler: handler, Service: iamService, Cookies: cookies}, nil
 }
+
+func (m HTTPModule) SessionCookieName() string { return m.Cookies.Name(service.SessionCookieName) }

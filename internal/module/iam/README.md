@@ -44,3 +44,7 @@ IAM 通过独立 `iam_schema_migrations` 管理三驱动 schema（含 authorizat
 ## 分享受众事实（135）
 
 公开CollaborationDirectory仅提供当前可用账号、有效角色、活跃系统owner角色事实及精确账号/角色标签查找。IAM repo以单次只读JOIN形成账号与角色快照，不在文件发布事务中另开写事务；关系超限失败，不截断授权事实。composition适配files消费方契约，文件策略仍由files拥有，IAM固定Core RBAC/Casbin模型不扩展为资源继承引擎。
+
+## HTTP 传输策略
+
+`iam.local.allowInsecureHTTP` 默认为 false；IAM HTTP Module 显式输出当前 `CookiePolicy` 及 Cookie 名称，由 composition 注入 Session 解析与 Console。显式 HTTP 模式使用无 `__Host-` 前缀的 Cookie，保留 HttpOnly、SameSite、Origin 与 CSRF；不从客户端转发头推断或自动降级。切换传输模式需要重新登录，但不重置或迁移账号和业务数据。

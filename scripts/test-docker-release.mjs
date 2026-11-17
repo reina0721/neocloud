@@ -13,7 +13,7 @@ import {
   readdir,
 } from "node:fs/promises";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { tmpdir } from "node:os";
+import { tmpdir, networkInterfaces } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import { createServer } from "node:net";
 import { parseArgs } from "node:util";
@@ -27,6 +27,7 @@ const { values } = parseArgs({
     "emulated-arch": { type: "string" },
     keep: { type: "boolean", default: false },
     faults: { type: "boolean", default: false },
+    "network-host": { type: "string" },
   },
 });
 assert.ok(
@@ -39,6 +40,20 @@ assert.equal(
   "升级目录和版本必须一起提供",
 );
 const source = resolve(values["release-dir"]);
+const networkHost = values["network-host"];
+assert.ok(
+  !networkHost ||
+    Object.values(networkInterfaces())
+      .flat()
+      .some(
+        (item) =>
+          item &&
+          !item.internal &&
+          item.family === "IPv4" &&
+          item.address === networkHost,
+      ),
+  "--network-host 必须是当前机器的非回环 IPv4，不能用 localhost 冒充 HTTP 外部入口",
+);
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const base = await mkdtemp(join(tmpdir(), "clouddrive-release-test-"));
 await writeFile(join(base, ".test-owner"), "clouddrive-release-fixture-v1", {
@@ -119,7 +134,7 @@ let ok = false;
 const cookieJar = new Map();
 let csrf = "";
 const port = await freePort(),
-  origin = `http://127.0.0.1:${port}`;
+  origin = `http://${networkHost ?? "127.0.0.1"}:${port}`;
 async function request(path, method = "GET", body) {
   const response = await fetch(origin + "/api/console/v1" + path, {
     method,
@@ -134,6 +149,11 @@ async function request(path, method = "GET", body) {
     signal: AbortSignal.timeout(30000),
   });
   for (const cookie of response.headers.getSetCookie()) {
+    if (networkHost) {
+      assert.doesNotMatch(cookie, /^__Host-/);
+      assert.doesNotMatch(cookie, /;\s*Secure(?:;|$)/i);
+      assert.match(cookie, /;\s*HttpOnly(?:;|$)/i);
+    }
     const pair = cookie.split(";")[0];
     const at = pair.indexOf("=");
     cookieJar.set(pair.slice(0, at), pair.slice(at + 1));
@@ -187,6 +207,9 @@ try {
     active,
     "--release-dir",
     source,
+    ...(networkHost
+      ? ["--bind", "0.0.0.0", "--public-url", origin, "--allow-http"]
+      : []),
   );
   install(
     "install",
@@ -273,7 +296,7 @@ try {
   );
   assert.deepEqual(
     bindings["4173/tcp"].map((x) => x.HostIp),
-    ["127.0.0.1"],
+    [networkHost ? "0.0.0.0" : "127.0.0.1"],
   );
   install("stop", "--dir", root);
   const originalSnapshot = await storageSnapshot();

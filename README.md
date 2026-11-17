@@ -24,7 +24,7 @@ node scripts/dev.mjs --prepare
 
 ## 下载版 Docker 部署
 
-面向 Linux amd64/arm64 的 Release 安装器支持安装、备份、版本检查及升级。目标机只需 Docker/Compose 与标准 Linux 工具，不编译源码；默认仅访问本机 `127.0.0.1:4173`。完整命令见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。正式版通过 GitHub Actions 完成构建、原生运行、校验签名和发布；draft 不能作为匿名下载入口。
+面向 Linux amd64/arm64 的 Release 安装器支持安装、备份、版本检查及升级。目标机只需 Docker/Compose 与标准 Linux 工具，不编译源码；默认仅访问本机 `127.0.0.1:4173`；新版网络配置可通过 `--bind`、`--public-url` 与显式 `--allow-http` 支持 IP＋端口、frp 或 HTTPS 代理。完整命令见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。正式版通过 GitHub Actions 完成构建、原生运行、校验签名和发布；draft 不能作为匿名下载入口。
 
 ```bash
 curl -fL --proto '=https' --proto-redir '=https' \

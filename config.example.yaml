@@ -228,6 +228,8 @@ auth:
 # 本地身份、凭据与会话由 IAM 独立拥有；setupToken 应通过 APP_IAM__LOCAL__SETUPTOKEN 注入。
 iam:
   local:
+    # 仅显式 HTTP 部署启用；使用无 __Host- 前缀的 HttpOnly Cookie，保留 CSRF 校验。
+    allowInsecureHTTP: false
     setupToken: ""
     idleTimeout: 30m0s
     absoluteTimeout: 12h0m0s
