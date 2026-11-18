@@ -6,12 +6,12 @@
 
 ### 安装当前正式版
 
-公开 `latest` 当前为 v0.1.3。先下载脚本，再用显式子命令启动安装。
+从公开 `latest` 下载脚本，再用显式子命令启动安装。下例只开放服务器本机访问。
 
 ```bash
 curl -fL --proto '=https' --proto-redir '=https' \
   https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
-bash install.sh install --dir "$HOME/clouddrive"
+bash install.sh install --dir "$HOME/clouddrive" --bind 127.0.0.1
 ```
 
 从 `http://127.0.0.1:4173/setup` 使用 `~/clouddrive/.control/setup-token` 创建管理员。旧版本的非回环访问需要显式指定外部 Origin 和 HTTP 策略。以下安装向导与新增命令取决于目标 Release 的安装器。
@@ -23,7 +23,7 @@ curl -fL --proto '=https' --proto-redir '=https' \
   https://github.com/reina0721/neocloud/releases/latest/download/install.sh | bash
 ```
 
-向导只询问安装目录、监听地址和端口；默认 `~/clouddrive`、`0.0.0.0:4173`。安装器解析最新正式 Release，固定版本下载配套产物、检查摘要和镜像身份，执行 `docker image load`、数据库迁移、启动及就绪检查。下载与导入阶段显示进度，低速停滞会有界重试；下载失败不会停止已有服务。
+向导询问安装目录、监听地址和端口，默认 `~/clouddrive`、`0.0.0.0:4173`。确认安装时也可选择启用网页运维。安装器解析最新正式 Release，固定版本下载配套产物、检查摘要和镜像身份，执行 `docker image load`、数据库迁移、启动及就绪检查。下载与导入阶段显示进度，低速停滞会有界重试；下载失败不会停止已有服务。
 
 安装后访问 `http://服务器地址:4173/setup` 创建自己的管理员。设置令牌位于安装目录 `.control/setup-token`（0600），脚本仅提示路径，没有默认管理员或预置密码。HTTP 是该 Docker 配置的明确默认选择；Go 的通用 Cookie 策略默认值仍保留 HTTPS 保护。API 8080、management 9090 只在容器网络内，宿主机只发布 Web 端口。
 
@@ -35,7 +35,7 @@ curl -fL --proto '=https' --proto-redir '=https' \
 curl -fL https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
 bash install.sh install --dir "$HOME/clouddrive" --port 4173 --yes
 # 固定版本、监听地址或使用独立实例目录
-bash install.sh install --dir "$HOME/clouddrive-two" --bind 127.0.0.1 --port 44173 --version v0.1.4 --yes
+bash install.sh install --dir "$HOME/clouddrive-two" --bind 127.0.0.1 --port 44173 --version v0.2.0 --yes
 ```
 
 显式 `install` 保持非交互行为；`--yes` 也支持省略 `install`。管道安装通过 `/dev/tty` 交互；没有终端且未明确使用命令或 `--yes` 时立即提示用法，不等待输入。
@@ -53,7 +53,7 @@ bash install.sh install --dir "$HOME/clouddrive-two" --bind 127.0.0.1 --port 441
 ~/clouddrive/install.sh logs -f
 ~/clouddrive/install.sh check-update
 ~/clouddrive/install.sh upgrade         # update 是同义命令
-~/clouddrive/install.sh upgrade --version v0.1.4
+~/clouddrive/install.sh upgrade --version v0.2.0
 ~/clouddrive/install.sh backup
 ~/clouddrive/install.sh stop
 ~/clouddrive/install.sh start
