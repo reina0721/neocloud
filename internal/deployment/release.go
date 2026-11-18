@@ -72,13 +72,13 @@ func (s *Releases) get(ctx context.Context, address string) (io.ReadCloser, erro
 		return nil, err
 	}
 	if response.StatusCode != http.StatusOK {
-		response.Body.Close()
-		return nil, fmt.Errorf("正式产物请求失败，HTTP %d", response.StatusCode)
+		return nil, errors.Join(fmt.Errorf("正式产物请求失败，HTTP %d", response.StatusCode), response.Body.Close())
 	}
 	return response.Body, nil
 }
 
 func fileDigest(path string) (string, error) {
+	// #nosec G304 -- 调用方仅传入管理目录的固定文件名或已限定格式的发布附件。
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err
@@ -97,6 +97,7 @@ func VerifyRelease(ctx context.Context, dir, version string) error {
 	if cosign == "" {
 		cosign = "cosign"
 	}
+	// #nosec G204 G702 -- cosign 由安装者配置，证书身份的 tag 已限定格式，参数独立传递。
 	command := exec.CommandContext(ctx, cosign, "verify-blob",
 		"--bundle", filepath.Join(dir, "checksums.txt.sigstore.json"),
 		"--certificate-identity", releaseOrigin+"/.github/workflows/release.yml@refs/tags/"+version,
@@ -109,15 +110,25 @@ func VerifyRelease(ctx context.Context, dir, version string) error {
 }
 
 func VerifyAsset(dir, name string) error {
-	f, err := os.Open(filepath.Join(dir, "checksums.txt"))
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	f, err := root.Open("checksums.txt")
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	return verifyAsset(f, filepath.Join(dir, name), name)
+	asset, err := root.Open(name)
+	if err != nil {
+		return err
+	}
+	defer asset.Close()
+	return verifyAsset(f, asset, name)
 }
 
-func verifyAsset(reader io.Reader, path, name string) error {
+func verifyAsset(reader, asset io.Reader, name string) error {
 	var want string
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
@@ -132,11 +143,11 @@ func verifyAsset(reader io.Reader, path, name string) error {
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	actual, err := fileDigest(path)
-	if err != nil {
+	hash := sha256.New()
+	if _, err := io.Copy(hash, asset); err != nil {
 		return err
 	}
-	if want != actual {
+	if want != hex.EncodeToString(hash.Sum(nil)) {
 		return errors.New("正式产物摘要不匹配")
 	}
 	return nil
@@ -169,7 +180,12 @@ func (s *Releases) download(ctx context.Context, dir, version, asset string, lim
 		return err
 	}
 	defer body.Close()
-	file, err := os.OpenFile(filepath.Join(dir, asset), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	file, err := root.OpenFile(asset, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return err
 	}

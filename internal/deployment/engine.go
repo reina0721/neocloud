@@ -27,6 +27,7 @@ func (e engine) control() string     { return filepath.Join(e.root, ".control", 
 func (e engine) currentPath() string { return filepath.Join(e.root, ".control", "current") }
 func (e engine) tool(ctx context.Context, version, action string, params ...string) *exec.Cmd {
 	arguments := []string{filepath.Join(e.control(), "engine.sh"), action, "--dir", e.root, "--version", version}
+	// #nosec G204 -- engine.sh 来自已安装发布包，操作名由执行器选取，参数按 argv 传递。
 	cmd := exec.CommandContext(ctx, "bash", append(arguments, params...)...)
 	cmd.WaitDelay = 5 * time.Second
 	cmd.Env = append(os.Environ(), "CLOUDDRIVE_MAINTENANCE_ENGINE=1",
@@ -118,7 +119,12 @@ func (e engine) snapshot(ctx context.Context, id, version string) (Snapshot, err
 			return Snapshot{}, err
 		}
 	}
-	file, err := os.OpenFile(filepath.Join(dir, "data.tar.gz"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	snapshotRoot, err := os.OpenRoot(dir)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	defer snapshotRoot.Close()
+	file, err := snapshotRoot.OpenFile("data.tar.gz", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -143,6 +149,7 @@ func (e engine) snapshot(ctx context.Context, id, version string) (Snapshot, err
 }
 
 func inspectArchive(ctx context.Context, filename string) (string, error) {
+	// #nosec G304 -- 恢复点编号由执行器生成并校验，归档文件名固定。
 	f, err := os.Open(filename)
 	if err != nil {
 		return "", err
@@ -252,6 +259,7 @@ func (e engine) beginSwap(jobID string, meta Snapshot, stage string) error {
 		return err
 	}
 	config := filepath.Join(e.root, "runtime.env")
+	// #nosec G304 -- runtime.env 固定在安装者指定的实例根下。
 	original, err := os.ReadFile(config)
 	if err != nil {
 		return err
@@ -286,6 +294,7 @@ func (e engine) undoSwap(jobID string) error {
 	} else if err != nil {
 		return err
 	}
+	// #nosec G304 -- 恢复目录使用本实例生成的任务 ID，配置文件名固定。
 	config, err := os.ReadFile(filepath.Join(dir, "original.env"))
 	if err != nil {
 		return err

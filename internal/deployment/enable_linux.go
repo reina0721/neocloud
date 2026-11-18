@@ -79,7 +79,9 @@ func Enable(ctx context.Context, root, trustedProxy, cosign, dockerHost string) 
 		return err
 	}
 	cfg.Upstream = listener.Addr().String()
-	listener.Close()
+	if err = listener.Close(); err != nil {
+		return err
+	}
 	if err = cfg.Validate(); err != nil {
 		return err
 	}
@@ -163,6 +165,7 @@ func Enable(ctx context.Context, root, trustedProxy, cosign, dockerHost string) 
 	if err = e.run(ctx, version, "_config"); err != nil {
 		return fmt.Errorf("网页运维需要支持 ports !override 的 Docker Compose（>=2.24.4）: %w", err)
 	}
+	// #nosec G304 -- 路径由 os.Executable 返回，复制正在运行的已验证安装工具。
 	exeBytes, err := os.ReadFile(executable)
 	if err != nil {
 		return err
@@ -170,7 +173,7 @@ func Enable(ctx context.Context, root, trustedProxy, cosign, dockerHost string) 
 	if err = atomicWrite(filepath.Join(e.control(), "client"), exeBytes, 0700); err != nil {
 		return err
 	}
-	if _, err = exec.CommandContext(ctx, "getent", "group", gatewayGroup(project)).Output(); err != nil {
+	if _, err = user.LookupGroup(gatewayGroup(project)); err != nil {
 		if err = privileged(ctx, "groupadd", "--system", gatewayGroup(project)); err != nil {
 			return err
 		}
@@ -251,7 +254,7 @@ func gatewayReady(ctx context.Context, cfg Config) bool {
 	if err != nil {
 		return false
 	}
-	res.Body.Close()
+	defer res.Body.Close()
 	return res.StatusCode == 200 && res.Header.Get("X-CloudDrive-Maintenance") == "1"
 }
 
@@ -276,6 +279,7 @@ func privileged(ctx context.Context, name string, args ...string) error {
 	if os.Geteuid() != 0 {
 		name, args = "sudo", append([]string{"--", name}, args...)
 	}
+	// #nosec G204 -- 仅供本地启用使用，调用方构造固定的 systemd/安装命令及独立 argv。
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Stdin, cmd.Stderr, cmd.Stdout = os.Stdin, os.Stderr, os.Stdout
 	return cmd.Run()

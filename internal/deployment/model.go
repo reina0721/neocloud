@@ -119,11 +119,13 @@ func RandomID() string {
 }
 
 func readText(path string) (string, error) {
+	// #nosec G304 -- 只读取宿主机控制目录的固定标记或凭据文件。
 	b, err := os.ReadFile(path)
 	return strings.TrimSpace(string(b)), err
 }
 
 func ReadJSON(path string, value any) error {
+	// #nosec G304 -- 只读取本地 CLI/systemd 指定的配置或实例状态。
 	f, err := os.Open(path)
 	if err != nil {
 		return err
@@ -164,6 +166,7 @@ func atomicWrite(path string, data []byte, mode os.FileMode) error {
 }
 
 func syncDirectory(path string) error {
+	// #nosec G304 -- 同步本地执行器刚写入的受控目录。
 	f, err := os.Open(path)
 	if err != nil {
 		return err

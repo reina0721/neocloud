@@ -216,15 +216,13 @@ func (w *Worker) Submit(req Request) (Job, error) {
 	}
 	current, err := readText(w.engine.currentPath())
 	if err != nil || current != req.Expected {
-		lock.Close()
-		return Job{}, ErrStale
+		return Job{}, errors.Join(ErrStale, err, lock.Close())
 	}
 	job := Job{Request: req, Actor: req.Actor, Submitted: time.Now().UTC(), Phase: "queued", Original: current, WasServing: w.state.Serving, WasRecovery: w.state.Recovery}
 	next := w.state.clone()
 	next.Jobs = append(next.Jobs, job)
 	if err = w.persist(next); err != nil {
-		lock.Close()
-		return Job{}, err
+		return Job{}, errors.Join(err, lock.Close())
 	}
 	w.running = lock
 	w.wg.Go(func() {

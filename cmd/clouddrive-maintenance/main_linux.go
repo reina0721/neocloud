@@ -77,8 +77,12 @@ func run(ctx context.Context, args []string) error {
 		defer worker.Wait()
 		return serve(ctx, socket, deployment.WorkerHandler(worker))
 	case "gateway":
-		credential := filepath.Join(os.Getenv("CREDENTIALS_DIRECTORY"), "session-key")
-		key, err := os.ReadFile(credential)
+		credentials, err := os.OpenRoot(os.Getenv("CREDENTIALS_DIRECTORY"))
+		if err != nil {
+			return err
+		}
+		defer credentials.Close()
+		key, err := credentials.ReadFile("session-key")
 		if err != nil {
 			return err
 		}
@@ -105,7 +109,7 @@ func serve(ctx context.Context, l net.Listener, handler http.Handler) error {
 	go func() {
 		defer close(done)
 		<-ctx.Done()
-		timeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		timeout, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 		defer cancel()
 		_ = server.Shutdown(timeout)
 	}()

@@ -1,6 +1,7 @@
 package deployment
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -57,7 +58,13 @@ func NewGateway(cfg Config, key []byte) (*Gateway, error) {
 	upstream := &url.URL{Scheme: "http", Host: cfg.Upstream}
 	g := &Gateway{
 		cfg: cfg, key: key, worker: NewClient(cfg.Socket()),
-		owners: &http.Client{Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }},
+		owners: &http.Client{
+			Timeout:       5 * time.Second,
+			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+			Transport: &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				return (&net.Dialer{}).DialContext(ctx, "tcp", cfg.Upstream)
+			}},
+		},
 	}
 	g.proxy = &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
@@ -175,6 +182,7 @@ func (g *Gateway) value(r *http.Request, kind, origin string) string {
 }
 
 func (g *Gateway) issue(w http.ResponseWriter, kind, value, origin string, https bool, lifetime time.Duration) {
+	// #nosec G124 -- 调用方已验证 HTTPS 或直连回环 HTTP，Cookie 始终启用 HttpOnly 和 SameSiteStrict。
 	http.SetCookie(w, &http.Cookie{Name: cookiePrefix + kind, Value: g.makeToken(kind, value, origin, lifetime),
 		Path: MaintenancePath, MaxAge: int(lifetime.Seconds()), HttpOnly: true, Secure: https, SameSite: http.SameSiteStrictMode})
 }
@@ -208,6 +216,7 @@ func (g *Gateway) owner(r *http.Request, origin string, write bool) string {
 		if err != nil {
 			return ""
 		}
+		// #nosec G704 -- 认证客户端只拨号已校验的回环 Web Host，禁止重定向。
 		response, err := g.owners.Do(csrf)
 		if err != nil {
 			return ""
@@ -216,7 +225,7 @@ func (g *Gateway) owner(r *http.Request, origin string, write bool) string {
 			Token string `json:"token"`
 		}
 		err = json.NewDecoder(io.LimitReader(response.Body, 4096)).Decode(&result)
-		response.Body.Close()
+		err = errors.Join(err, response.Body.Close())
 		if err != nil || response.StatusCode != 200 || len(result.Token) != 64 {
 			return ""
 		}
@@ -242,6 +251,7 @@ func (g *Gateway) owner(r *http.Request, origin string, write bool) string {
 		req.Header.Set("Origin", origin)
 		req.Header.Set("X-CSRF-Token", result.Token)
 	}
+	// #nosec G704 -- 请求路径为固定的 IAM 接口，客户端只拨号当前实例的回环 Web Host。
 	response, err := g.owners.Do(req)
 	if err != nil {
 		return ""
@@ -351,6 +361,7 @@ func (g *Gateway) mutate(w http.ResponseWriter, r *http.Request, origin string, 
 		}
 		g.issue(w, "recovery", "authorized", origin, secure, 30*time.Minute)
 	case "recovery-logout":
+		// #nosec G124 -- 与签发使用同一受信连接策略，只清除本维护会话的 Cookie。
 		http.SetCookie(w, &http.Cookie{Name: cookiePrefix + "recovery", Path: MaintenancePath, MaxAge: -1, HttpOnly: true, Secure: secure, SameSite: http.SameSiteStrictMode})
 	default:
 		switch action {

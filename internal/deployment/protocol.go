@@ -90,8 +90,7 @@ func SocketListener(address string) (net.Listener, error) {
 		}
 		conn, dialErr := net.DialTimeout("unix", address, time.Second)
 		if dialErr == nil {
-			conn.Close()
-			return nil, ErrBusy
+			return nil, errors.Join(ErrBusy, conn.Close())
 		}
 		if err = os.Remove(address); err != nil {
 			return nil, err
@@ -103,9 +102,9 @@ func SocketListener(address string) (net.Listener, error) {
 	if err != nil {
 		return nil, err
 	}
+	// #nosec G302 -- Unix socket 组写权限授予专用的同实例网关组。
 	if err = os.Chmod(address, 0660); err != nil {
-		l.Close()
-		return nil, err
+		return nil, errors.Join(err, l.Close())
 	}
 	return l, nil
 }
