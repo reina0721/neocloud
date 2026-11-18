@@ -35,7 +35,7 @@ curl -fL --proto '=https' --proto-redir '=https' \
 curl -fL https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
 bash install.sh install --dir "$HOME/clouddrive" --port 4173 --yes
 # 固定版本、监听地址或使用独立实例目录
-bash install.sh install --dir "$HOME/clouddrive-two" --bind 127.0.0.1 --port 44173 --version v0.2.1 --yes
+bash install.sh install --dir "$HOME/clouddrive-two" --bind 127.0.0.1 --port 44173 --version v0.2.2 --yes
 ```
 
 显式 `install` 保持非交互行为；`--yes` 也支持省略 `install`。管道安装通过 `/dev/tty` 交互；没有终端且未明确使用命令或 `--yes` 时立即提示用法，不等待输入。
@@ -53,7 +53,7 @@ bash install.sh install --dir "$HOME/clouddrive-two" --bind 127.0.0.1 --port 441
 ~/clouddrive/install.sh logs -f
 ~/clouddrive/install.sh check-update
 ~/clouddrive/install.sh upgrade         # update 是同义命令
-~/clouddrive/install.sh upgrade --version v0.2.1
+~/clouddrive/install.sh upgrade --version v0.2.2
 ~/clouddrive/install.sh backup
 ~/clouddrive/install.sh stop
 ~/clouddrive/install.sh start

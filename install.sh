@@ -337,7 +337,12 @@ enable_maintenance() {
   fetch_asset checksums.txt "$work/checksums.txt"
   fetch_asset checksums.txt.sigstore.json "$work/checksums.txt.sigstore.json"
   identity="https://github.com/$REPOSITORY/.github/workflows/release.yml@refs/tags/$version"
-  cosign verify-blob --bundle "$work/checksums.txt.sigstore.json" --certificate-identity "$identity" +    --certificate-oidc-issuer https://token.actions.githubusercontent.com "$work/checksums.txt"
+  local -a verification=(
+    --bundle "$work/checksums.txt.sigstore.json"
+    --certificate-identity "$identity"
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com
+  )
+  cosign verify-blob "${verification[@]}" "$work/checksums.txt"
   fetch_asset "$name" "$work/$name"
   local digest
   digest=$(awk -v asset="$name" '$2 == asset {print $1}' "$work/checksums.txt")

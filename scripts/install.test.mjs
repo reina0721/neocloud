@@ -649,3 +649,57 @@ test("旧包不能假装支持外部入口，已有网络配置不向旧包升�
   );
   assert.deepEqual(await readFile(join(f.root, "runtime.env")), original);
 });
+
+test("启用网页运维使用正式版签名校验，并执行摘要匹配的宿主工具", async (t) => {
+  const f = await fixture(t);
+  await f.install();
+  const source = join(f.base, "v1.0.0");
+  const binary = "clouddrive-maintenance_v1.0.0_linux_amd64";
+  const script =
+    "#!/usr/bin/env bash\nset -eu\n[[ $1 == enable && $2 == --root ]]\nprintf 'maintenance fixture\\n'\n";
+  const digest = createHash("sha256").update(script).digest("hex");
+  const manifest = join(source, "checksums.txt");
+  await writeFile(join(source, binary), script);
+  await writeFile(
+    manifest,
+    (await readFile(manifest, "utf8")) + digest + "  " + binary + "\n",
+  );
+  await writeFile(join(source, "checksums.txt.sigstore.json"), "{}\n");
+  await writeFile(
+    join(f.base, "bin", "cosign"),
+    `#!/usr/bin/env bash
+set -euo pipefail
+[[ $# == 8 && $1 == verify-blob && $2 == --bundle && -f $3 ]]
+[[ $4 == --certificate-identity && $5 == https://github.com/reina0721/neocloud/.github/workflows/release.yml@refs/tags/v1.0.0 ]]
+[[ $6 == --certificate-oidc-issuer && $7 == https://token.actions.githubusercontent.com && -f $8 ]]
+`,
+    { mode: 0o700 },
+  );
+  for (const command of ["systemctl", "sudo"]) {
+    await writeFile(
+      join(f.base, "bin", command),
+      "#!/usr/bin/env bash\nexit 99\n",
+      { mode: 0o700 },
+    );
+  }
+  const result = f.run([
+    "enable-web-management",
+    "--dir",
+    f.root,
+    "--release-dir",
+    source,
+  ]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /maintenance fixture/);
+  await writeFile(join(source, binary), script + "# altered\n");
+  const altered = f.run([
+    "enable-web-management",
+    "--dir",
+    f.root,
+    "--release-dir",
+    source,
+  ]);
+  assert.notEqual(altered.status, 0);
+  assert.match(altered.stderr, /维护工具摘要不匹配/);
+  assert.doesNotMatch(altered.stdout, /maintenance fixture/);
+});
