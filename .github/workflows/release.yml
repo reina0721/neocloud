@@ -59,6 +59,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if [[ "$GITHUB_REF_NAME" != *-* ]]; then
+            published="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
+            [[ "$published" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+            git merge-base --is-ancestor "${published}^{commit}" "$GITHUB_SHA"
+            export GORELEASER_PREVIOUS_TAG="$published"
+          fi
           node scripts/release-config.mjs --output "${RUNNER_TEMP}/goreleaser.yaml"
           goreleaser release --clean --skip=sign --config "${RUNNER_TEMP}/goreleaser.yaml"
       - name: Verify archive license trees

@@ -4,7 +4,7 @@
 
 产品继续采用 `v0.MINOR.PATCH` annotated tag；修复递增 PATCH，新增能力或需要明确升级说明的兼容变化递增 MINOR。0.x 仍须说明不兼容影响，不因版本阶段而重置数据。预发布使用 `-rc.N`；本地快照从当前版本派生为下一 PATCH 的 `-next.<commit>`，不能当成正式发布。前端私有包版本是包元数据，不表示独立产品发布。
 
-[GitHub Releases](https://github.com/reina0721/neocloud/releases) 是产品版本变更的唯一来源。GoReleaser 从前一 tag 至当前 tag 的真实 Git 提交生成记录，分为功能、修复和其他维护，包含直接提交；维护者须审阅用户影响、迁移、升级和已知限制。不维护重复的 CHANGELOG，不补写未经核验的历史发布内容。
+[GitHub Releases](https://github.com/reina0721/neocloud/releases) 是产品版本变更的唯一来源。正式版由 GoReleaser 从上一公开正式版至当前 tag 的真实 Git 提交生成记录，分为功能、修复和其他维护，包含直接提交；维护者须审阅用户影响、迁移、升级和已知限制。不维护重复的 CHANGELOG，不补写未经核验的历史发布内容。
 
 ## 仓库设置与发布前提
 
