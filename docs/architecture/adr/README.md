@@ -12,6 +12,7 @@
 | URL 写锁     | [锁进入文件事务](141-transactional-url-locks.md)                       | 保存跨 WebDAV、网页与文件发布的锁判断和替换条件。                                        |
 | 压缩解析     | [受限同二进制子进程](133-isolated-archive-parser.md)                   | 保存不可信解析的资源隔离理由，任务与发布仍归 files。                                     |
 | PDF          | [本地 PDF.js 组件](134-local-pdf-components.md)                        | 保存 SDK、frame、独立资产预算与 Host 边界。                                              |
+| 网页运维 | [同址宿主维护与完整恢复点](142-host-maintenance-gateway.md) | 网关接管原端口，维护进程拥有 Docker 权限并管理升级与恢复。 |
 
 原文件名保留历史定位；重复的旧 ADR 编号不表示同一决定。各记录末尾提供原始材料的完整 Git revision 与路径，历史任务目录不再作为当前说明的依赖。
 

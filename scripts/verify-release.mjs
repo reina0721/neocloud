@@ -2,10 +2,12 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { readFile, stat } from "node:fs/promises";
+import { open, readFile, stat } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+
+import { verifyHeader } from "./verify-elf-platform.mjs";
 
 const workflows = ["quality.yml", "database.yml", "container.yml"];
 export function selectDraft(pages, tag) {
@@ -58,6 +60,7 @@ export function requiredAssets(tag) {
     ...goArchives.map((name) => name + ".spdx.json"),
     ...["amd64", "arm64"].flatMap((arch) => [
       `clouddrive_${tag}_linux_${arch}_docker.tar.gz`,
+      `clouddrive-maintenance_${tag}_linux_${arch}`,
       ...["api", "web"].map(
         (kind) => `clouddrive-${kind}_${tag}_${arch}.spdx.json`,
       ),
@@ -139,6 +142,17 @@ export async function verifyAssets({
     await readFile(installerPath),
   );
   for (const arch of ["amd64", "arm64"]) {
+    const tool = await open(
+      join(directory, `clouddrive-maintenance_${tag}_linux_${arch}`),
+      "r",
+    );
+    try {
+      const header = Buffer.alloc(20);
+      const { bytesRead } = await tool.read(header);
+      verifyHeader(header.subarray(0, bytesRead), arch);
+    } finally {
+      await tool.close();
+    }
     const path = join(
       directory,
       `clouddrive_${tag}_linux_${arch}_docker.tar.gz`,

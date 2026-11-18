@@ -111,6 +111,11 @@ jobs:
           go-version-file: go.mod
       - name: Build paired offline images
         run: bash scripts/build-docker-release.sh --version "${GITHUB_REF_NAME}" --arch "${{ matrix.arch }}" --out dist/docker
+      - name: Build host maintenance command
+        run: |
+          binary="dist/docker/clouddrive-maintenance_${GITHUB_REF_NAME}_linux_${{ matrix.arch }}"
+          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build -trimpath -buildvcs=false -ldflags="-s -w" -o "${binary}" ./cmd/clouddrive-maintenance
+          node scripts/verify-elf-platform.mjs "${binary}" "${{ matrix.arch }}"
       - name: Exercise installation and persistence on native architecture
         run: node scripts/test-docker-release.mjs --release-dir dist/docker --version "${GITHUB_REF_NAME}"
       - name: Exercise default HTTP installation on a non-loopback IP
@@ -153,7 +158,7 @@ jobs:
           cd dist/docker
           sha256sum --check "checksums-amd64.txt"
           sha256sum --check "checksums-arm64.txt"
-          sha256sum clouddrive_*_docker.tar.gz install.sh version.txt *.spdx.json >> ../complete/checksums.txt
+          sha256sum clouddrive_*_docker.tar.gz clouddrive-maintenance_* install.sh version.txt *.spdx.json >> ../complete/checksums.txt
           LC_ALL=C sort -u -k2 ../complete/checksums.txt -o ../complete/checksums.txt
       - name: Sign final checksum set
         run: |
@@ -169,11 +174,79 @@ jobs:
         run: |
           test "$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq .isDraft)" = true
           gh release upload "${GITHUB_REF_NAME}" dist/docker/clouddrive_*_docker.tar.gz dist/docker/install.sh \
-            dist/docker/version.txt dist/docker/*.spdx.json dist/complete/checksums.txt dist/complete/checksums.txt.sigstore.json --clobber
+            dist/docker/version.txt dist/docker/*.spdx.json dist/docker/clouddrive-maintenance_* dist/complete/checksums.txt dist/complete/checksums.txt.sigstore.json --clobber
+
+  maintenance-acceptance:
+    name: Native browser maintenance / ${{ matrix.arch }}
+    needs: attach-docker
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 55
+    environment: release
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd5d6820020
+        with:
+          node-version: 24.11.1
+      - name: Download the signed candidate and previous stable release
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          old="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
+          [[ "$old" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$old" != "$GITHUB_REF_NAME"
+          gh release download "$old" --dir "${RUNNER_TEMP}/baseline" \
+            --pattern install.sh --pattern checksums.txt --pattern "clouddrive_${old}_linux_${ARCH}_docker.tar.gz"
+          gh release download "$GITHUB_REF_NAME" --dir "${RUNNER_TEMP}/candidate" \
+            --pattern install.sh --pattern checksums.txt --pattern checksums.txt.sigstore.json \
+            --pattern "clouddrive_${GITHUB_REF_NAME}_linux_${ARCH}_docker.tar.gz" \
+            --pattern "clouddrive-maintenance_${GITHUB_REF_NAME}_linux_${ARCH}"
+          echo "BASELINE_VERSION=$old" >> "${GITHUB_ENV}"
+      - name: Prepare browser and release verifier
+        run: |
+          GOBIN="${RUNNER_TEMP}/tools" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
+          export PLAYWRIGHT_BROWSERS_PATH="${RUNNER_TEMP}/maintenance-browsers"
+          echo "PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH" >> "${GITHUB_ENV}"
+          npx --yes pnpm@10.22.0 --dir frontend install --frozen-lockfile
+          npx --yes pnpm@10.22.0 --dir frontend exec playwright install --with-deps chromium
+      - name: Exercise port handover, browser maintenance and complete restore
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          cd "${RUNNER_TEMP}/candidate"
+          "${RUNNER_TEMP}/tools/cosign" verify-blob --bundle checksums.txt.sigstore.json \
+            --certificate-identity "https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/tags/${GITHUB_REF_NAME}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com checksums.txt
+          tool="clouddrive-maintenance_${GITHUB_REF_NAME}_linux_${ARCH}"
+          awk -v asset="$tool" '$2 == asset {print}' checksums.txt | sha256sum -c -
+          chmod 700 "$tool"
+          cd "${GITHUB_WORKSPACE}"
+          sudo env CLOUDDRIVE_COSIGN="${RUNNER_TEMP}/tools/cosign" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_PATH" \
+            "$(command -v node)" scripts/test-docker-maintenance.mjs \
+            --candidate "${RUNNER_TEMP}/candidate" --version "$GITHUB_REF_NAME" \
+            --baseline "${RUNNER_TEMP}/baseline" --baseline-version "$BASELINE_VERSION"
+          sudo env CLOUDDRIVE_COSIGN="${RUNNER_TEMP}/tools/cosign" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_PATH" \
+            "$(command -v node)" scripts/test-docker-maintenance.mjs \
+            --candidate "${RUNNER_TEMP}/candidate" --version "$GITHUB_REF_NAME"
 
   publish:
     name: Verify and publish stable release
-    needs: attach-docker
+    needs: maintenance-acceptance
     if: ${{ !contains(github.ref_name, '-') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90

@@ -22,18 +22,17 @@ Release 提供 Linux amd64/arm64 配套 Docker 离线镜像包。目标机需要
 ```bash
 curl -fL --proto '=https' --proto-redir '=https' \
   https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
-bash install.sh
+bash install.sh install --dir "$HOME/clouddrive"
 ```
 
-无参数运行进入向导，默认安装到 `~/clouddrive`，监听 `0.0.0.0:4173`。首次访问 `http://<主机地址>:4173/setup` 创建管理员。外网访问、TLS 和反向代理由部署方配置。
+当前正式版默认监听 `127.0.0.1:4173`。在服务器上打开 `http://127.0.0.1:4173/setup`，使用 `~/clouddrive/.control/setup-token` 的令牌创建管理员。SQLite、文件和传输暂存保存在 `~/clouddrive/data/`。外网访问、TLS 和反向代理由部署方配置。
 
 ```bash
-~/clouddrive/install.sh               # 管理菜单
 ~/clouddrive/install.sh check-update  # 检查正式版
 ~/clouddrive/install.sh upgrade       # 备份并升级
 ```
 
-升级前阅读目标版本说明并核验备份。安装选项、签名与校验、数据位置、HTTP/TLS 和故障恢复见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。Release 中的 Windows/Linux amd64 Go 归档仅包含后端，完整网页需要独立 Web Host。
+升级前阅读目标版本说明并核验备份。主分支的[网页运维说明](docs/operations/clouddrive-deployment.md#网页运维)适用于已包含签名维护工具的后续 Release。安装选项、签名与校验、数据位置、HTTP/TLS 和故障恢复见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。Release 中的 Windows/Linux amd64 Go 归档仅包含后端，完整网页需要独立 Web Host。
 
 ## 源码开发
 

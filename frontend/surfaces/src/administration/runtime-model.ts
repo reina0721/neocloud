@@ -78,6 +78,7 @@ export type RuntimeMetrics = z.infer<typeof runtimeMetricsSchema>;
 /** 运行信息分别读取，某项失败不抹去其余项；指标文本只在明确请求时读取。 */
 export type RuntimePort = Readonly<{
   probe(kind: 'readiness' | 'liveness', signal?: AbortSignal): Promise<RuntimeProbe>;
+  maintenanceAvailable(signal?: AbortSignal): Promise<boolean>;
   build(signal?: AbortSignal): Promise<RuntimeBuild>;
   metadata(signal?: AbortSignal): Promise<RuntimeMetadata>;
   diagnostics(signal?: AbortSignal): Promise<RuntimeDiagnostics>;

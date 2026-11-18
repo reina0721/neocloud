@@ -4,6 +4,18 @@
 
 下载版支持 Linux amd64、arm64，使用 SQLite 和本地文件存储。目标机需预装本机 Docker Engine、Docker Compose >=2.20，以及 Bash、curl、GNU tar/coreutils、gzip、sha256sum、flock。当前账号应有 Docker 权限；脚本不安装系统软件、不自动提权，不需要源码、Git、Go、Node 或 pnpm。
 
+### 安装当前正式版
+
+公开 `latest` 当前为 v0.1.3。先下载脚本，再用显式子命令启动安装。
+
+```bash
+curl -fL --proto '=https' --proto-redir '=https' \
+  https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
+bash install.sh install --dir "$HOME/clouddrive"
+```
+
+从 `http://127.0.0.1:4173/setup` 使用 `~/clouddrive/.control/setup-token` 创建管理员。旧版本的非回环访问需要显式指定外部 Origin 和 HTTP 策略。以下安装向导与新增命令取决于目标 Release 的安装器。
+
 ### 安装向导
 
 ```bash
@@ -48,7 +60,7 @@ bash install.sh install --dir "$HOME/clouddrive-two" --bind 127.0.0.1 --port 441
 ~/clouddrive/install.sh restart
 ```
 
-`restart` 会应用修改后的配置并检查就绪状态。更新成功后同时更新本实例的管理脚本；同版本更新不会重复迁移。重复安装不重建已有实例，目标目录非空且无实例标记时拒绝接管。不同实例使用独立 Compose project、配置和数据目录。
+`restart` 会应用修改后的配置并检查就绪状态。常规 CLI 升级成功后同时更新实例管理脚本。启用网页运维的实例使用独立安装的宿主维护工具。相同版本不会重复迁移。重复安装不重建已有实例，目标目录非空且无实例标记时拒绝接管。不同实例使用独立 Compose project、配置和数据目录。
 
 主目录结构：
 
@@ -92,6 +104,26 @@ Web Host 校验外部 Host/Origin，并向 Go 转发内部同源请求；额外�
 下载或校验失败不会停止服务。备份失败不会执行目标迁移。后续失败会保留数据、候选版本和备份；只有旧镜像报告各迁移集精确兼容时才恢复旧服务。否则停止自动回退，按[迁移与回滚](migration-and-rollback.md)选择 forward-fix 或经所有者确认的备份恢复，不执行自动 `down`、删除版本记录或覆盖数据库。恢复前先停止实例、另存失败现场并校验备份，不在运行中的数据库上解包。
 
 首次初始化失败的目录保留安装器标记，可以使用相同安装命令重试；dirty migration 等数据库问题仍必须先按迁移规范解决。任意管理操作均使用实例锁，拒绝并发安装、备份或升级。
+
+## 网页运维
+
+发布附件包含同版本、同架构的 `clouddrive-maintenance_…` 后，Linux systemd 上的安装器托管实例可以启用。网页运维需要 Docker Compose 2.24.4 或更新版本，以便单独替换 Web 发布端口。宿主机需能访问本机 Docker，安装账户需有对应权限，启用时需要 sudo 或 root。安装 [发布验证所用的 cosign](release.md#docker-下载产物)，并让安装账户可以在 PATH 找到它。
+
+```bash
+# 已有实例先用旧管理脚本升级到配套的正式版。
+~/clouddrive/install.sh enable-web-management
+# 新实例可在向导选择启用，或给 install 子命令加 --enable-web-management。
+```
+
+启用会短暂停服。宿主网关接管原 Web 地址和端口，Web Host 改在独立的宿主机回环端口监听。系统工具的运行状态页通过当前 IAM 系统所有者会话打开 `/maintenance`。停服期间也可直接打开同一个地址。API、DAV 和 WOPI 在业务暂不可用时返回 503 和重试提示。
+
+远程维护写操作走 HTTPS。已有 TLS 反向代理时，先让 `runtime.env` 的 `PUBLIC_ORIGIN` 等于外部 HTTPS Origin，再给启用命令加 `--trusted-proxy <代理直接连接网关的IP>`。代理应保留 Host 并覆盖 `X-Forwarded-Proto` 为 `https`。直连回环 HTTP 可用于本机运维。工作区不可用时，从宿主机读取 `.control/maintenance/recovery-token`，在同址维护页建立短期恢复会话。妥善保护这个恢复凭据。
+
+- 检查正式版可查看目标版本、发布说明和更新历史。每个实例一次运行一个维护任务，刷新维护页可以重新查看任务。
+- 升级先从 GitHub 校验签名并导入配套镜像，再停服复制完整恢复点。移除旧镜像前，确认所需恢复点仍有对应的本地镜像。宿主机可将经签名的正式包与校验附件放在 `.control/maintenance/assets/<版本>/` 供离线校验和导入。
+- `backups/full-<编号>/` 保存 SQLite、文件、传输暂存、应用配置与版本清单。创建恢复点会停服，并需要足够空间写入压缩档案。旧 CLI 生成的 SQLite 备份继续适用于人工流程。
+- 兼容回退使用上一套程序及当前数据。恢复完整备份会重新启用当时的数据和应用配置。确认前核对备份时间和恢复点编号。恢复通过原子重命名切换目录，实例数据与恢复目录需要在同一个文件系统。原数据保留在 `.control/maintenance/restore-<任务编号>/`，宿主网关配置、恢复凭据和任务记录继续生效。
+- CLI 的 `check-update`、`upgrade`、`backup`、`rollback` 和 `restore --backup-id <编号> --confirm-restore <编号>` 使用相同执行路径。服务名按实例标记命名为 `<实例标记>-gateway.service` 和 `<实例标记>-maintenance.service`。任务失败的详细阶段可在后一个服务的宿主日志中查看。
 
 ## 构建与进程
 

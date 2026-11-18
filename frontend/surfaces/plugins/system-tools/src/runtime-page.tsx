@@ -467,6 +467,9 @@ function RuntimeContent() {
   const access = useProductAccess();
   const [revision, setRevision] = useState(0);
   const [security, setSecurity] = useState(false);
+  const maintenance = useCatalogRequest(port.runtime.maintenanceAvailable);
+  const showMaintenance =
+    maintenance.result && 'value' in maintenance.result && maintenance.result.value;
   return (
     <Page>
       <PageHeader
@@ -491,6 +494,13 @@ function RuntimeContent() {
         </Section>
         <Metrics />
         <Deployment />
+        {showMaintenance ? (
+          <Section title={label('maintenance')} description={label('maintenanceHint')} contentInset>
+            <a className="text-sm font-medium text-brand underline" href="/maintenance">
+              {label('openMaintenance')}
+            </a>
+          </Section>
+        ) : null}
         {access.data?.nativePermissions?.includes('auth:audit:read') ? (
           <Section title={label('security')} description={label('securityHint')} contentInset>
             <div className="space-y-4">

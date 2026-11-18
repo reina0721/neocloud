@@ -96,3 +96,10 @@ cosign verify-blob --bundle checksums.txt.sigstore.json \
 上例版本应替换为实际下载的 tag。目标机安装、更新及失败处理见[下载版部署](clouddrive-deployment.md#release-下载版安装与升级)。
 
 安装和升级验收使用独立的临时目录与数据库副本，保持既有 `.data/ui-production` 独立。daemon 架构选择夹具或标注为 ARM64 的镜像不能证明程序确实以 ARM64 运行；须检查实际 ELF 架构，并以当前 tag 的原生 ARM runner 安装、操作及持久化结果为准。公开安装入口只以已发布的正式 Release 及其完整签名附件为准。
+
+
+### 网页运维附件与验收
+
+每个平台同时构建 `clouddrive-maintenance_<tag>_linux_<arch>`。最终签名清单覆盖维护工具，发布门禁检查真实 ELF 架构。维护工具具有独立进程和版本周期，普通应用升级期间由原工具继续持有实例锁和网关端口。
+
+正式发布前的原生验收从上一正式版初始化文件和分享，下载签名候选，启动 systemd 网关并通过 Chromium 提交升级。停服期间检查同址维护页与 WebDAV 503，升级后核对原文件，验证系统所有者授权、备份和恢复。若旧版未包含所有者校验接口，首次跨版验收使用宿主恢复凭据发起任务。验收实例只使用独立临时目录。

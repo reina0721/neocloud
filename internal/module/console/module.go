@@ -88,20 +88,21 @@ type Access interface {
 	WithinTx(context.Context, func(context.Context, database.Client, database.Tx) error) error
 }
 type Dependencies struct {
-	Cookies      httpx.CookiePolicy
-	Runtime      func() RuntimeMetadata
-	IAM          IdentityAccess
-	CookieName   string
-	Native       http.Handler
-	Origins      []string
-	SiteOrigins  []string
-	Database     Access
-	Logger       logger.Logger
-	Relay        RelayPolicy
-	Executor     execution.OperationExecutor
-	Authenticate func(*http.Request) (*http.Request, error)
-	Todos        TodoOperations
-	Navigation   NavigationOperations
+	Cookies         httpx.CookiePolicy
+	Runtime         func() RuntimeMetadata
+	IAM             IdentityAccess
+	CookieName      string
+	Native          http.Handler
+	Origins         []string
+	SiteOrigins     []string
+	Database        Access
+	Logger          logger.Logger
+	Relay           RelayPolicy
+	Executor        execution.OperationExecutor
+	Authenticate    func(*http.Request) (*http.Request, error)
+	Todos           TodoOperations
+	Navigation      NavigationOperations
+	DeploymentOwner func(context.Context, string) (bool, error)
 }
 
 func New(dependencies Dependencies) (*Handler, error) {
@@ -109,7 +110,7 @@ func New(dependencies Dependencies) (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	return httpbinding.New(httpbinding.Dependencies{Cookies: dependencies.Cookies, Data: store, IAM: dependencies.IAM, CookieName: dependencies.CookieName, Native: dependencies.Native, Origins: dependencies.Origins, SiteOrigins: dependencies.SiteOrigins, Logger: dependencies.Logger, Relay: dependencies.Relay, Executor: dependencies.Executor, Authenticate: dependencies.Authenticate, Todos: dependencies.Todos, Navigation: dependencies.Navigation, Runtime: dependencies.Runtime})
+	return httpbinding.New(httpbinding.Dependencies{Cookies: dependencies.Cookies, Data: store, IAM: dependencies.IAM, CookieName: dependencies.CookieName, Native: dependencies.Native, Origins: dependencies.Origins, SiteOrigins: dependencies.SiteOrigins, Logger: dependencies.Logger, Relay: dependencies.Relay, Executor: dependencies.Executor, Authenticate: dependencies.Authenticate, Todos: dependencies.Todos, Navigation: dependencies.Navigation, Runtime: dependencies.Runtime, DeploymentOwner: dependencies.DeploymentOwner})
 }
 func DefaultRelayPolicy() RelayPolicy { return httpbinding.DefaultRelayPolicy() }
 func WithSession(r *http.Request, value Session) *http.Request {

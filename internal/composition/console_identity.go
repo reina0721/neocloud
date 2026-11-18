@@ -95,6 +95,20 @@ func (port consoleIAMPort) AccountDetail(ctx context.Context, id string) (consol
 	}
 	return console.AccountDetail{Account: consoleAccount(value.Account), Roles: roles}, consoleError(err)
 }
+
+// deploymentOwner checks the reserved IAM role, including its current assignment.
+func (port consoleIAMPort) deploymentOwner(ctx context.Context, accountID string) (bool, error) {
+	value, err := port.service.AccountDetail(ctx, accountID)
+	if err != nil {
+		return false, err
+	}
+	for _, role := range value.Roles {
+		if role.Code == iammodel.OwnerRoleCode && role.System && role.Active && !role.Archived {
+			return true, nil
+		}
+	}
+	return false, nil
+}
 func (port consoleIAMPort) RoleDetail(ctx context.Context, id string) (console.RoleDetail, error) {
 	value, err := port.service.RoleDetail(ctx, id)
 	return console.RoleDetail{Role: consoleRole(value.Role), Permissions: value.Permissions, AssignedAccountCount: value.AssignedAccountCount}, consoleError(err)

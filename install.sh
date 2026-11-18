@@ -29,6 +29,10 @@ tail_lines=100
 work=
 stop_recovery=false
 old_version=
+enable_web=false
+trusted_proxy=
+backup_id=
+restore_confirmation=
 fail() { printf '错误：%s\n' "$*" >&2; exit 1; }
 usage() {
   cat <<'HELP'
@@ -37,6 +41,9 @@ bash install.sh install [--dir ~/clouddrive] [--bind 0.0.0.0] [--port 4173]
   [--version vX.Y.Z] [--yes]
 ~/clouddrive/install.sh status | check-update | upgrade | update | backup | start | stop | restart
 ~/clouddrive/install.sh logs [-f|--follow] [--tail 100]
+~/clouddrive/install.sh enable-web-management [--trusted-proxy IP]
+启用后支持 rollback、restore --backup-id ID --confirm-restore ID。
+首次安装可用 --enable-web-management 启用同址网页运维。
 upgrade 支持 --version；install/upgrade/check-update 支持 --release-dir 离线产物目录。
 高级选项：--public-url HTTP(S)根地址、--allow-origin 精确Origin（可重复）、--allow-http。
 需要 Linux、本机 Docker Engine、Docker Compose >=2.20、curl、tar、gzip、sha256sum、flock。
@@ -71,6 +78,10 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     -h|--help) usage; exit 0 ;;
     -y|--yes) yes=true; shift ;;
+    --enable-web-management) enable_web=true; shift ;;
+    --trusted-proxy) [[ $# -ge 2 ]] || fail '--trusted-proxy 缺少 IP'; trusted_proxy=$2; shift 2 ;;
+    --backup-id) [[ $# -ge 2 ]] || fail '--backup-id 缺少 ID'; backup_id=$2; shift 2 ;;
+    --confirm-restore) [[ $# -ge 2 ]] || fail '--confirm-restore 缺少 ID'; restore_confirmation=$2; shift 2 ;;
     --dir) [[ $# -ge 2 ]] || fail '--dir 缺少路径'; root=$2; explicit_dir=true; shift 2 ;;
     --port) [[ $# -ge 2 ]] || fail '--port 缺少数值'; port=$2; explicit_port=true; shift 2 ;;
     --bind) [[ $# -ge 2 ]] || fail '--bind 缺少监听 IP'; network_options=true; explicit_bind=true; bind=$2; shift 2 ;;
@@ -95,11 +106,20 @@ if [[ -z $command_name ]]; then
     printf '\n安装目录：%s\n监听地址：%s:%s\n版本：%s\n' "$root" "$bind" "$port" "$version" >&3
     prompt '开始安装？输入 y 继续' y confirmation
     [[ $confirmation == y || $confirmation == Y ]] || { printf '已取消。\n' >&3; exit 0; }
+    if [[ $enable_web == false ]]; then
+      prompt '启用网页运维？需要 systemd、cosign 和宿主机管理权限（输入 y 启用）' n confirmation
+      [[ $confirmation != y && $confirmation != Y ]] || enable_web=true
+    fi
     command_name=install
   else usage >&2; printf '没有交互终端；请使用 install 命令或 --yes。\n' >&2; exit 2; fi
 fi
 [[ $command_name != update ]] || command_name=upgrade
-case $command_name in install|upgrade|check-update|status|backup|start|stop|restart|logs) ;; *) fail "未知命令：$command_name" ;; esac
+case $command_name in
+  install|upgrade|check-update|status|backup|start|stop|restart|logs|rollback|restore|enable-web-management) ;;
+  _prepare|_config|_probe|_compat|_migrate|_start|_stop|_idle|_capture|_extract)
+    [[ ${CLOUDDRIVE_MAINTENANCE_ENGINE:-} == 1 ]] || fail '此命令由宿主维护进程调用' ;;
+  *) fail "未知命令：$command_name" ;;
+esac
 if [[ $explicit_http == false && $public_origin == https://* ]]; then allow_http=false; fi
 [[ $network_options == false || $command_name == install ]] || fail '已有实例请编辑 runtime.env，再执行 stop/start；网络选项只用于首次 install'
 [[ $(uname -s) == Linux ]] || fail '当前安装包只支持 Linux'
@@ -162,7 +182,11 @@ resolve_version() {
 managed() { [[ -f $root/.control/project && -f $root/.control/current ]] || fail '此目录不是安装器管理的实例；不会接管既有数据'; }
 compose_at() {
   local release=$1; shift
-  docker compose --project-directory "$root" --env-file "$root/runtime.env" --env-file "$root/releases/$release/images.env" --project-name "$project" --file "$root/releases/$release/compose.yaml" "$@"
+  local -a maintenance=()
+  if [[ ${CLOUDDRIVE_MAINTENANCE_ENGINE:-} == 1 && -n ${CLOUDDRIVE_MAINTENANCE_COMPOSE:-} ]]; then
+    maintenance=(--file "$CLOUDDRIVE_MAINTENANCE_COMPOSE")
+  fi
+  docker compose --project-directory "$root" --env-file "${CLOUDDRIVE_MAINTENANCE_CONFIG:-$root/runtime.env}" --env-file "$root/releases/$release/images.env" --project-name "$project" --file "$root/releases/$release/compose.yaml" "${maintenance[@]}" "$@"
 }
 current() { cat "$root/.control/current"; }
 atomic_current() { printf '%s\n' "$1" > "$root/.control/current.new"; mv -- "$root/.control/current.new" "$root/.control/current"; }
@@ -181,8 +205,12 @@ probe() {
 }
 migration_status() {
   local release=$1 web_ref
+  local -a mounts=()
+  if [[ -n ${CLOUDDRIVE_MAINTENANCE_STAGE:-} ]]; then
+    mounts=(--volume "$CLOUDDRIVE_MAINTENANCE_STAGE:/app/.data")
+  fi
   web_ref=$(sed -n 's/^WEB_IMAGE=//p' "$root/releases/$release/images.env")
-  compose_at "$release" run --rm --no-deps migrate db migrate status |
+  compose_at "$release" run --rm --no-deps "${mounts[@]}" migrate db migrate status |
     docker run --rm --pull never --interactive "$web_ref" node -e '
       let b="";process.stdin.on("data",c=>b+=c);process.stdin.on("end",()=>{
         try {const s=JSON.parse(b); if(s.compatible!==true||!s.sets.length||!s.sets.every(x=>x.compatible===true&&x.dirty===false&&x.current===x.target))process.exit(1)}catch{process.exit(1)}
@@ -266,14 +294,15 @@ prepare_release() {
   done
 }
 store_release() {
-  local destination="$root/releases/$version"
+  local destination="$root/releases/$version" staging
   if [[ -d $destination ]]; then
     for file in manifest.txt compose.yaml images.env install.sh; do
       cmp -- "$destination/$file" "$work/bundle/$file" >/dev/null || fail '同一版本的产物已发生变化；拒绝覆盖'
     done
   else
-    mkdir -- "$destination"
-    cp -- "$work/bundle/compose.yaml" "$work/bundle/images.env" "$work/bundle/manifest.txt" "$work/bundle/install.sh" "$destination/"
+    staging=$(mktemp -d "$root/releases/.candidate.XXXXXXXX")
+    cp -- "$work/bundle/compose.yaml" "$work/bundle/images.env" "$work/bundle/manifest.txt" "$work/bundle/install.sh" "$staging/"
+    mv -T -- "$staging" "$destination"
   fi
   compose_at "$version" config --quiet
 }
@@ -294,6 +323,28 @@ install_manager() {
   cp -- "$work/bundle/install.sh" "$root/install.sh.new"
   chmod 700 "$root/install.sh.new"
   mv -- "$root/install.sh.new" "$root/install.sh"
+}
+enable_maintenance() {
+  local name identity
+  version=$(current)
+  [[ $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail '网页运维要求正式版本'
+  name="clouddrive-maintenance_${version}_linux_${arch}"
+  command -v cosign >/dev/null || fail '启用网页运维前请按部署手册安装 cosign'
+  command -v systemctl >/dev/null || fail '网页运维要求 systemd'
+  [[ $EUID == 0 ]] || command -v sudo >/dev/null || fail '启用网页运维需要 sudo'
+  [[ -z $work ]] || rm -rf -- "$work"
+  work=$(mktemp -d)
+  fetch_asset checksums.txt "$work/checksums.txt"
+  fetch_asset checksums.txt.sigstore.json "$work/checksums.txt.sigstore.json"
+  identity="https://github.com/$REPOSITORY/.github/workflows/release.yml@refs/tags/$version"
+  cosign verify-blob --bundle "$work/checksums.txt.sigstore.json" --certificate-identity "$identity" +    --certificate-oidc-issuer https://token.actions.githubusercontent.com "$work/checksums.txt"
+  fetch_asset "$name" "$work/$name"
+  local digest
+  digest=$(awk -v asset="$name" '$2 == asset {print $1}' "$work/checksums.txt")
+  [[ $digest =~ ^[a-f0-9]{64}$ ]] || fail '清单缺少唯一维护工具条目'
+  printf '%s  %s\n' "$digest" "$work/$name" | sha256sum --check --status || fail '维护工具摘要不匹配'
+  chmod 700 "$work/$name"
+  "$work/$name" enable --root "$root" --trusted-proxy "$trusted_proxy" --cosign "$(command -v cosign)" --docker-host "$endpoint"
 }
 if [[ $command_name == install ]]; then
   if [[ -f $root/.control/current ]]; then
@@ -344,12 +395,47 @@ if [[ $command_name == install ]]; then
   install_manager
   local setup_origin=${public_origin:-"http://<服务器地址>:$port"}
   printf '安装完成：%s\nWeb 端口：%s:%s；访问 %s/setup 创建管理员。\n设置令牌保存在 %s/.control/setup-token（不输出令牌）。\n管理入口：%s/install.sh\n' "$root" "$bind" "$port" "$setup_origin" "$root" "$root"
+  exec 9>&-
+  if [[ $enable_web == true ]]; then enable_maintenance; fi
   exit 0
 fi
 managed
 project=$(cat "$root/.control/project")
 [[ $project =~ ^clouddrive-[a-f0-9]{12}$ ]] || fail '实例标记无效'
 old_version=$(current); valid_version "$old_version" || fail '当前版本标记无效'
+maintenance_config="$root/.control/maintenance/gateway.json"
+if [[ $command_name == enable-web-management ]]; then enable_maintenance; exit 0; fi
+if [[ $command_name == _* ]]; then
+  valid_version "$version" || fail '宿主执行器需要明确版本'
+  case $command_name in
+    _prepare) prepare_release; store_release ;;
+    _config) compose_at "$version" config --quiet ;;
+    _probe) probe "$version" ;;
+    _compat) migration_status "$version" ;;
+    _migrate) compose_at "$version" run --rm --no-deps migrate ;;
+    _start) compose_at "$version" up --detach --pull never --force-recreate backend web ;;
+    _stop) compose_at "$version" stop ;;
+    _idle)
+      active_migrations=$(docker ps -q --filter "label=com.docker.compose.project=$project" \
+        --filter "label=com.docker.compose.service=migrate")
+      [[ -z $active_migrations ]] || fail '仍有迁移容器运行，请等待或由宿主机管理员检查' ;;
+    _capture|_extract)
+      web_ref=$(sed -n 's/^WEB_IMAGE=//p' "$root/releases/$version/images.env")
+      if [[ $command_name == _capture ]]; then
+        docker run --rm --pull never --network none --user 0:0 --mount "type=bind,source=$root/data,target=/data,readonly" "$web_ref" tar --numeric-owner -C /data -czf - .
+      else
+        [[ -n ${CLOUDDRIVE_MAINTENANCE_STAGE:-} ]] || fail '缺少恢复暂存目录'
+        docker run --rm --pull never --network none --user 0:0 --interactive --mount "type=bind,source=$CLOUDDRIVE_MAINTENANCE_STAGE,target=/data" "$web_ref" tar --numeric-owner --same-owner -C /data -xzf -
+      fi ;;
+  esac
+  exit 0
+fi
+if [[ -f $maintenance_config && $command_name != logs ]]; then
+  [[ -z $release_source ]] || fail '网页运维模式仅使用已验证的官方在线产物'
+  if [[ $command_name == restore ]]; then version=$backup_id; fi
+  exec "$root/.control/maintenance/client" client --root "$root" --action "$command_name" --target "$version" --confirm "$restore_confirmation"
+fi
+[[ $command_name != rollback && $command_name != restore ]] || fail '请先启用网页运维'
 case $command_name in
   status) printf '当前版本：%s\n安装目录：%s\n' "$old_version" "$root"; compose_at "$old_version" ps; exit 0 ;;
   logs) log_args=(logs --tail "$tail_lines"); [[ $follow == false ]] || log_args+=(--follow); compose_at "$old_version" "${log_args[@]}" backend web; exit 0 ;;

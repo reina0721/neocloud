@@ -2,6 +2,7 @@
 package httpbinding
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -43,23 +44,25 @@ type Handler struct {
 	authenticateRequest func(*http.Request) (*http.Request, error)
 	todos               TodoOperations
 	navigation          NavigationOperations
+	deploymentOwner     func(context.Context, string) (bool, error)
 }
 
 type Dependencies struct {
-	Cookies      httpx.CookiePolicy
-	Runtime      func() RuntimeMetadata
-	IAM          IdentityAccess
-	CookieName   string
-	Native       http.Handler
-	Origins      []string
-	SiteOrigins  []string
-	Data         Persistence
-	Logger       logger.Logger
-	Relay        RelayPolicy
-	Executor     execution.OperationExecutor
-	Authenticate func(*http.Request) (*http.Request, error)
-	Todos        TodoOperations
-	Navigation   NavigationOperations
+	Cookies         httpx.CookiePolicy
+	Runtime         func() RuntimeMetadata
+	IAM             IdentityAccess
+	CookieName      string
+	Native          http.Handler
+	Origins         []string
+	SiteOrigins     []string
+	Data            Persistence
+	Logger          logger.Logger
+	Relay           RelayPolicy
+	Executor        execution.OperationExecutor
+	Authenticate    func(*http.Request) (*http.Request, error)
+	Todos           TodoOperations
+	Navigation      NavigationOperations
+	DeploymentOwner func(context.Context, string) (bool, error)
 }
 
 // New 显式注入当前 Generation 的 IAM 服务及原生 API，不拥有共享资源关闭权。
@@ -79,11 +82,14 @@ func New(dependencies Dependencies) (*Handler, error) {
 	h.authenticateRequest = dependencies.Authenticate
 	h.todos = dependencies.Todos
 	h.navigation = dependencies.Navigation
+	h.deploymentOwner = dependencies.DeploymentOwner
 	h.siteOrigins = slices.Clone(dependencies.SiteOrigins)
 	for _, origin := range origins {
 		h.origins[origin] = true
 	}
 	h.routes()
+	h.mux.HandleFunc("GET "+Prefix+"/deployment/owner", h.authorizeDeployment)
+	h.mux.HandleFunc("POST "+Prefix+"/deployment/owner", h.authorizeDeployment)
 	h.siteProfileRoutes()
 	h.dataRoutes()
 	h.workbenchRoutes()

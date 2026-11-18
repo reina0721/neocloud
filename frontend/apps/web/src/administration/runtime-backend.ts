@@ -74,6 +74,14 @@ export function createRuntimePort(
     return parse(schema, value);
   };
   return {
+    maintenanceAvailable: (signal) =>
+      owned(async () => {
+        const options = { cache: 'no-store' as const, ...(signal ? { signal } : {}) };
+        const gateway = await request('/maintenance', { ...options, method: 'HEAD' });
+        if (gateway.headers.get('X-CloudDrive-Maintenance') !== '1') return false;
+        const owner = await request('/api/console/v1/deployment/owner', options);
+        return owner.ok;
+      }, signal),
     probe: (kind, signal) =>
       owned(async () => {
         try {

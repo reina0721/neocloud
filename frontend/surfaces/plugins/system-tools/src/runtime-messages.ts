@@ -3,6 +3,9 @@ export const runtimeMessages = {
     translation: {
       systemRuntime: {
         title: '服务运行状态',
+        maintenance: '系统维护',
+        maintenanceHint: '系统所有者可以检查正式版、备份、升级和恢复。',
+        openMaintenance: '打开维护页',
         description: '查看服务可用性，沿依赖和运行单元查找故障线索。',
         snapshot: '每项检查独立读取，显示本次读取的结果；刷新以检查最新状态。',
         readiness: '接收请求',
@@ -122,6 +125,9 @@ export const runtimeMessages = {
     translation: {
       systemRuntime: {
         title: 'Service status',
+        maintenance: 'System maintenance',
+        maintenanceHint: 'Instance owners can check releases, create backups, update, and restore.',
+        openMaintenance: 'Open maintenance',
         description:
           'Check availability and follow dependencies and runtime units to investigate failures.',
         snapshot: 'Each check is read independently. Refresh to check the latest state.',

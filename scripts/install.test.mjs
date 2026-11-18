@@ -538,12 +538,12 @@ sys.stdout.buffer.write(output);sys.exit(os.waitstatus_to_exitcode(status))
   );
 }
 
-test("管道安装在真实终端询问三项，已安装脚本提供可重复管理菜单", async (t) => {
+test("管道安装使用真实终端并可跳过网页运维", async (t) => {
   const f = await fixture(t),
     source = await f.bundle("v1.0.0");
   const result = terminal(
     [installer, "--version", "v1.0.0", "--release-dir", source],
-    [f.root, "0.0.0.0", "44173", "y"],
+    [f.root, "0.0.0.0", "44173", "y", "n"],
     { ...f.env, HOME: f.base },
     true,
   );

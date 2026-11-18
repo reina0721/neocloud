@@ -119,6 +119,11 @@ async function fixture(t, { armSha = sha } = {}) {
         spdxVersion: "SPDX-2.3",
         packages: [{ name: "fixture" }],
       });
+    if (name.startsWith("clouddrive-maintenance_")) {
+      bytes = Buffer.alloc(20);
+      bytes.set([127, 69, 76, 70, 2, 1, 1]);
+      bytes.writeUInt16LE(name.endsWith("arm64") ? 183 : 62, 18);
+    }
     if (name === "install.sh") bytes = await readFile(installerPath);
     if (name === "version.txt") bytes = tag + "\n";
     await writeFile(join(directory, name), bytes);

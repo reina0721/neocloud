@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+{{if .Active}}<meta http-equiv="refresh" content="3">{{end}}
+<title>CloudDrive 系统维护</title>
+<style>
+:root{color-scheme:light dark;font:16px/1.6 system-ui,sans-serif;--border:light-dark(#d0d8df,#49505a);--accent:light-dark(#005f66,#83d5da)}
+body{margin:0;background:light-dark(#f7f9fb,#151a20);color:light-dark(#1c2730,#e3e8ee)}
+main{max-width:54rem;margin:auto;padding:2rem 1rem 4rem}header{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
+section{margin-top:1.5rem;border:1px solid var(--border);border-radius:12px;padding:1.25rem;background:light-dark(#fff,#1b2129)}
+h1,h2,p{margin-top:0}h1{margin-bottom:0}h2{font-size:1.25rem}a{color:var(--accent)}
+form{margin:.5rem 0 0}button,input{font:inherit;padding:.4rem .7rem;border:1px solid var(--border);border-radius:8px;max-width:100%;box-sizing:border-box}
+button{background:var(--accent);color:light-dark(#fff,#14282b);cursor:pointer}
+button:disabled{opacity:.5;cursor:default}pre{white-space:pre-wrap;overflow-wrap:anywhere}code{overflow-wrap:anywhere}
+ol,ul{padding-inline-start:1.4rem}summary{cursor:pointer}small{display:block}
+</style>
+</head>
+<body>
+<main>
+<header><h1>CloudDrive 系统维护</h1><a href="/">返回工作区</a></header>
+{{if .Error}}<section aria-label="错误"><p role="alert">{{.Error}}</p><a href="/maintenance">返回维护页</a></section>{{end}}
+{{if not .Permitted}}{{if not .Error}}<section><p>远程维护请通过已配置的 HTTPS 站点访问。本机可以使用回环 HTTP 地址。</p></section>{{end}}{{end}}
+{{if .Receipt}}<section aria-label="本次任务"><h2>本次任务</h2><p role="status">{{ action .Receipt.Action }} · {{ phase .Receipt.Phase }}{{if .Receipt.Result}} · {{.Receipt.Result}}{{end}}</p>{{if .Receipt.Backup}}<small>恢复点 <code>{{.Receipt.Backup}}</code></small>{{end}}</section>{{end}}
+{{if .Authorized}}
+<section><h2>版本</h2><p>当前版本 <strong>{{.Current}}</strong>{{if .Previous}} · 上一版本 <strong>{{.Previous}}</strong>{{end}}</p>
+{{if .Recovery}}<p role="alert">实例等待恢复，请从以下完整恢复点选择。</p>{{end}}
+<form method="post"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="expected" value="{{.Current}}"><input type="hidden" name="id" value="{{requestID}}"><button name="action" value="check" {{if .Active}}disabled{{end}}>检查正式版</button></form>
+{{if .Update}}<details open><summary>最新正式版 {{.Update.Version}}</summary><p><a href="{{.Update.URL}}">查看发布说明</a></p><pre>{{.Update.Notes}}</pre></details>
+{{if and .IsNewer (not .Recovery)}}<form method="post"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="expected" value="{{.Current}}"><input type="hidden" name="id" value="{{requestID}}"><input type="hidden" name="target" value="{{.Update.Version}}"><label><input type="checkbox" required> 我已阅读发布说明，并确认停服备份和升级</label> <button name="action" value="upgrade" {{if .Active}}disabled{{end}}>升级到 {{.Update.Version}}</button></form>{{end}}
+{{end}}
+{{if and .Previous (not .Recovery)}}<form method="post"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="expected" value="{{.Current}}"><input type="hidden" name="id" value="{{requestID}}"><input type="hidden" name="target" value="{{.Previous}}"><button name="action" value="rollback" {{if .Active}}disabled{{end}}>兼容回退到 {{.Previous}}</button></form>{{end}}
+</section>
+<section><h2>完整备份与恢复</h2>
+{{if not .Recovery}}<form method="post"><input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="expected" value="{{.Current}}"><input type="hidden" name="id" value="{{requestID}}"><button name="action" value="backup" {{if .Active}}disabled{{end}}>停服创建完整备份</button></form>{{end}}
+{{if not .Backups}}<p>暂无完整恢复点。</p>{{end}}
+<ul>{{range .Backups}}<li><details><summary>{{.Version}} · {{.Created.Format "2006-01-02 15:04 MST"}}</summary>
+<p>恢复将使用 {{.Created.Format "2006-01-02 15:04 MST"}} 的数据库、用户文件、传输暂存和应用配置。此后写入会从在线实例移除，恢复前数据保留在宿主机。</p><p>恢复点 <code>{{.ID}}</code></p>
+<form method="post"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="expected" value="{{$.Current}}"><input type="hidden" name="id" value="{{requestID}}"><input type="hidden" name="target" value="{{.ID}}"><label>输入恢复点编号确认 <input name="confirm" required autocomplete="off"></label> <button name="action" value="restore" {{if $.Active}}disabled{{end}}>恢复此备份</button></form>
+</details></li>{{end}}</ul></section>
+<section><h2>维护记录</h2>{{if not .Jobs}}<p>暂无维护任务。</p>{{end}}
+<ol>{{range .Jobs}}<li>{{.Submitted.Format "2006-01-02 15:04 MST"}} · {{action .Action}} {{.Target}} · {{phase .Phase}} {{.Result}}</li>{{end}}</ol></section>
+{{end}}
+{{if and .Permitted .CSRF}}<section><h2>恢复访问</h2><p>当工作区会话不可用时，请使用宿主机保存的恢复凭据。</p><form method="post"><input type="hidden" name="csrf" value="{{.CSRF}}"><label>恢复凭据 <input name="secret" type="password" autocomplete="off" required></label> <button name="action" value="recovery-login">进入维护</button></form>
+<form method="post"><input type="hidden" name="csrf" value="{{.CSRF}}"><button name="action" value="recovery-logout">结束恢复会话</button></form></section>{{end}}
+</main>
+</body>
+</html>

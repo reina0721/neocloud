@@ -595,7 +595,7 @@ func (f *applicationGenerationFactory) Prepare(
 	if err != nil {
 		return abort(err)
 	}
-	consoleHandler, err := console.New(console.Dependencies{Runtime: generation.consoleRuntime, IAM: consoleIAMPort{generation.iamModule.Service}, CookieName: generation.iamModule.SessionCookieName(), Cookies: generation.iamModule.Cookies, Native: httptransport.IsolatedRoutes(apiRoutes), Origins: httpConfig.CORS.AllowedOrigins, SiteOrigins: consoleConfig.SiteOrigins, Database: databaseAccess, Logger: generation.logger.value(), Relay: consoleConfig.Relay, Executor: generation.execution.value(), Authenticate: consoleAuthenticate(generation.authModule.SessionSource.AuthenticateRequest), Todos: consoleTodoPort{generation.module.Operations}, Navigation: consoleNavigationPort{generation.navigationModule.Operations}})
+	consoleHandler, err := console.New(console.Dependencies{Runtime: generation.consoleRuntime, DeploymentOwner: (consoleIAMPort{generation.iamModule.Service}).deploymentOwner, IAM: consoleIAMPort{generation.iamModule.Service}, CookieName: generation.iamModule.SessionCookieName(), Cookies: generation.iamModule.Cookies, Native: httptransport.IsolatedRoutes(apiRoutes), Origins: httpConfig.CORS.AllowedOrigins, SiteOrigins: consoleConfig.SiteOrigins, Database: databaseAccess, Logger: generation.logger.value(), Relay: consoleConfig.Relay, Executor: generation.execution.value(), Authenticate: consoleAuthenticate(generation.authModule.SessionSource.AuthenticateRequest), Todos: consoleTodoPort{generation.module.Operations}, Navigation: consoleNavigationPort{generation.navigationModule.Operations}})
 	if err != nil {
 		return abort(err)
 	}
