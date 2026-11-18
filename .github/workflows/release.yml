@@ -154,11 +154,11 @@ jobs:
         run: |
           mkdir -p dist/complete
           gh release download "${GITHUB_REF_NAME}" --pattern checksums.txt --pattern '*.spdx.json' --dir dist/complete
-          (cd dist/complete && sha256sum *.spdx.json >> checksums.txt)
+          (cd dist/complete && sha256sum -- *.spdx.json >> checksums.txt)
           cd dist/docker
           sha256sum --check "checksums-amd64.txt"
           sha256sum --check "checksums-arm64.txt"
-          sha256sum clouddrive_*_docker.tar.gz clouddrive-maintenance_* install.sh version.txt *.spdx.json >> ../complete/checksums.txt
+          sha256sum -- clouddrive_*_docker.tar.gz clouddrive-maintenance_* install.sh version.txt *.spdx.json >> ../complete/checksums.txt
           LC_ALL=C sort -u -k2 ../complete/checksums.txt -o ../complete/checksums.txt
       - name: Sign final checksum set
         run: |
