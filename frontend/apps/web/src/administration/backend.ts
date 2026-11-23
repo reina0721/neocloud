@@ -11,6 +11,7 @@ import {
   dashboardSchema,
   tokenSchema,
   permissionSchema,
+  passwordPolicySchema,
   type AdministrationPort,
 } from '@clouddrive/surface/administration';
 import { refreshServerNavigation } from '../state/use-server-navigation';
@@ -74,7 +75,7 @@ export function createAdministrationPort(
   ) {
     return json(path, { method, body, ...(headers ? { headers } : {}) });
   }
-  async function tokenOperation<T>(operation: () => Promise<T>): Promise<T> {
+  async function securityOperation<T>(operation: () => Promise<T>): Promise<T> {
     const owner = currentUserId?.();
     try {
       return await operation();
@@ -102,6 +103,20 @@ export function createAdministrationPort(
     }
   }
   return {
+    passwordPolicy: {
+      read: () =>
+        securityOperation(async () =>
+          passwordPolicySchema.parse(await json('/system/password-policy')),
+        ),
+      update: (value) =>
+        securityOperation(async () =>
+          passwordPolicySchema.parse(await write('/system/password-policy', value, 'PUT')),
+        ),
+      reset: (version) =>
+        securityOperation(async () =>
+          passwordPolicySchema.parse(await write('/system/password-policy', { version }, 'DELETE')),
+        ),
+    },
     preferences: async () =>
       accountPreferencesSchema.parse(await json(native + '/iam/self/preferences')),
     savePreferences: async (value) => {
@@ -258,9 +273,9 @@ export function createAdministrationPort(
     disableMfa: async (code) => {
       await write(`${native}/iam/self/mfa/disable`, { code });
     },
-    tokens: () => tokenOperation(() => all(`${native}/iam/api-tokens?status=all`, tokenSchema)),
+    tokens: () => securityOperation(() => all(`${native}/iam/api-tokens?status=all`, tokenSchema)),
     createToken: async (name, scopes, description = '', expiresAt) =>
-      tokenOperation(async () =>
+      securityOperation(async () =>
         tokenSchema.parse(
           await write(`${native}/iam/api-tokens`, {
             name,
@@ -271,7 +286,7 @@ export function createAdministrationPort(
         ),
       ),
     updateToken: async (value) =>
-      tokenOperation(async () => {
+      securityOperation(async () => {
         await write(
           `${native}/iam/api-tokens/${encodeURIComponent(value.id)}`,
           {
@@ -284,7 +299,7 @@ export function createAdministrationPort(
         );
       }),
     tokenAction: async (id, action, version) =>
-      tokenOperation(async () => {
+      securityOperation(async () => {
         const result = await write(
           `${native}/iam/api-tokens/${encodeURIComponent(id)}/${action}`,
           {},

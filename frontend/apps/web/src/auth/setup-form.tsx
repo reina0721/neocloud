@@ -11,6 +11,7 @@ import { useFrontendTranslation } from '@clouddrive/i18n';
 import { AuthFrame } from './frame';
 import { LoginHelp } from './login-help';
 import { readAuthConfig } from './config';
+import { passwordRuleMessage, readInstancePasswordPolicy } from './password-policy';
 import { ApiError, createJsonClient } from '../api/json-client';
 import type { SetupPasswordPolicy, SetupValues } from './setup-schema';
 
@@ -56,11 +57,7 @@ export function SetupForm() {
       try {
         const config = readAuthConfig();
         if (config.mode !== 'backend') throw new Error('Backend setup requires backend auth');
-        const [value, { setupPolicySchema }] = await Promise.all([
-          createJsonClient(config.apiBaseUrl)('/auth/setup-policy', { signal: controller.signal }),
-          import('./setup-schema'),
-        ]);
-        const policy = setupPolicySchema.parse(value);
+        const policy = await readInstancePasswordPolicy(config.apiBaseUrl, controller.signal);
         if (!controller.signal.aborted) {
           setState(
             policy.initialized
@@ -147,10 +144,10 @@ function SetupFields({
       import('./setup-schema').then(({ createSetupSchema }) => createSetupSchema(policy)),
     defaultValues: { name: '', email: '', password: '', setupToken: '' },
   });
-  const passwordRule = t(
-    policy.requireComplexity ? 'auth.setupComplexPasswordRule' : 'auth.setupPasswordRule',
-    { minLength: policy.minLength, maxLength: policy.maxLength },
-  );
+  const passwordRule = t(passwordRuleMessage(policy), {
+    minLength: policy.minLength,
+    maxLength: policy.maxLength,
+  });
   const validation = (field: keyof SetupValues, message: string) => {
     if (failure?.field === field) return { error: t(failure.message) };
     return form.hasError(field) ? { error: message } : {};

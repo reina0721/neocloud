@@ -11,6 +11,8 @@ import (
 // IdentityAccess 是控制台使用方拥有的 IAM 窄契约；composition 负责跨模块转换。
 type IdentityAccess interface {
 	SetupPolicy(context.Context) (SetupPolicy, error)
+	PasswordPolicy(context.Context) (PasswordPolicy, error)
+	UpdatePasswordPolicy(context.Context, uint64, *PasswordPolicyInput) (PasswordPolicy, error)
 	Setup(context.Context, string, string, string, string) (Session, error)
 	Login(context.Context, string, string) (Session, error)
 	VerifyMFAChallenge(context.Context, string, string) (Session, error)

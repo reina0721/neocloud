@@ -14,6 +14,7 @@ import (
 	"unicode"
 
 	"github.com/reina0721/clouddrive/internal/composition/httpcatalog"
+	consolehttp "github.com/reina0721/clouddrive/internal/module/console/binding/http"
 	"github.com/reina0721/clouddrive/internal/projectlayout"
 	httptransport "github.com/reina0721/clouddrive/internal/transport/http"
 	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
@@ -24,6 +25,7 @@ func main() {
 	outputInventory := flag.String("output-inventory", "", "生成的 operation inventory Go 文件路径；留空时读取 project layout")
 	packageName := flag.String("package", "api", "生成 inventory 的 package")
 	outputJSON := flag.String("output-json", "", "可选的前端原生契约 JSON 快照")
+	consolePaths := flag.String("output-console-paths", "", "可选的 Console 服务端协议路径快照")
 	flag.Parse()
 	if *outputOpenAPI == "" || *outputInventory == "" {
 		root, layout, err := projectlayout.FindRepositoryRootFromCurrentDirectory()
@@ -45,6 +47,15 @@ func main() {
 	}
 	if err := run(*outputOpenAPI, *outputInventory, *packageName); err != nil {
 		fail(err)
+	}
+	if *consolePaths != "" {
+		encoded, err := json.MarshalIndent(consolehttp.PasswordPolicyOpenAPIPaths(), "", "  ")
+		if err != nil {
+			fail(err)
+		}
+		if err := writeFile(*consolePaths, append(encoded, '\n')); err != nil {
+			fail(err)
+		}
 	}
 	if *outputJSON != "" {
 		content, err := os.ReadFile(*outputOpenAPI)

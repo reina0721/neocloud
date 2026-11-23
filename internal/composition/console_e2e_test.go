@@ -157,6 +157,26 @@ func TestConsoleSQLiteSetupPolicyAndFailures(t *testing.T) {
 			setup(setupToken, password, email, name, http.StatusOK, "")
 			assertPolicy(true)
 			setup(setupToken, password, email, name, http.StatusConflict, "setup-closed")
+
+			const route = "/system/password-policy"
+			anonymous := &consoleTestClient{base: base, cookies: map[string]string{}}
+			anonymous.request(t, "GET", route, nil, http.StatusUnauthorized)
+			policy := client.request(t, "GET", route, nil, http.StatusOK)
+			override := map[string]any{"minLength": 4, "maxLength": 24, "requireComplexity": false, "version": policy["version"]}
+			client.request(t, "PUT", route, override, http.StatusForbidden, map[string]string{"X-CSRF-Token": "wrong"})
+			saved := client.request(t, "PUT", route, override, http.StatusOK)
+			if saved["minLength"] != float64(4) || saved["overridden"] != true {
+				t.Fatalf("saved policy = %#v", saved)
+			}
+			client.request(t, "PUT", route, override, http.StatusConflict)
+			publicPolicy := anonymous.request(t, "GET", "/auth/setup-policy", nil, http.StatusOK)
+			if publicPolicy["minLength"] != float64(4) || publicPolicy["requireComplexity"] != false {
+				t.Fatalf("public policy did not apply immediately: %#v", publicPolicy)
+			}
+			updated := client.request(t, "DELETE", route, map[string]any{"version": saved["version"]}, http.StatusOK)
+			if updated["minLength"] != float64(tc.minLength) || updated["overridden"] != false {
+				t.Fatalf("reset policy did not restore configured rules: %#v", updated)
+			}
 		})
 	}
 }

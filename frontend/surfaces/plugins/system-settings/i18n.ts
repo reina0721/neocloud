@@ -24,6 +24,20 @@ export const pluginI18nResources = {
         invalid: '请选择有效的默认角色。',
         permissions: '所选角色的权限',
         noPermissions: '该角色没有授予权限。',
+        password: {
+          title: '密码强度',
+          description: '即时应用于新建、修改和重置的密码。已有密码仍可使用。',
+          configured: '当前使用实例配置中的规则。',
+          override: '当前使用在此保存的规则。',
+          minimum: '最少字符数',
+          maximum: '最多字符数',
+          lengthError: '请输入 1–128 之间的整数，最多字符数须大于或等于最少字符数。',
+          complexity: '要求混合字符',
+          complexityDescription: '开启后，密码需同时包含大写字母、小写字母和数字。',
+          save: '保存密码规则',
+          restore: '恢复配置中的规则',
+          saved: '密码规则已更新',
+        },
         site: {
           title: '站点信息',
           page: '参数设置',
@@ -96,6 +110,23 @@ export const pluginI18nResources = {
         invalid: 'Select a valid default role.',
         permissions: 'Selected role permissions',
         noPermissions: 'This role grants no permissions.',
+        password: {
+          title: 'Password strength',
+          description:
+            'Applies immediately to new, changed, and reset passwords. Existing passwords still work.',
+          configured: 'Using the rules from instance configuration.',
+          override: 'Using the rules saved here.',
+          minimum: 'Minimum characters',
+          maximum: 'Maximum characters',
+          lengthError:
+            'Enter whole numbers from 1 to 128. The maximum must be at least the minimum.',
+          complexity: 'Require mixed character types',
+          complexityDescription:
+            'Passwords must contain uppercase and lowercase letters and a number.',
+          save: 'Save password rules',
+          restore: 'Restore configured rules',
+          saved: 'Password rules updated',
+        },
         site: {
           title: 'Site information',
           page: 'Settings',

@@ -11,7 +11,6 @@ import (
 	"github.com/reina0721/clouddrive/internal/module/iam"
 	iamcli "github.com/reina0721/clouddrive/internal/module/iam/binding/cli"
 	iamconfig "github.com/reina0721/clouddrive/internal/module/iam/binding/config"
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
 	iamservice "github.com/reina0721/clouddrive/internal/module/iam/service"
 	"github.com/reina0721/clouddrive/pkg/clock"
 	"github.com/reina0721/clouddrive/pkg/idgen"
@@ -20,24 +19,22 @@ import (
 type iamExecutor struct{ application *Application }
 
 func (e iamExecutor) ResetPassword(ctx context.Context, username, password string) error {
-	return e.application.useInstanceIAM(ctx, func(administration iam.Administration, _ model.PasswordPolicy) error {
-		if err := administration.ReconcileOwnerCatalog(ctx); err != nil {
-			return fmt.Errorf("reconcile iam owner catalog: %w", err)
-		}
-		if err := administration.Compatible(ctx); err != nil {
-			return fmt.Errorf("verify iam catalog compatibility: %w", err)
-		}
+	return e.application.useInstanceIAM(ctx, func(administration iam.Administration) error {
 		return administration.ResetPasswordByUsername(ctx, username, password)
 	})
 }
 
 func (e iamExecutor) RecoverOwner(ctx context.Context, selectRecovery iamcli.SelectOwnerRecovery) error {
-	return e.application.useInstanceIAM(ctx, func(administration iam.Administration, policy model.PasswordPolicy) error {
+	return e.application.useInstanceIAM(ctx, func(administration iam.Administration) error {
 		owners, err := administration.RecoverableOwners(ctx)
 		if err != nil {
 			return err
 		}
-		id, password, err := selectRecovery(ctx, owners, policy)
+		settings, err := administration.PasswordPolicy(ctx)
+		if err != nil {
+			return err
+		}
+		id, password, err := selectRecovery(ctx, owners, settings.Policy)
 		if err != nil {
 			return err
 		}
@@ -49,7 +46,21 @@ func (e iamExecutor) RecoverOwner(ctx context.Context, selectRecovery iamcli.Sel
 	})
 }
 
-func (a *Application) useInstanceIAM(ctx context.Context, use func(iam.Administration, model.PasswordPolicy) error) (resultErr error) {
+func (e iamExecutor) PasswordPolicy(ctx context.Context, update bool, change *iamservice.PasswordPolicyChange) (iamservice.PasswordPolicySettings, error) {
+	var settings iamservice.PasswordPolicySettings
+	err := e.application.useInstanceIAM(ctx, func(administration iam.Administration) error {
+		var err error
+		settings, err = administration.PasswordPolicy(ctx)
+		if err != nil || !update {
+			return err
+		}
+		settings, err = administration.UpdatePasswordPolicy(ctx, settings.Version, change)
+		return err
+	})
+	return settings, err
+}
+
+func (a *Application) useInstanceIAM(ctx context.Context, use func(iam.Administration) error) (resultErr error) {
 	snapshot, err := a.loadInstanceConfiguration(ctx)
 	if err != nil {
 		return err
@@ -73,7 +84,7 @@ func (a *Application) useInstanceIAM(ctx context.Context, use func(iam.Administr
 	if err != nil {
 		return err
 	}
-	return use(iamModule.Administration, model.PasswordPolicy(iamConfig.Local.PasswordPolicy))
+	return use(iamModule.Administration)
 }
 
 func (a *Application) openInstanceDatabase(ctx context.Context, snapshot config.Snapshot) (*immutableComponent[databaseapp.Access], error) {

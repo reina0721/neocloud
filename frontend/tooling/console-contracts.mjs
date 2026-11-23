@@ -481,6 +481,16 @@ for (const op of operations) {
   paths[path] ??= {};
   paths[path][op.method.toLowerCase()] = entry;
 }
+const serverPaths = JSON.parse(
+  await readFile(
+    new URL('../apps/web/src/generated/console-server-paths.json', import.meta.url),
+    'utf8',
+  ),
+);
+for (const [path, value] of Object.entries(serverPaths)) {
+  if (paths[path]) throw new Error(`Console OpenAPI path already declared: ${path}`);
+  paths[path] = value;
+}
 const output =
   JSON.stringify(
     {
@@ -489,7 +499,7 @@ const output =
         title: 'clouddrive console API',
         version: '1.0.0',
         description:
-          'Generated from console-web response validators and native Huma contracts. Cookie credentials are never stored in browser persistent storage. Writes require Origin and console CSRF; native forwarding repeats native authorization.',
+          'Generated from Go Console contracts, native Huma contracts, and legacy Console validators. Writes require Origin and console CSRF; native forwarding repeats native authorization.',
       },
       paths,
       components: {

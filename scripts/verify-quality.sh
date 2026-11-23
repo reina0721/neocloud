@@ -21,7 +21,7 @@ go run ./internal/tools/project-layout --check-webui
 go generate ./...
 openapi_output="$(node scripts/project-layout.mjs --field openapiOutput)"
 operation_inventory_output="$(node scripts/project-layout.mjs --field operationInventoryOutput)"
-git diff --exit-code -- "${openapi_output}" "${operation_inventory_output}" frontend/apps/web/src/generated/native-openapi.json
+git diff --exit-code -- "${openapi_output}" "${operation_inventory_output}" frontend/apps/web/src/generated/native-openapi.json frontend/apps/web/src/generated/console-server-paths.json
 go test ./... -count=1
 go test -race ./... -count=1
 go vet ./...

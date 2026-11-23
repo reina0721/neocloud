@@ -9,9 +9,14 @@ import (
 	"testing"
 
 	"github.com/reina0721/clouddrive/internal/module/iam/model"
+	"github.com/reina0721/clouddrive/internal/module/iam/service"
 	"github.com/reina0721/clouddrive/pkg/cli"
 	"golang.org/x/term"
 )
+
+func (*recoveryExecutorStub) PasswordPolicy(context.Context, bool, *service.PasswordPolicyChange) (service.PasswordPolicySettings, error) {
+	return service.PasswordPolicySettings{}, errors.New("unexpected password policy command")
+}
 
 func TestOwnerRecoveryPromptsRequireConfirmationAndSuppressPasswordEcho(t *testing.T) {
 	const password = "fictional-Recovery-123"
@@ -63,10 +68,10 @@ func TestOwnerRecoveryRetriesAgainstActivePolicy(t *testing.T) {
 	terminal := term.NewTerminal(struct {
 		io.Reader
 		io.Writer
-	}{strings.NewReader("y\ra\rsolo\rsolo\r"), &output}, "")
+	}{strings.NewReader("y\ra\rsolo\rother\rsolo\rsolo\r"), &output}, "")
 	policy := model.PasswordPolicy{MinLength: 4, MaxLength: 12}
 	_, password, err := promptOwnerRecovery(t.Context(), terminal, []model.RecoveryOwner{{ID: "owner", Username: "fixture"}}, policy)
-	if err != nil || password != "solo" || !strings.Contains(output.String(), "至少需要 4 个字符") {
+	if err != nil || password != "solo" || !strings.Contains(output.String(), "至少需要 4 个字符") || !strings.Contains(output.String(), "两次输入不同") {
 		t.Fatalf("恢复未在同次交互中应用配置的长度要求: %v", err)
 	}
 	if strings.Contains(output.String(), "solo") {

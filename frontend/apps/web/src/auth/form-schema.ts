@@ -18,8 +18,8 @@ export function createAuthSchema(register: boolean, acceptsUsername: boolean) {
         .pipe(acceptsUsername && !register ? z.union([email, iamUsernameSchema]) : email),
       password: z
         .string()
-        .min(register ? 15 : 1)
-        .max(128),
+        .min(1)
+        .refine((value) => Array.from(value).length <= 128),
       confirmation: z.string(),
     })
     .refine((values) => !register || values.password === values.confirmation, {

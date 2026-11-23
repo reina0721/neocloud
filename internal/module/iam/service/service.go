@@ -374,13 +374,15 @@ type SetupPolicy struct {
 
 // SetupPolicy 返回首次设置所需的密码规则与当前初始化状态。
 func (s *Service) SetupPolicy(ctx context.Context) (SetupPolicy, error) {
-	policy := s.config.PasswordPolicy
-	result := SetupPolicy{
-		MinLength: policy.MinLength, MaxLength: policy.MaxLength, RequireComplexity: policy.RequireComplexity,
-	}
+	var result SetupPolicy
 	err := s.store.Use(ctx, func(unit *repo.Unit) error {
+		settings, err := s.readPasswordPolicy(ctx, unit, false)
+		if err != nil {
+			return err
+		}
+		policy := settings.Policy
 		initialized, err := setupInitialized(ctx, unit)
-		result.Initialized = initialized
+		result = SetupPolicy{MinLength: policy.MinLength, MaxLength: policy.MaxLength, RequireComplexity: policy.RequireComplexity, Initialized: initialized}
 		return err
 	})
 	return result, err
@@ -395,12 +397,9 @@ func (s *Service) Setup(ctx context.Context, setupToken, username, displayName, 
 	if strings.TrimSpace(s.config.SetupToken) == "" || subtle.ConstantTimeCompare([]byte(setupToken), []byte(s.config.SetupToken)) != 1 {
 		return Session{}, ErrInvalidCredentials
 	}
-	if err := model.ValidatePasswordWith(password, s.config.PasswordPolicy); err != nil {
-		return Session{}, err
-	}
-	hash, err := s.passwords.Hash(password)
+	hash, err := s.hashNewPassword(ctx, password)
 	if err != nil {
-		return Session{}, fmt.Errorf("hash setup credential: %w", err)
+		return Session{}, err
 	}
 	accountID, err := s.ids.New()
 	if err != nil {
@@ -427,6 +426,9 @@ func (s *Service) Setup(ctx context.Context, setupToken, username, displayName, 
 		}
 		if initialized {
 			return false, ErrSetupClosed
+		}
+		if err := s.validatePasswordChange(txCtx, r, password); err != nil {
+			return false, err
 		}
 		ar := accountRecord(account)
 		if err := r.CreateAccount(txCtx, &ar); err != nil {
@@ -774,14 +776,14 @@ func (s *Service) ValidateCSRF(ctx context.Context, sessionID, token string) err
 }
 
 func (s *Service) ChangePassword(ctx context.Context, accountID, currentPassword, newPassword string) error {
-	if err := model.ValidatePasswordWith(newPassword, s.config.PasswordPolicy); err != nil {
-		return err
-	}
-	hash, err := s.passwords.Hash(newPassword)
+	hash, err := s.hashNewPassword(ctx, newPassword)
 	if err != nil {
 		return err
 	}
 	return s.store.WithinTx(ctx, func(txCtx context.Context, r *repo.Unit) error {
+		if err := s.validatePasswordChange(txCtx, r, newPassword); err != nil {
+			return err
+		}
 		account, err := accountByID(txCtx, r, accountID)
 		if err != nil {
 			return err
@@ -849,14 +851,14 @@ func (s *Service) ResetPassword(ctx context.Context, accountID, newPassword stri
 }
 
 func (s *Service) resetPassword(ctx context.Context, accountID, newPassword string, requireOwner bool, expected ...uint64) error {
-	if err := model.ValidatePasswordWith(newPassword, s.config.PasswordPolicy); err != nil {
-		return err
-	}
-	hash, err := s.passwords.Hash(newPassword)
+	hash, err := s.hashNewPassword(ctx, newPassword)
 	if err != nil {
 		return err
 	}
 	err = s.store.WithinTx(ctx, func(txCtx context.Context, r *repo.Unit) error {
+		if err := s.validatePasswordChange(txCtx, r, newPassword); err != nil {
+			return err
+		}
 		account, err := accountByID(txCtx, r, accountID)
 		if err != nil {
 			return err
@@ -890,10 +892,7 @@ func (s *Service) resetPassword(ctx context.Context, accountID, newPassword stri
 }
 
 func (s *Service) CreateAccount(ctx context.Context, username, displayName, password string) (model.Account, error) {
-	if err := model.ValidatePasswordWith(password, s.config.PasswordPolicy); err != nil {
-		return model.Account{}, err
-	}
-	hash, err := s.passwords.Hash(password)
+	hash, err := s.hashNewPassword(ctx, password)
 	if err != nil {
 		return model.Account{}, err
 	}
@@ -908,6 +907,9 @@ func (s *Service) CreateAccount(ctx context.Context, username, displayName, pass
 	account.Version = 1
 	record := accountRecord(account)
 	err = s.store.WithinTx(ctx, func(txCtx context.Context, r *repo.Unit) error {
+		if err := s.validatePasswordChange(txCtx, r, password); err != nil {
+			return err
+		}
 		if err := r.CreateAccount(txCtx, &record); err != nil {
 			return err
 		}

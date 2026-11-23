@@ -92,7 +92,10 @@ export const createUserSchema = z
   .object({
     name: nameSchema,
     email: emailSchema,
-    password: z.string().min(15).max(128),
+    password: z
+      .string()
+      .min(1)
+      .refine((value) => Array.from(value).length <= 128),
     roleIds: roleIdsSchema,
     status: userStatusSchema,
   })

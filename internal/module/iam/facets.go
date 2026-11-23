@@ -52,6 +52,8 @@ type Administration interface {
 	ResetPasswordByUsername(context.Context, string, string) error
 	RecoverableOwners(context.Context) ([]model.RecoveryOwner, error)
 	RecoverOwnerPassword(context.Context, string, string) error
+	PasswordPolicy(context.Context) (service.PasswordPolicySettings, error)
+	UpdatePasswordPolicy(context.Context, uint64, *service.PasswordPolicyChange) (service.PasswordPolicySettings, error)
 }
 
 // ApiTokenResolver 是 API-Token 认证解析的窄 facet（078）；composition 把

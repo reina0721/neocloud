@@ -12,6 +12,7 @@ import { readAuthConfig } from './config';
 import { AuthError } from './contract';
 import { ApiError, createJsonClient } from '../api/json-client';
 import { useAuth } from './context';
+import { passwordRuleMessage, usePasswordPolicy } from './password-policy';
 
 function passwordChangeError(error: unknown): string {
   if (error instanceof AuthError && error.code === 'configuration')
@@ -41,6 +42,7 @@ function passwordChangeError(error: unknown): string {
 export function RequiredPasswordChange() {
   const { t } = useFrontendTranslation();
   const auth = useAuth();
+  const policy = usePasswordPolicy(true);
   const [failure, setFailure] = useState<string>();
   const form = useFoundationForm<{ currentPassword: string; newPassword: string }>({
     schema: () =>
@@ -94,6 +96,14 @@ export function RequiredPasswordChange() {
           />
           <PasswordField
             label={t('auth.newPassword')}
+            {...(policy
+              ? {
+                  hint: t(passwordRuleMessage(policy), {
+                    minLength: policy.minLength,
+                    maxLength: policy.maxLength,
+                  }),
+                }
+              : {})}
             purpose="new"
             showLabel={t('auth.showPassword')}
             hideLabel={t('auth.hidePassword')}

@@ -91,6 +91,7 @@ func New(dependencies Dependencies) (*Handler, error) {
 	h.mux.HandleFunc("GET "+Prefix+"/deployment/owner", h.authorizeDeployment)
 	h.mux.HandleFunc("POST "+Prefix+"/deployment/owner", h.authorizeDeployment)
 	h.siteProfileRoutes()
+	h.passwordPolicyRoutes()
 	h.dataRoutes()
 	h.workbenchRoutes()
 	h.dashboardRoutes()

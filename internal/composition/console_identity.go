@@ -17,6 +17,29 @@ import (
 // consoleIAMPort 只转换模块间输入、投影及错误，不创建第二套身份或权限状态。
 type consoleIAMPort struct{ service *iamservice.Service }
 
+func (port consoleIAMPort) PasswordPolicy(ctx context.Context) (console.PasswordPolicy, error) {
+	value, err := port.service.PasswordPolicy(ctx)
+	return consolePasswordPolicy(value), consoleError(err)
+}
+
+func (port consoleIAMPort) UpdatePasswordPolicy(ctx context.Context, version uint64, input *console.PasswordPolicyInput) (console.PasswordPolicy, error) {
+	var change *iamservice.PasswordPolicyChange
+	if input != nil {
+		change = &iamservice.PasswordPolicyChange{
+			MinLength: input.MinLength, MaxLength: input.MaxLength, RequireComplexity: input.RequireComplexity,
+		}
+	}
+	value, err := port.service.UpdatePasswordPolicy(ctx, version, change)
+	return consolePasswordPolicy(value), consoleError(err)
+}
+
+func consolePasswordPolicy(value iamservice.PasswordPolicySettings) console.PasswordPolicy {
+	return console.PasswordPolicy{
+		MinLength: value.Policy.MinLength, MaxLength: value.Policy.MaxLength, RequireComplexity: value.Policy.RequireComplexity,
+		Overridden: value.Overridden, Version: value.Version,
+	}
+}
+
 func consoleError(err error) error {
 	if err == nil {
 		return nil

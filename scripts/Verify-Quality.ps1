@@ -19,7 +19,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'go generate failed' }
     $openapi = (& node scripts/project-layout.mjs --field openapiOutput).Trim()
     $operationInventory = (& node scripts/project-layout.mjs --field operationInventoryOutput).Trim()
-    git diff --exit-code -- $openapi $operationInventory frontend/apps/web/src/generated/native-openapi.json
+    git diff --exit-code -- $openapi $operationInventory frontend/apps/web/src/generated/native-openapi.json frontend/apps/web/src/generated/console-server-paths.json
     if ($LASTEXITCODE -ne 0) { throw 'generated files are not clean' }
     & $GoExecutable test -p 1 ./... -count=1
     if ($LASTEXITCODE -ne 0) { throw 'go test failed' }

@@ -16,6 +16,7 @@ import { authPageHref, authReturnDestination } from './contract';
 import { readAuthConfig } from './config';
 import type { DemoAccount } from './demo-accounts';
 import { readRegistrationAvailability } from './registration-policy';
+import { passwordRuleMessage, usePasswordPolicy } from './password-policy';
 import type { AuthFormValues } from './form-schema';
 import { AlertTriangle, CheckCircle2, Clock, Eye, EyeOff } from 'lucide-react';
 
@@ -25,6 +26,7 @@ const DemoAccessPanel = lazy(() =>
 
 export function AuthForm({ kind }: Readonly<{ kind: 'login' | 'register' | 'expired' }>) {
   const register = kind === 'register';
+  const passwordPolicy = usePasswordPolicy(register);
   const { t } = useFrontendTranslation();
   const { profile } = useSiteProfile();
   const auth = useAuth();
@@ -204,7 +206,16 @@ export function AuthForm({ kind }: Readonly<{ kind: 'login' | 'register' | 'expi
               showLabel={t('auth.showPassword')}
               visibilityIcons={visibilityIcons}
               hideLabel={t('auth.hidePassword')}
-              {...(register ? { hint: t('auth.passwordRule') } : {})}
+              {...(register
+                ? {
+                    hint: passwordPolicy
+                      ? t(passwordRuleMessage(passwordPolicy), {
+                          minLength: passwordPolicy.minLength,
+                          maxLength: passwordPolicy.maxLength,
+                        })
+                      : t('auth.passwordRule'),
+                  }
+                : {})}
               {...validation('password', register ? 'auth.passwordRule' : 'auth.passwordRequired')}
               {...form.registerField('password')}
             />

@@ -162,13 +162,10 @@ func (s *Service) registrationRole(ctx context.Context, r *repo.Unit, id string)
 
 // CreateConsoleAccount 在同一事务创建凭据与角色；公开注册在事务内重读策略。
 func (s *Service) CreateConsoleAccount(ctx context.Context, username, name, password string, roleIDs []string, status model.AccountStatus, public bool) (model.Account, error) {
-	if err := model.ValidatePasswordWith(password, s.config.PasswordPolicy); err != nil {
-		return model.Account{}, err
-	}
 	if status != model.AccountActive && status != model.AccountDisabled {
 		return model.Account{}, model.ErrInvalidName
 	}
-	hash, err := s.passwords.Hash(password)
+	hash, err := s.hashNewPassword(ctx, password)
 	if err != nil {
 		return model.Account{}, err
 	}
@@ -184,6 +181,9 @@ func (s *Service) CreateConsoleAccount(ctx context.Context, username, name, pass
 	account.Status = status
 	account.Version = 1
 	err = s.authorizeMutation(ctx, func(txCtx context.Context, r *repo.Unit) (bool, error) {
+		if err := s.validatePasswordChange(txCtx, r, password); err != nil {
+			return false, err
+		}
 		if public {
 			policy, e := r.Registration(txCtx)
 			if e != nil {

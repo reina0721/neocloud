@@ -113,19 +113,6 @@ func promptOwnerRecovery(ctx context.Context, terminal *term.Terminal, owners []
 	if err != nil {
 		return model.RecoveryOwner{}, "", err
 	}
-	if err := ctx.Err(); err != nil {
-		return model.RecoveryOwner{}, "", err
-	}
-	confirmation, err := terminal.ReadPassword("再次输入新临时密码 > ")
-	if err != nil {
-		return model.RecoveryOwner{}, "", err
-	}
-	if password != confirmation {
-		return model.RecoveryOwner{}, "", errors.New("两次输入的密码不一致")
-	}
-	if err := ctx.Err(); err != nil {
-		return model.RecoveryOwner{}, "", err
-	}
 	return selected, password, nil
 }
 
@@ -146,7 +133,20 @@ func promptRecoveryPassword(ctx context.Context, terminal *term.Terminal, policy
 			return "", err
 		}
 		if model.ValidatePasswordWith(password, policy) == nil {
-			return password, nil
+			if err := ctx.Err(); err != nil {
+				return "", err
+			}
+			confirmation, err := terminal.ReadPassword("再次输入新临时密码 > ")
+			if err != nil {
+				return "", err
+			}
+			if password == confirmation {
+				return password, ctx.Err()
+			}
+			if _, err := fmt.Fprintln(terminal, "两次输入不同，请重新输入临时密码。"); err != nil {
+				return "", err
+			}
+			continue
 		}
 		length := utf8.RuneCountInString(password)
 		switch {

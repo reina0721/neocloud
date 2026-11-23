@@ -17,6 +17,11 @@ export function createLazyAdministrationPort(
     return port;
   };
   return {
+    passwordPolicy: {
+      read: async () => (await load()).passwordPolicy.read(),
+      update: async (input) => (await load()).passwordPolicy.update(input),
+      reset: async (version) => (await load()).passwordPolicy.reset(version),
+    },
     preferences: async () => (await load()).preferences(),
     savePreferences: async (value) => (await load()).savePreferences(value),
     profile: async () => (await load()).profile(),

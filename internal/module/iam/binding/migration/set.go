@@ -7,7 +7,7 @@ import (
 	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
 )
 
-const CurrentVersion uint = 13
+const CurrentVersion uint = 14
 const TableName = "iam_schema_migrations"
 
 //go:embed sqlite/*.sql postgres/*.sql mysql/*.sql
@@ -19,6 +19,12 @@ func Set() dbmigrate.Set {
 		DriverPaths: map[database.Driver]string{database.DriverSQLite: "sqlite", database.DriverPostgres: "postgres", database.DriverMySQL: "mysql"},
 		// #nosec G101 -- 公开迁移 SQL 文件的 SHA-256 完整性摘要，不是凭据。
 		SHA256ByFile: map[string]string{
+			"sqlite/000014_password_policy.up.sql":          "1047c17e256e5fbc623799c96f592fc86166b4f5f0e20bb351bee5b40efe00e4",
+			"sqlite/000014_password_policy.down.sql":        "c1a48a0d46e709d2dd6ea2bc4bc2657bd6bfc480de8cc757b5893628241c483b",
+			"postgres/000014_password_policy.up.sql":        "1047c17e256e5fbc623799c96f592fc86166b4f5f0e20bb351bee5b40efe00e4",
+			"postgres/000014_password_policy.down.sql":      "c1a48a0d46e709d2dd6ea2bc4bc2657bd6bfc480de8cc757b5893628241c483b",
+			"mysql/000014_password_policy.up.sql":           "1047c17e256e5fbc623799c96f592fc86166b4f5f0e20bb351bee5b40efe00e4",
+			"mysql/000014_password_policy.down.sql":         "c1a48a0d46e709d2dd6ea2bc4bc2657bd6bfc480de8cc757b5893628241c483b",
 			"sqlite/000013_preferences_version.up.sql":      "53b6cb18b420adc6e540d7f6dc081712469d8fe36c89a2211492a6f05dc0248c",
 			"sqlite/000013_preferences_version.down.sql":    "07248cdea492eb8b1911b386774185ae23a94c19ac9dd30485884bc33eae6a8d",
 			"postgres/000013_preferences_version.up.sql":    "53b6cb18b420adc6e540d7f6dc081712469d8fe36c89a2211492a6f05dc0248c",

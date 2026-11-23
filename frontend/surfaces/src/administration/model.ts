@@ -155,7 +155,23 @@ export const accountPreferencesSchema = z.object({
   }),
 });
 export type AccountPreferences = z.infer<typeof accountPreferencesSchema>;
+export const passwordPolicySchema = z
+  .object({
+    minLength: z.number().int().min(1).max(128),
+    maxLength: z.number().int().min(1).max(128),
+    requireComplexity: z.boolean(),
+    overridden: z.boolean(),
+    version: z.number().int().positive(),
+  })
+  .refine((value) => value.minLength <= value.maxLength);
+export type PasswordPolicy = z.infer<typeof passwordPolicySchema>;
+export type PasswordPolicyInput = Omit<PasswordPolicy, 'overridden'>;
 export interface AdministrationPort {
+  passwordPolicy: {
+    read(): Promise<PasswordPolicy>;
+    update(input: PasswordPolicyInput): Promise<PasswordPolicy>;
+    reset(version: number): Promise<PasswordPolicy>;
+  };
   preferences(): Promise<AccountPreferences>;
   savePreferences(value: AccountPreferences): Promise<AccountPreferences>;
   profile(): Promise<AccountProfile>;

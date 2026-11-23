@@ -104,8 +104,7 @@ func NormalizeName(value string) (string, error) {
 	return value, nil
 }
 
-// PasswordPolicy 是创建/重置/修改密码时的强度策略；由配置注入并在 Service
-// 构造时冻结。MinLength/MaxLength 按 rune 计数（与既有 ValidatePassword 一致）。
+// PasswordPolicy 是创建、重置和修改密码时的有效策略。长度按 Unicode 码点计数。
 // HistorySize/MaxPasswordAge 在 Service 层校验（需要数据库），model 只承载值。
 type PasswordPolicy struct {
 	MinLength int
@@ -150,7 +149,7 @@ func ValidatePasswordWith(value string, policy PasswordPolicy) error {
 	return nil
 }
 
-// ValidatePassword 使用默认策略校验密码；默认策略与既有硬编码语义一致。
+// ValidatePassword 使用默认策略校验密码。
 func ValidatePassword(value string) error {
 	return ValidatePasswordWith(value, DefaultPasswordPolicy())
 }

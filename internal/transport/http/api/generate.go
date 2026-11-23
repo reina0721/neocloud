@@ -5,5 +5,5 @@
 //
 // 输出路径由 .scaffold/layout.json 声明，避免生成器和质量脚本各自维护副本。
 //
-//go:generate go run ../../../tools/contract-gen -package api -output-json ../../../../frontend/apps/web/src/generated/native-openapi.json
+//go:generate go run ../../../tools/contract-gen -package api -output-json ../../../../frontend/apps/web/src/generated/native-openapi.json -output-console-paths ../../../../frontend/apps/web/src/generated/console-server-paths.json
 package api
