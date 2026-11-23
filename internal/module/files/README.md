@@ -8,10 +8,12 @@
 - adapter/tus 隔离 tusd 核心 HEAD/PATCH 与本机持久暂存；service 持有同步 OS 锁回调，覆盖协议、暂停和发布的同一临界区，没有第二套身份、配额或存储客户端。
 - handler 读取已认证主体并决定可公开的错误及低敏日志；binding/http 承担 Huma schema 与 mutation guard。
 - service.Downloads拥有私有HTTP任务状态与发布围栏，Transfer继续唯一拥有候选、配额和内容发布；adapter/httpdownload封装标准net/http的受控流、DNS/IP与续传语义。module.New返回Handler与Contribution，由现有Scheduler运行任务、Participant管理源客户端生命周期，不建立第二个worker框架。
-- module.go 的 New 只做纯内存装配；ValidateStorage 与 PrepareTransfers 是单独命名的候选准入 I/O。composition 注入 Kernel 资源租约，不创建第二个客户端。
+- `PrepareRuntime` 负责文件设置、传输暂存、归档和模块协议装配。初次启动验证持久资源，热重载只读取已有设置。组合根注入 Kernel 租约及账号和调度端口，`New` 完成内存装配。
 - binding/migration 独占 files schema；当前v15新增独立账号保留策略表，v14新增视图偏好，v13 增加受众JSON、子项策略与独立revision、下载票据及上传主体绑定，v12 保留分享协作字段，v11 增加离线任务与子传输关联，v8 分享引用、v9 私有注解、v10 历史快照以及此前连接/上传字段保持不变，沿用持久传输、暂存位置绑定和单文件下载凭据约束，已应用 SQL 不改写。
 
 元数据提交先锁定存储位置，再锁 owner，随后判断目录环、名称冲突、祖先可见性与配额；锁与取消由数据库租约管理。读取后复核位置摘要，以免从另一个存储位置读取同名对象。回收不会删除内容，目录的 parent_id 同时保留恢复前的位置，不另存冗余原位置字段。
+
+SQLite 的本人文件详情只读取目标和祖先。详情与下载继续复核账号和可见祖先，打开内容租约后再复核对象版本。分享详情使用原有授权快照。运行 `go test ./internal/module/files/repo -run '^$' -bench BenchmarkSQLiteEntryAncestors -benchmem` 可测量全量与祖先读取。
 
 - adapter/webdav 隔离成熟XML/协议实现；binding/webdav 在共同HTTP中间件内显式分派扩展方法，不修改全局方法表。
 - service.Connections 拥有独立凭据策略和目录范围，通过 composition 注入的 IAM AccountAuthorizer 复核当前身份/权限；不穿透IAM私有包。

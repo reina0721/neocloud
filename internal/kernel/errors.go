@@ -12,6 +12,8 @@ var (
 	ErrNotRunning = errors.New("kernel is not running")
 	// ErrStopped 表示 Kernel 已经永久停止。
 	ErrStopped = errors.New("kernel is stopped")
+	// ErrGenerationPublication 表示切换准入未完整完成，必须撤销就绪并结束当前进程。
+	ErrGenerationPublication = errors.New("application generation publication incomplete")
 )
 
 // CommittedCleanupError 表示新实例已经发布，但旧实例清理失败。

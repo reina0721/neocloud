@@ -97,6 +97,7 @@ type Repository interface {
 	ReadHistoryPreferences(context.Context, string) (model.HistoryPreferences, error)
 	ChangeContent(context.Context, string, func(ContentSnapshot) (model.Entry, error)) (model.Entry, error)
 	Read(context.Context, string) ([]model.Entry, error)
+	ReadEntryPath(context.Context, string, string) ([]model.Entry, error)
 	ReadBounded(context.Context, string, int) ([]model.Entry, error)
 	Change(context.Context, string, func([]model.Entry) (model.Entry, error)) (model.Entry, error)
 	ChangeMany(context.Context, string, func([]model.Entry) ([]model.Entry, error)) ([]model.Entry, error)
@@ -396,7 +397,10 @@ type Detail struct {
 }
 
 func (s *Service) Detail(ctx context.Context, owner, id string) (Detail, error) {
-	entries, err := s.read(ctx, owner)
+	if owner == "" || id == "" {
+		return Detail{}, model.ErrMissing
+	}
+	entries, err := s.repo.ReadEntryPath(ctx, owner, id)
 	if err != nil {
 		return Detail{}, err
 	}

@@ -17,6 +17,7 @@ type testGenerationFactory struct {
 	mu         sync.Mutex
 	nextID     uint64
 	prepareErr error
+	commitErr  error
 	prepared   []*testGeneration
 	stopCalls  int
 }
@@ -32,7 +33,7 @@ func (f *testGenerationFactory) Prepare(
 		return nil, f.prepareErr
 	}
 	f.nextID++
-	generation := &testGeneration{id: f.nextID, snapshot: snapshot}
+	generation := &testGeneration{id: f.nextID, snapshot: snapshot, commitErr: f.commitErr}
 	f.prepared = append(f.prepared, generation)
 	return generation, nil
 }
@@ -61,6 +62,7 @@ type testGeneration struct {
 	id             uint64
 	snapshot       config.Snapshot
 	retireErr      error
+	commitErr      error
 	stopErr        error
 	retireCalls    int
 	stopCalls      int
@@ -80,7 +82,12 @@ func (*testGeneration) ActiveRequests() int64    { return 0 }
 func (*testGeneration) ResourceStats() GenerationResourceStats {
 	return GenerationResourceStats{Built: []string{"test"}}
 }
-func (g *testGeneration) Commit(ActiveGeneration) (ActiveGeneration, error) { return g, nil }
+func (g *testGeneration) Commit(ActiveGeneration) (ActiveGeneration, error) {
+	if g.commitErr != nil {
+		return nil, g.commitErr
+	}
+	return g, nil
+}
 
 func (g *testGeneration) Abort(context.Context) error {
 	g.mu.Lock()
@@ -212,6 +219,26 @@ func TestGenerationCoordinatorPrepareFailurePreservesCurrent(t *testing.T) {
 	}
 	if diagnostics.State != LifecycleRunning || !diagnostics.Ready || diagnostics.Phase != "rejected:prepare" {
 		t.Fatalf("Diagnostics() = %+v", diagnostics)
+	}
+}
+
+func TestGenerationCoordinatorPartialPublicationRevokesReadiness(t *testing.T) {
+	coordinator, source, factory := newTestGenerationCoordinator(t)
+	if err := coordinator.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	cause := errors.New("candidate admission failed")
+	factory.commitErr = errors.Join(ErrGenerationPublication, cause)
+	source.set(map[string]any{"app": map[string]any{"version": "v2"}})
+	result, err := coordinator.Reload(t.Context())
+	if result.Applied || !errors.Is(err, cause) || factory.generation(1).abortCalls != 1 {
+		t.Fatalf("Reload() = %#v, %v", result, err)
+	}
+	if diagnostics := coordinator.Diagnostics(); diagnostics.Ready || diagnostics.State != LifecycleDegraded {
+		t.Fatalf("Diagnostics() = %+v", diagnostics)
+	}
+	if _, err := coordinator.Reload(t.Context()); !errors.Is(err, ErrNotRunning) {
+		t.Fatalf("Reload after failed publication = %v", err)
 	}
 }
 

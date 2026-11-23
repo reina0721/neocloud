@@ -307,7 +307,11 @@ func (c *GenerationCoordinator) Reload(ctx context.Context) (GenerationReloadRes
 	if err != nil {
 		abortErr := c.abortPrepared(ctx, prepared)
 		joined := generationOperationError("commit", prepared.ID(), errors.Join(err, abortErr))
-		c.reject("commit", joined)
+		if errors.Is(err, ErrGenerationPublication) || abortErr != nil {
+			c.fail(LifecycleDegraded, "commit", joined)
+		} else {
+			c.reject("commit", joined)
+		}
 		return result, joined
 	}
 	c.mu.Lock()

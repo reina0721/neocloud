@@ -31,7 +31,6 @@ import (
 	filesconfig "github.com/reina0721/clouddrive/internal/module/files/binding/config"
 	fileshttp "github.com/reina0721/clouddrive/internal/module/files/binding/http"
 	fileswebdav "github.com/reina0721/clouddrive/internal/module/files/binding/webdav"
-	filesservice "github.com/reina0721/clouddrive/internal/module/files/service"
 	"github.com/reina0721/clouddrive/internal/module/iam"
 	iamconfig "github.com/reina0721/clouddrive/internal/module/iam/binding/config"
 	iamhttp "github.com/reina0721/clouddrive/internal/module/iam/binding/http"
@@ -54,6 +53,7 @@ import (
 	"github.com/reina0721/clouddrive/pkg/idgen"
 	"github.com/reina0721/clouddrive/pkg/logger"
 	pkgobservability "github.com/reina0721/clouddrive/pkg/observability"
+	pkgschedule "github.com/reina0721/clouddrive/pkg/schedule"
 	"github.com/reina0721/clouddrive/pkg/supervisor"
 	"github.com/reina0721/clouddrive/pkg/validation"
 )
@@ -109,6 +109,7 @@ type applicationGeneration struct {
 	opsModule          ops.Module
 	participants       []supervisor.Participant
 	route              *httpx.PreparedRoute
+	routePublished     bool
 	server             *httpx.Server
 	runDone            chan struct{}
 	runErr             error
@@ -477,94 +478,23 @@ func (f *applicationGenerationFactory) Prepare(
 	if err != nil {
 		return abort(err)
 	}
-	if previous == nil {
-		if err := files.ValidateStorage(ctx, databaseAccess, storageIdentity, clock.System()); err != nil {
-			return abort(err)
-		}
-	}
 	storageBackend, err := filesStorageBackend(storageConfig.Driver)
 	if err != nil {
 		return abort(err)
 	}
-	transferPolicy := filesPolicy.TransferPolicy()
-	storagePolicy, storageLimits, err := files.PrepareStoragePolicy(ctx, databaseAccess, storageIdentity, clock.System(), storageBackend,
-		filesservice.StorageLimits{MaxFileBytes: filesPolicy.MaxFileBytes, ChunkBytes: transferPolicy.ChunkBytes})
+	filesSession, err := newIAMSessionAuthAdapter(generation.iamModule.Sessions, generation.iamModule.SessionCookieName())
 	if err != nil {
 		return abort(err)
 	}
-	transferPolicy.ChunkBytes = storageLimits.ChunkBytes
-	trashScheduled, err := scheduleapp.TaskConfiguredEnabled(snapshot, filesservice.TrashExpiryTaskID)
-	if err != nil {
-		return abort(err)
-	}
-	blobScheduled, err := scheduleapp.TaskConfiguredEnabled(snapshot, filesservice.BlobReclamationTaskID)
-	if err != nil {
-		return abort(err)
-	}
-	fileRuntimePolicy := filesPolicy.Policy()
-	fileRuntimePolicy.MaxFileBytes = storageLimits.MaxFileBytes
-	nameRules, nameAdmission, err := files.PrepareStorageNameRules(ctx, databaseAccess, storageIdentity, clock.System())
-	if err != nil {
-		return abort(err)
-	}
-	fileRuntimePolicy.NameAdmission = nameAdmission
-	filesystemSettings, activeFilesystem, err := files.PrepareFilesystemSettings(ctx, databaseAccess, storageIdentity, clock.System(), filesservice.FilesystemRuntime{
-		Policy: fileRuntimePolicy, Blob: filesPolicy.BlobReclamation, TrashInterval: filesservice.TrashExpiryInterval,
-		TrashScheduled: trashScheduled, BlobScheduled: blobScheduled,
-	})
-	if err != nil {
-		return abort(err)
-	}
-	if previous == nil {
-		if err := files.PrepareTransfers(ctx, databaseAccess, storageIdentity, filesPolicy.Transfers.StagingPath, clock.System()); err != nil {
-			return abort(err)
-		}
-		if err := files.PrepareTorrentNodes(ctx, files.TorrentPreparation{Database: databaseAccess, StorageIdentity: storageIdentity, StagingPath: filesPolicy.Transfers.StagingPath, MetadataEntries: filesPolicy.Policy().SearchTreeEntries, Clock: clock.System(), Nodes: filesPolicy.Offline.TorrentNodes}); err != nil {
-			return abort(err)
-		}
-	}
-	offlineEnabled, err := scheduleapp.TaskConfiguredEnabled(snapshot, filesservice.DownloadDispatchTaskID)
-	if err != nil {
-		return abort(err)
-	}
-	torrentEnabled, err := scheduleapp.TaskConfiguredEnabled(snapshot, filesservice.TorrentDispatchTaskID)
-	if err != nil {
-		return abort(err)
-	}
-	archiveProcessor, err := files.NewArchiveProcessor(filesPolicy.Archive, generation.logger.value())
-	if err != nil {
-		return abort(err)
-	}
-	archiveEnabled, err := scheduleapp.TaskConfiguredEnabled(snapshot, filesservice.ArchiveDispatchTaskID)
-	if err != nil {
-		return abort(err)
-	}
-	filesSessionAuth, err := newIAMSessionAuthAdapter(generation.iamModule.Sessions, generation.iamModule.SessionCookieName())
-	if err != nil {
-		return abort(err)
-	}
-	fileContent := filesContentAdapter{access: generation.storage.value()}
-	fileAuthority := filesConnectionAuthority{access: generation.iamModule.AccountAuthorization, audience: generation.iamModule.Collaboration}
-	blobPolicy := activeFilesystem.Blob
-	blobPolicy.Automatic = blobPolicy.Automatic && activeFilesystem.BlobScheduled
-	filesModule, err := files.New(files.Dependencies{
-		PublicAuthentication: fileOptionalSessionAuth{session: filesSessionAuth, cookieName: generation.iamModule.SessionCookieName()},
-		ArchiveProcessor:     archiveProcessor, ArchiveAuthority: fileAuthority, ArchiveDispatcherEnabled: archiveEnabled,
-		ShareAuthority: fileAuthority, SharePolicy: filesPolicy.SharePolicy(), Passwords: iam.NewCredentialDigests(),
-		OfflinePolicy: filesPolicy.Offline, OfflineDispatcherEnabled: offlineEnabled, TorrentDispatcherEnabled: torrentEnabled, OfflineAuthority: fileAuthority,
-		NavigationPolicy: filesPolicy.NavigationPolicy(), ConnectionOrigin: filesPolicy.Connections.PublicOrigin,
-		ConnectionPolicy: filesPolicy.ConnectionPolicy(), ConnectionAuthority: fileAuthority, PublicOrigins: httpConfig.CORS.AllowedOrigins,
-		StorageIdentity: storageIdentity, Database: databaseAccess, Content: fileContent, BlobProbe: fileContent,
-		TransferContent: fileContent, TransferPolicy: transferPolicy, StagingPath: filesPolicy.Transfers.StagingPath,
-		BlobReclamationPolicy: blobPolicy, BlobReclamationAccess: fileAuthority, TrashScanInterval: activeFilesystem.TrashInterval,
-		TrashSchedulerEnabled: activeFilesystem.TrashScheduled,
-		FilesystemSettings:    filesystemSettings, FilesystemSettingsAccess: fileAuthority,
-		StoragePolicy: storagePolicy, StoragePolicyAccess: fileAuthority,
-		StorageNameRules: nameRules,
-		AdminShareAccess: fileAuthority,
-		AdminTaskAccess:  fileAuthority,
-		Clock:            clock.System(), IDs: idgen.UUID(), Actors: filesActorAdapter{}, Logger: generation.logger.value(), Policy: activeFilesystem.Policy,
-	})
+	filesModule, err := files.PrepareRuntime(ctx, filesPolicy, files.RuntimeDependencies{
+		Database: databaseAccess, StorageIdentity: storageIdentity, StorageBackend: storageBackend,
+		Content:        filesContentAdapter{access: generation.storage.value()},
+		Authority:      filesConnectionAuthority{access: generation.iamModule.AccountAuthorization, audience: generation.iamModule.Collaboration},
+		Authentication: fileOptionalSessionAuth{session: filesSession, cookieName: generation.iamModule.SessionCookieName()},
+		Actors:         filesActorAdapter{}, Passwords: iam.NewCredentialDigests(), Clock: clock.System(), IDs: idgen.UUID(),
+		Logger: generation.logger.value(), PublicOrigins: httpConfig.CORS.AllowedOrigins,
+		TaskEnabled: func(id pkgschedule.TaskID) (bool, error) { return scheduleapp.TaskConfiguredEnabled(snapshot, id) },
+	}, previous == nil)
 	if err != nil {
 		return abort(err)
 	}
@@ -835,6 +765,7 @@ func (g *applicationGeneration) Commit(previous kernel.ActiveGeneration) (kernel
 	if _, err := g.factory.hub.Commit(g.route, previousRoute); err != nil {
 		return nil, g.failPublication(err)
 	}
+	g.routePublished = true
 	if _, err := g.factory.managementHub.Commit(g.managementRoute, previousManagementRoute); err != nil {
 		return nil, g.failPublication(errors.Join(err, g.factory.hub.Retire(g.route)))
 	}
@@ -851,7 +782,7 @@ func (g *applicationGeneration) Commit(previous kernel.ActiveGeneration) (kernel
 }
 
 func (g *applicationGeneration) failPublication(err error) error {
-	failure := fmt.Errorf("publish application generation %d: %w", g.id, err)
+	failure := fmt.Errorf("publish application generation %d: %w", g.id, errors.Join(kernel.ErrGenerationPublication, err))
 	select {
 	case g.factory.failures <- failure:
 	default:
@@ -895,7 +826,11 @@ func (g *applicationGeneration) abort(ctx context.Context) error {
 		joined = errors.Join(joined, g.waitRun(ctx))
 	}
 	if g.route != nil {
-		joined = errors.Join(joined, g.factory.hub.Abort(g.route))
+		if g.routePublished {
+			joined = errors.Join(joined, g.factory.hub.Release(g.route))
+		} else {
+			joined = errors.Join(joined, g.factory.hub.Abort(g.route))
+		}
 	}
 	if g.managementRoute != nil {
 		joined = errors.Join(joined, g.factory.managementHub.Abort(g.managementRoute))

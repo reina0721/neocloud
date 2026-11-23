@@ -267,6 +267,10 @@ func scopedReadEntries(snapshot ShareSnapshot) []model.Entry {
 func (r *shareScopedRepository) Read(ctx context.Context, owner string) ([]model.Entry, error) {
 	return r.ReadBounded(ctx, owner, r.treeLimit)
 }
+func (r *shareScopedRepository) ReadEntryPath(ctx context.Context, owner, _ string) ([]model.Entry, error) {
+	// 分享仍需在整份已授权的子树内判断根目录和共享版本。
+	return r.Read(ctx, owner)
+}
 func (r *shareScopedRepository) ReadBounded(ctx context.Context, owner string, limit int) ([]model.Entry, error) {
 	snapshot, err := r.snapshot(ctx, owner, limit)
 	if err != nil {

@@ -66,6 +66,10 @@ func (r *memoryRepository) ReadBounded(ctx context.Context, owner string, limit 
 	return entries, nil
 }
 
+func (r *memoryRepository) ReadEntryPath(ctx context.Context, owner, _ string) ([]model.Entry, error) {
+	return r.Read(ctx, owner)
+}
+
 func (r *memoryRepository) Read(ctx context.Context, owner string) ([]model.Entry, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
