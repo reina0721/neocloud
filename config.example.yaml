@@ -240,7 +240,7 @@ iam:
     # historySize 启用后禁止复用最近 N 次口令；maxPasswordAge 启用后口令超过
     # 期限登录进入受限改密（两者默认关闭）。
     passwordPolicy:
-      minLength: 15
+      minLength: 8
       maxLength: 128
       requireComplexity: false
       historySize: 0

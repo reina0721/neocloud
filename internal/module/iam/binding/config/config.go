@@ -39,10 +39,9 @@ type Config struct {
 	Local Local `mapstructure:"local"`
 }
 
-// defaultPasswordPolicy 与 model 默认策略（15/128、不要求复杂度）保持一致，
-// 保证既有配置与存量账号兼容；这里显式声明，避免配置包反向依赖业务 model。
+// 默认值与 model 的默认密码策略一致。实例可显式覆盖长度和复杂度。
 const (
-	defaultPasswordMinLength = 15
+	defaultPasswordMinLength = 8
 	defaultPasswordMaxLength = 128
 	// maxPasswordMaxLength 是密码最大长度的防御性配置上限。
 	maxPasswordMaxLength = 128

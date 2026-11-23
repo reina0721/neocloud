@@ -49,7 +49,7 @@ IAM 在 composition 提供普通 WebUI 业务 mutation 共用的窄 Origin/CSRF 
 
 ## 密码策略（076）
 
-创建/重置/修改密码的强度策略由 `iam.local.passwordPolicy` 配置（`minLength`/`maxLength` 默认 15/128，`requireComplexity` 默认 false）；策略在 Service 构造时冻结，只约束新建密码路径、不重验存量哈希，默认值保持与历史硬编码一致。`requireComplexity` 开启时要求密码同时包含大写字母、小写字母与数字（按 rune 计数）。HTTP 契约的密码字段只做非空与长度上限防御校验，真实策略统一由服务端判定（避免契约静态校验与配置策略双 authority）。
+创建、重置和修改密码使用 `iam.local.passwordPolicy`。新实例默认允许 8–128 个字符，复杂度默认关闭。显式配置的长度和复杂度继续生效，已设置的密码按原有哈希验证。`requireComplexity` 开启时要求同时包含大写字母、小写字母和数字。长度按 Unicode 码点计算，服务端统一校验实际策略。
 
 ## 口令治理与会话治理（077）
 

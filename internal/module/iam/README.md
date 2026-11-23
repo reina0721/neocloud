@@ -18,7 +18,7 @@ IAM（Identity and Access Management）拥有本地 Account、Credential、Sessi
 
 ## 影响分析、列表过滤与会话分页（076）
 
-IAM 提供只读影响分析查询：角色→持有账号（`GET /api/v1/iam/roles/{id}/accounts`，`iam:role:read`）与权限键→使用角色（`GET /api/v1/iam/permissions/roles?key=…`，`iam:permission:read`），供角色归档/权限退役前影响分析；不新增权限键、不改变授权状态。账号列表支持 status/archived/roleId typed 过滤（Count/List 同条件）；会话列表支持分页与 status（all/active/revoked，active = 未吊销且未过期）过滤，保持 IDHash 低敏摘要。密码强度策略由 `iam.local.passwordPolicy` 配置（默认 15/128、复杂度开关默认关），在 Service 构造时冻结，只约束新建密码路径，不重验存量哈希。
+IAM 提供只读影响分析查询：角色→持有账号（`GET /api/v1/iam/roles/{id}/accounts`，`iam:role:read`）与权限键→使用角色（`GET /api/v1/iam/permissions/roles?key=…`，`iam:permission:read`），供角色归档/权限退役前影响分析；不新增权限键、不改变授权状态。账号列表支持 status/archived/roleId typed 过滤（Count/List 同条件）；会话列表支持分页与 status（all/active/revoked，active = 未吊销且未过期）过滤，保持 IDHash 低敏摘要。密码强度策略由 `iam.local.passwordPolicy` 配置（默认 8/128、复杂度开关默认关），在 Service 构造时冻结，只约束新建密码路径，不重验存量哈希。
 
 ## 口令治理与会话治理（077）
 

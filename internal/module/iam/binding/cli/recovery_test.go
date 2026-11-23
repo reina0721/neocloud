@@ -33,7 +33,7 @@ func TestOwnerRecoveryPromptsRequireConfirmationAndSuppressPasswordEcho(t *testi
 				io.Reader
 				io.Writer
 			}{strings.NewReader(tc.input), &output}, "")
-			owner, value, err := promptOwnerRecovery(t.Context(), terminal, tc.owners)
+			owner, value, err := promptOwnerRecovery(t.Context(), terminal, tc.owners, model.DefaultPasswordPolicy())
 			if !errors.Is(err, tc.wantError) || owner.ID != tc.wantID || (tc.wantError == nil && value != password) {
 				t.Fatal("恢复提示未按选择、确认或取消的结果结束")
 			}
@@ -50,11 +50,27 @@ func TestOwnerRecoveryPromptsRequireConfirmationAndSuppressPasswordEcho(t *testi
 		io.Reader
 		io.Writer
 	}{strings.NewReader("y\r" + password + "\rshort-other-password\r"), &output}, "")
-	if _, _, err := promptOwnerRecovery(t.Context(), terminal, owners[:1]); err == nil {
+	if _, _, err := promptOwnerRecovery(t.Context(), terminal, owners[:1], model.DefaultPasswordPolicy()); err == nil {
 		t.Fatal("接受了不一致的密码")
 	}
 	if strings.Contains(output.String(), password) || strings.Contains(output.String(), "short-other-password") {
 		t.Fatal("密码不一致时回显了输入密码")
+	}
+}
+
+func TestOwnerRecoveryRetriesAgainstActivePolicy(t *testing.T) {
+	var output bytes.Buffer
+	terminal := term.NewTerminal(struct {
+		io.Reader
+		io.Writer
+	}{strings.NewReader("y\ra\rsolo\rsolo\r"), &output}, "")
+	policy := model.PasswordPolicy{MinLength: 4, MaxLength: 12}
+	_, password, err := promptOwnerRecovery(t.Context(), terminal, []model.RecoveryOwner{{ID: "owner", Username: "fixture"}}, policy)
+	if err != nil || password != "solo" || !strings.Contains(output.String(), "至少需要 4 个字符") {
+		t.Fatalf("恢复未在同次交互中应用配置的长度要求: %v", err)
+	}
+	if strings.Contains(output.String(), "solo") {
+		t.Fatal("重试时回显了密码")
 	}
 }
 

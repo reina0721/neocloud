@@ -16,7 +16,7 @@ import (
 const (
 	// OwnerRoleCode 是不可改名、不可归档的系统所有者角色编码。
 	OwnerRoleCode    = "owner"
-	MinPasswordRunes = 15
+	MinPasswordRunes = 8
 	MaxPasswordRunes = 128
 )
 
@@ -118,7 +118,7 @@ type PasswordPolicy struct {
 	MaxPasswordAge time.Duration
 }
 
-// DefaultPasswordPolicy 返回与既有硬编码语义一致的默认策略（15/128、不要求复杂度）。
+// DefaultPasswordPolicy 返回未显式配置时的密码策略。
 func DefaultPasswordPolicy() PasswordPolicy {
 	return PasswordPolicy{MinLength: MinPasswordRunes, MaxLength: MaxPasswordRunes}
 }

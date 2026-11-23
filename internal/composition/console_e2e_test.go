@@ -90,7 +90,7 @@ func TestConsoleSQLiteSetupPolicyAndFailures(t *testing.T) {
 		minLength, maxLength int
 		requireComplexity    bool
 	}{
-		{name: "default", minLength: 15, maxLength: 128},
+		{name: "default", minLength: 8, maxLength: 128},
 		{
 			name: "configured", minLength: 18, maxLength: 32, requireComplexity: true,
 			passwordConfig: "    passwordPolicy:\n      minLength: 18\n      maxLength: 32\n      requireComplexity: true\n",
@@ -126,10 +126,13 @@ func TestConsoleSQLiteSetupPolicyAndFailures(t *testing.T) {
 
 			client := &consoleTestClient{base: base, cookies: map[string]string{}}
 			client.request(t, "GET", "/auth/csrf", nil, http.StatusOK)
-			const password = "Fixture-Password-123"
 			const setupToken = "console-setup-fixture"
 			const email = "setup@example.test"
 			const name = "Setup owner"
+			password := strings.Repeat("a", tc.minLength)
+			if tc.requireComplexity {
+				password = "Aa1" + strings.Repeat("a", tc.minLength-3)
+			}
 			setup := func(token, password, email, name string, status int, reason string) {
 				t.Helper()
 				value := client.request(t, "POST", "/auth/setup", map[string]string{

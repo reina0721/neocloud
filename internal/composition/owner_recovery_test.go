@@ -37,7 +37,7 @@ func TestOwnerRecoveryUsesExistingSQLiteInstanceAndRequiresPasswordChange(t *tes
 	executor := newOwnerRecoveryTestExecutor(t, path)
 	ctx := t.Context()
 	cancelled := errors.New("test recovery canceled")
-	if err := executor.RecoverOwner(ctx, func(_ context.Context, owners []model.RecoveryOwner) (string, string, error) {
+	if err := executor.RecoverOwner(ctx, func(_ context.Context, owners []model.RecoveryOwner, _ model.PasswordPolicy) (string, string, error) {
 		if len(owners) != 0 {
 			t.Fatal("uninitialized SQLite instance listed owners")
 		}
@@ -54,7 +54,7 @@ func TestOwnerRecoveryUsesExistingSQLiteInstanceAndRequiresPasswordChange(t *tes
 	client.request(t, "POST", "/auth/setup", map[string]string{
 		"setupToken": setupToken, "email": username, "name": "Fixture owner", "password": originalPassword,
 	}, http.StatusOK)
-	if err := executor.RecoverOwner(ctx, func(_ context.Context, owners []model.RecoveryOwner) (string, string, error) {
+	if err := executor.RecoverOwner(ctx, func(_ context.Context, owners []model.RecoveryOwner, _ model.PasswordPolicy) (string, string, error) {
 		if len(owners) != 1 || owners[0].Username != username {
 			t.Fatal("configured SQLite instance did not list its active owner")
 		}
@@ -63,9 +63,12 @@ func TestOwnerRecoveryUsesExistingSQLiteInstanceAndRequiresPasswordChange(t *tes
 		t.Fatalf("cancelled recovery returned %v", err)
 	}
 	client.request(t, "GET", "/auth/session", nil, http.StatusOK)
-	if err := executor.RecoverOwner(ctx, func(_ context.Context, owners []model.RecoveryOwner) (string, string, error) {
+	if err := executor.RecoverOwner(ctx, func(_ context.Context, owners []model.RecoveryOwner, policy model.PasswordPolicy) (string, string, error) {
 		if len(owners) != 1 || owners[0].Username != username {
 			t.Fatal("configured SQLite instance did not list its active owner")
+		}
+		if policy != model.DefaultPasswordPolicy() {
+			t.Fatal("recovery did not receive the instance policy")
 		}
 		return owners[0].ID, temporaryPassword, nil
 	}); err != nil {
@@ -88,7 +91,7 @@ func TestOwnerRecoveryDoesNotCreateMissingSQLiteInstance(t *testing.T) {
 	missing := filepath.Join(dir, "missing")
 	writeGenerationConfig(t, path, generationConfig(dir, 120, 1<<20, filepath.Join(missing, "app.db")))
 	executor := newOwnerRecoveryTestExecutor(t, path)
-	if err := executor.RecoverOwner(t.Context(), func(context.Context, []model.RecoveryOwner) (string, string, error) {
+	if err := executor.RecoverOwner(t.Context(), func(context.Context, []model.RecoveryOwner, model.PasswordPolicy) (string, string, error) {
 		t.Fatal("recovery prompted for an account in a missing instance")
 		return "", "", nil
 	}); err == nil {

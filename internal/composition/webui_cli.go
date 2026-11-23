@@ -12,6 +12,8 @@ import (
 	"github.com/reina0721/clouddrive/internal/module/iam"
 	iamcli "github.com/reina0721/clouddrive/internal/module/iam/binding/cli"
 	iamconfig "github.com/reina0721/clouddrive/internal/module/iam/binding/config"
+	iammodel "github.com/reina0721/clouddrive/internal/module/iam/model"
+	iamservice "github.com/reina0721/clouddrive/internal/module/iam/service"
 	"github.com/reina0721/clouddrive/pkg/clock"
 	"github.com/reina0721/clouddrive/pkg/idgen"
 	"github.com/reina0721/clouddrive/pkg/supervisor"
@@ -78,11 +80,15 @@ func (e iamExecutor) RecoverOwner(ctx context.Context, selectRecovery iamcli.Sel
 	if err != nil {
 		return err
 	}
-	id, password, err := selectRecovery(ctx, owners)
+	id, password, err := selectRecovery(ctx, owners, iammodel.PasswordPolicy(iamConfig.Local.PasswordPolicy))
 	if err != nil {
 		return err
 	}
-	return iamModule.Administration.RecoverOwnerPassword(ctx, id, password)
+	err = iamModule.Administration.RecoverOwnerPassword(ctx, id, password)
+	if errors.Is(err, iamservice.ErrPasswordReused) {
+		return fmt.Errorf("新密码与近期用过的密码相同，请换一个后重试: %w", err)
+	}
+	return err
 }
 
 func (a *Application) executeIAMResetPassword(ctx context.Context, username, password string) error {

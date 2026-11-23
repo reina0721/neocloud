@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/reina0721/clouddrive/internal/module/iam/model"
 	"github.com/reina0721/clouddrive/pkg/cli"
@@ -15,7 +16,7 @@ import (
 )
 
 // SelectOwnerRecovery 由本机 CLI 选定账号并读取经确认的临时密码。
-type SelectOwnerRecovery func(context.Context, []model.RecoveryOwner) (accountID, password string, err error)
+type SelectOwnerRecovery func(context.Context, []model.RecoveryOwner, model.PasswordPolicy) (accountID, password string, err error)
 
 var errRecoveryCanceled = errors.New("已取消所有者恢复")
 
@@ -30,8 +31,8 @@ func (c *Contract) recoverOwnerCommand() cli.CommandSpec {
 				return &cli.UsageError{Command: ctx.CommandPath, Message: "所有者恢复需要交互式终端"}
 			}
 			var selected model.RecoveryOwner
-			err := c.executor.RecoverOwner(ctx.Context, func(operationCtx context.Context, owners []model.RecoveryOwner) (string, string, error) {
-				owner, password, err := readOwnerRecovery(operationCtx, stdin, stdout, owners)
+			err := c.executor.RecoverOwner(ctx.Context, func(operationCtx context.Context, owners []model.RecoveryOwner, policy model.PasswordPolicy) (string, string, error) {
+				owner, password, err := readOwnerRecovery(operationCtx, stdin, stdout, owners, policy)
 				selected = owner
 				return owner.ID, password, err
 			})
@@ -44,7 +45,7 @@ func (c *Contract) recoverOwnerCommand() cli.CommandSpec {
 	}
 }
 
-func readOwnerRecovery(ctx context.Context, stdin, stdout *os.File, owners []model.RecoveryOwner) (_ model.RecoveryOwner, _ string, resultErr error) {
+func readOwnerRecovery(ctx context.Context, stdin, stdout *os.File, owners []model.RecoveryOwner, policy model.PasswordPolicy) (_ model.RecoveryOwner, _ string, resultErr error) {
 	if len(owners) == 0 {
 		return model.RecoveryOwner{}, "", errors.New("当前实例没有可恢复的系统所有者")
 	}
@@ -70,14 +71,14 @@ func readOwnerRecovery(ctx context.Context, stdin, stdout *os.File, owners []mod
 			return model.RecoveryOwner{}, "", fmt.Errorf("设置终端尺寸: %w", err)
 		}
 	}
-	owner, password, err := promptOwnerRecovery(ctx, terminal, owners)
+	owner, password, err := promptOwnerRecovery(ctx, terminal, owners, policy)
 	if errors.Is(err, io.EOF) {
 		return model.RecoveryOwner{}, "", errors.Join(errRecoveryCanceled, err)
 	}
 	return owner, password, err
 }
 
-func promptOwnerRecovery(ctx context.Context, terminal *term.Terminal, owners []model.RecoveryOwner) (model.RecoveryOwner, string, error) {
+func promptOwnerRecovery(ctx context.Context, terminal *term.Terminal, owners []model.RecoveryOwner, policy model.PasswordPolicy) (model.RecoveryOwner, string, error) {
 	selected := owners[0]
 	if len(owners) > 1 {
 		for index, owner := range owners {
@@ -108,7 +109,7 @@ func promptOwnerRecovery(ctx context.Context, terminal *term.Terminal, owners []
 	if err := ctx.Err(); err != nil {
 		return model.RecoveryOwner{}, "", err
 	}
-	password, err := terminal.ReadPassword("输入新临时密码 > ")
+	password, err := promptRecoveryPassword(ctx, terminal, policy)
 	if err != nil {
 		return model.RecoveryOwner{}, "", err
 	}
@@ -126,4 +127,38 @@ func promptOwnerRecovery(ctx context.Context, terminal *term.Terminal, owners []
 		return model.RecoveryOwner{}, "", err
 	}
 	return selected, password, nil
+}
+
+func promptRecoveryPassword(ctx context.Context, terminal *term.Terminal, policy model.PasswordPolicy) (string, error) {
+	rule := fmt.Sprintf("新临时密码需为 %d–%d 个字符", policy.MinLength, policy.MaxLength)
+	if policy.RequireComplexity {
+		rule += "，并同时包含大写字母、小写字母和数字"
+	}
+	if _, err := fmt.Fprintln(terminal, rule+"。"); err != nil {
+		return "", err
+	}
+	for {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+		password, err := terminal.ReadPassword("输入新临时密码 > ")
+		if err != nil {
+			return "", err
+		}
+		if model.ValidatePasswordWith(password, policy) == nil {
+			return password, nil
+		}
+		length := utf8.RuneCountInString(password)
+		switch {
+		case length < policy.MinLength:
+			_, err = fmt.Fprintf(terminal, "密码太短，至少需要 %d 个字符。\n", policy.MinLength)
+		case length > policy.MaxLength:
+			_, err = fmt.Fprintf(terminal, "密码太长，最多允许 %d 个字符。\n", policy.MaxLength)
+		default:
+			_, err = fmt.Fprintln(terminal, "密码需同时包含大写字母、小写字母和数字。")
+		}
+		if err != nil {
+			return "", err
+		}
+	}
 }
