@@ -16,13 +16,16 @@ node scripts/dev.mjs
 
 启动器按当前实例的状态提示登录或首次设置。首次设置令牌默认位于 `.data/dev/setup-token`。如果启动前设置了 `APP_IAM__LOCAL__SETUPTOKEN`，本次服务使用环境变量中的值，终端只提示令牌来源。已有实例无法登录时，使用[账号恢复](first-use.md#无法登录)。令牌不写入聊天或 Git。
 
-需要真实浏览器验收时使用隔离环境：
+预览与一次性浏览器验收使用隔离环境：
 
 ```bash
 node scripts/dev.mjs --preview
+node scripts/dev.mjs --acceptance
 ```
 
-预览使用独立的 `.data/preview/` SQLite、文件、传输目录和账号，默认端口 4180 / 8120 / 9120。账号信息位于 `.data/preview/access.json`，重启复用账号与数据，不继承调用者的 `APP_` 数据库和存储环境。`run.lock` 防止同一环境并发启动；异常退出留下锁时，先确认原进程已停止再移除锁。设置 `CLOUDDRIVE_FILE_TEST_ACCESS` 为该文件的**绝对路径**后，在 frontend 运行 `pnpm exec playwright test --config playwright.files.config.ts file-tests/material-workspace.spec.ts`。该环境与原 Windows 文件预览分离。
+预览使用 `.data/preview/` 的 SQLite、文件、传输目录和账号，默认端口 4180 / 8120 / 9120。账号信息位于 `.data/preview/access.json`，重启复用账号与数据。设置 `CLOUDDRIVE_FILE_TEST_ACCESS` 为该文件的**绝对路径**后，在 frontend 运行 `pnpm exec playwright test --config playwright.files.config.ts file-tests/material-workspace.spec.ts`。
+
+一次性验收每次在 `.data/acceptance/` 创建新目录，运行 Playwright Chromium 后关闭前后端，保留日志用于诊断。默认端口为 4185 / 8088 / 9098。预览和验收都忽略继承的 `APP_` 环境变量，前缀大小写均视为相同。`run.lock` 防止同一环境并发启动。异常退出留下锁时，先确认原进程已停止再移除锁。
 
 `--web-port`、`--api-port`、`--management-port` 可覆盖端口，不会终止占用端口的其它进程。默认使用 Turbopack；需要明确选择 webpack 时加 `--webpack`，不会在失败后静默更换编译器。
 
@@ -30,11 +33,9 @@ Linux 上出现 `inotify` / `EMFILE` 时先检查 `fs.inotify.max_user_instances
 
 ## Windows 既有入口
 
-从仓库根目录执行 scripts/Start-Dev.ps1。若 Go 不在 PATH，传入 -GoExecutable 指定 go.exe；脚本也识别本机 LOCALAPPDATA/clouddrive-tools/go1.26.11/go/bin/go.exe。
+PowerShell 的 `scripts/Start-Dev.ps1` 和 `scripts/Test-Integration.ps1` 调用统一的 Node 入口。Go 不在 PATH 时传入 `--go-executable C:\路径\go.exe`，兼容脚本使用 `-GoExecutable`。前台服务使用 Ctrl+C 关闭。旧版后台开发进程可通过 `scripts/Stop-Dev.ps1` 退出。根配置、数据及仍在使用的 `.data/dev-setup-token` 沿用原路径。
 
-首次启动会复制配置、安装前端依赖、迁移数据库，并启动 Go 与 Next.js。按终端提示登录或首次设置。新实例的设置令牌默认位于 `.data/dev-setup-token`，也可以在启动前设置 `APP_IAM__LOCAL__SETUPTOKEN`。
-
-停止使用 scripts/Stop-Dev.ps1；只停止该脚本记录的进程树，避免按端口结束其它项目。
+原 Windows 文件预览可继续使用 `scripts/Start-FilePreview.ps1`，该入口仍使用 `.data/file-preview/` 与 `.data/preview-access.json`。新版统一入口可通过 `--preview --legacy-preview` 选择同一目录。
 
 ## 分别启动
 
@@ -61,6 +62,6 @@ config.yaml 必须存在，可复制 config.example.yaml 或运行 go run ./cmd/
 
 日常从仓库根运行 `node scripts/verify-changed.mjs --dry-run` 查看选择，再执行 `node scripts/verify-changed.mjs`。环境准备、按包及调用方选择、浏览器配置与完整回归见[验证策略](../development/validation.md)。
 
-前端完整 `pnpm check` 包含模拟与拦截式契约测试，不能代替真实后端验收。`scripts/Test-Integration.ps1` 使用独立数据库验证实际创建与登录退出。
+前端完整 `pnpm check` 包含模拟与拦截式契约测试。运行 `node scripts/dev.mjs --acceptance` 可用独立数据库验证实际创建、密码规则及登录退出。
 
 [完整部署说明](../operations/clouddrive-deployment.md)

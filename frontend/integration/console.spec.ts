@@ -6,8 +6,10 @@ test('empty SQLite setup, real business writes, protected native pages and logou
 }) => {
   const token = process.env.CLOUDDRIVE_TEST_SETUP_TOKEN;
   const password = process.env.CLOUDDRIVE_TEST_PASSWORD;
+  const apiUrl = process.env.CLOUDDRIVE_TEST_API_URL ?? 'http://127.0.0.1:8088';
+  const policyUrl = apiUrl + '/api/console/v1/auth/registration-policy';
   if (!token || !password)
-    throw new Error('Run scripts/Test-Integration.ps1 to create an isolated backend.');
+    throw new Error('Run node scripts/dev.mjs --acceptance to create an isolated backend.');
   const failures: string[] = [];
   page.on('pageerror', (error) => failures.push(error.message));
   await page.goto('/setup');
@@ -49,6 +51,18 @@ test('empty SQLite setup, real business writes, protected native pages and logou
   } finally {
     await guest.close();
   }
+  await page.goto('/system-settings');
+  const policySection = page.getByText('密码强度', { exact: true });
+  await expect(policySection).toBeVisible();
+  const minimum = page.getByLabel('最少字符数', { exact: true });
+  await minimum.fill('4');
+  await page.getByRole('button', { name: '保存密码规则', exact: true }).click();
+  await expect(page.getByText('当前使用在此保存的规则。')).toBeVisible();
+  expect(
+    (await (await page.request.get('/api/console/v1/auth/setup-policy')).json()).minLength,
+  ).toBe(4);
+  await page.getByRole('button', { name: '恢复配置中的规则', exact: true }).click();
+  await expect(minimum).toHaveValue('8');
   await page.goto('/users');
   await expect(
     page.getByRole('gridcell', { name: 'acceptance@clouddrive.test', exact: true }),
@@ -68,7 +82,7 @@ test('empty SQLite setup, real business writes, protected native pages and logou
   await page.getByRole('dialog').getByRole('button', { name: '保存', exact: true }).click();
   await expect(page.getByRole('rowheader', { name: '验收部门', exact: true })).toBeVisible();
   // Persist a real workspace, then execute from the actual browser editor and restore history.
-  await page.evaluate(async () => {
+  await page.evaluate(async (policyUrl) => {
     const base = '/api/console/v1';
     const csrf = (await fetch(base + '/auth/csrf').then((response) => response.json())) as {
       token: string;
@@ -86,7 +100,7 @@ test('empty SQLite setup, real business writes, protected native pages and logou
           collectionId: 'acceptance-collection',
           name: '真实策略查询',
           method: 'GET',
-          url: 'http://127.0.0.1:8088/api/console/v1/auth/registration-policy',
+          url: policyUrl,
           params: [],
           headers: [],
           auth: { type: 'none' },
@@ -112,18 +126,16 @@ test('empty SQLite setup, real business writes, protected native pages and logou
       body: JSON.stringify(workspace),
     });
     if (saved.status !== 204) throw new Error('Real workspace save failed: ' + saved.status);
-  });
+  }, policyUrl);
   await page.goto('/api-workbench');
-  await expect(page.getByRole('textbox', { name: '请求 URL', exact: true })).toHaveValue(
-    'http://127.0.0.1:8088/api/console/v1/auth/registration-policy',
-  );
+  await expect(page.getByRole('textbox', { name: '请求 URL', exact: true })).toHaveValue(policyUrl);
   await page.getByRole('button', { name: '发送', exact: true }).click();
   await expect(page.getByText('200 OK', { exact: true })).toBeVisible();
   await page.getByRole('tab', { name: '历史', exact: true }).click();
-  await expect(page.getByRole('button', { name: /8088\/api\/console/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: policyUrl, exact: false })).toBeVisible();
   await page.reload();
   await page.getByRole('tab', { name: '历史', exact: true }).click();
-  await expect(page.getByRole('button', { name: /8088\/api\/console/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: policyUrl, exact: false })).toBeVisible();
   for (const route of [
     '/system/menus',
     '/system/dictionaries',
@@ -140,6 +152,67 @@ test('empty SQLite setup, real business writes, protected native pages and logou
     ).toHaveCount(0);
     await expect(page.getByRole('main').getByText('操作未完成', { exact: true })).toHaveCount(0);
   }
+  const temporaryPassword = 'tempword';
+  const permanentPassword = 'newpassw';
+  const owned = await page.evaluate(async (temporaryPassword) => {
+    const base = '/api/console/v1';
+    const csrf = (await fetch(base + '/auth/csrf').then((response) => response.json())) as {
+      token: string;
+    };
+    const headers = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf.token };
+    const session = await fetch(base + '/auth/session').then((response) => response.json());
+    const account = await fetch(base + '/users/' + session.user.id).then((response) =>
+      response.json(),
+    );
+    const folder = await fetch(base + '/native/files/folders', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ parentId: '', name: '恢复验收文件夹' }),
+    });
+    if (!folder.ok) throw new Error('Recovery fixture folder failed: ' + folder.status);
+    const entry = await folder.json();
+    const reset = await fetch(
+      base + '/native/iam/accounts/' + session.user.id + '/password-reset',
+      {
+        method: 'POST',
+        headers: { ...headers, 'If-Match': '"' + account.user.version + '"' },
+        body: JSON.stringify({ password: temporaryPassword }),
+      },
+    );
+    if (!reset.ok) throw new Error('Password reset failed: ' + reset.status);
+    const revoked = await fetch(base + '/auth/session');
+    return {
+      accountId: session.user.id as string,
+      fileId: entry.id as string,
+      revoked: revoked.status,
+    };
+  }, temporaryPassword);
+  expect(owned.revoked).toBe(401);
+  async function signIn(value: string) {
+    await page.goto('/login');
+    await page.getByLabel(/邮箱/).fill('acceptance@clouddrive.test');
+    await page.getByLabel('密码', { exact: true }).fill(value);
+    await page.getByRole('button', { name: '登录', exact: true }).click();
+  }
+  await signIn(temporaryPassword);
+  await expect(page.getByRole('heading', { name: '必须修改密码' })).toBeVisible();
+  await page.getByLabel('当前密码', { exact: true }).fill(temporaryPassword);
+  await page.getByLabel('新密码', { exact: true }).fill(permanentPassword);
+  await page.getByRole('button', { name: '保存并重新登录' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await signIn(permanentPassword);
+  await expect(page).toHaveURL(/\/home$/);
+  const afterReset = await page.evaluate(async (fileId) => {
+    const base = '/api/console/v1';
+    const [session, detail] = await Promise.all([
+      fetch(base + '/auth/session'),
+      fetch(base + '/native/files/' + encodeURIComponent(fileId)),
+    ]);
+    if (!session.ok || !detail.ok)
+      throw new Error('Recovery verification failed: ' + session.status + '/' + detail.status);
+    return { accountId: (await session.json()).user.id, name: (await detail.json()).entry.name };
+  }, owned.fileId);
+  expect(afterReset).toEqual({ accountId: owned.accountId, name: '恢复验收文件夹' });
   const result = await page.evaluate(async () => {
     const csrf = (await fetch('/api/console/v1/auth/csrf').then((response) => response.json())) as {
       token: string;

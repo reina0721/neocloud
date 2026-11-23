@@ -32,6 +32,19 @@ func OpenExistingGORM(ctx context.Context, cfg *Config) (Resource, error) {
 	return newGORM(ctx, cfg, false)
 }
 
+// PrepareLocalFile 为写入型工具准备 SQLite 文件与私有目录。其它数据库由服务端管理。
+func PrepareLocalFile(ctx context.Context, cfg *Config) error {
+	if err := validateContext(ctx); err != nil {
+		return err
+	}
+	resolved, err := resolveConfig(cfg)
+	if err != nil || resolved.Driver != DriverSQLite {
+		return err
+	}
+	_, err = prepareSQLite(resolved.DSN)
+	return err
+}
+
 func newGORM(ctx context.Context, cfg *Config, createSQLite bool) (Resource, error) {
 	if err := validateContext(ctx); err != nil {
 		return nil, err

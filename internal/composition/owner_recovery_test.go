@@ -104,6 +104,21 @@ func TestOwnerRecoveryDoesNotCreateMissingSQLiteInstance(t *testing.T) {
 	}
 }
 
+func TestMigrationUpPreparesMissingSQLiteDirectory(t *testing.T) {
+	dir := testkit.PrivateTempDir(t)
+	configPath := filepath.Join(dir, "config.yaml")
+	databasePath := filepath.Join(dir, "instance", "data", "app.db")
+	writeGenerationConfig(t, configPath, generationConfig(dir, 120, 1<<20, databasePath))
+	application := newOwnerRecoveryTestExecutor(t, configPath).application
+	status, err := (migrationExecutor{application: application}).MigrationUp(t.Context())
+	if err != nil || !status.Compatible {
+		t.Fatalf("MigrationUp on a fresh SQLite directory = %+v, %v", status, err)
+	}
+	if _, err := os.Stat(databasePath); err != nil {
+		t.Fatalf("configured database was not prepared: %v", err)
+	}
+}
+
 func newOwnerRecoveryTestExecutor(t *testing.T, configPath string) iamExecutor {
 	t.Helper()
 	manager, err := kernellogging.New(logger.Noop())

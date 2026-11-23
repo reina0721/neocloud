@@ -13,7 +13,14 @@ vi.mock('../auth/context', () => ({ useAuth: () => ({ expire: vi.fn() }) }));
 function renderPasswordChange(request: typeof fetch) {
   vi.stubEnv('NEXT_PUBLIC_AUTH_MODE', 'backend');
   vi.stubEnv('NEXT_PUBLIC_AUTH_API_BASE_URL', '/api/console/v1');
-  vi.stubGlobal('fetch', request);
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
+    if (input === '/api/console/v1/auth/setup-policy') {
+      return Promise.resolve(
+        Response.json({ minLength: 4, maxLength: 24, requireComplexity: false, initialized: true }),
+      );
+    }
+    return request(input, init);
+  });
   render(
     <FrontendI18nProvider
       runtime={createFrontendI18n({
@@ -38,6 +45,7 @@ it('关联必填与新旧密码相同的校验信息，拒绝提交至服务', a
   const currentPassword = screen.getByLabelText('当前密码', { exact: true });
   const newPassword = screen.getByLabelText('新密码', { exact: true });
   const submit = screen.getByRole('button', { name: '保存并重新登录' });
+  await waitFor(() => expect(newPassword).toHaveAccessibleDescription(/4–24/));
 
   fireEvent.click(submit);
   await waitFor(() => expect(currentPassword).toHaveFocus());

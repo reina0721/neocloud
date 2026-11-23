@@ -5,6 +5,7 @@ import {
   access,
   chmod,
   mkdir,
+  mkdtemp,
   open,
   readFile,
   unlink,
@@ -23,43 +24,46 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const { values } = parseArgs({
   options: {
     preview: { type: "boolean", default: false },
+    "legacy-preview": { type: "boolean", default: false },
+    acceptance: { type: "boolean", default: false },
     prepare: { type: "boolean", default: false },
     webpack: { type: "boolean", default: false },
     "web-port": { type: "string" },
     "api-port": { type: "string" },
     "management-port": { type: "string" },
+    "go-executable": { type: "string", default: "go" },
     help: { type: "boolean", default: false },
   },
 });
 if (values.help) {
   console.log(
-    "node scripts/dev.mjs [--preview] [--webpack] [--web-port N] [--api-port N] [--management-port N]\n启动前按锁文件同步前端依赖，兼容旧参数 --prepare。Ctrl+C 关闭拥有的进程树。\n--preview 使用独立数据库并初始化测试账号。",
+    "node scripts/dev.mjs [--preview | --acceptance] [--webpack] [--web-port N] [--api-port N] [--management-port N] [--go-executable PATH]\n启动前按锁文件同步前端依赖，兼容旧参数 --prepare。Ctrl+C 关闭拥有的进程树。\n--preview 保留预览数据并初始化测试账号。--acceptance 使用全新数据库运行真实浏览器验收。",
   );
   process.exit(0);
 }
 if (Number(process.versions.node.split(".")[0]) < 24)
   throw new Error("启动工具需要 Node 24 或更高版本。");
+if (values.preview && values.acceptance)
+  throw new Error("预览与一次性验收只能选择一个。");
+if (values["legacy-preview"] && !values.preview)
+  throw new Error("--legacy-preview 需要同时指定 --preview。");
+const isolated = values.preview || values.acceptance;
 const port = (value, fallback) => {
   const number = Number(value ?? fallback);
   if (!Number.isInteger(number) || number < 1024 || number > 65535)
     throw new Error("端口须为 1024–65535 的整数。");
   return number;
 };
-const webPort = port(values["web-port"], values.preview ? 4180 : 4173);
-const apiPort = port(values["api-port"], values.preview ? 8120 : 8080);
+const webPort = port(values["web-port"], values.acceptance ? 4185 : values.preview ? 4180 : 4173);
+const apiPort = port(values["api-port"], values.acceptance ? 8088 : values.preview ? 8120 : 8080);
 const managementPort = port(
   values["management-port"],
-  values.preview ? 9120 : 9090,
+  values.acceptance ? 9098 : values.preview ? 9120 : 9090,
 );
 if (new Set([webPort, apiPort, managementPort]).size !== 3)
   throw new Error("三个服务必须使用不同端口。");
-const data = join(repo, ".data", values.preview ? "preview" : "dev");
-const binary = join(
-  repo,
-  ".tools",
-  `clouddrive-${values.preview ? "preview" : "dev"}${process.platform === "win32" ? ".exe" : ""}`,
-);
-const workdir = values.preview ? data : repo;
+const acceptanceRoot = join(repo, ".data", "acceptance");
+let data = values.acceptance ? acceptanceRoot : join(repo, ".data", values["legacy-preview"] ? "file-preview" : values.preview ? "preview" : "dev");
 const base = `http://127.0.0.1:${webPort}`;
 const backend = `http://127.0.0.1:${apiPort}`;
 const children = new Set();
@@ -74,7 +78,7 @@ function run(command, args, options = {}) {
   const label = options.label ?? command;
   const child = spawn(command, args, {
     cwd: options.cwd ?? repo,
-    env: { ...process.env, ...options.env },
+    env: { ...(options.baseEnv ?? process.env), ...options.env },
     stdio: options.stdio ?? "inherit",
     detached: process.platform !== "win32",
     shell: false,
@@ -105,9 +109,9 @@ function run(command, args, options = {}) {
   // 保留进程组记录到统一清理结束：根进程退出后仍可能有派生进程。
   return result;
 }
-function pnpm(args) {
+function pnpm(args, env) {
   const npmArgs = ["--yes", "pnpm@10.22.0", ...args];
-  const options = { cwd: join(repo, "frontend"), label: `pnpm ${args[0]}` };
+  const options = { cwd: join(repo, "frontend"), label: `pnpm ${args[0]}`, env };
   if (process.platform === "win32") {
     // 参数均由本工具生成；不用 shell 解释目录或配置值。
     return run(
@@ -244,6 +248,12 @@ try {
   for (const number of [webPort, apiPort, managementPort])
     await freePort(number);
   await mkdir(data, { recursive: true, mode: 0o700 });
+  if (values.acceptance) data = await mkdtemp(join(acceptanceRoot, "run-"));
+  const workdir = isolated ? data : repo;
+  const binary = join(
+    values.acceptance ? data : join(repo, ".tools"),
+    `clouddrive-${values.acceptance ? "acceptance" : values["legacy-preview"] ? "file-preview" : values.preview ? "preview" : "dev"}${process.platform === "win32" ? ".exe" : ""}`,
+  );
   if (process.platform !== "win32") {
     await chmod(join(repo, ".data"), 0o700);
     await chmod(data, 0o700);
@@ -266,45 +276,50 @@ try {
     "--prod=false",
   ]);
   await mkdir(join(repo, ".tools"), { recursive: true });
-  await run("go", ["version"]);
-  await run("go", ["build", "-o", binary, "./cmd/app"]);
-  const tokenPath = join(data, "setup-token");
+  const go = values["go-executable"];
+  await run(go, ["version"]);
+  await run(go, ["build", "-o", binary, "./cmd/app"]);
+  const legacyToken = join(repo, ".data", "dev-setup-token");
+  const tokenPath = !isolated && await exists(legacyToken) && !(await exists(join(data, "setup-token")))
+    ? legacyToken : join(data, "setup-token");
   const providedSetupToken =
-    !values.preview && process.env.APP_IAM__LOCAL__SETUPTOKEN;
+    !isolated && process.env.APP_IAM__LOCAL__SETUPTOKEN;
   if (!providedSetupToken && !(await exists(tokenPath)))
     await privateWrite(tokenPath, randomBytes(32).toString("base64url") + "\n");
-  const setupToken =
+  let setupToken =
     providedSetupToken || (await readFile(tokenPath, "utf8")).trim();
   const tokenSource = providedSetupToken
     ? "环境变量 APP_IAM__LOCAL__SETUPTOKEN"
     : tokenPath;
   const environment = {
     // 预览不能继承调用者的数据库、Storage 或认证配置而连接到真实数据。
-    ...(values.preview
-      ? Object.fromEntries(
-          Object.keys(process.env)
-            .filter((name) => name.startsWith("APP_"))
-            .map((name) => [name, undefined]),
-        )
-      : {}),
     APP_IAM__LOCAL__SETUPTOKEN: setupToken,
     APP_HTTP__ADDR: `127.0.0.1:${apiPort}`,
     APP_MANAGEMENT__ADDR: `127.0.0.1:${managementPort}`,
     APP_HTTP__CORS__ALLOWEDORIGINS: JSON.stringify([base]),
   };
+  const backendOptions = {
+    cwd: workdir,
+    env: environment,
+    baseEnv: isolated ? Object.fromEntries(Object.entries(process.env).filter(([name]) => !/^app_/i.test(name))) : process.env,
+  };
+  const configPath = join(workdir, "config.yaml");
   let accessPath;
   if (values.preview) {
-    // 与正常开发、已有 Windows 预览互不共享数据库和凭据。
-    const configPath = join(data, "config.yaml");
-    accessPath = join(data, "access.json");
+    accessPath = values["legacy-preview"] ? join(repo, ".data", "preview-access.json") : join(data, "access.json");
     let preview;
     if (await exists(accessPath)) {
       preview = JSON.parse(await readFile(accessPath, "utf8"));
-      if (
-        preview.environment !== "clouddrive-node-preview-v1" ||
-        typeof preview.password !== "string"
-      )
+      const legacy = values["legacy-preview"] && preview.environment === undefined &&
+        typeof preview.username === "string" && typeof preview.setupToken === "string" &&
+        typeof preview.dataDirectory === "string" && resolve(preview.dataDirectory) === data;
+      if ((!legacy && preview.environment !== "clouddrive-node-preview-v1") || typeof preview.password !== "string")
         throw new Error("预览目录不是本工具创建的环境，已保留其内容。");
+      if (legacy) {
+        setupToken = preview.setupToken;
+        environment.APP_IAM__LOCAL__SETUPTOKEN = setupToken;
+        await privateWrite(tokenPath, setupToken + "\n");
+      }
     } else {
       if (await exists(configPath))
         throw new Error("预览目录已有配置，已保留其内容。");
@@ -315,25 +330,25 @@ try {
       };
     }
     Object.assign(preview, {
+      environment: "clouddrive-node-preview-v1",
       url: base + "/home",
       apiUrl: backend,
       managementUrl: `http://127.0.0.1:${managementPort}`,
       setupToken,
       dataDirectory: data,
     });
-    await privateWrite(
-      configPath,
-      `logger:\n  environment: development\n  level: info\ndatabase:\n  driver: sqlite\n  dsn: app.db\nauth:\n  mode: session\nhttp:\n  cors:\n    allowedOrigins: [${base}]\nstorage:\n  driver: local\n  local:\n    basePath: storage\nfiles:\n  transfers:\n    stagingPath: transfers\n`,
-    );
     await privateWrite(accessPath, JSON.stringify(preview, null, 2) + "\n");
-  } else if (!(await exists(join(repo, "config.yaml")))) {
+  }
+  if (isolated && !(await exists(configPath))) {
+    await privateWrite(configPath, `logger:\n  environment: development\n  level: info\ndatabase:\n  driver: sqlite\n  dsn: app.db\nauth:\n  mode: session\nhttp:\n  addr: 127.0.0.1:${apiPort}\nmanagement:\n  addr: 127.0.0.1:${managementPort}\nstorage:\n  driver: local\n  local:\n    basePath: storage\nfiles:\n  transfers:\n    stagingPath: transfers\n`);
+  } else if (!isolated && !(await exists(configPath))) {
     await run(binary, ["config", "init"]);
   }
-  await run(binary, ["db", "migrate", "up"], {
-    cwd: workdir,
-    env: environment,
-  });
-  await launch("backend", binary, [], { cwd: workdir, env: environment });
+  if (values.acceptance) environment.APP_CONSOLE__RELAY__ALLOWEDORIGINS = JSON.stringify([backend]);
+  await run(binary, ["db", "migrate", "up"], backendOptions);
+  if (values.acceptance)
+    await run(binary, ["iam", "password-policy", "show"], { cwd: workdir, baseEnv: backendOptions.baseEnv });
+  await launch("backend", binary, [], backendOptions);
   await ready(`http://127.0.0.1:${managementPort}/readyz`);
   await ready(backend + "/api/console/v1/auth/registration-policy");
   await pnpm(["codegen:plugins"]);
@@ -351,7 +366,7 @@ try {
         WEB_HOST: "127.0.0.1",
         WEB_PORT: String(webPort),
         CLOUDDRIVE_BACKEND_URL: backend,
-        NEXT_DIST_DIR: values.preview ? ".next/preview" : ".next",
+        NEXT_DIST_DIR: values.acceptance ? `.next/acceptance-${webPort}` : values["legacy-preview"] ? ".next/file-preview" : values.preview ? ".next/preview" : ".next",
         ...(values.webpack
           ? { CLOUDDRIVE_DEV_BUNDLER: "webpack", WATCHPACK_POLLING: "true" }
           : {}),
@@ -360,19 +375,29 @@ try {
   );
   await ready(base + "/login", "frontend");
   await ready(base + "/api/console/v1/auth/registration-policy", "frontend");
-  if (accessPath)
-    await run(process.execPath, [
-      join(repo, "scripts/initialize-file-preview.mjs"),
-      accessPath,
-    ]);
-  const entry = accessPath
-    ? `预览：${base}/home\n测试账号：${accessPath}`
-    : await devSetupMessage(base, tokenSource, controller.signal);
-  console.log(`${entry}\n日志：${data}\nCtrl+C 关闭服务，数据保留。`);
-  if (!controller.signal.aborted)
-    await new Promise((done) =>
-      controller.signal.addEventListener("abort", done, { once: true }),
-    );
+  if (values.acceptance) {
+    console.log(`验收日志与数据：${data}`);
+    await pnpm(["exec", "playwright", "test", "--config", "playwright.integration.config.ts"], {
+      CLOUDDRIVE_TEST_WEB_URL: base,
+      CLOUDDRIVE_TEST_API_URL: backend,
+      CLOUDDRIVE_TEST_SETUP_TOKEN: setupToken,
+      CLOUDDRIVE_TEST_PASSWORD: randomBytes(24).toString("base64url"),
+    });
+  } else {
+    if (accessPath)
+      await run(process.execPath, [
+        join(repo, "scripts/initialize-file-preview.mjs"),
+        accessPath,
+      ]);
+    const entry = accessPath
+      ? `预览：${base}/home\n测试账号：${accessPath}`
+      : await devSetupMessage(base, tokenSource, controller.signal);
+    console.log(`${entry}\n日志：${data}\nCtrl+C 关闭服务，数据保留。`);
+    if (!controller.signal.aborted)
+      await new Promise((done) =>
+        controller.signal.addEventListener("abort", done, { once: true }),
+      );
+  }
 } catch (error) {
   if (!controller.signal.aborted) failure = error;
 } finally {

@@ -16,7 +16,7 @@ export default function nextConfig(phase: string): NextConfig {
     experimental: {
       proxyClientMaxBodySize: '32mb',
       // 多个隔离生产目录不保留编译数据库；避免缓存压缩额外占用构建磁盘。
-      turbopackFileSystemCacheForBuild: false,
+      turbopackFileSystemCacheForBuild: process.env.CLOUDDRIVE_NATIVE_BUILD_CACHE === '1',
     },
     // 浏览器验收使用独立构建目录，避免与普通开发或生产构建相互覆盖。
     distDir: config.distDir ?? (phase === PHASE_DEVELOPMENT_SERVER ? '.next' : 'dist'),

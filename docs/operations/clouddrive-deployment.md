@@ -127,7 +127,25 @@ Web Host 校验外部 Host/Origin，并向 Go 转发内部同源请求；额外�
 
 ## 构建与进程
 
-使用 Go 1.26.11、Node 24 和 pnpm 10.22.0。Windows 可执行 `scripts/Build.ps1`；已安装工具链的 Linux 环境执行：
+从仓库根目录使用 Go 1.26.11 或更新版本和 Node 24 执行：
+
+```bash
+node scripts/build.mjs
+```
+
+工具使用锁定版本的 pnpm。Windows 直接生成 ZIP。Linux 使用系统 `tar` 按本机架构生成 tar.gz，分别在 amd64 和 arm64 环境运行构建以取得相应包。解包后在 `clouddrive` 目录启动各自的进程。Windows 示例：
+
+```powershell
+.\clouddrive.exe config init
+.\clouddrive.exe db migrate up
+.\clouddrive.exe
+# 另开终端，仍在解包后的 clouddrive 目录
+node start-web.mjs
+```
+
+首次设置前通过实例配置或进程环境提供设置令牌。已有实例升级时继续从原工作目录启动 Go，以便使用现有配置、数据库和文件位置。Web Host 只需 Node 24，可用 `CLOUDDRIVE_BACKEND_URL` 指向 Go 服务。Windows 的 `start-web.mjs` 在解包目录内恢复 Next 的依赖目录链接。Linux 可用相同的 Web 启动命令，Go 文件名为 `clouddrive`。
+
+单独构建两端或为容器构建标准 Next 输出时，仍可执行：
 
 ```bash
 go build -trimpath -buildvcs=false -o dist/clouddrive ./cmd/app
@@ -165,7 +183,7 @@ PowerShell 对应设置 `$env:CLOUDDRIVE_BACKEND_URL`、`$env:HOSTNAME`、`$env:
 
 将已有本地数据迁入容器时，保持存储位置标识和访问路径稳定。系统会把本地存储的绝对路径与文件元数据绑定；直接把原目录挂到另一个路径，会触发内容迁移保护并拒绝启动。本地验收沿用原绝对路径作为容器挂载目标与工作目录，使用可读写该目录的非 root UID，数据库和文件保持原样。需要改变存储位置时，应先完成明确的内容迁移。
 
-默认 SQLite；持久化 .data/。MySQL/PostgreSQL 通过 driver/DSN 指定并执行 db migrate up，三种方言迁移均保留。升级前备份数据库；同一数据库必须执行全部六个迁移集。迁移失败/dirty 时停止启动并按原迁移工具恢复，不能直接删除版本记录。
+默认 SQLite，数据保存在 `.data/`。MySQL/PostgreSQL 通过 driver/DSN 指定并执行 `db migrate up`。三种方言都使用同一组模块迁移。升级前备份数据库，迁移失败或存在 dirty 记录时，按迁移工具流程恢复。
 
 scheduler.enabled 默认 true；任务定义与下次运行时间保存在数据库，重启后重新加载。关闭调度器会保留任务并停止派发。任务由既有 execution 生命周期执行；每次执行重新检查账号状态与权限，执行权通过版本比较领取，避免重复派发。当前本地调度适用于单个后端实例；多实例上线前配置并验证既有协调能力。
 

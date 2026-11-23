@@ -3,9 +3,8 @@ import { cp, lstat, mkdir, readdir, realpath, symlink } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 // 保持 pnpm 模块解析拓扑；Windows junction 是绝对路径，搬迁时须重新指向新追踪目录。
-export async function copyStandalone(source, destination) {
+export async function inspectStandaloneLinks(source) {
   const root = await realpath(source);
-  const output = resolve(destination);
   const links = [];
   async function inspect(path) {
     for (const entry of await readdir(path, { withFileTypes: true })) {
@@ -25,6 +24,13 @@ export async function copyStandalone(source, destination) {
     }
   }
   await inspect(root);
+  return links;
+}
+
+export async function copyStandalone(source, destination) {
+  const root = await realpath(source);
+  const output = resolve(destination);
+  const links = await inspectStandaloneLinks(root);
   await cp(root, output, {
     recursive: true,
     errorOnExist: true,

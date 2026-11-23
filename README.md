@@ -36,7 +36,7 @@ bash install.sh install --dir "$HOME/clouddrive" --bind 127.0.0.1
 
 ## 源码开发
 
-需要 Go **1.26.11** 和带 npm 的 Node **24**。克隆仓库后运行：
+需要 Go **1.26.11** 或更新版本和带 npm 的 Node **24**。克隆仓库后运行：
 
 ```bash
 git clone https://github.com/reina0721/neocloud.git
@@ -45,6 +45,8 @@ node scripts/dev.mjs
 ```
 
 启动完成后按终端提示进入登录页或首次设置页。新实例的设置令牌默认位于本地忽略目录 `.data/dev/setup-token`。启动前自动使用 pnpm **10.22.0** 按锁文件同步前端依赖，随后准备配置、迁移数据库并检查服务就绪。Ctrl+C 停止其拥有的服务。隔离真实预览使用 `node scripts/dev.mjs --preview`。已有数据库与文件须保留，不作为可随意清空的测试夹具。Windows 命令、完整前置与排障见[本地开发](docs/getting-started/local-development.md)。
+
+使用 `node scripts/dev.mjs --acceptance` 在全新 SQLite 上运行真实浏览器验收。使用 `node scripts/build.mjs` 生成包含 Go 和 Web Host 的本机包，产物在 `dist/native/`。见[构建与部署](docs/operations/clouddrive-deployment.md#构建与进程)。
 
 ## 结构与验证
 

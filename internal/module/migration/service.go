@@ -193,8 +193,11 @@ func (s *Service) Compatible(ctx context.Context) error {
 	return nil
 }
 
-// DefaultPreflight 拒绝任何已注册的退休 baseline 标记，且绝不自动修改用户数据库。
+// DefaultPreflight 准备新 SQLite 文件并检查旧结构，不执行 schema 迁移。
 func DefaultPreflight(ctx context.Context, config database.Config, catalog Catalog) error {
+	if err := database.PrepareLocalFile(ctx, &config); err != nil {
+		return fmt.Errorf("prepare migration database file: %w", err)
+	}
 	tables := make([]string, 0)
 	owners := make(map[string]string)
 	for _, registration := range catalog.registrations {

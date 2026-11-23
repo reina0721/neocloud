@@ -1,6 +1,6 @@
 // 按实际构建平台收集许可；输出只进入忽略的发布目录。
 import { execFileSync } from "node:child_process";
-import { copyFile, mkdir } from "node:fs/promises";
+import { copyFile, mkdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import assert from "node:assert/strict";
@@ -10,13 +10,25 @@ const { values } = parseArgs({
     output: { type: "string" },
     goos: { type: "string" },
     goarch: { type: "string" },
+    "go-executable": { type: "string", default: "go" },
+    "from-module": { type: "boolean", default: false },
   },
 });
 assert.ok(values.output, "需要 --output");
-assert.ok(["linux", "windows"].includes(values.goos), "不支持的 GOOS");
+assert.ok(["linux", "windows", "darwin"].includes(values.goos), "不支持的 GOOS");
 assert.ok(["amd64", "arm64"].includes(values.goarch), "不支持的 GOARCH");
 const output = resolve(values.output);
-execFileSync("go-licenses", ["save", "./cmd/app", "--save_path=" + output], {
+const go = values["go-executable"];
+const args = ["save", "./cmd/app", "--save_path=" + output];
+let command = "go-licenses";
+if (values["from-module"]) {
+  const tools = await readFile(new URL("./tool-versions.env", import.meta.url), "utf8");
+  const version = /^GO_LICENSES_VERSION=(v[\d.]+)\s*$/m.exec(tools)?.[1];
+  assert.ok(version, "缺少 go-licenses 的固定版本");
+  command = go;
+  args.unshift("run", "github.com/google/go-licenses/v2@" + version);
+}
+execFileSync(command, args, {
   stdio: "inherit",
   env: {
     ...process.env,
@@ -25,7 +37,7 @@ execFileSync("go-licenses", ["save", "./cmd/app", "--save_path=" + output], {
     GOARCH: values.goarch,
   },
 });
-const goroot = execFileSync("go", ["env", "GOROOT"], {
+const goroot = execFileSync(go, ["env", "GOROOT"], {
   encoding: "utf8",
 }).trim();
 await mkdir(output, { recursive: true });

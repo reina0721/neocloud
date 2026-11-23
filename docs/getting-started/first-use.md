@@ -13,6 +13,8 @@ go run ./cmd/app iam recover-owner
 
 恢复命令从当前实例列出可恢复的所有者。选择并确认目标后，两次输入新临时密码，终端会屏蔽输入。密码重置撤销目标账号的旧网页登录会话，保留账号、角色和文件归属。用选中的登录名和临时密码登录后，按页面提示修改密码。启用双重验证的账号仍需使用认证器或恢复码完成验证。
 
+系统所有者可以在网页配置密码强度。维护者无法登录时，可在主机用 `iam password-policy show` 查看当前规则，或通过 `iam password-policy set` 修改。见[密码强度配置](../configuration/README.md#密码强度)。
+
 ## 从文件开始
 
 1. 登录后进入 `/home` 的“我的文件”。创建一个验收目录，上传小文件或新建文本文件；刷新页面，确认名称、内容和目录位置仍然存在。
@@ -34,4 +36,4 @@ go run ./cmd/app iam recover-owner
 
 ## 验收证据
 
-接口与重启集成测试见 [console_e2e_test.go](../../internal/composition/console_e2e_test.go)，跨进程浏览器验收入口为 [Test-Integration.ps1](../../scripts/Test-Integration.ps1)。执行方式与扩大范围遵循[验证策略](../development/validation.md)，浏览器模式与服务隔离见[前端质量说明](../../frontend/docs/quality-evidence.md)。记录实际 revision、命令、环境、结果与未验证项；历史 ADR 不代表当前检查通过。
+接口与重启集成测试见 [console_e2e_test.go](../../internal/composition/console_e2e_test.go)，跨进程浏览器验收执行 `node scripts/dev.mjs --acceptance`。执行方式与扩大范围遵循[验证策略](../development/validation.md)，浏览器模式与服务隔离见[前端质量说明](../../frontend/docs/quality-evidence.md)。记录实际 revision、命令、环境、结果与未验证项。
