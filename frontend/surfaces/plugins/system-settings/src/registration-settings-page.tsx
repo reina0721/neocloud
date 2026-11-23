@@ -253,7 +253,9 @@ export function RegistrationSettingsPage() {
       <PageHeader title={t('systemSettings.title')} description={t('systemSettings.description')} />
       {port.mode === 'backend' ? <SettingsSections active="registration" /> : null}
       <IdentityModeNotice mode={port.mode} />
-      {port.mode === 'backend' ? <PasswordPolicySection key={port.currentUserId()} /> : null}
+      {port.mode === 'backend' ? (
+        <PasswordPolicySection key={`password-policy:${port.currentUserId() ?? ''}`} />
+      ) : null}
       {query.error || !query.data ? (
         <IdentityQueryState error={query.error} retry={query.reload} />
       ) : (

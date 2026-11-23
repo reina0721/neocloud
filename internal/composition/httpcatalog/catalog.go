@@ -4,6 +4,7 @@ package httpcatalog
 
 import (
 	authhttp "github.com/reina0721/clouddrive/internal/module/auth/binding/http"
+	consolehttp "github.com/reina0721/clouddrive/internal/module/console/binding/http"
 	fileshttp "github.com/reina0721/clouddrive/internal/module/files/binding/http"
 	iamhttp "github.com/reina0721/clouddrive/internal/module/iam/binding/http"
 	navigationhttp "github.com/reina0721/clouddrive/internal/module/navigation/binding/http"
@@ -11,6 +12,11 @@ import (
 	todohttp "github.com/reina0721/clouddrive/internal/module/todo/binding/http"
 	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
 )
+
+// ConsoleServerPaths 导出由 Console 服务端拥有的 OpenAPI 路径片段。
+func ConsoleServerPaths() humabinding.OpenAPIPaths {
+	return consolehttp.PasswordPolicyOpenAPIPaths()
+}
 
 // Registrations 是当前应用 HTTP 模块选择的唯一静态清单，不持有运行期对象。
 func Registrations() []humabinding.Registration {

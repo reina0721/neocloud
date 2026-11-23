@@ -17,6 +17,9 @@ const definitionMetadata = "project.definition"
 // Registration 是无资源、可重复构造 OpenAPI 的模块 registration。
 type Registration func(huma.API)
 
+// OpenAPIPaths 是其他 HTTP 入口可以拼入文档的静态路径声明。
+type OpenAPIPaths = map[string]*huma.PathItem
+
 const (
 	SecurityNone         = ""
 	SecurityBearer       = "bearerAuth"

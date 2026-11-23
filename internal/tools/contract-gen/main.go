@@ -14,7 +14,6 @@ import (
 	"unicode"
 
 	"github.com/reina0721/clouddrive/internal/composition/httpcatalog"
-	consolehttp "github.com/reina0721/clouddrive/internal/module/console/binding/http"
 	"github.com/reina0721/clouddrive/internal/projectlayout"
 	httptransport "github.com/reina0721/clouddrive/internal/transport/http"
 	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
@@ -49,7 +48,7 @@ func main() {
 		fail(err)
 	}
 	if *consolePaths != "" {
-		encoded, err := json.MarshalIndent(consolehttp.PasswordPolicyOpenAPIPaths(), "", "  ")
+		encoded, err := json.MarshalIndent(httpcatalog.ConsoleServerPaths(), "", "  ")
 		if err != nil {
 			fail(err)
 		}
