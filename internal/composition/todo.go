@@ -3,140 +3,79 @@ package composition
 import (
 	"context"
 	"fmt"
-
-	"github.com/reina0721/clouddrive/internal/kernel"
-	databaseapp "github.com/reina0721/clouddrive/internal/kernel/app/database"
 	executionapp "github.com/reina0721/clouddrive/internal/kernel/app/execution"
-	messagingapp "github.com/reina0721/clouddrive/internal/kernel/app/messaging"
-	scheduleapp "github.com/reina0721/clouddrive/internal/kernel/app/schedule"
-	kernelcomposition "github.com/reina0721/clouddrive/internal/kernel/composition"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
 	"github.com/reina0721/clouddrive/internal/module/auth"
 	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	"github.com/reina0721/clouddrive/internal/module/migration"
 	"github.com/reina0721/clouddrive/internal/module/todo"
 	configbinding "github.com/reina0721/clouddrive/internal/module/todo/binding/config"
 	"github.com/reina0721/clouddrive/internal/module/todo/model"
 	"github.com/reina0721/clouddrive/internal/module/todo/service"
+	"github.com/reina0721/clouddrive/pkg/clock"
 	pkgexecution "github.com/reina0721/clouddrive/pkg/execution"
+	"github.com/reina0721/clouddrive/pkg/idgen"
 	"github.com/reina0721/clouddrive/pkg/supervisor"
 )
 
-type preparedTodo struct {
-	coordinator  *kernel.Coordinator
-	capabilities kernelcomposition.Capabilities
-	module       todo.Module
-	authModule   auth.Module
-	migration    *migration.Service
-	candidate    config.Snapshot
-}
-
-func (a *Application) prepareTodo(ctx context.Context) (preparedTodo, error) {
-	loader := config.New(
-		config.FileSource(a.config.ConfigPath),
-		config.EnvSource(a.config.EnvironmentPrefix),
-	)
-	runtime, err := kernel.New(loader, kernel.Options{Logging: a.config.Logging})
-	if err != nil {
-		return preparedTodo{}, fmt.Errorf("create kernel: %w", err)
-	}
-	capabilities, err := kernelcomposition.Compose(runtime, kernelcomposition.Options{
-		Logger: kernelcomposition.ConfiguredLoggerReplacement,
-	})
-	if err != nil {
-		return preparedTodo{}, fmt.Errorf("compose application capabilities: %w", err)
-	}
-	// CLI 与 Service 共用正式配置文件，因此两种模式都声明 application-owned 配置节。
-	// 这里只补齐 Application Generation 拥有的 HTTP / scheduler / messaging 配置契约，
-	// 不会构造 listener、调度器、Host 或 watcher。
-	bindings := append([]config.Binding{
-		kernelcomposition.HTTPConfiguration(),
-		scheduleapp.Configuration(),
-		messagingapp.Configuration(),
-	}, applicationOwnedConfigurationBindings()...)
-	coordinator, err := kernel.NewCoordinator(runtime, bindings...)
-	if err != nil {
-		return preparedTodo{}, fmt.Errorf("create configuration coordinator: %w", err)
-	}
-	candidate, err := coordinator.Prepare(ctx)
-	if err != nil {
-		return preparedTodo{}, fmt.Errorf("prepare application configuration: %w", err)
-	}
-	todoConfig, err := configbinding.Decode(candidate)
-	if err != nil {
-		return preparedTodo{}, err
-	}
-	databaseConfig, err := databaseapp.Decode(candidate)
-	if err != nil {
-		return preparedTodo{}, err
-	}
-	migrationService, err := applicationMigrationService(candidate, databaseConfig.PackageConfig())
-	if err != nil {
-		return preparedTodo{}, err
-	}
-	databaseAccess, err := adaptDatabaseAccess(capabilities.Database)
-	if err != nil {
-		return preparedTodo{}, err
-	}
-	policies := a.blueprint.policyCopy()
-	authModule, err := auth.NewLocal(auth.Dependencies{
-		Clock: capabilities.Clock, Logger: capabilities.Logger, Policies: policies,
-	})
-	if err != nil {
-		return preparedTodo{}, fmt.Errorf("compose local auth module: %w", err)
-	}
-	authorizer, err := newTodoAuthorizerAdapter(authModule.Service)
-	if err != nil {
-		return preparedTodo{}, err
-	}
-	module, err := todo.New(todo.Dependencies{
-		Database: databaseAccess, Clock: capabilities.Clock, IDGenerator: capabilities.IDGenerator,
-		Config: todoConfig, Authorizer: authorizer,
-		Executor: todoExecutionAdapter(capabilities.Execution),
-	})
-	if err != nil {
-		return preparedTodo{}, fmt.Errorf("compose todo module: %w", err)
-	}
-	return preparedTodo{
-		coordinator: coordinator, capabilities: capabilities, module: module, authModule: authModule,
-		migration: migrationService, candidate: candidate,
-	}, nil
-}
-
-func (a *Application) executeTodo(ctx context.Context, actor service.Actor, operation func(context.Context, service.UseCases) error) error {
+func (a *Application) executeTodo(ctx context.Context, actor service.Actor, operation func(context.Context, service.UseCases) error) (resultErr error) {
 	if operation == nil {
 		return fmt.Errorf("todo application operation is nil")
 	}
-	prepared, err := a.prepareTodo(ctx)
+	snapshot, err := a.loadInstanceConfiguration(ctx)
 	if err != nil {
 		return err
 	}
-	participants := make([]supervisor.Participant, 0, len(prepared.module.Contribution.Participants)+1)
-	participants = append(participants, prepared.coordinator)
-	participants = append(participants, prepared.module.Contribution.Participants...)
-	owner, err := newTodoOperationSupervisor(participants)
+	todoConfig, err := configbinding.Decode(snapshot)
+	if err != nil {
+		return err
+	}
+	database, err := a.openInstanceDatabase(ctx, snapshot)
+	if err != nil {
+		return err
+	}
+	defer closeInstanceComponent(ctx, database.close, &resultErr)
+	execution, err := startImmutableExecution(ctx, snapshot, a.config.Logging)
+	if err != nil {
+		return err
+	}
+	defer closeInstanceComponent(ctx, execution.close, &resultErr)
+	databaseAccess, err := adaptDatabaseAccess(database.output)
+	if err != nil {
+		return err
+	}
+	currentClock := clock.System()
+	authModule, err := auth.NewLocal(auth.Dependencies{
+		Clock: currentClock, Logger: a.config.Logging.Logger(), Policies: a.blueprint.policyCopy(),
+	})
+	if err != nil {
+		return fmt.Errorf("compose local auth module: %w", err)
+	}
+	authorizer, err := newTodoAuthorizerAdapter(authModule.Service)
+	if err != nil {
+		return err
+	}
+	module, err := todo.New(todo.Dependencies{
+		Database: databaseAccess, Clock: currentClock, IDGenerator: idgen.UUID(),
+		Config: todoConfig, Authorizer: authorizer, Executor: todoExecutionAdapter(execution.output),
+	})
+	if err != nil {
+		return fmt.Errorf("compose todo module: %w", err)
+	}
+	owner, err := newTodoOperationSupervisor(module.Contribution.Participants)
 	if err != nil {
 		return fmt.Errorf("create todo operation supervisor: %w", err)
 	}
-	if err := owner.RunOperation(ctx, func(operationCtx context.Context) error {
-		if err := prepared.migration.Compatible(operationCtx); err != nil {
-			return fmt.Errorf("verify application migration compatibility: %w", err)
-		}
+	return owner.RunOperation(ctx, func(operationCtx context.Context) error {
 		scopes := make([]authmodel.Scope, len(actor.Scopes))
 		for index, scope := range actor.Scopes {
 			scopes[index] = authmodel.Scope(scope)
 		}
-		principal, err := prepared.authModule.Service.LocalPrincipal(operationCtx, actor.Subject, scopes)
+		principal, err := authModule.Service.LocalPrincipal(operationCtx, actor.Subject, scopes)
 		if err != nil {
 			return fmt.Errorf("construct Todo CLI actor: %w", err)
 		}
-		return operation(authmodel.WithPrincipal(operationCtx, principal), prepared.module.Service)
-	}); err != nil {
-		return fmt.Errorf("execute todo application operation: %w", err)
-	}
-	return nil
+		return operation(authmodel.WithPrincipal(operationCtx, principal), module.Service)
+	})
 }
-
 func newTodoOperationSupervisor(participants []supervisor.Participant) (*supervisor.Supervisor, error) {
 	return supervisor.New(supervisor.Config{}, participants...)
 }

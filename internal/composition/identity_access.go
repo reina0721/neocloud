@@ -49,13 +49,14 @@ const defaultAuditRetentionLimit int64 = 100_000
 // identityAccessInput 是 identity-access 切片的 typed 输入；字段只能由该
 // 切片真实消费，不得扩展为全应用依赖包。
 type identityAccessInput struct {
-	Database       repo.Access
-	Logger         logger.Logger
-	IAMConfig      iamconfig.Config
-	AuthConfig     authconfig.Config
-	Permissions    permissioncatalog.Catalog
-	Policies       []authmodel.Policy
-	AllowedOrigins []string
+	Database        repo.Access
+	Logger          logger.Logger
+	IAMConfig       iamconfig.Config
+	AuthConfig      authconfig.Config
+	Permissions     permissioncatalog.Catalog
+	Policies        []authmodel.Policy
+	AllowedOrigins  []string
+	ReconcileOwners bool
 	// AlertNotifier 是安全告警事件汇报通道（079）；nil 时告警 no-op。
 	AlertNotifier pkgalerting.Notifier
 }
@@ -91,8 +92,10 @@ func composeIdentityAccess(ctx context.Context, input identityAccessInput) (iden
 	if err != nil {
 		return identityAccess{}, fmt.Errorf("compose iam module: %w", err)
 	}
-	if err := iamModule.Administration.ReconcileOwnerCatalog(ctx); err != nil {
-		return identityAccess{}, fmt.Errorf("reconcile iam owner catalog: %w", err)
+	if input.ReconcileOwners {
+		if err := iamModule.Administration.ReconcileOwnerCatalog(ctx); err != nil {
+			return identityAccess{}, fmt.Errorf("reconcile iam owner catalog: %w", err)
+		}
 	}
 	if err := iamModule.Authorization.Load(ctx); err != nil {
 		return identityAccess{}, fmt.Errorf("load iam authorization evaluator: %w", err)

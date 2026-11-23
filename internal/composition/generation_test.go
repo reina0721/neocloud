@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/reina0721/clouddrive/internal/kernel"
+	"github.com/reina0721/clouddrive/internal/kernel/app"
 	databaseapp "github.com/reina0721/clouddrive/internal/kernel/app/database"
 	kernelcomposition "github.com/reina0721/clouddrive/internal/kernel/composition"
 	"github.com/reina0721/clouddrive/internal/kernel/config"
@@ -144,7 +145,7 @@ func TestScheduleFailureUsesExistingGenerationFailureChannel(t *testing.T) {
 	}
 }
 
-func TestAllConfigurationSectionsCommitOneGeneration(t *testing.T) {
+func TestMixedReloadRequiresRestartBeforePreparingCandidate(t *testing.T) {
 	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	payload := generationConfig(directory, 120, 1<<20, filepath.Join(directory, "todo.db"))
@@ -173,14 +174,14 @@ func TestAllConfigurationSectionsCommitOneGeneration(t *testing.T) {
 	updated = strings.Replace(updated, "serviceName: generation-a", "serviceName: generation-b", 1)
 	writeGenerationConfig(t, configPath, updated)
 	result, err := coordinator.Reload(t.Context())
-	if err != nil {
+	var restart *app.RestartRequiredError
+	if !errors.As(err, &restart) || fmt.Sprint(restart.Components) != "[database storage auth]" {
 		t.Fatalf("Reload() error = %v", err)
 	}
-	wantSections := []string{"logger", "database", "cache", "i18n", "storage", "http", "auth", "todo", "management", "observability"}
-	if !result.Applied || result.PreviousGeneration != 1 || result.CurrentGeneration != 2 || fmt.Sprint(result.ChangedSections) != fmt.Sprint(wantSections) {
-		t.Fatalf("Reload() result = %#v", result)
+	if result.Applied || result.PreviousGeneration != 1 || result.CurrentGeneration != 1 || factory.nextID.Load() != 1 {
+		t.Fatalf("Reload() prepared or applied a candidate: %#v", result)
 	}
-	if diagnostics := coordinator.Diagnostics(); diagnostics.CurrentGeneration != 2 || diagnostics.CandidateGeneration != 0 || fmt.Sprint(diagnostics.ResourceReused) != fmt.Sprint([]string{"observability.metrics", "execution"}) {
+	if diagnostics := coordinator.Diagnostics(); diagnostics.CurrentGeneration != 1 || diagnostics.CandidateGeneration != 0 || !diagnostics.Ready {
 		t.Fatalf("Diagnostics() = %#v", diagnostics)
 	}
 	if blueprint == nil || factory.blueprint != blueprint || factory.currentGeneration().blueprint != blueprint {
@@ -188,7 +189,7 @@ func TestAllConfigurationSectionsCommitOneGeneration(t *testing.T) {
 	}
 }
 
-func TestApplicationGenerationRejectsDatabaseWithoutSchemaAndKeepsCurrent(t *testing.T) {
+func TestApplicationGenerationRejectsDatabaseChangeWithoutOpeningIt(t *testing.T) {
 	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	writeGenerationConfig(t, configPath, generationConfig(directory, 120, 1<<20, filepath.Join(directory, "current.db")))
@@ -202,10 +203,14 @@ func TestApplicationGenerationRejectsDatabaseWithoutSchemaAndKeepsCurrent(t *tes
 		_ = coordinator.Stop(ctx)
 	}()
 	before := coordinator.Diagnostics()
-	writeGenerationConfig(t, configPath, generationConfig(directory, 120, 1<<20, filepath.Join(directory, "empty.db")))
+	target := filepath.Join(directory, "empty.db")
+	writeGenerationConfig(t, configPath, generationConfig(directory, 120, 1<<20, target))
 	result, err := coordinator.Reload(t.Context())
-	if err == nil || !strings.Contains(err.Error(), "version is too old") || result.Applied {
+	if !errors.Is(err, app.ErrRestartRequired) || result.Applied {
 		t.Fatalf("Reload(empty schema) = %#v, %v", result, err)
+	}
+	if _, err := os.Stat(target); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("rejected database was touched: %v", err)
 	}
 	after := coordinator.Diagnostics()
 	if after.CurrentGeneration != before.CurrentGeneration || after.BoundAddress != before.BoundAddress || !after.Ready {
@@ -219,7 +224,6 @@ func TestApplicationGenerationRejectsDatabaseWithoutSchemaAndKeepsCurrent(t *tes
 func TestApplicationGenerationPinsOldDatabaseUntilRetire(t *testing.T) {
 	directory := testkit.PrivateTempDir(t)
 	firstDatabase := filepath.Join(directory, "first.db")
-	secondDatabase := filepath.Join(directory, "second.db")
 	configPath := filepath.Join(directory, "config.yaml")
 	writeGenerationConfig(t, configPath, generationConfig(directory, 120, 1<<20, firstDatabase))
 	prepareTodoSchema(t, firstDatabase)
@@ -250,8 +254,7 @@ func TestApplicationGenerationPinsOldDatabaseUntilRetire(t *testing.T) {
 		t.Fatalf("Create(first) error = %v", err)
 	}
 
-	prepareTodoSchema(t, secondDatabase)
-	writeGenerationConfig(t, configPath, generationConfig(directory, 5, 1<<20, secondDatabase))
+	writeGenerationConfig(t, configPath, generationConfig(directory, 5, 1<<20, firstDatabase))
 	secondSnapshot, err := loader.Load(t.Context())
 	if err != nil {
 		t.Fatalf("Load(second) error = %v", err)
@@ -280,8 +283,8 @@ func TestApplicationGenerationPinsOldDatabaseUntilRetire(t *testing.T) {
 	if err != nil {
 		t.Fatalf("List(second) error = %v", err)
 	}
-	if oldItems.Total != 2 || newItems.Total != 0 {
-		t.Fatalf("database generations mixed: old=%d new=%d", oldItems.Total, newItems.Total)
+	if oldItems.Total != 2 || newItems.Total != 2 {
+		t.Fatalf("generations did not share instance database: old=%d new=%d", oldItems.Total, newItems.Total)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -355,24 +358,24 @@ func TestApplicationGenerationReusesUnchangedTypedResources(t *testing.T) {
 	}
 }
 
-func TestEachConfigurationSectionCreatesOneCompleteGeneration(t *testing.T) {
+func TestEachConfigurationSectionFollowsReloadBoundary(t *testing.T) {
 	tests := []struct {
 		section string
 		update  func(*testing.T, string, string) string
+		restart bool
 	}{
 		{section: "logger", update: replaceConfig("level: info", "level: debug")},
-		{section: "database", update: func(t *testing.T, directory, payload string) string {
+		{section: "database", restart: true, update: func(_ *testing.T, directory, payload string) string {
 			target := filepath.Join(directory, "next.db")
-			prepareTodoSchema(t, target)
 			return strings.Replace(payload, filepath.ToSlash(filepath.Join(directory, "todo.db")), filepath.ToSlash(target), 1)
 		}},
 		{section: "cache", update: replaceConfig("tagPrefix: generation-a", "tagPrefix: generation-b")},
 		{section: "i18n", update: replaceConfig("defaultLanguage: zh-CN", "defaultLanguage: en-US")},
-		{section: "storage", update: func(_ *testing.T, directory, payload string) string {
+		{section: "storage", restart: true, update: func(_ *testing.T, directory, payload string) string {
 			return strings.Replace(payload, filepath.ToSlash(filepath.Join(directory, "storage")), filepath.ToSlash(filepath.Join(directory, "storage-next")), 1)
 		}},
-		{section: "scheduler", update: replaceConfig("maxConcurrency: 32", "maxConcurrency: 31")},
-		{section: "messaging", update: replaceConfig("publishConfirmTimeout: 5s", "publishConfirmTimeout: 4s")},
+		{section: "scheduler", restart: true, update: replaceConfig("maxConcurrency: 32", "maxConcurrency: 31")},
+		{section: "messaging", restart: true, update: replaceConfig("publishConfirmTimeout: 5s", "publishConfirmTimeout: 4s")},
 		{section: "http", update: replaceConfig("maxHeaderBytes: 1048576", "maxHeaderBytes: 2097152")},
 		{section: "todo", update: replaceConfig("titleMaxRunes: 120", "titleMaxRunes: 80")},
 	}
@@ -388,11 +391,12 @@ func TestEachConfigurationSectionCreatesOneCompleteGeneration(t *testing.T) {
 			}
 			writeGenerationConfig(t, configPath, test.update(t, directory, payload))
 			result, err := coordinator.Reload(t.Context())
-			if err != nil {
-				t.Fatalf("Reload(%s) error = %v", test.section, err)
-			}
-			if !result.Applied || fmt.Sprint(result.ChangedSections) != fmt.Sprint([]string{test.section}) {
-				t.Fatalf("Reload(%s) result = %#v", test.section, result)
+			if test.restart {
+				if !errors.Is(err, app.ErrRestartRequired) || result.Applied {
+					t.Fatalf("Reload(%s) = %#v, %v", test.section, result, err)
+				}
+			} else if err != nil || !result.Applied || fmt.Sprint(result.ChangedSections) != fmt.Sprint([]string{test.section}) {
+				t.Fatalf("Reload(%s) = %#v, %v", test.section, result, err)
 			}
 			if status := listTodos(t, coordinator.Diagnostics().BoundAddress); status != http.StatusOK {
 				t.Fatalf("list after %s reload status = %d", test.section, status)
@@ -406,7 +410,7 @@ func TestEachConfigurationSectionCreatesOneCompleteGeneration(t *testing.T) {
 	}
 }
 
-func TestApplicationGenerationAddressChangeAndBindFailure(t *testing.T) {
+func TestApplicationGenerationAddressChangeRequiresRestart(t *testing.T) {
 	directory := testkit.PrivateTempDir(t)
 	configPath := filepath.Join(directory, "config.yaml")
 	payload := generationConfig(directory, 120, 1<<20, filepath.Join(directory, "todo.db"))
@@ -430,7 +434,7 @@ func TestApplicationGenerationAddressChangeAndBindFailure(t *testing.T) {
 	blocked := strings.Replace(payload, "127.0.0.1:0", blockedAddress, 1)
 	writeGenerationConfig(t, configPath, blocked)
 	result, err := coordinator.Reload(t.Context())
-	if err == nil || result.Applied {
+	if !errors.Is(err, app.ErrRestartRequired) || result.Applied {
 		t.Fatalf("Reload(blocked address) = %#v, %v", result, err)
 	}
 	if status := listTodos(t, oldAddress); status != http.StatusOK {
@@ -440,12 +444,12 @@ func TestApplicationGenerationAddressChangeAndBindFailure(t *testing.T) {
 
 	writeGenerationConfig(t, configPath, blocked)
 	result, err = coordinator.Reload(t.Context())
-	if err != nil || !result.Applied {
+	if !errors.Is(err, app.ErrRestartRequired) || result.Applied {
 		t.Fatalf("Reload(new address) = %#v, %v", result, err)
 	}
 	newAddress := coordinator.Diagnostics().BoundAddress
-	if newAddress != blockedAddress || newAddress == oldAddress {
-		t.Fatalf("new address = %s, old = %s, configured = %s", newAddress, oldAddress, blockedAddress)
+	if newAddress != oldAddress {
+		t.Fatalf("address changed before restart: now = %s, old = %s", newAddress, oldAddress)
 	}
 	if status := listTodos(t, newAddress); status != http.StatusOK {
 		t.Fatalf("new address status = %d", status)

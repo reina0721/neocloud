@@ -10,7 +10,6 @@ import (
 
 	"github.com/reina0721/clouddrive/internal/kernel"
 	kernelcomposition "github.com/reina0721/clouddrive/internal/kernel/composition"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
 	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
 	fileswebdav "github.com/reina0721/clouddrive/internal/module/files/binding/webdav"
 	httpbinding "github.com/reina0721/clouddrive/internal/module/ops/binding/http"
@@ -55,11 +54,7 @@ type serviceRuntime struct {
 }
 
 func (a *Application) newServiceRuntime() (*serviceRuntime, error) {
-	loader := config.New(
-		config.FileSource(a.config.ConfigPath),
-		config.EnvSource(a.config.EnvironmentPrefix),
-	)
-	bindings, err := kernelcomposition.ConfigurationBindings(applicationOwnedConfigurationBindings()...)
+	loader, bindings, err := a.configurationSource()
 	if err != nil {
 		return nil, fmt.Errorf("compose service configuration bindings: %w", err)
 	}

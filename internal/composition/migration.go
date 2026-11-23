@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	databaseapp "github.com/reina0721/clouddrive/internal/kernel/app/database"
-	kernelcomposition "github.com/reina0721/clouddrive/internal/kernel/composition"
 	"github.com/reina0721/clouddrive/internal/kernel/config"
 	authmigration "github.com/reina0721/clouddrive/internal/module/auth/binding/migration"
 	consolemigration "github.com/reina0721/clouddrive/internal/module/console/binding/migration"
@@ -89,23 +88,10 @@ func (a *Application) executeMigration(
 	}
 	logging := a.config.Logging.Logger()
 	logMigrationStarted(logging, operationName)
-	bindings, err := kernelcomposition.ConfigurationBindings(applicationOwnedConfigurationBindings()...)
+	snapshot, err := a.loadInstanceConfiguration(ctx)
 	if err != nil {
-		logMigrationFailed(logging, operationName, "compose-config", err)
-		return migration.Status{}, fmt.Errorf("compose migration configuration bindings: %w", err)
-	}
-	loader := config.New(
-		config.FileSource(a.config.ConfigPath),
-		config.EnvSource(a.config.EnvironmentPrefix),
-	)
-	snapshot, err := loader.Load(ctx)
-	if err != nil {
-		logMigrationFailed(logging, operationName, "load-config", err)
-		return migration.Status{}, fmt.Errorf("load migration configuration: %w", err)
-	}
-	if err := config.ValidateCandidate(snapshot, bindings...); err != nil {
-		logMigrationFailed(logging, operationName, "validate-config", err)
-		return migration.Status{}, fmt.Errorf("validate migration configuration: %w", err)
+		logMigrationFailed(logging, operationName, "configuration", err)
+		return migration.Status{}, err
 	}
 	databaseConfig, err := databaseapp.Decode(snapshot)
 	if err != nil {

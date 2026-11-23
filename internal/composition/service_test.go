@@ -123,12 +123,8 @@ func TestExampleConfigSatisfiesApplicationBindings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	prepared, err := application.prepareTodo(t.Context())
-	if err != nil {
-		t.Fatalf("prepareTodo(config.example.yaml) error = %v", err)
-	}
-	if prepared.module.Service == nil || prepared.coordinator == nil {
-		t.Fatalf("prepared application = %#v", prepared)
+	if _, err := application.loadInstanceConfiguration(t.Context()); err != nil {
+		t.Fatalf("loadInstanceConfiguration(config.example.yaml) error = %v", err)
 	}
 }
 

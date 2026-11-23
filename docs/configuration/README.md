@@ -112,7 +112,7 @@ memory backend 只在单进程内可见，记录同步写入，不提供外部�
 
 ## Reload 行为
 
-长期 Service 监听配置文件变化，并把文件与进程启动时继承的环境变量重新合并成候选配置。被环境变量覆盖的字段即使文件发生变化，也不会改变最终有效值。scheduler、消息 Provider/Binding 与模块对象图随完整 Application Generation 重建；Prepare 不触发任务或消息消费，Commit 才切换准入。reload 的底层机制见 [Kernel 运行与配置](../../internal/kernel/README.md)。
+长期 Service 监听配置文件变化，并把文件与进程启动时继承的环境变量重新合并成候选配置。被环境变量覆盖的字段即使文件发生变化，也不会改变最终有效值。修改 `database`、`storage`、`iam`、`auth`、`files`、`scheduler`、`messaging`、`http.addr` 或 `management.addr` 后需要重启服务。在同一次修改中，其他字段也随重启生效。候选准备只读取现有 IAM 和文件设置，所有者目录协调、存储身份检查及上传和种子暂存准备在启动时执行。reload 的底层机制见 [Kernel 运行与配置](../../internal/kernel/README.md)。
 
 ## clouddrive 控制台
 

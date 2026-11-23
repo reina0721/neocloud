@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 
 	"github.com/reina0721/clouddrive/internal/kernel"
-	"github.com/reina0721/clouddrive/internal/kernel/app"
 	kernelalerting "github.com/reina0721/clouddrive/internal/kernel/app/alerting"
 	cacheapp "github.com/reina0721/clouddrive/internal/kernel/app/cache"
 	databaseapp "github.com/reina0721/clouddrive/internal/kernel/app/database"
@@ -185,17 +184,9 @@ func (f *applicationGenerationFactory) Prepare(
 	if ctx == nil {
 		return nil, fmt.Errorf("application generation prepare context is nil")
 	}
-	if prior, ok := previous.(*applicationGeneration); ok && prior != nil {
-		before, err := prior.snapshot.SectionDigest("files")
-		if err != nil {
+	if previous != nil {
+		if err := requireReloadableConfiguration(previous.Snapshot(), snapshot); err != nil {
 			return nil, err
-		}
-		after, err := snapshot.SectionDigest("files")
-		if err != nil {
-			return nil, err
-		}
-		if before != after {
-			return nil, &app.RestartRequiredError{Components: []app.ID{"module.files"}}
 		}
 	}
 	generation := &applicationGeneration{
@@ -370,8 +361,9 @@ func (f *applicationGenerationFactory) Prepare(
 		Database: databaseAccess, Logger: generation.logger.value(),
 		IAMConfig: iamConfig, AuthConfig: authConfig,
 		Permissions: generation.blueprint.permissions, Policies: generation.blueprint.policyCopy(),
-		AllowedOrigins: httpConfig.CORS.AllowedOrigins,
-		AlertNotifier:  generation.alerting.output,
+		AllowedOrigins:  httpConfig.CORS.AllowedOrigins,
+		ReconcileOwners: previous == nil,
+		AlertNotifier:   generation.alerting.output,
 	})
 	if err != nil {
 		return abort(err)
@@ -485,8 +477,10 @@ func (f *applicationGenerationFactory) Prepare(
 	if err != nil {
 		return abort(err)
 	}
-	if err := files.ValidateStorage(ctx, databaseAccess, storageIdentity, clock.System()); err != nil {
-		return abort(err)
+	if previous == nil {
+		if err := files.ValidateStorage(ctx, databaseAccess, storageIdentity, clock.System()); err != nil {
+			return abort(err)
+		}
 	}
 	storageBackend, err := filesStorageBackend(storageConfig.Driver)
 	if err != nil {
@@ -521,11 +515,13 @@ func (f *applicationGenerationFactory) Prepare(
 	if err != nil {
 		return abort(err)
 	}
-	if err := files.PrepareTransfers(ctx, databaseAccess, storageIdentity, filesPolicy.Transfers.StagingPath, clock.System()); err != nil {
-		return abort(err)
-	}
-	if err := files.PrepareTorrentNodes(ctx, files.TorrentPreparation{Database: databaseAccess, StorageIdentity: storageIdentity, StagingPath: filesPolicy.Transfers.StagingPath, MetadataEntries: filesPolicy.Policy().SearchTreeEntries, Clock: clock.System(), Nodes: filesPolicy.Offline.TorrentNodes}); err != nil {
-		return abort(err)
+	if previous == nil {
+		if err := files.PrepareTransfers(ctx, databaseAccess, storageIdentity, filesPolicy.Transfers.StagingPath, clock.System()); err != nil {
+			return abort(err)
+		}
+		if err := files.PrepareTorrentNodes(ctx, files.TorrentPreparation{Database: databaseAccess, StorageIdentity: storageIdentity, StagingPath: filesPolicy.Transfers.StagingPath, MetadataEntries: filesPolicy.Policy().SearchTreeEntries, Clock: clock.System(), Nodes: filesPolicy.Offline.TorrentNodes}); err != nil {
+			return abort(err)
+		}
 	}
 	offlineEnabled, err := scheduleapp.TaskConfiguredEnabled(snapshot, filesservice.DownloadDispatchTaskID)
 	if err != nil {
@@ -801,8 +797,8 @@ func (g *applicationGeneration) recordResource(owner string, reused bool) {
 
 func (g *applicationGeneration) Commit(previous kernel.ActiveGeneration) (kernel.ActiveGeneration, error) {
 	g.mu.Lock()
+	defer g.mu.Unlock()
 	if g.committed || g.settled {
-		g.mu.Unlock()
 		return nil, fmt.Errorf("application generation %d is already settled", g.id)
 	}
 	var previousGeneration *applicationGeneration
@@ -810,7 +806,6 @@ func (g *applicationGeneration) Commit(previous kernel.ActiveGeneration) (kernel
 		var ok bool
 		previousGeneration, ok = previous.(*applicationGeneration)
 		if !ok || previousGeneration.factory != g.factory {
-			g.mu.Unlock()
 			return nil, fmt.Errorf("previous application generation is incompatible")
 		}
 	}
@@ -821,32 +816,27 @@ func (g *applicationGeneration) Commit(previous kernel.ActiveGeneration) (kernel
 		previousManagementRoute = previousGeneration.managementRoute
 	}
 	if g.messaging == nil {
-		g.mu.Unlock()
 		return nil, fmt.Errorf("application generation %d messaging is missing", g.id)
 	}
-	if err := g.messaging.output.Control.OpenPublisher(context.Background()); err != nil {
-		g.mu.Unlock()
-		return nil, fmt.Errorf("open messaging publisher admission: %w", err)
-	}
-	if _, err := g.factory.hub.Commit(g.route, previousRoute); err != nil {
-		g.mu.Unlock()
-		return nil, err
-	}
-	if _, err := g.factory.managementHub.Commit(g.managementRoute, previousManagementRoute); err != nil {
-		g.mu.Unlock()
-		return nil, err
-	}
-	if err := g.factory.messagingHub.Commit(context.Background(), g.messaging.output.Control); err != nil {
-		g.mu.Unlock()
-		return nil, err
-	}
 	if g.scheduler == nil {
-		g.mu.Unlock()
 		return nil, fmt.Errorf("application generation %d scheduler is missing", g.id)
 	}
-	if err := g.factory.scheduleHub.Commit(context.Background(), g.scheduler.output); err != nil {
-		g.mu.Unlock()
-		return nil, err
+	ctx, cancel := context.WithTimeout(context.Background(), kernel.DefaultReloadTimeout)
+	defer cancel()
+	if err := g.messaging.output.Control.OpenPublisher(ctx); err != nil {
+		return nil, fmt.Errorf("open messaging publisher admission: %w", err)
+	}
+	if err := g.factory.messagingHub.Commit(ctx, g.messaging.output.Control); err != nil {
+		return nil, g.failPublication(err)
+	}
+	if err := g.factory.scheduleHub.Commit(ctx, g.scheduler.output); err != nil {
+		return nil, g.failPublication(err)
+	}
+	if _, err := g.factory.hub.Commit(g.route, previousRoute); err != nil {
+		return nil, g.failPublication(err)
+	}
+	if _, err := g.factory.managementHub.Commit(g.managementRoute, previousManagementRoute); err != nil {
+		return nil, g.failPublication(errors.Join(err, g.factory.hub.Retire(g.route)))
 	}
 	g.factory.logging.Replace(g.logger.value())
 	g.committed = true
@@ -857,8 +847,16 @@ func (g *applicationGeneration) Commit(previous kernel.ActiveGeneration) (kernel
 		previousGeneration.mu.Unlock()
 	}
 	g.factory.setCurrent(g)
-	g.mu.Unlock()
 	return g, nil
+}
+
+func (g *applicationGeneration) failPublication(err error) error {
+	failure := fmt.Errorf("publish application generation %d: %w", g.id, err)
+	select {
+	case g.factory.failures <- failure:
+	default:
+	}
+	return failure
 }
 
 func (g *applicationGeneration) Abort(ctx context.Context) error { return g.abort(ctx) }

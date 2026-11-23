@@ -7,65 +7,62 @@ import (
 
 	"github.com/reina0721/clouddrive/internal/kernel"
 	databaseapp "github.com/reina0721/clouddrive/internal/kernel/app/database"
-	kernelcomposition "github.com/reina0721/clouddrive/internal/kernel/composition"
 	"github.com/reina0721/clouddrive/internal/kernel/config"
 	"github.com/reina0721/clouddrive/internal/module/iam"
 	iamcli "github.com/reina0721/clouddrive/internal/module/iam/binding/cli"
 	iamconfig "github.com/reina0721/clouddrive/internal/module/iam/binding/config"
-	iammodel "github.com/reina0721/clouddrive/internal/module/iam/model"
+	"github.com/reina0721/clouddrive/internal/module/iam/model"
 	iamservice "github.com/reina0721/clouddrive/internal/module/iam/service"
 	"github.com/reina0721/clouddrive/pkg/clock"
 	"github.com/reina0721/clouddrive/pkg/idgen"
-	"github.com/reina0721/clouddrive/pkg/supervisor"
 )
 
 type iamExecutor struct{ application *Application }
 
 func (e iamExecutor) ResetPassword(ctx context.Context, username, password string) error {
-	return e.application.executeIAMResetPassword(ctx, username, password)
+	return e.application.useInstanceIAM(ctx, func(administration iam.Administration, _ model.PasswordPolicy) error {
+		if err := administration.ReconcileOwnerCatalog(ctx); err != nil {
+			return fmt.Errorf("reconcile iam owner catalog: %w", err)
+		}
+		if err := administration.Compatible(ctx); err != nil {
+			return fmt.Errorf("verify iam catalog compatibility: %w", err)
+		}
+		return administration.ResetPasswordByUsername(ctx, username, password)
+	})
 }
 
-func (e iamExecutor) RecoverOwner(ctx context.Context, selectRecovery iamcli.SelectOwnerRecovery) (resultErr error) {
-	a := e.application
-	bindings, err := kernelcomposition.ConfigurationBindings(applicationOwnedConfigurationBindings()...)
+func (e iamExecutor) RecoverOwner(ctx context.Context, selectRecovery iamcli.SelectOwnerRecovery) error {
+	return e.application.useInstanceIAM(ctx, func(administration iam.Administration, policy model.PasswordPolicy) error {
+		owners, err := administration.RecoverableOwners(ctx)
+		if err != nil {
+			return err
+		}
+		id, password, err := selectRecovery(ctx, owners, policy)
+		if err != nil {
+			return err
+		}
+		err = administration.RecoverOwnerPassword(ctx, id, password)
+		if errors.Is(err, iamservice.ErrPasswordReused) {
+			return fmt.Errorf("新密码与近期用过的密码相同，请换一个后重试: %w", err)
+		}
+		return err
+	})
+}
+
+func (a *Application) useInstanceIAM(ctx context.Context, use func(iam.Administration, model.PasswordPolicy) error) (resultErr error) {
+	snapshot, err := a.loadInstanceConfiguration(ctx)
 	if err != nil {
 		return err
-	}
-	snapshot, err := config.New(config.FileSource(a.config.ConfigPath), config.EnvSource(a.config.EnvironmentPrefix)).Load(ctx)
-	if err != nil {
-		return fmt.Errorf("加载实例配置: %w", err)
-	}
-	if err := config.ValidateCandidate(snapshot, bindings...); err != nil {
-		return fmt.Errorf("校验实例配置: %w", err)
 	}
 	iamConfig, err := iamconfig.Decode(snapshot)
 	if err != nil {
 		return err
 	}
-	databaseConfig, err := databaseapp.Decode(snapshot)
+	component, err := a.openInstanceDatabase(ctx, snapshot)
 	if err != nil {
 		return err
 	}
-	definition, err := databaseapp.ExistingDefinition()
-	if err != nil {
-		return err
-	}
-	component, err := startImmutableComponent(ctx, snapshot, a.config.Logging, definition)
-	if err != nil {
-		return fmt.Errorf("打开现有实例数据库: %w", err)
-	}
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), kernel.DefaultReloadTimeout)
-		defer cancel()
-		resultErr = errors.Join(resultErr, component.close(stopCtx))
-	}()
-	migrationService, err := applicationMigrationService(snapshot, databaseConfig.PackageConfig())
-	if err != nil {
-		return err
-	}
-	if err := migrationService.Compatible(ctx); err != nil {
-		return fmt.Errorf("校验实例迁移兼容性: %w", err)
-	}
+	defer closeInstanceComponent(ctx, component.close, &resultErr)
 	databaseAccess, err := adaptDatabaseAccess(component.output)
 	if err != nil {
 		return err
@@ -76,90 +73,36 @@ func (e iamExecutor) RecoverOwner(ctx context.Context, selectRecovery iamcli.Sel
 	if err != nil {
 		return err
 	}
-	owners, err := iamModule.Administration.RecoverableOwners(ctx)
-	if err != nil {
-		return err
-	}
-	id, password, err := selectRecovery(ctx, owners, iammodel.PasswordPolicy(iamConfig.Local.PasswordPolicy))
-	if err != nil {
-		return err
-	}
-	err = iamModule.Administration.RecoverOwnerPassword(ctx, id, password)
-	if errors.Is(err, iamservice.ErrPasswordReused) {
-		return fmt.Errorf("新密码与近期用过的密码相同，请换一个后重试: %w", err)
-	}
-	return err
+	return use(iamModule.Administration, model.PasswordPolicy(iamConfig.Local.PasswordPolicy))
 }
 
-func (a *Application) executeIAMResetPassword(ctx context.Context, username, password string) error {
-	if a == nil {
-		return fmt.Errorf("application is nil")
-	}
-	loader := config.New(
-		config.FileSource(a.config.ConfigPath),
-		config.EnvSource(a.config.EnvironmentPrefix),
-	)
-	runtime, err := kernel.New(loader, kernel.Options{Logging: a.config.Logging})
+func (a *Application) openInstanceDatabase(ctx context.Context, snapshot config.Snapshot) (*immutableComponent[databaseapp.Access], error) {
+	databaseConfig, err := databaseapp.Decode(snapshot)
 	if err != nil {
-		return fmt.Errorf("create kernel: %w", err)
+		return nil, err
 	}
-	capabilities, err := kernelcomposition.Compose(runtime, kernelcomposition.Options{
-		Logger: kernelcomposition.ConfiguredLoggerReplacement,
-	})
+	migrations, err := applicationMigrationService(snapshot, databaseConfig.PackageConfig())
 	if err != nil {
-		return fmt.Errorf("compose application capabilities: %w", err)
+		return nil, err
 	}
-	bindings := append([]config.Binding{
-		kernelcomposition.HTTPConfiguration(),
-	}, applicationOwnedConfigurationBindings()...)
-	coordinator, err := kernel.NewCoordinator(runtime, bindings...)
+	definition, err := databaseapp.ExistingDefinition()
 	if err != nil {
-		return fmt.Errorf("create configuration coordinator: %w", err)
+		return nil, err
 	}
-	candidate, err := coordinator.Prepare(ctx)
+	component, err := startImmutableComponent(ctx, snapshot, a.config.Logging, definition)
 	if err != nil {
-		return fmt.Errorf("prepare application configuration: %w", err)
+		return nil, fmt.Errorf("open instance database: %w", err)
 	}
-	iamConfig, err := iamconfig.Decode(candidate)
-	if err != nil {
-		return err
+	if err := migrations.Compatible(ctx); err != nil {
+		resultErr := fmt.Errorf("verify application migration compatibility: %w", err)
+		closeInstanceComponent(ctx, component.close, &resultErr)
+		return nil, resultErr
 	}
-	databaseConfig, err := databaseapp.Decode(candidate)
-	if err != nil {
-		return err
-	}
-	databaseAccess, err := adaptDatabaseAccess(capabilities.Database)
-	if err != nil {
-		return err
-	}
-	migrationService, err := applicationMigrationService(candidate, databaseConfig.PackageConfig())
-	if err != nil {
-		return err
-	}
-	permissions := a.blueprint.permissions
-	iamModule, err := iam.New(iam.Dependencies{
-		Database: databaseAccess, Clock: capabilities.Clock, IDGenerator: idgen.UUID(), Config: iamConfig, Permissions: permissions,
-	})
-	if err != nil {
-		return fmt.Errorf("compose local iam module: %w", err)
-	}
-	owner, err := newTodoOperationSupervisor([]supervisor.Participant{coordinator})
-	if err != nil {
-		return fmt.Errorf("create webui operation supervisor: %w", err)
-	}
-	if err := owner.RunOperation(ctx, func(operationCtx context.Context) error {
-		if err := migrationService.Compatible(operationCtx); err != nil {
-			return fmt.Errorf("verify application migration compatibility: %w", err)
-		}
-		if err := iamModule.Administration.ReconcileOwnerCatalog(operationCtx); err != nil {
-			return fmt.Errorf("reconcile iam owner catalog: %w", err)
-		}
-		if err := iamModule.Administration.Compatible(operationCtx); err != nil {
-			return fmt.Errorf("verify iam catalog compatibility: %w", err)
-		}
-		return iamModule.Administration.ResetPasswordByUsername(operationCtx, username, password)
-	}); err != nil {
-		return fmt.Errorf("execute webui password reset: %w", err)
-	}
-	return nil
+	return component, nil
+}
+
+func closeInstanceComponent(ctx context.Context, close func(context.Context) error, result *error) {
+	stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), kernel.DefaultReloadTimeout)
+	defer cancel()
+	*result = errors.Join(*result, close(stopCtx))
 }
