@@ -32,7 +32,7 @@ const { values } = parseArgs({
 });
 if (values.help) {
   console.log(
-    "node scripts/dev.mjs [--preview] [--prepare] [--webpack] [--web-port N] [--api-port N] [--management-port N]\n前台运行，Ctrl+C 关闭拥有的进程树。--preview 使用独立数据库并初始化测试账号。",
+    "node scripts/dev.mjs [--preview] [--webpack] [--web-port N] [--api-port N] [--management-port N]\n启动前按锁文件同步前端依赖，兼容旧参数 --prepare。Ctrl+C 关闭拥有的进程树。\n--preview 使用独立数据库并初始化测试账号。",
   );
   process.exit(0);
 }
@@ -70,6 +70,7 @@ let environmentLock;
 
 function run(command, args, options = {}) {
   controller.signal.throwIfAborted();
+  const label = options.label ?? command;
   const child = spawn(command, args, {
     cwd: options.cwd ?? repo,
     env: { ...process.env, ...options.env },
@@ -78,10 +79,12 @@ function run(command, args, options = {}) {
     shell: false,
   });
   const result = new Promise((resolveResult, reject) => {
-    child.once("error", reject);
+    child.once("error", (error) => {
+      reject(new Error(`${label} 启动失败：${error.message}`, { cause: error }));
+    });
     child.once("exit", (code, signal) => {
       if (code === 0) resolveResult();
-      else reject(new Error(`${command} 退出 (${signal ?? code})`));
+      else reject(new Error(`${label} 退出 (${signal ?? code})`));
     });
   });
   const record = { child, result };
@@ -101,16 +104,18 @@ function run(command, args, options = {}) {
   // 保留进程组记录到统一清理结束：根进程退出后仍可能有派生进程。
   return result;
 }
-function pnpm(args, options = {}) {
+function pnpm(args) {
+  const npmArgs = ["--yes", "pnpm@10.22.0", ...args];
+  const options = { cwd: join(repo, "frontend"), label: `pnpm ${args[0]}` };
   if (process.platform === "win32") {
     // 参数均由本工具生成；不用 shell 解释目录或配置值。
     return run(
       process.env.ComSpec ?? "cmd.exe",
-      ["/d", "/s", "/c", "npx.cmd --yes pnpm@10.22.0 " + args.join(" ")],
+      ["/d", "/s", "/c", "npx.cmd " + npmArgs.join(" ")],
       options,
     );
   }
-  return run("pnpm", args, options);
+  return run("npx", npmArgs, options);
 }
 function fail(error) {
   failure ??= error;
@@ -187,8 +192,9 @@ async function privateWrite(path, content) {
   await writeFile(path, content, { mode: 0o600 });
   if (process.platform !== "win32") await chmod(path, 0o600);
 }
-async function ready(url) {
+async function ready(url, service = "backend") {
   const deadline = Date.now() + 120_000;
+  let lastStatus;
   while (Date.now() < deadline) {
     controller.signal.throwIfAborted();
     try {
@@ -198,6 +204,7 @@ async function ready(url) {
           AbortSignal.timeout(5_000),
         ]),
       });
+      lastStatus = response.status;
       await response.arrayBuffer();
       if (response.ok) return;
     } catch {
@@ -215,7 +222,10 @@ async function ready(url) {
       );
     });
   }
-  throw new Error(`启动超时：${url}。日志：${data}`);
+  const status = lastStatus ? `（最近收到 HTTP ${lastStatus}）` : "";
+  throw new Error(
+    `启动超时：${url}${status}。日志：${join(data, `${service}.log`)}`,
+  );
 }
 async function launch(name, command, args, options = {}) {
   const file = await open(join(data, `${name}.log`), "a", 0o600);
@@ -247,15 +257,16 @@ try {
       );
     throw error;
   }
+  console.log("同步前端工作区依赖…");
+  await pnpm([
+    "install",
+    "--frozen-lockfile",
+    "--prefer-offline",
+    "--prod=false",
+  ]);
   await mkdir(join(repo, ".tools"), { recursive: true });
   await run("go", ["version"]);
   await run("go", ["build", "-o", binary, "./cmd/app"]);
-  if (values.prepare)
-    await pnpm(["install", "--frozen-lockfile"], {
-      cwd: join(repo, "frontend"),
-    });
-  if (!(await exists(join(repo, "frontend", "node_modules"))))
-    throw new Error("前端依赖缺失，请使用 --prepare。");
   const tokenPath = join(data, "setup-token");
   if (!(await exists(tokenPath)))
     await privateWrite(tokenPath, randomBytes(32).toString("base64url") + "\n");
@@ -320,7 +331,7 @@ try {
   await launch("backend", binary, [], { cwd: workdir, env: environment });
   await ready(`http://127.0.0.1:${managementPort}/readyz`);
   await ready(backend + "/api/console/v1/auth/registration-policy");
-  await pnpm(["codegen:plugins"], { cwd: join(repo, "frontend") });
+  await pnpm(["codegen:plugins"]);
   // 前端使用同一 Node 生命周期，生成器与 HMR 仍由既有 frontend dev 入口拥有。
   await launch(
     "frontend",
@@ -342,8 +353,8 @@ try {
       },
     },
   );
-  await ready(base + "/login");
-  await ready(base + "/api/console/v1/auth/registration-policy");
+  await ready(base + "/login", "frontend");
+  await ready(base + "/api/console/v1/auth/registration-policy", "frontend");
   if (accessPath)
     await run(process.execPath, [
       join(repo, "scripts/initialize-file-preview.mjs"),
@@ -362,8 +373,6 @@ try {
   await stop();
 }
 if (failure) {
-  console.error(
-    `启动失败：${failure.message}\n查看 ${data} 中的日志；Linux 出现 inotify/EMFILE 时检查用户监听配额。`,
-  );
+  console.error(`启动失败：${failure.message}\n服务日志目录：${data}`);
   process.exitCode = 1;
 }
