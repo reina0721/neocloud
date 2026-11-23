@@ -121,7 +121,7 @@ async function seekToEnd(audio: Locator) {
   });
 }
 
-test('顶部播放器保留进度、验证元信息、队列和循环并释放资源', async ({ page }, info) => {
+test('底部播放器保留进度、验证元信息、队列和循环并释放资源', async ({ page }, info) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await setupTracks(page);
   await page.evaluate(() => {
@@ -136,20 +136,23 @@ test('顶部播放器保留进度、验证元信息、队列和循环并释放�
   const content = '**/native/files/*/content';
   await page.route(content, (route) => route.fulfill({ status: 503, body: '{}' }), { times: 1 });
   await page.getByRole('button', { name: trackNames[0], exact: true }).click();
-  const player = page.getByRole('dialog', { name: '音乐播放器', exact: true });
+  const player = page.getByRole('region', { name: '音乐播放器', exact: true });
+  const toolbar = page.getByRole('button', { name: '音乐播放器', exact: true });
   const button = (name: string) => player.getByRole('button', { name, exact: true });
   const audio = page.locator('audio');
-  await expect(player).toHaveCount(1);
+  await expect(page.getByRole('button', { name: '展开底部播放器', exact: true })).toBeVisible();
+  await expect(player).toHaveCount(0);
   await expect(audio).toHaveCount(1);
   await expect(
     page.getByRole('button', { name: '音乐播放器', exact: true, includeHidden: true }),
   ).toHaveCount(1);
+  await toolbar.click();
   await expect(player.getByRole('alert')).toBeVisible();
   await button('重试').click();
   await expect(audio).toHaveAttribute('src', /^blob:/);
   await expect(player.getByText('North Shore', { exact: true })).toBeVisible();
   await expect(player.getByText('Example Artist', { exact: true })).toBeVisible();
-  await expect(player.getByText('Example Album', { exact: true })).toBeVisible();
+  await expect(player.getByText('Example Album', { exact: true })).toBeAttached();
   const art = player.getByRole('img', { name: '曲目封面', exact: true });
   await expect.poll(() => art.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(24);
   const sourceURL = await audio.getAttribute('src');
@@ -169,6 +172,7 @@ test('顶部播放器保留进度、验证元信息、队列和循环并释放�
     .poll(() => audio.evaluate((node: HTMLAudioElement) => node.currentTime))
     .toBeCloseTo(0.1);
   await expect(player.getByText('−0:39', { exact: false })).toBeVisible();
+  await button('更多播放控制').click();
   const volume = player.getByRole('slider', { name: '音量', exact: true });
   await volume.press('Home');
   await volume.press('ArrowRight');
@@ -182,10 +186,12 @@ test('顶部播放器保留进度、验证元信息、队列和循环并释放�
 
   await button('播放').click();
   await expect(button('暂停')).toBeVisible();
+  await button('隐藏更多播放控制').click();
   // 响应式布局只重排同一套入口，不允许隐藏的第二播放器抢占播放状态。
   for (const width of [648, 320, 1440]) {
     const beforeResize = await audio.evaluate((node: HTMLAudioElement) => node.currentTime);
     await page.setViewportSize({ width, height: 844 });
+    if (!(await player.isVisible())) await toolbar.click();
     await expect(player).toHaveCount(1);
     await expect(audio).toHaveCount(1);
     await expect(
@@ -216,16 +222,16 @@ test('顶部播放器保留进度、验证元信息、队列和循环并释放�
     }
     await page.screenshot({ path: info.outputPath(`music-responsive-${width}.png`) });
   }
-  await button('关闭').click();
+  await button('收起底部播放器').click();
   await expect(player).toHaveCount(0);
   await page.getByRole('link', { name: '传输中心', exact: true }).click();
   await expect(page).toHaveURL(/\/home\/transfers$/);
   await expect(audio).toHaveCount(1);
   expect(await audio.evaluate((node, original) => node === original, retainedNode)).toBe(true);
   await expect(audio).toHaveAttribute('src', sourceURL ?? '');
-  await page.getByRole('button', { name: '音乐播放器', exact: true }).click();
+  await toolbar.click();
   await expect(player.getByText('North Shore', { exact: true })).toBeVisible();
-  await button('关闭').click();
+  await button('收起底部播放器').click();
   await page.goBack();
   await expect(page).toHaveURL(/parent=/);
   await expect(player).toHaveCount(0);
@@ -233,11 +239,12 @@ test('顶部播放器保留进度、验证元信息、队列和循环并释放�
   await expect
     .poll(() => audio.evaluate((node: HTMLAudioElement) => node.currentTime))
     .toBeGreaterThan(before);
-  await page.getByRole('button', { name: '音乐播放器', exact: true }).click();
+  await toolbar.click();
   await expect(player.getByText('North Shore', { exact: true })).toBeVisible();
   await expect(audio).toHaveAttribute('src', sourceURL ?? '');
   await page.screenshot({ path: info.outputPath('music-player-desktop.png') });
 
+  await button('更多播放控制').click();
   await button('显示播放队列').click();
   const queue = player.getByRole('list', { name: '播放队列', exact: true });
   await expect(queue.getByRole('listitem')).toHaveCount(3);
@@ -275,12 +282,18 @@ test('顶部播放器保留进度、验证元信息、队列和循环并释放�
   await expect(player.getByText('North Shore', { exact: true })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
+  if (!(await player.isVisible())) {
+    await toolbar.click();
+    await button('更多播放控制').click();
+  }
   await expect(player).toBeVisible();
   const playPosition = await button('暂停').boundingBox();
-  const queuePosition = await button('隐藏播放队列').boundingBox();
+  const fullscreenPosition = await button('全屏播放').boundingBox();
   expect(
     Math.abs(
-      playPosition!.y + playPosition!.height / 2 - (queuePosition!.y + queuePosition!.height / 2),
+      playPosition!.y +
+        playPosition!.height / 2 -
+        (fullscreenPosition!.y + fullscreenPosition!.height / 2),
     ),
   ).toBeLessThan(1);
   await page.screenshot({ path: info.outputPath('music-player-mobile.png') });
@@ -309,28 +322,44 @@ test('顶部播放器保留进度、验证元信息、队列和循环并释放�
 });
 
 for (const width of [320, 390, 648, 1440]) {
-  test(`播放器三种布局在 ${width}px 保持主轴对齐和同一播放节点`, async ({ page }, info) => {
+  test(`播放器在 ${width}px 默认折叠并通过独立按钮切换布局`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 844 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await setupTracks(page);
     await page.getByRole('button', { name: trackNames[0], exact: true }).click();
-    const player = page.getByRole('dialog', { name: '音乐播放器', exact: true });
-    const layout = player.locator('[data-music-layout]');
-    await expect(layout).toHaveAttribute('data-music-layout', width < 768 ? 'sheet' : 'floating');
+    const dock = page.getByRole('region', { name: '音乐播放器', exact: true });
+    const dialog = page.getByRole('dialog', { name: '音乐播放器', exact: true });
+    const handle = page.getByRole('button', { name: '展开底部播放器', exact: true });
     const audio = page.locator('audio');
+    await expect(handle).toBeVisible();
+    await expect(dock).toHaveCount(0);
+    await expect(dialog).toHaveCount(0);
+    const bottom =
+      width < 768
+        ? (await page.getByRole('navigation', { name: '主要目的地', exact: true }).boundingBox())!.y
+        : 844;
+    const handleBounds = (await handle.boundingBox())!;
+    expect(handleBounds.y + handleBounds.height).toBeCloseTo(bottom - 1);
     await expect(audio).toHaveCount(1);
     await expect(audio).toHaveAttribute('src', /^blob:/);
     const node = await audio.elementHandle();
     const source = await audio.getAttribute('src');
+    await handle.press('Enter');
+    await expect(dock).toBeFocused();
+    const dockBounds = (await dock.boundingBox())!;
+    expect(dockBounds.y + dockBounds.height).toBe(bottom);
+    expect(dockBounds.height).toBeLessThanOrEqual(width < 768 ? 120 : 72);
+    await page.screenshot({ path: info.outputPath(`music-dock-${width}.png`) });
+
     for (const [mode, label] of [
-      ['floating', '悬浮'],
-      ['sheet', '底部面板'],
+      ['floating', '悬浮播放'],
       ['fullscreen', '全屏播放'],
     ] as const) {
-      await player.getByRole('button', { name: '播放器布局', exact: true }).click();
-      await page.getByRole('menuitemradio', { name: label, exact: true }).click();
-      await expect(player).toHaveCount(1);
+      await dock.getByRole('button', { name: label, exact: true }).click();
+      const layout = dialog.locator('[data-music-layout]');
+      await expect(dialog).toHaveCount(1);
       await expect(layout).toHaveAttribute('data-music-layout', mode);
+      await expect(page.getByRole('menu')).toHaveCount(0);
       await expect(audio).toHaveCount(1);
       expect(await audio.evaluate((actual, original) => actual === original, node)).toBe(true);
       await expect(audio).toHaveAttribute('src', source!);
@@ -346,7 +375,7 @@ for (const width of [320, 390, 648, 1440]) {
         ];
       });
       expect(Math.max(...axes) - Math.min(...axes)).toBeLessThanOrEqual(1);
-      const controls = await player.locator('[data-music-transport] button').evaluateAll((nodes) =>
+      const controls = await dialog.locator('[data-music-transport] button').evaluateAll((nodes) =>
         nodes.map((n) => {
           const b = n.getBoundingClientRect();
           return [b.width, b.height];
@@ -357,56 +386,120 @@ for (const width of [320, 390, 648, 1440]) {
         true,
       );
       await page.screenshot({ path: info.outputPath(`music-${mode}-${width}.png`) });
+      await dialog.getByRole('button', { name: '收回底部', exact: true }).click();
+      await expect(dialog).toHaveCount(0);
+      await expect(dock).toHaveCount(0);
+      await expect(handle).toBeFocused();
+      await handle.press('Space');
+      await expect(dock).toBeFocused();
     }
-    await player.getByRole('button', { name: '关闭', exact: true }).click();
-    await expect(player).toHaveCount(0);
-    await expect(page.getByRole('button', { name: '音乐播放器', exact: true })).toBeFocused();
-    await page.getByRole('button', { name: '音乐播放器', exact: true }).click();
-    await expect(layout).toHaveAttribute('data-music-layout', 'fullscreen');
-    await page.setViewportSize({ width: 844, height: 320 });
-    await expect(layout).toHaveAttribute('data-music-layout', 'fullscreen');
-    const close = player.getByRole('button', { name: '关闭', exact: true });
-    await close.click();
-    await expect(player).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(dock).toHaveCount(0);
+    await expect(handle).toBeFocused();
+    expect(await audio.evaluate((actual, original) => actual === original, node)).toBe(true);
   });
 }
 
-test('手机英文深色与短横屏保留三种模式及可达控制', async ({ page }, info) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+test('鼠标移入展开、拖动完成后收起，文件区仍能滚动、选取文件', async ({ page }, info) => {
+  await page.setViewportSize({ width: 1440, height: 510 });
   await setupTracks(page);
-  await page.getByRole('button', { name: '当前用户', exact: true }).click();
-  await page.getByRole('menuitem', { name: '语言 简体中文', exact: true }).click();
-  await page.getByRole('menuitemradio', { name: 'English', exact: true }).click();
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await page.getByRole('button', { name: trackNames[0], exact: true }).click();
-  const player = page.getByRole('dialog', { name: 'Music player', exact: true });
-  for (const label of ['Floating', 'Bottom sheet', 'Full screen']) {
-    await player.getByRole('button', { name: 'Player layout', exact: true }).click();
-    await page.getByRole('menuitemradio', { name: label, exact: true }).click();
-    await expect(
-      player.getByRole('slider', { name: 'Playback position', exact: true }),
-    ).toBeEnabled();
-    await page.screenshot({
-      path: info.outputPath(`music-dark-en-${label.replaceAll(' ', '-')}.png`),
-    });
-  }
-  await page.setViewportSize({ width: 844, height: 320 });
-  await player.getByRole('button', { name: 'Player layout', exact: true }).click();
-  await page.getByRole('menuitemradio', { name: 'Bottom sheet', exact: true }).click();
-  const volume = player.getByRole('slider', { name: 'Volume', exact: true });
-  await volume.press('Home');
-  await volume.press('ArrowRight');
-  await expect
-    .poll(() => page.locator('audio').evaluate((node: HTMLAudioElement) => node.volume))
-    .toBeCloseTo(0.01);
-  const stop = player.getByRole('button', { name: 'Stop player', exact: true });
-  await stop.scrollIntoViewIfNeeded();
-  const stopBounds = await stop.boundingBox();
-  expect(stopBounds!.y).toBeGreaterThanOrEqual(0);
-  expect(stopBounds!.y + stopBounds!.height).toBeLessThanOrEqual(320);
-  await page.screenshot({ path: info.outputPath('music-short-landscape.png') });
-  await player.getByRole('button', { name: 'Close', exact: true }).click();
-  await expect(player).toHaveCount(0);
+  await page.evaluate(() => {
+    const play = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'play')
+      ?.value as HTMLMediaElement['play'];
+    let shouldBlock = true;
+    HTMLMediaElement.prototype.play = function () {
+      if (this instanceof HTMLAudioElement && shouldBlock) {
+        shouldBlock = false;
+        return Promise.reject(new DOMException('Synthetic autoplay block', 'NotAllowedError'));
+      }
+      return play.call(this);
+    };
+  });
+  const file = page.getByRole('button', { name: trackNames[0], exact: true });
+  await file.click();
+  const dock = page.getByRole('region', { name: '音乐播放器', exact: true });
+  const handle = page.getByRole('button', { name: '展开底部播放器', exact: true });
+  const toolbar = page.getByRole('button', { name: '音乐播放器', exact: true });
+  await expect(dock).toHaveCount(0);
+  await expect(handle).toBeVisible();
+  await page.screenshot({ path: info.outputPath('music-dock-collapsed.png') });
+  await handle.hover();
+  await expect(dock.getByText('浏览器未开始播放。请点击播放按钮。')).toBeVisible();
+  await dock.getByRole('button', { name: '播放', exact: true }).click();
+  await expect(dock.getByRole('button', { name: '暂停', exact: true })).toBeVisible();
+  await page.mouse.move(32, 140);
+  await expect(handle).toBeVisible();
+  await handle.hover();
+  const slider = dock.locator('[data-music-progress] .MuiSlider-rail');
+  const bounds = (await slider.boundingBox())!;
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + bounds.width * 0.75, bounds.y - 100);
+  await expect(dock).toBeVisible();
+  await page.mouse.up();
+  await expect(handle).toBeVisible();
+
+  await toolbar.press('Enter');
+  await expect(dock).toBeFocused();
+  const main = page.locator('#main-content');
+  const mainBounds = (await main.boundingBox())!;
+  await page.mouse.move(mainBounds.x + mainBounds.width - 32, mainBounds.y + 52);
+  await page.mouse.wheel(0, 330);
+  await expect.poll(() => main.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  await expect(dock).toBeVisible();
+  const checkbox = page.getByRole('checkbox', { name: '选择 ' + trackNames[1], exact: true });
+  await checkbox.check();
+  await expect(checkbox).toBeChecked();
+  await expect(handle).toBeVisible();
+  await handle.hover();
+  await file.focus();
+  await page.keyboard.press('/');
+  await expect(page.getByRole('searchbox', { name: '搜索文件', exact: true })).toBeFocused();
+  await expect(dock).toBeVisible();
+});
+
+test.describe('触屏播放器', () => {
+  test.use({ hasTouch: true });
+
+  test('英文深色与短横屏可点按展开并操作播放控制', async ({ page }, info) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+    await setupTracks(page);
+    await page.getByRole('button', { name: '当前用户', exact: true }).click();
+    await page.getByRole('menuitem', { name: '语言 简体中文', exact: true }).click();
+    await page.getByRole('menuitemradio', { name: 'English', exact: true }).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await page.getByRole('button', { name: trackNames[0], exact: true }).click();
+    const player = page.getByRole('region', { name: 'Music player', exact: true });
+    const handle = page.getByRole('button', { name: 'Expand bottom player', exact: true });
+    await expect(player).toHaveCount(0);
+    await handle.tap();
+    await expect(player.getByRole('slider', { name: 'Playback position' })).toBeEnabled();
+    await page.screenshot({ path: info.outputPath('music-dark-en-dock.png') });
+    await player.getByRole('button', { name: 'Full screen', exact: true }).tap();
+    const dialog = page.getByRole('dialog', { name: 'Music player', exact: true });
+    await page.setViewportSize({ width: 844, height: 320 });
+    await expect(dialog.locator('[data-music-layout]')).toHaveAttribute(
+      'data-music-layout',
+      'fullscreen',
+    );
+    await dialog.getByRole('button', { name: 'Return to bottom', exact: true }).tap();
+    await handle.tap();
+    await player.getByRole('button', { name: 'More playback controls', exact: true }).tap();
+    const volume = player.getByRole('slider', { name: 'Volume', exact: true });
+    await volume.press('Home');
+    await volume.press('ArrowRight');
+    await expect
+      .poll(() => page.locator('audio').evaluate((node: HTMLAudioElement) => node.volume))
+      .toBeCloseTo(0.01);
+    const stop = player.getByRole('button', { name: 'Stop player', exact: true });
+    await stop.scrollIntoViewIfNeeded();
+    const stopBounds = await stop.boundingBox();
+    expect(stopBounds!.y).toBeGreaterThanOrEqual(0);
+    expect(stopBounds!.y + stopBounds!.height).toBeLessThanOrEqual(320);
+    await page.screenshot({ path: info.outputPath('music-short-landscape.png') });
+    await player.getByRole('button', { name: 'Collapse bottom player', exact: true }).tap();
+    await expect(player).toHaveCount(0);
+  });
 });

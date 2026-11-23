@@ -48,6 +48,21 @@
 }
 
 @layer components {
+  .music-dock {
+    --music-dock-bottom: env(safe-area-inset-bottom);
+    bottom: var(--music-dock-bottom);
+  }
+
+  .music-dock-panel {
+    max-height: calc(100dvh - var(--music-dock-bottom));
+  }
+
+  @media (width < 48rem) {
+    .music-dock {
+      --music-dock-bottom: calc(var(--spacing-mobile-navigation) + env(safe-area-inset-bottom));
+    }
+  }
+
   /* Top Progress：应用级 Global Pending 的顶部反馈（Host 单例，见 host/top-progress.tsx）。
    * 关键帧与 recipe 登记在 packages/design-system/src/motion.css；
    * reduced/off 由 tokens.css 全局 Motion Policy 覆盖。

@@ -404,10 +404,11 @@ test('目录层级上传与复制、图片画廊、真实音视频播放和剪�
   await expect
     .poll(() => audio.evaluate((element: HTMLAudioElement) => element.currentTime))
     .toBeGreaterThan(0);
-  await page
-    .getByRole('dialog', { name: '音乐播放器' })
-    .getByRole('button', { name: '停止播放器' })
-    .click();
+  const player = page.getByRole('region', { name: '音乐播放器', exact: true });
+  await expect(player).toHaveCount(0);
+  await page.getByRole('button', { name: '音乐播放器', exact: true }).click();
+  await player.getByRole('button', { name: '更多播放控制', exact: true }).click();
+  await player.getByRole('button', { name: '停止播放器', exact: true }).click();
   await expect(page.locator('audio')).toHaveCount(0);
   expect(
     await ownedAudio.evaluate(
