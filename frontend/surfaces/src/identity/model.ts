@@ -19,6 +19,8 @@ export const identifierSchema = z
   .regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]*$/);
 export const nameSchema = z.string().trim().min(1).max(80);
 export const emailSchema = z.string().trim().toLowerCase().email().max(254);
+// 与 IAM NormalizeUsername 的非邮箱分支一致；可用于真实登录和已有账户投影。
+export const iamUsernameSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$/);
 export const roleIdsSchema = z
   .array(identifierSchema)
   .min(1)
@@ -29,7 +31,7 @@ export const userSchema = z
   .object({
     id: identifierSchema,
     name: nameSchema,
-    email: emailSchema,
+    email: z.union([emailSchema, iamUsernameSchema]),
     status: userStatusSchema,
     roleIds: roleIdsSchema,
     version: z.number().int().positive(),

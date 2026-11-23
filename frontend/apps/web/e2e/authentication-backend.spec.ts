@@ -1,9 +1,66 @@
 import { test, expect } from '@playwright/test';
 import { e2eBackendBaseUrl } from './base-url';
 import AxeBuilder from '@axe-core/playwright';
+import { saveEvidenceScreenshot } from './evidence-screenshot';
+import { waitForVisualReadiness } from './visual-readiness';
 
 // Controlled proposed API responses validate the real Backend adapter and UI.
 // This is not evidence of integration with an actual authentication server.
+test('Sign-in and completed setup share keyboard-accessible recovery help', async ({
+  page,
+  context,
+}) => {
+  const unexpectedAuthRequests: string[] = [];
+  await context.route(/\/api\//, async (route) => {
+    const request = route.request();
+    const { pathname } = new URL(request.url());
+    const authPath = pathname.replace(/^\/api\/(?:console\/v1\/)?/, '/');
+    if (request.method() === 'GET') {
+      if (authPath === '/auth/registration-policy') {
+        await route.fulfill({ json: { enabled: false } });
+        return;
+      }
+      if (authPath === '/auth/setup-policy') {
+        await route.fulfill({
+          json: { minLength: 15, maxLength: 128, requireComplexity: false, initialized: true },
+        });
+        return;
+      }
+      if (authPath === '/auth/session') {
+        await route.fulfill({ status: 401 });
+        return;
+      }
+    }
+    if (authPath.startsWith('/auth/'))
+      unexpectedAuthRequests.push(`${request.method()} ${pathname}`);
+    await route.fulfill({ status: 404 });
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const path of ['/login', '/setup']) {
+    await page.goto(path);
+    const help = page.getByRole('button', { name: '无法登录？', exact: true });
+    const ownerInstructions = page.getByText(/iam recover-owner/);
+    await expect(help).toHaveAttribute('aria-expanded', 'false');
+    await expect(ownerInstructions).toBeHidden();
+    await help.focus();
+    await help.press('Enter');
+    await expect(help).toBeFocused();
+    await expect(help).toHaveAttribute('aria-expanded', 'true');
+    await expect(ownerInstructions).toBeVisible();
+    await expect(page.getByText('忘记账号或密码时，请联系此实例的管理员。')).toBeVisible();
+    await waitForVisualReadiness(page);
+    const axe = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+      .analyze();
+    expect(axe.violations).toEqual([]);
+    await saveEvidenceScreenshot(page, { path: `recovery-help/${path.slice(1)}.png` });
+    await help.press('Space');
+    await expect(help).toHaveAttribute('aria-expanded', 'false');
+  }
+  expect(unexpectedAuthRequests).toEqual([]);
+});
+
 test('Backend mode uses CSRF/session API for login, restore and logout without Mock persistence', async ({
   page,
   context,

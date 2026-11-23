@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/reina0721/clouddrive/internal/module/iam/authorization"
+	"github.com/reina0721/clouddrive/internal/module/iam/model"
 	"github.com/reina0721/clouddrive/internal/module/iam/service"
 	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
 )
@@ -49,6 +50,8 @@ type Administration interface {
 	Compatible(context.Context) error
 	ReconcileOwnerCatalog(context.Context) error
 	ResetPasswordByUsername(context.Context, string, string) error
+	RecoverableOwners(context.Context) ([]model.RecoveryOwner, error)
+	RecoverOwnerPassword(context.Context, string, string) error
 }
 
 // ApiTokenResolver 是 API-Token 认证解析的窄 facet（078）；composition 把

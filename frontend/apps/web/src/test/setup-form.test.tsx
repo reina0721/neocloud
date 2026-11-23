@@ -62,6 +62,7 @@ it('在失焦和提交时显示默认密码要求，拦截短密码且将错误�
   const submit = renderSetup(() => Response.json(defaultPolicy));
   const password = await screen.findByLabelText('密码', { exact: true });
   const button = screen.getByRole('button', { name: '创建管理员' });
+  expect(screen.queryByRole('button', { name: '无法登录？' })).not.toBeInTheDocument();
   expect(password).toHaveAccessibleDescription('请输入 15–128 个字符。');
 
   fill('姓名', '测试管理员');
@@ -131,6 +132,11 @@ it('读取失败时允许重试，已初始化实例直接给出登录入口', a
   fireEvent.click(retry);
   expect(await screen.findByRole('link', { name: '前往登录' })).toHaveAttribute('href', '/login');
   expect(screen.getByRole('status')).toHaveTextContent('系统已完成首次设置');
+  const help = screen.getByRole('button', { name: '无法登录？' });
+  expect(help).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(help);
+  expect(help).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getByText(/iam recover-owner/)).toBeVisible();
   expect(readPolicy).toHaveBeenCalledTimes(2);
 });
 

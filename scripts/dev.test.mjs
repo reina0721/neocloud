@@ -3,13 +3,18 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { existsSync } from "node:fs";
 import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { createServer as createHttpServer } from "node:http";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import { devSetupMessage } from "./dev-setup-status.mjs";
 
 const devScript = fileURLToPath(new URL("./dev.mjs", import.meta.url));
+const statusScript = fileURLToPath(
+  new URL("./dev-setup-status.mjs", import.meta.url),
+);
 
 function cli(args, { script = devScript, env } = {}) {
   const child = spawn(process.execPath, [script, ...args], {
@@ -67,6 +72,7 @@ test("已有 node_modules 也先按锁文件同步，安装失败不启动后端
   await mkdir(join(root, "scripts"));
   await mkdir(bin);
   await copyFile(devScript, script);
+  await copyFile(statusScript, join(root, "scripts", "dev-setup-status.mjs"));
   const windows = process.platform === "win32";
   await writeFile(
     join(bin, windows ? "npx.cmd" : "npx"),
@@ -109,4 +115,32 @@ test("帮助不启动任何服务", async () => {
   assert.equal(result.code, 0);
   assert.match(result.output, /--preview/);
   assert.match(result.output, /Ctrl\+C/);
+});
+
+test("启动提示按同源设置状态切换，无法确认时只提示登录", async (t) => {
+  const replies = [
+    [200, '{"initialized":true}'],
+    [200, '{"initialized":false}'],
+    [200, '{"initialized":"false"}'],
+    [200, "invalid JSON"],
+    [503, "{}"],
+  ];
+  const server = createHttpServer((request, response) => {
+    assert.equal(request.url, "/api/console/v1/auth/setup-policy");
+    const [status, body] = replies.shift();
+    response.writeHead(status, { "Content-Type": "application/json" });
+    response.end(body);
+  });
+  await once(server.listen(0, "127.0.0.1"), "listening");
+  t.after(() => new Promise((done) => server.close(done)));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const controller = new AbortController();
+  const read = () => devSetupMessage(base, "设置令牌文件", controller.signal);
+  const login = `登录：${base}/login`;
+  assert.equal(await read(), login);
+  assert.equal(await read(), `首次设置：${base}/setup；令牌：设置令牌文件`);
+  for (let attempt = 0; attempt < 3; attempt++)
+    assert.equal(await read(), `无法确认首次设置状态。${login}`);
+  controller.abort();
+  await assert.rejects(read(), { name: "AbortError" });
 });

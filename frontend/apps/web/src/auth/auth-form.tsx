@@ -11,6 +11,7 @@ import { useFrontendTranslation } from '@clouddrive/i18n';
 import { useSiteProfile } from '@clouddrive/surface/administration/runtime';
 import { useAuth } from './context';
 import { AuthFrame } from './frame';
+import { LoginHelp } from './login-help';
 import { authPageHref, authReturnDestination } from './contract';
 import { readAuthConfig } from './config';
 import type { DemoAccount } from './demo-accounts';
@@ -42,12 +43,11 @@ export function AuthForm({ kind }: Readonly<{ kind: 'login' | 'register' | 'expi
   const [availability, setAvailability] = useState<boolean | null>(null);
   const [policyFailure, setPolicyFailure] = useState(false);
   const [policyRetry, setPolicyRetry] = useState(0);
-  // 演示模式判定：显式 Mock 部署才提供快捷身份；后端模式绝不出现（也不因失败降级）。
-  const [demoMode] = useState(() => {
+  const [authMode] = useState(() => {
     try {
-      return readAuthConfig().mode === 'mock';
+      return readAuthConfig().mode;
     } catch {
-      return false;
+      return null;
     }
   });
   const signInAsDemo = async (account: DemoAccount) => {
@@ -81,9 +81,12 @@ export function AuthForm({ kind }: Readonly<{ kind: 'login' | 'register' | 'expi
     show: <Eye aria-hidden="true" className="size-4" />,
     hide: <EyeOff aria-hidden="true" className="size-4" />,
   };
+  const acceptsUsername = !register && authMode === 'backend';
   const form = useFoundationForm<AuthFormValues>({
     schema: () =>
-      import('./form-schema').then(({ createAuthSchema }) => createAuthSchema(register)),
+      import('./form-schema').then(({ createAuthSchema }) =>
+        createAuthSchema(register, acceptsUsername),
+      ),
     defaultValues: { name: '', email: '', password: '', confirmation: '' },
   });
   const validation = (field: keyof AuthFormValues, message: string) =>
@@ -111,7 +114,11 @@ export function AuthForm({ kind }: Readonly<{ kind: 'login' | 'register' | 'expi
           <AlertBanner
             tone="danger"
             announcement="urgent"
-            title={t(`auth.errors.${auth.error}`)}
+            title={t(
+              acceptsUsername && auth.error === 'credentials'
+                ? 'auth.loginCredentialsError'
+                : `auth.errors.${auth.error}`,
+            )}
             description={t('auth.errorDescription')}
             icon={<AlertTriangle aria-hidden="true" className="size-4" />}
           />
@@ -180,10 +187,14 @@ export function AuthForm({ kind }: Readonly<{ kind: 'login' | 'register' | 'expi
             ) : null}
             <TextField
               label={t('auth.email')}
-              purpose="email"
+              purpose={acceptsUsername ? 'text' : 'email'}
               autoComplete="username"
               disabled={auth.busy}
-              {...validation('email', 'auth.emailError')}
+              {...(acceptsUsername ? { hint: t('auth.loginIdentifierHint') } : {})}
+              {...validation(
+                'email',
+                acceptsUsername ? 'auth.loginIdentifierError' : 'auth.emailError',
+              )}
               {...form.registerField('email')}
             />
             <PasswordField
@@ -222,7 +233,8 @@ export function AuthForm({ kind }: Readonly<{ kind: 'login' | 'register' | 'expi
             </Action>
           </FoundationForm>
         )}
-        {demoMode && !register && !registered ? (
+        {authMode === 'backend' && !register ? <LoginHelp /> : null}
+        {authMode === 'mock' && !register && !registered ? (
           <Suspense
             fallback={
               <p role="status" className="text-sm text-ink-muted">

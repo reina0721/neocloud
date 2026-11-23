@@ -48,6 +48,56 @@ CREATE TABLE memberships (id INTEGER PRIMARY KEY, organization_id INTEGER NOT NU
 	}
 }
 
+func TestOpenExistingGORMRequiresPersistentSQLite(t *testing.T) {
+	ctx := t.Context()
+	path := filepath.Join(t.TempDir(), "state", "app.db")
+	config := &Config{Driver: DriverSQLite, DSN: path}
+	if resource, err := OpenExistingGORM(ctx, config); err == nil {
+		_ = resource.Close()
+		t.Fatal("opening a missing instance succeeded")
+	}
+	if _, err := os.Stat(filepath.Dir(path)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("opening a missing instance changed its directory: %v", err)
+	}
+	missingFile := filepath.Join(t.TempDir(), "app.db")
+	if resource, err := OpenExistingGORM(ctx, &Config{Driver: DriverSQLite, DSN: missingFile}); err == nil {
+		_ = resource.Close()
+		t.Fatal("opening a missing database in an existing directory succeeded")
+	}
+	if _, err := os.Stat(missingFile); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("opening a missing database changed its file: %v", err)
+	}
+	if resource, err := OpenExistingGORM(ctx, &Config{Driver: DriverSQLite, DSN: ":memory:"}); err == nil {
+		_ = resource.Close()
+		t.Fatal("an in-memory database cannot be opened as an existing instance")
+	}
+	created, err := NewGORM(ctx, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = UseGORM(ctx, created.Client(), func(db *gorm.DB) error {
+		return db.Exec("CREATE TABLE existing (value INTEGER NOT NULL); INSERT INTO existing VALUES (42);").Error
+	})
+	if err = errors.Join(err, created.Close()); err != nil {
+		t.Fatal(err)
+	}
+	existing, err := OpenExistingGORM(ctx, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := existing.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	var value int
+	if err := UseGORM(ctx, existing.Client(), func(db *gorm.DB) error {
+		return db.Raw("SELECT value FROM existing").Scan(&value).Error
+	}); err != nil || value != 42 {
+		t.Fatalf("existing SQLite content was unavailable: %v", err)
+	}
+}
+
 func TestWithinTxCommitsAndRollsBack(t *testing.T) {
 	resource := sqliteResource(t)
 	defer resource.Close()

@@ -58,6 +58,15 @@ type PoolConfig struct {
 
 // Definition 返回无安装副作用的 Database 组件声明。
 func Definition() (app.Definition[Access], error) {
+	return definition(pkgdatabase.NewGORM)
+}
+
+// ExistingDefinition 装配只打开既有数据库的本机恢复资源。
+func ExistingDefinition() (app.Definition[Access], error) {
+	return definition(pkgdatabase.OpenExistingGORM)
+}
+
+func definition(open func(context.Context, *pkgdatabase.Config) (pkgdatabase.Resource, error)) (app.Definition[Access], error) {
 	source, err := app.Configured(ConfigPath, decode, defaults{})
 	if err != nil {
 		return app.Definition[Access]{}, err
@@ -66,7 +75,10 @@ func Definition() (app.Definition[Access], error) {
 		ID,
 		source,
 		app.FixedDependencies(struct{}{}),
-		build,
+		func(ctx context.Context, cfg Config, _ struct{}) (pkgdatabase.Resource, error) {
+			packageConfig := cfg.packageConfig()
+			return open(ctx, &packageConfig)
+		},
 		app.Leased(newAccess),
 		app.KernelInstanceSwap,
 		app.WithReady(ready),
@@ -124,11 +136,6 @@ func (a *access) WithinTx(ctx context.Context, use func(context.Context, Client,
 			return use(txCtx, client, tx)
 		})
 	})
-}
-
-func build(ctx context.Context, cfg Config, _ struct{}) (pkgdatabase.Resource, error) {
-	packageConfig := cfg.packageConfig()
-	return pkgdatabase.NewGORM(ctx, &packageConfig)
 }
 
 func ready(ctx context.Context, client pkgdatabase.Resource) error {

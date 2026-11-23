@@ -845,6 +845,10 @@ func (s *Service) recordPasswordHistory(ctx context.Context, r *repo.Unit, accou
 	return r.TrimPasswordHistory(ctx, accountID, s.config.PasswordPolicy.HistorySize)
 }
 func (s *Service) ResetPassword(ctx context.Context, accountID, newPassword string, expected ...uint64) error {
+	return s.resetPassword(ctx, accountID, newPassword, false, expected...)
+}
+
+func (s *Service) resetPassword(ctx context.Context, accountID, newPassword string, requireOwner bool, expected ...uint64) error {
 	if err := model.ValidatePasswordWith(newPassword, s.config.PasswordPolicy); err != nil {
 		return err
 	}
@@ -859,6 +863,11 @@ func (s *Service) ResetPassword(ctx context.Context, accountID, newPassword stri
 		}
 		if len(expected) > 0 && account.Version != expected[0] {
 			return ErrVersionConflict
+		}
+		if requireOwner {
+			if err := requireRecoveryOwner(txCtx, r, account); err != nil {
+				return err
+			}
 		}
 		if account.Archived {
 			return ErrAccountDisabled

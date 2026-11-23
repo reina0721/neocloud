@@ -24,6 +24,15 @@ import (
 //
 // 技术实现由组合根调用本函数明确选择；配置只选择数据库协议和连接位置。
 func NewGORM(ctx context.Context, cfg *Config) (Resource, error) {
+	return newGORM(ctx, cfg, true)
+}
+
+// OpenExistingGORM 打开已有数据库。SQLite 缺失时返回错误，不创建数据库或目录。
+func OpenExistingGORM(ctx context.Context, cfg *Config) (Resource, error) {
+	return newGORM(ctx, cfg, false)
+}
+
+func newGORM(ctx context.Context, cfg *Config, createSQLite bool) (Resource, error) {
 	if err := validateContext(ctx); err != nil {
 		return nil, err
 	}
@@ -33,7 +42,11 @@ func NewGORM(ctx context.Context, cfg *Config) (Resource, error) {
 	}
 	dsn := resolved.DSN
 	if resolved.Driver == DriverSQLite {
-		dsn, err = prepareSQLite(resolved.DSN)
+		if createSQLite {
+			dsn, err = prepareSQLite(resolved.DSN)
+		} else {
+			dsn, err = openExistingSQLite(resolved.DSN)
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -241,7 +254,7 @@ func prepareSQLite(dsn string) (string, error) {
 		return "", err
 	}
 	directory := filepath.Dir(path)
-	if err := prepareSQLiteDirectory(directory); err != nil {
+	if err := prepareSQLiteDirectory(directory, true); err != nil {
 		return "", err
 	}
 	if info, err := os.Lstat(path); err == nil {
@@ -277,10 +290,31 @@ func sqliteMemoryDSN(dsn string) bool {
 	return dsn == ":memory:" || strings.HasPrefix(dsn, "file::memory:")
 }
 
-func prepareSQLiteDirectory(directory string) error {
+func openExistingSQLite(dsn string) (string, error) {
+	if sqliteMemoryDSN(dsn) {
+		return "", fmt.Errorf("恢复操作需要持久化 SQLite 数据库")
+	}
+	path, err := sqlitePath(dsn)
+	if err != nil {
+		return "", err
+	}
+	if err := prepareSQLiteDirectory(filepath.Dir(path), false); err != nil {
+		return "", err
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		return "", fmt.Errorf("检查现有 SQLite 数据库: %w", redactDriverError(err))
+	}
+	if !info.Mode().IsRegular() || (runtime.GOOS != "windows" && info.Mode().Perm() != 0o600) {
+		return "", fmt.Errorf("SQLite 数据库必须是私有的普通文件")
+	}
+	return sqliteDSN(path) + "&mode=rw", nil
+}
+
+func prepareSQLiteDirectory(directory string, create bool) error {
 	created := false
 	info, err := os.Lstat(directory)
-	if errors.Is(err, os.ErrNotExist) {
+	if create && errors.Is(err, os.ErrNotExist) {
 		if err := os.MkdirAll(directory, 0o700); err != nil {
 			return fmt.Errorf("create sqlite directory: %w", redactDriverError(err))
 		}

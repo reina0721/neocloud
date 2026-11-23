@@ -14,7 +14,7 @@ node scripts/dev.mjs
 
 工具在前台拥有前后端及生成器进程。构建、迁移后等待 Go readiness、前端登录页和同源 API 全部成功。Ctrl+C 或任一服务退出时清理其余进程；日志在 `.data/dev/`，数据保留。探活超时会提示对应服务的日志文件及最近收到的 HTTP 状态。普通开发使用根 `config.yaml`，不存在时运行原生 `config init`；已有数据库不重置；浏览器 Origin 仅在子进程环境中按实际端口覆盖。
 
-首次设置令牌默认位于 `.data/dev/setup-token`。如果启动前设置了 `APP_IAM__LOCAL__SETUPTOKEN`，本次服务使用环境变量中的值，终端只提示令牌来源。令牌不写入聊天或 Git。
+启动器按当前实例的状态提示登录或首次设置。首次设置令牌默认位于 `.data/dev/setup-token`。如果启动前设置了 `APP_IAM__LOCAL__SETUPTOKEN`，本次服务使用环境变量中的值，终端只提示令牌来源。已有实例无法登录时，使用[账号恢复](first-use.md#无法登录)。令牌不写入聊天或 Git。
 
 需要真实浏览器验收时使用隔离环境：
 
@@ -32,7 +32,7 @@ Linux 上出现 `inotify` / `EMFILE` 时先检查 `fs.inotify.max_user_instances
 
 从仓库根目录执行 scripts/Start-Dev.ps1。若 Go 不在 PATH，传入 -GoExecutable 指定 go.exe；脚本也识别本机 LOCALAPPDATA/clouddrive-tools/go1.26.11/go/bin/go.exe。
 
-首次启动会复制配置、安装前端依赖、迁移数据库，并启动 Go 与 Next.js。浏览器打开 http://127.0.0.1:4173/setup，用 .data/dev-setup-token 中的令牌创建管理员。也可以在启动前设置 APP_IAM__LOCAL__SETUPTOKEN。已有管理员时不能再次首次设置。
+首次启动会复制配置、安装前端依赖、迁移数据库，并启动 Go 与 Next.js。按终端提示登录或首次设置。新实例的设置令牌默认位于 `.data/dev-setup-token`，也可以在启动前设置 `APP_IAM__LOCAL__SETUPTOKEN`。
 
 停止使用 scripts/Stop-Dev.ps1；只停止该脚本记录的进程树，避免按端口结束其它项目。
 

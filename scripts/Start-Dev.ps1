@@ -59,7 +59,17 @@ try {
             if (-not $ready) { throw "Startup timed out: $url. Check .data logs." }
         }
     } catch { & (Join-Path $PSScriptRoot 'Stop-Dev.ps1'); throw }
-    Write-Host 'clouddrive: http://127.0.0.1:4173  |  first administrator: /setup'
+    $initialized = $null
+    try {
+        $initialized = (Invoke-RestMethod -Uri 'http://127.0.0.1:4173/api/console/v1/auth/setup-policy' -UseBasicParsing -TimeoutSec 5).initialized
+    } catch {}
+    if ($initialized -is [bool] -and -not $initialized) {
+        Write-Host '首次设置：http://127.0.0.1:4173/setup'
+        $tokenSource = if ($previousSetupToken) { '环境变量 APP_IAM__LOCAL__SETUPTOKEN' } else { '.data/dev-setup-token' }
+        Write-Host "令牌：$tokenSource"
+    } else {
+        if ($initialized -isnot [bool]) { Write-Warning '无法确认首次设置状态。' }
+        Write-Host '登录：http://127.0.0.1:4173/login'
+    }
     Write-Host 'Logs: .data/backend.log, .data/frontend.log. Stop: scripts/Stop-Dev.ps1'
-    if (-not $previousSetupToken) { Write-Host 'First administrator setup token: .data/dev-setup-token (keep private).' }
 } finally { $env:APP_IAM__LOCAL__SETUPTOKEN = $previousSetupToken; Pop-Location }

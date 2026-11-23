@@ -14,6 +14,7 @@ import { createServer } from "node:net";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { devSetupMessage } from "./dev-setup-status.mjs";
 
 // SQLite、配置与日志的默认权限统一由启动 owner 收紧。
 process.umask(0o077);
@@ -364,9 +365,10 @@ try {
       join(repo, "scripts/initialize-file-preview.mjs"),
       accessPath,
     ]);
-  console.log(
-    `clouddrive: ${base}/home\n日志：${data}\n${accessPath ? `测试账号：${accessPath}` : `首次设置：${base}/setup；令牌：${tokenSource}`}\nCtrl+C 关闭服务，数据保留。`,
-  );
+  const entry = accessPath
+    ? `预览：${base}/home\n测试账号：${accessPath}`
+    : await devSetupMessage(base, tokenSource, controller.signal);
+  console.log(`${entry}\n日志：${data}\nCtrl+C 关闭服务，数据保留。`);
   if (!controller.signal.aborted)
     await new Promise((done) =>
       controller.signal.addEventListener("abort", done, { once: true }),

@@ -10,6 +10,7 @@ import (
 
 type Executor interface {
 	ResetPassword(context.Context, string, string) error
+	RecoverOwner(context.Context, SelectOwnerRecovery) error
 }
 type Contract struct{ executor Executor }
 
@@ -20,7 +21,7 @@ func New(executor Executor) (kernelcli.Contract, error) {
 	return &Contract{executor: executor}, nil
 }
 func (c *Contract) Commands() ([]cli.CommandSpec, error) {
-	return []cli.CommandSpec{{Name: "iam", Description: "管理本地 IAM 账号", Mode: cli.CommandModeApplication, SideEffect: cli.SideEffectExternalWrite, Positional: cli.PositionalNone, Commands: []cli.CommandSpec{c.resetPasswordCommand()}}}, nil
+	return []cli.CommandSpec{{Name: "iam", Description: "管理本地 IAM 账号", Mode: cli.CommandModeApplication, SideEffect: cli.SideEffectExternalWrite, Positional: cli.PositionalNone, Commands: []cli.CommandSpec{c.resetPasswordCommand(), c.recoverOwnerCommand()}}}, nil
 }
 func (c *Contract) resetPasswordCommand() cli.CommandSpec {
 	return cli.CommandSpec{Name: "reset-password", Description: "重置本地 IAM 账号密码", Mode: cli.CommandModeApplication, SideEffect: cli.SideEffectExternalWrite, Positional: cli.PositionalNone, Flags: []cli.FlagSpec{{Name: "username", Type: cli.FlagTypeString, Required: true, Description: "IAM 用户名"}, {Name: "password", Type: cli.FlagTypeString, Description: "新密码；未提供时通过安全输入提示读取"}}, Run: func(ctx *cli.Context) error {

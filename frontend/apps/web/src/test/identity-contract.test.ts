@@ -748,6 +748,15 @@ it('rejects malformed or mismatched backend payloads without fabricating users',
   request.mockResolvedValue(Response.json({ error: { code: 'unavailable' } }, { status: 401 }));
   await expect(api.me()).rejects.toMatchObject({ code: 'unauthenticated' });
 });
+it('preserves the legacy IAM username in the backend authorization projection', async () => {
+  const user = { ...(await readMockDatabase()).users[0], email: 'owner_01' };
+  const permissions = ['users.read'];
+  const request = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ user, permissions }));
+  const api = createBackendIdentityService('/api', request);
+
+  await expect(api.access()).resolves.toMatchObject({ user, permissions });
+  expect(request.mock.calls[0]?.[0]).toBe('/api/auth/access');
+});
 it('retains timeout/network/protocol distinctions and never falls back to Mock', async () => {
   const network = createBackendIdentityService('/api', () =>
     Promise.reject(new TypeError('offline')),

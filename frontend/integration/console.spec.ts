@@ -40,6 +40,12 @@ test('empty SQLite setup, real business writes, protected native pages and logou
     await guest.goto(new URL('/setup', page.url()).href);
     await expect(guest.getByRole('link', { name: /登录/ })).toBeVisible();
     await expect(guest.getByRole('button', { name: '创建管理员' })).toHaveCount(0);
+    await guest.getByRole('button', { name: '无法登录？' }).click();
+    await expect(guest.getByText(/iam recover-owner/)).toBeVisible();
+    await guest.goto(new URL('/login', page.url()).href);
+    await guest.getByRole('button', { name: '无法登录？' }).click();
+    await expect(guest.getByText(/iam recover-owner/)).toBeVisible();
+    await expect(guest.getByText('acceptance@clouddrive.test', { exact: true })).toHaveCount(0);
   } finally {
     await guest.close();
   }

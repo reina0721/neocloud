@@ -40,6 +40,9 @@ const (
 	AccountDisabled AccountStatus = "disabled"
 )
 
+// RecoveryOwner 是本机所有者恢复使用的最小账号投影。
+type RecoveryOwner struct{ ID, Username string }
+
 type Account struct {
 	ID, Username, DisplayName string
 	// Nickname/Bio/BirthDate 是用户主页资料（072 设置中心 profile 分区；可空）。

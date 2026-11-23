@@ -6,15 +6,24 @@ export const authenticationResources = {
       auth: {
         ...credentialMessages['zh-CN'],
         requiredPasswordTitle: '必须修改密码',
-        requiredPasswordDescription: '管理员已重置密码。请设置新密码后重新登录。',
+        requiredPasswordDescription: '请设置新密码并重新登录，以继续访问工作区。',
         currentPassword: '当前密码',
         newPassword: '新密码',
         changePasswordSubmit: '保存并重新登录',
+        changePasswordFailure: '未能修改密码',
+        changePasswordCurrentInput: '请输入当前密码，最多 128 个字符。',
+        changePasswordNewInput: '请输入不同于当前密码的新密码，最多 128 个字符。',
+        changePasswordAuthentication:
+          '当前密码不正确，或登录会话已失效。请核对当前密码或重新登录。',
+        changePasswordPolicy: '新密码不符合此实例的密码要求，请更换后重试。',
+        changePasswordReused: '请选择近期未使用过的新密码。',
+        changePasswordStale: '账户状态已更新，请刷新页面后重试。',
+        changePasswordForbidden: '服务拒绝了密码修改请求，请刷新页面后重试。',
+        changePasswordUnavailable: '暂时无法保存新密码，请稍后重试。',
         setupTitle: '首次设置',
         setupDescription: '创建系统管理员。使用启动服务时提供的设置令牌。',
         setupToken: '设置令牌',
         setupSubmit: '创建管理员',
-        setupFailure: '设置失败，请检查令牌、输入内容或系统是否已初始化。',
         setupErrorTitle: '无法完成首次设置',
         setupNameError: '请输入 1–128 个字符的姓名。',
         setupPasswordRule: '请输入 {{minLength}}–{{maxLength}} 个字符。',
@@ -23,7 +32,7 @@ export const authenticationResources = {
         setupTokenRequired: '请输入设置令牌。',
         setupTokenInvalid: '设置令牌无效，请核对当前服务启动时使用的令牌。',
         setupPasswordRejected: '密码未通过服务端验证，请刷新页面确认当前密码要求后重试。',
-        setupClosed: '系统已完成首次设置，请前往登录。',
+        setupClosed: '系统已完成首次设置，请使用此实例的已有账户登录。',
         setupValidation: '服务未接受这些设置，请核对输入及服务端密码策略后重试。',
         setupForbidden: '服务拒绝了设置请求，请使用启动时显示的页面地址重新打开并重试。',
         setupPolicyLoading: '正在读取首次设置的密码要求…',
@@ -42,6 +51,14 @@ export const authenticationResources = {
         },
         loginTitle: '欢迎回来',
         loginDescription: '登录后继续整理、阅读和分享你的文件。',
+        loginIdentifierHint: '也可输入 IAM 用户名。',
+        loginIdentifierError: '请输入有效的邮箱地址或用户名。',
+        loginCredentialsError: '邮箱、用户名或密码不正确，请重试。',
+        loginHelp: {
+          title: '无法登录？',
+          account: '忘记账号或密码时，请联系此实例的管理员。',
+          owner: '主机维护者可在运行此实例的主机上使用 {{command}} 恢复已有系统所有者的登录。',
+        },
         registerTitle: '创建你的账户',
         registrationClosed: '公开注册已关闭。如需账户，请联系系统管理员。',
         accountHelp: '需要账户？请联系站点管理员。',
@@ -129,15 +146,27 @@ export const authenticationResources = {
         ...credentialMessages.en,
         requiredPasswordTitle: 'Change your password',
         requiredPasswordDescription:
-          'Your password was reset. Set a new password and sign in again.',
+          'Set a new password and sign in again to access the workspace.',
         currentPassword: 'Current password',
         newPassword: 'New password',
         changePasswordSubmit: 'Save and sign in again',
+        changePasswordFailure: 'Could not change your password',
+        changePasswordCurrentInput: 'Enter your current password, up to 128 characters.',
+        changePasswordNewInput:
+          'Enter a password different from your current one, up to 128 characters.',
+        changePasswordAuthentication:
+          'Your current password is incorrect, or your session has expired. Check your password or sign in again.',
+        changePasswordPolicy:
+          'The new password does not meet this instance’s requirements. Choose another password and try again.',
+        changePasswordReused: 'Choose a new password you have not used recently.',
+        changePasswordStale: 'Your account status changed. Reload the page and try again.',
+        changePasswordForbidden:
+          'The server denied the password change. Reload the page and try again.',
+        changePasswordUnavailable: 'The new password could not be saved. Try again later.',
         setupTitle: 'Initial setup',
         setupDescription: 'Create the administrator using the token supplied at server startup.',
         setupToken: 'Setup token',
         setupSubmit: 'Create administrator',
-        setupFailure: 'Setup failed. Check the token, input, or whether setup is already complete.',
         setupErrorTitle: 'Could not complete initial setup',
         setupNameError: 'Enter a name between 1 and 128 characters.',
         setupPasswordRule: 'Enter {{minLength}}–{{maxLength}} characters.',
@@ -147,7 +176,8 @@ export const authenticationResources = {
         setupTokenInvalid: 'The setup token is invalid. Check the token used to start the server.',
         setupPasswordRejected:
           'The server rejected this password. Reload the page to check the latest password requirements, then retry.',
-        setupClosed: 'Initial setup is complete. Sign in to continue.',
+        setupClosed:
+          'Initial setup is complete. Sign in with an existing account on this instance.',
         setupValidation:
           'The server rejected these settings. Check your input and the password policy, then retry.',
         setupForbidden:
@@ -169,6 +199,16 @@ export const authenticationResources = {
         },
         loginTitle: 'Welcome back',
         loginDescription: 'Sign in to organize, read, and share your files.',
+        loginIdentifierHint: 'You can also enter your IAM username.',
+        loginIdentifierError: 'Enter a valid email address or username.',
+        loginCredentialsError: 'Your email, username, or password is incorrect. Try again.',
+        loginHelp: {
+          title: 'Cannot sign in?',
+          account:
+            'If you forgot your account name or password, contact this instance’s administrator.',
+          owner:
+            'Host maintainers can use {{command}} on the host running this instance to restore access for an existing system owner.',
+        },
         registerTitle: 'Create your account',
         registrationClosed:
           'Public registration is closed. Contact your system administrator for an account.',

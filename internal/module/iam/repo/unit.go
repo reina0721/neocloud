@@ -86,6 +86,15 @@ func (unit *Unit) CountAccounts(ctx context.Context, filter AccountFilter) (int6
 	return count, err
 }
 
+// ListAccountIdentities 按现有账号过滤条件读取用于选择账号的最小字段。
+func (unit *Unit) ListAccountIdentities(ctx context.Context, filter AccountFilter) ([]struct{ ID, Username string }, error) {
+	var identities []struct{ ID, Username string }
+	err := unit.useDB(ctx, func(db *gorm.DB) error {
+		return unit.accountQuery(ctx, db, filter).Select("id", "username").Order("username ASC").Scan(&identities).Error
+	})
+	return identities, err
+}
+
 func (unit *Unit) CreateAccount(ctx context.Context, value *AccountRecord) error {
 	value.Version = 1
 	return unit.useDB(ctx, func(db *gorm.DB) error { return db.Table(accountTable).Create(value).Error })

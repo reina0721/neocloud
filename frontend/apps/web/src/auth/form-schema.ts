@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { iamUsernameSchema } from '@clouddrive/surface/identity';
 
 export type AuthFormValues = {
   name: string;
@@ -6,11 +7,15 @@ export type AuthFormValues = {
   password: string;
   confirmation: string;
 };
-export function createAuthSchema(register: boolean) {
+export function createAuthSchema(register: boolean, acceptsUsername: boolean) {
+  const email = z.email().max(254);
   return z
     .object({
       name: register ? z.string().trim().min(1).max(80) : z.string(),
-      email: z.string().trim().email().max(254),
+      email: z
+        .string()
+        .trim()
+        .pipe(acceptsUsername && !register ? z.union([email, iamUsernameSchema]) : email),
       password: z
         .string()
         .min(register ? 15 : 1)

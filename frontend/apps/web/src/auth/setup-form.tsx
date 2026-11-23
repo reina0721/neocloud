@@ -9,6 +9,7 @@ import { Action } from '@clouddrive/ui-adapter/action';
 import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { AuthFrame } from './frame';
+import { LoginHelp } from './login-help';
 import { readAuthConfig } from './config';
 import { ApiError, createJsonClient } from '../api/json-client';
 import type { SetupPasswordPolicy, SetupValues } from './setup-schema';
@@ -112,6 +113,7 @@ export function SetupForm() {
             >
               {t('auth.loginLink')}
             </Link>
+            <LoginHelp />
           </div>
         ) : null}
         {state.status === 'ready' ? (

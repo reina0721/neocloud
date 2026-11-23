@@ -99,6 +99,7 @@ test('Invalid credentials keep the form usable and reject external return target
   page,
 }) => {
   await page.goto('/login?returnTo=https%3A%2F%2Fexample.com');
+  await expect(page.getByRole('button', { name: '无法登录？', exact: true })).toHaveCount(0);
   await page.getByRole('textbox', { name: '邮箱', exact: true }).fill('demo@community.test');
   await page.getByLabel('密码', { exact: true }).fill('WrongPassword2026!');
   await page.getByRole('button', { name: '登录', exact: true }).click();
