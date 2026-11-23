@@ -35,6 +35,7 @@ type NavigationMenus = httpbinding.NavigationMenus
 type NavigationOperations = httpbinding.NavigationOperations
 type Notification = httpbinding.Notification
 type RegistrationSettings = httpbinding.RegistrationSettings
+type SetupPolicy = httpbinding.SetupPolicy
 type RelayPolicy = httpbinding.RelayPolicy
 type RequestDefinition = httpbinding.RequestDefinition
 type ResolvedRequest = httpbinding.ResolvedRequest

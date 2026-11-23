@@ -84,6 +84,80 @@ func (c *consoleTestClient) request(t *testing.T, method, path string, body any,
 	return result
 }
 
+func TestConsoleSQLiteSetupPolicyAndFailures(t *testing.T) {
+	for _, tc := range []struct {
+		name, passwordConfig string
+		minLength, maxLength int
+		requireComplexity    bool
+	}{
+		{name: "default", minLength: 15, maxLength: 128},
+		{
+			name: "configured", minLength: 18, maxLength: 32, requireComplexity: true,
+			passwordConfig: "    passwordPolicy:\n      minLength: 18\n      maxLength: 32\n      requireComplexity: true\n",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			directory := testkit.PrivateTempDir(t)
+			configPath := filepath.Join(directory, "config.yaml")
+			config := strings.Replace(generationConfig(directory, 120, 1<<20, filepath.Join(directory, "console.db")), "mode: development-anonymous", "mode: session", 1)
+			writeGenerationConfig(t, configPath, "iam:\n  local:\n    setupToken: console-setup-fixture\n"+tc.passwordConfig+config)
+			coordinator, _ := newGenerationTestCoordinator(t, configPath)
+			if err := coordinator.Start(t.Context()); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				if err := coordinator.Stop(ctx); err != nil {
+					t.Error(err)
+				}
+			})
+			base := "http://" + coordinator.Diagnostics().BoundAddress
+			assertPolicy := func(initialized bool) {
+				t.Helper()
+				anonymous := &consoleTestClient{base: base, cookies: map[string]string{}}
+				value := anonymous.request(t, "GET", "/auth/setup-policy", nil, http.StatusOK)
+				if len(value) != 4 || value["minLength"] != float64(tc.minLength) || value["maxLength"] != float64(tc.maxLength) ||
+					value["requireComplexity"] != tc.requireComplexity || value["initialized"] != initialized {
+					t.Fatalf("setup policy did not project the expected settings and initialized=%t", initialized)
+				}
+			}
+			assertPolicy(false)
+
+			client := &consoleTestClient{base: base, cookies: map[string]string{}}
+			client.request(t, "GET", "/auth/csrf", nil, http.StatusOK)
+			const password = "Fixture-Password-123"
+			const setupToken = "console-setup-fixture"
+			const email = "setup@example.test"
+			const name = "Setup owner"
+			setup := func(token, password, email, name string, status int, reason string) {
+				t.Helper()
+				value := client.request(t, "POST", "/auth/setup", map[string]string{
+					"setupToken": token, "email": email, "name": name, "password": password,
+				}, status)
+				if reason != "" {
+					issue, _ := value["error"].(map[string]any)
+					if issue["reason"] != reason {
+						t.Fatalf("setup returned reason %v, want %q", issue["reason"], reason)
+					}
+				}
+			}
+			setup("incorrect", password, email, name, http.StatusUnauthorized, "invalid-setup-token")
+			setup(setupToken, "short", email, name, http.StatusUnprocessableEntity, "invalid-password")
+			setup(setupToken, strings.Repeat("Ab1", tc.maxLength), email, name, http.StatusUnprocessableEntity, "invalid-password")
+			if tc.requireComplexity {
+				setup(setupToken, strings.Repeat("a", tc.minLength), email, name, http.StatusUnprocessableEntity, "invalid-password")
+			}
+			setup(setupToken, password, "invalid email", name, http.StatusUnprocessableEntity, "invalid-email")
+			setup(setupToken, password, email, " ", http.StatusUnprocessableEntity, "invalid-name")
+			assertPolicy(false)
+			setup(setupToken, password, email, name, http.StatusOK, "")
+			assertPolicy(true)
+			setup(setupToken, password, email, name, http.StatusConflict, "setup-closed")
+		})
+	}
+}
+
 func TestConsoleSQLiteDataIsolationAndRestart(t *testing.T) {
 	var hits atomic.Int32
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

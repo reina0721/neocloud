@@ -47,6 +47,10 @@ func consoleAccount(value iammodel.Account) console.Account {
 func consoleRole(value iammodel.Role) console.CoreRole {
 	return console.CoreRole{ID: value.ID, Name: value.Name, System: value.System, Active: value.Active, Archived: value.Archived, Version: value.Version, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt}
 }
+func (port consoleIAMPort) SetupPolicy(ctx context.Context) (console.SetupPolicy, error) {
+	value, err := port.service.SetupPolicy(ctx)
+	return console.SetupPolicy(value), consoleError(err)
+}
 func (port consoleIAMPort) Setup(ctx context.Context, token, username, name, password string) (console.Session, error) {
 	value, err := port.service.Setup(ctx, token, username, name, password)
 	return consoleSession(value), consoleError(err)

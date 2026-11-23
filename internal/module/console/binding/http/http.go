@@ -113,8 +113,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	publicProfile := path == publicSiteProfilePath && (r.Method == http.MethodGet || r.Method == http.MethodHead)
-	if !publicProfile && path != "/auth/csrf" && path != "/auth/login" && path != "/auth/register" && path != "/auth/setup" && path != "/auth/registration-policy" {
+	publicRead := (r.Method == http.MethodGet || r.Method == http.MethodHead) &&
+		(path == publicSiteProfilePath || path == setupPolicyPath)
+	if !publicRead && path != "/auth/csrf" && path != "/auth/login" && path != "/auth/register" && path != "/auth/setup" && path != "/auth/registration-policy" {
 		authenticated, err := h.authenticateRequest(r)
 		if err != nil {
 			failure(w, 401, "unauthenticated", "")
@@ -191,6 +192,26 @@ func problem(w http.ResponseWriter, err error) {
 		failure(w, 500, "unavailable", "")
 	}
 }
+
+func setupProblem(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, ErrInvalidCredentials):
+		failure(w, http.StatusUnauthorized, "unauthenticated", "invalid-setup-token")
+	case errors.Is(err, ErrSetupClosed):
+		failure(w, http.StatusConflict, "conflict", "setup-closed")
+	case errors.Is(err, ErrInvalidPassword):
+		failure(w, http.StatusUnprocessableEntity, "validation", "invalid-password")
+	case errors.Is(err, ErrInvalidUsername):
+		failure(w, http.StatusUnprocessableEntity, "validation", "invalid-email")
+	case errors.Is(err, ErrInvalidName):
+		failure(w, http.StatusUnprocessableEntity, "validation", "invalid-name")
+	default:
+		problem(w, err)
+	}
+}
+
+const setupPolicyPath = "/auth/setup-policy"
+
 func decode(w http.ResponseWriter, r *http.Request, value any) bool {
 	d := json.NewDecoder(http.MaxBytesReader(w, r.Body, 2<<20))
 	d.DisallowUnknownFields()
@@ -290,6 +311,14 @@ func (h *Handler) routes() {
 			return
 		}
 		reply(w, map[string]bool{"enabled": s.Enabled})
+	})
+	h.mux.HandleFunc("GET "+Prefix+setupPolicyPath, func(w http.ResponseWriter, r *http.Request) {
+		value, err := h.iam.SetupPolicy(r.Context())
+		if err != nil {
+			problem(w, err)
+			return
+		}
+		reply(w, value)
 	})
 	h.mux.HandleFunc("POST "+Prefix+"/auth/{action}", h.authenticate)
 	h.mux.HandleFunc("GET "+Prefix+"/auth/session", func(w http.ResponseWriter, r *http.Request) { h.session(w, current(r)) })
@@ -410,7 +439,11 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, database.ErrOperationFailed) {
 			h.logger.Error("console authentication failed", logger.String("owner", "console"), logger.String("phase", "authenticate"), logger.Error(err))
 		}
-		problem(w, err)
+		if action == "setup" {
+			setupProblem(w, err)
+		} else {
+			problem(w, err)
+		}
 		return
 	}
 	http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: h.cookieName, Value: session.ID, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode}))

@@ -10,6 +10,7 @@ import (
 
 // IdentityAccess 是控制台使用方拥有的 IAM 窄契约；composition 负责跨模块转换。
 type IdentityAccess interface {
+	SetupPolicy(context.Context) (SetupPolicy, error)
 	Setup(context.Context, string, string, string, string) (Session, error)
 	Login(context.Context, string, string) (Session, error)
 	VerifyMFAChallenge(context.Context, string, string) (Session, error)
@@ -87,6 +88,12 @@ type AccountFilter struct {
 }
 type AccountRoles struct{ RoleIDs []string }
 type RolePermissions struct{ PermissionKeys []permission.Key }
+type SetupPolicy struct {
+	MinLength         int  `json:"minLength"`
+	MaxLength         int  `json:"maxLength"`
+	RequireComplexity bool `json:"requireComplexity"`
+	Initialized       bool `json:"initialized"`
+}
 type RegistrationSettings struct {
 	ID            int       `json:"-"`
 	Enabled       bool      `json:"enabled"`

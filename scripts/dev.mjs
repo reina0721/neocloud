@@ -268,11 +268,15 @@ try {
   await run("go", ["version"]);
   await run("go", ["build", "-o", binary, "./cmd/app"]);
   const tokenPath = join(data, "setup-token");
-  if (!(await exists(tokenPath)))
+  const providedSetupToken =
+    !values.preview && process.env.APP_IAM__LOCAL__SETUPTOKEN;
+  if (!providedSetupToken && !(await exists(tokenPath)))
     await privateWrite(tokenPath, randomBytes(32).toString("base64url") + "\n");
   const setupToken =
-    (!values.preview && process.env.APP_IAM__LOCAL__SETUPTOKEN) ||
-    (await readFile(tokenPath, "utf8")).trim();
+    providedSetupToken || (await readFile(tokenPath, "utf8")).trim();
+  const tokenSource = providedSetupToken
+    ? "环境变量 APP_IAM__LOCAL__SETUPTOKEN"
+    : tokenPath;
   const environment = {
     // 预览不能继承调用者的数据库、Storage 或认证配置而连接到真实数据。
     ...(values.preview
@@ -361,7 +365,7 @@ try {
       accessPath,
     ]);
   console.log(
-    `clouddrive: ${base}/home\n日志：${data}\n${accessPath ? `测试账号：${accessPath}` : `首次设置：${base}/setup；令牌：${tokenPath}`}\nCtrl+C 关闭服务，数据保留。`,
+    `clouddrive: ${base}/home\n日志：${data}\n${accessPath ? `测试账号：${accessPath}` : `首次设置：${base}/setup；令牌：${tokenSource}`}\nCtrl+C 关闭服务，数据保留。`,
   );
   if (!controller.signal.aborted)
     await new Promise((done) =>

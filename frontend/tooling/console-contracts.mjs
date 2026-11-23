@@ -118,6 +118,17 @@ function add(method, path, input, output, permission = '', code = 200, query) {
 }
 add('GET', '/auth/csrf', null, z.object({ token: id }));
 add('GET', '/auth/registration-policy', null, z.object({ enabled: z.boolean() }));
+add(
+  'GET',
+  '/auth/setup-policy',
+  null,
+  z.object({
+    minLength: version.positive(),
+    maxLength: version.positive(),
+    requireComplexity: z.boolean(),
+    initialized: z.boolean(),
+  }),
+);
 add('GET', '/site-profile', null, site.siteProfileSchema);
 add(
   'POST',
@@ -418,20 +429,19 @@ for (const op of operations) {
       schema: { type: 'string' },
       description: 'Quoted workspace version, initially "0"; stale versions return 409.',
     });
+  const publicOperation =
+    op.path === '/site-profile' ||
+    (op.path.startsWith('/auth/') &&
+      ['csrf', 'login', 'setup', 'register', 'registration-policy', 'setup-policy'].includes(
+        op.path.split('/').at(-1),
+      ));
   const entry = {
     operationId:
       'console.' +
       op.method.toLowerCase() +
       '.' +
       op.path.replaceAll(/[{}]/g, '').replaceAll('/', '.'),
-    security:
-      op.path === '/site-profile' ||
-      (op.path.startsWith('/auth/') &&
-        ['csrf', 'login', 'setup', 'register', 'registration-policy'].includes(
-          op.path.split('/').at(-1),
-        ))
-        ? []
-        : [{ ConsoleCookie: [] }],
+    security: publicOperation ? [] : [{ ConsoleCookie: [] }],
     parameters,
     responses: {
       [op.code]: {
@@ -464,7 +474,8 @@ for (const op of operations) {
           },
         }
       : {}),
-    'x-required-permission': op.permission || 'authenticated session',
+    'x-required-permission':
+      op.permission || (publicOperation ? 'public' : 'authenticated session'),
   };
   const path = '/api/console/v1' + op.path;
   paths[path] ??= {};

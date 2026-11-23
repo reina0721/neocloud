@@ -365,6 +365,32 @@ func New(store *repo.Store, currentClock clock.Clock, ids idgen.Generator, passw
 	return &Service{store: store, clock: currentClock, ids: ids, passwords: passwords, config: config, catalog: catalog, authorization: authorization, dummyHash: dummy, selfArchiveConfirmations: map[string]pendingArchive{}, mfaChallenges: map[string]mfaChallenge{}, mfaFailureWindows: map[string]mfaFailureWindow{}}, nil
 }
 
+type SetupPolicy struct {
+	MinLength         int
+	MaxLength         int
+	RequireComplexity bool
+	Initialized       bool
+}
+
+// SetupPolicy 返回首次设置所需的密码规则与当前初始化状态。
+func (s *Service) SetupPolicy(ctx context.Context) (SetupPolicy, error) {
+	policy := s.config.PasswordPolicy
+	result := SetupPolicy{
+		MinLength: policy.MinLength, MaxLength: policy.MaxLength, RequireComplexity: policy.RequireComplexity,
+	}
+	err := s.store.Use(ctx, func(unit *repo.Unit) error {
+		initialized, err := setupInitialized(ctx, unit)
+		result.Initialized = initialized
+		return err
+	})
+	return result, err
+}
+
+func setupInitialized(ctx context.Context, unit *repo.Unit) (bool, error) {
+	count, err := unit.CountAccounts(ctx, repo.AccountFilter{})
+	return count != 0, err
+}
+
 func (s *Service) Setup(ctx context.Context, setupToken, username, displayName, password string) (Session, error) {
 	if strings.TrimSpace(s.config.SetupToken) == "" || subtle.ConstantTimeCompare([]byte(setupToken), []byte(s.config.SetupToken)) != 1 {
 		return Session{}, ErrInvalidCredentials
@@ -395,11 +421,11 @@ func (s *Service) Setup(ctx context.Context, setupToken, username, displayName, 
 	}
 	var result Session
 	err = s.authorizeMutation(ctx, func(txCtx context.Context, r *repo.Unit) (bool, error) {
-		count, err := r.CountAccounts(txCtx, repo.AccountFilter{})
+		initialized, err := setupInitialized(txCtx, r)
 		if err != nil {
 			return false, err
 		}
-		if count != 0 {
+		if initialized {
 			return false, ErrSetupClosed
 		}
 		ar := accountRecord(account)
