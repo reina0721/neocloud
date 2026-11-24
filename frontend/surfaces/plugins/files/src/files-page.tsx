@@ -13,6 +13,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -71,7 +72,8 @@ import { VersionsPanel } from './versions-panel';
 import { ViewOptionsDialog } from './view-options-dialog';
 import { useCursorFileFeed } from './use-cursor-file-feed';
 import { useFileReader } from './use-file-reader';
-import { FileReader } from './file-reader';
+import { useReaderWorkspace } from './reader-workspace-context';
+import { FileApplicationSelection } from './file-reader';
 import { archiveFile } from './file-reader-session';
 import type { TrashPurgeSelection } from '../../../src/files/trash-purge';
 
@@ -231,6 +233,14 @@ export function FilesPage({
     port.list,
   );
   const listing = feed.listing ?? firstListing;
+  const { restoreListPosition } = useReaderWorkspace();
+  useLayoutEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const content = document.getElementById('main-content');
+      if (content) restoreListPosition(content, Boolean(listing) && !loading);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [listing, loading, restoreListPosition]);
   const iconsByExtension = useMemo(() => {
     const lookup = new Map<string, FileIconRule>();
     for (const rule of iconRules)
@@ -574,7 +584,6 @@ export function FilesPage({
     maxTextBytes: listing?.maxTextBytes,
     pdfReaderLimits: listing?.pdfReader,
     onNotice: setNotice,
-    onChanged: reload,
   });
   const cancelPendingOpen = reader.cancelPending;
   const navigate = useCallback(
@@ -1864,7 +1873,7 @@ export function FilesPage({
           }}
         />
       ) : null}
-      <FileReader key={reader.identity} reader={reader} />
+      <FileApplicationSelection reader={reader} />
       {versionEntry ? (
         <VersionsPanel
           entry={versionEntry}

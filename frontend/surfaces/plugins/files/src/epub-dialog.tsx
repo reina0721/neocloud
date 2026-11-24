@@ -4,7 +4,8 @@ import { useFrontendTranslation } from '@clouddrive/i18n';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { useContainerBreakpoint } from '@clouddrive/ui-adapter/container-layout';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { ReaderSurface } from './reader-surface';
+import { useReaderSurface } from './reader-surface-context';
 import {
   BookOpen,
   ChevronLeft,
@@ -177,6 +178,7 @@ export function EpubDialog({
   onDownload: () => void;
 }) {
   const { t, locale } = useFrontendTranslation();
+  const viewer = useReaderSurface();
   const labels = locale.startsWith('zh') ? zh : en;
   const { openEpub, epubReading } = useFiles();
   const reading = useEpubReadingState(entry, epubReading);
@@ -295,7 +297,7 @@ export function EpubDialog({
     reading.configure({ bookmarks: [...bookmarks, position] });
   }
   return (
-    <DialogSurface
+    <ReaderSurface
       isOpen
       size="cover"
       layout="workspace"
@@ -316,9 +318,11 @@ export function EpubDialog({
           aria-label={labels.title}
           className="flex shrink-0 items-center gap-2 overflow-x-auto"
         >
-          <IconAction label={t('files.download')} size="sm" tooltip onPress={onDownload}>
-            <Download className="size-icon-sm" aria-hidden="true" />
-          </IconAction>
+          {!viewer ? (
+            <IconAction label={t('files.download')} size="sm" tooltip onPress={onDownload}>
+              <Download className="size-icon-sm" aria-hidden="true" />
+            </IconAction>
+          ) : null}
           {book ? (
             <>
               <IconAction
@@ -399,6 +403,9 @@ export function EpubDialog({
           <p role="status" className="text-sm text-ink-muted">
             {labels.storage}
           </p>
+        ) : null}
+        {viewer && book?.title && book.title !== entry.name ? (
+          <h3 className="text-sm font-semibold text-ink">{book.title}</h3>
         ) : null}
         {book?.author ? <p className="text-sm text-ink-muted">{book.author}</p> : null}
         {failure ? (
@@ -523,6 +530,6 @@ export function EpubDialog({
           </>
         )}
       </div>
-    </DialogSurface>
+    </ReaderSurface>
   );
 }

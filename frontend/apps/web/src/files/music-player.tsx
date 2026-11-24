@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import type { FileMusicDockProps } from '@clouddrive/surface/files/runtime';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import {
   FilesError,
@@ -32,17 +33,20 @@ import {
 import { useLockStore } from '../state/use-lock-store';
 import { audioMediaType } from './audio-format';
 import { rasterType } from './media-signatures';
-import { MusicDock } from './music-dock';
 import { readMusicTags, type MusicTags } from './music-tags';
 
 export type MusicRequest = Readonly<{
   entry: FileEntry;
   maxBytes: number;
+  position?: number;
   consumeAutoplay: () => boolean;
 }>;
 
 type MusicPlayerProps = Readonly<{
   request: MusicRequest;
+  dock: FileMusicDockProps;
+  claimAudio: (media: HTMLMediaElement) => void;
+  onPosition: (fileId: string, position: number) => void;
   listFiles: FilesPort['list'];
   readEntry: FilesPort['detail'];
   readMedia: (id: string, expectedSizeBytes: number, signal: AbortSignal) => Promise<Blob>;
@@ -151,18 +155,18 @@ export function MusicPlayer({
   readEntry,
   readMedia,
   onStop,
+  onPosition,
+  dock,
+  claimAudio,
 }: MusicPlayerProps) {
   const { t, locale } = useFrontendTranslation();
   const labels = locale.startsWith('zh') ? zh : en;
   const audio = useRef<HTMLAudioElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  const dockHandle = useRef<HTMLButtonElement>(null);
-  const dockPanel = useRef<HTMLElement>(null);
-  const dockId = useId();
+  const floatingTrigger = useRef<HTMLButtonElement>(null);
   const detailsId = useId();
   const queueId = useId();
   const [presentation, setPresentation] = useState<Presentation>('dock');
-  const [dockOpen, setDockOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const locked = useLockStore((state) => state.locked);
   const [track, setTrack] = useState<TrackSelection>({
@@ -182,11 +186,6 @@ export function MusicPlayer({
   const [volume, setVolume] = useState(volumePercent);
   const [muted, setMuted] = useState(false);
   const [blockedSequence, setBlockedSequence] = useState<number>();
-  const closeDock = useCallback(() => {
-    setDockOpen(false);
-    setDetailsOpen(false);
-    setQueueOpen(false);
-  }, []);
   const current = media?.sequence === track.sequence ? media : undefined;
   const timing = clock?.sequence === track.sequence ? clock : undefined;
   const duration = timing?.duration ?? 0;
@@ -199,22 +198,21 @@ export function MusicPlayer({
   const next = entries[index + 1] ?? (wraps ? entries[0] : undefined);
   const compact = presentation === 'dock';
 
-  function collapseDock() {
-    closeDock();
-    requestAnimationFrame(() => dockHandle.current?.focus({ preventScroll: true }));
-  }
-
   function returnToDock() {
     setPresentation('dock');
-    collapseDock();
+    setDetailsOpen(false);
+    setQueueOpen(false);
+    dock.collapse();
   }
 
-  function toggleDock() {
-    if (dockOpen) closeDock();
-    else {
-      setDockOpen(true);
-      requestAnimationFrame(() => dockPanel.current?.focus({ preventScroll: true }));
+  function expandPresentation(next: Exclude<Presentation, 'dock'>) {
+    if (next === 'floating') {
+      floatingTrigger.current =
+        document.querySelector<HTMLButtonElement>('[data-file-dock-trigger] button') ??
+        trigger.current;
     }
+    dock.activate();
+    setPresentation(next);
   }
 
   useLayoutEffect(() => {
@@ -343,6 +341,8 @@ export function MusicPlayer({
   }, [readEntry, readMedia, request, track]);
 
   function syncClock(node: HTMLAudioElement) {
+    if (Number.isFinite(node.currentTime) && node.readyState > 0)
+      onPosition(track.entry.id, Math.floor(node.currentTime));
     setClock({
       sequence: track.sequence,
       elapsed: Number.isFinite(node.currentTime) ? node.currentTime : 0,
@@ -551,7 +551,14 @@ export function MusicPlayer({
           }}
         />
       </div>
-      <IconAction size="lg" label={labels.stop} onPress={onStop}>
+      <IconAction
+        size="lg"
+        label={labels.stop}
+        onPress={() => {
+          dock.collapse();
+          onStop();
+        }}
+      >
         <Square />
       </IconAction>
     </div>
@@ -640,14 +647,21 @@ export function MusicPlayer({
         hidden
         preload="metadata"
         loop={repeat === 'track'}
-        onLoadedMetadata={(event) => syncClock(event.currentTarget)}
+        onLoadedMetadata={(event) => {
+          const node = event.currentTarget;
+          if (track.first && request.position && Number.isFinite(node.duration))
+            node.currentTime = Math.min(request.position, node.duration);
+          syncClock(node);
+        }}
         onDurationChange={(event) => syncClock(event.currentTarget)}
         onTimeUpdate={(event) => syncClock(event.currentTarget)}
         onPlay={(event) => {
+          claimAudio(event.currentTarget);
           setBlockedSequence(undefined);
           syncClock(event.currentTarget);
         }}
         onPause={(event) => syncClock(event.currentTarget)}
+        onVolumeChange={(event) => claimAudio(event.currentTarget)}
         onEnded={(event) => {
           syncClock(event.currentTarget);
           if (next && current?.url === event.currentTarget.src) choose(next);
@@ -658,102 +672,82 @@ export function MusicPlayer({
           setMedia((state) => (state?.url === url ? { ...state, failure: 'unsupported' } : state));
         }}
       />
-      <IconAction
-        ref={trigger}
-        size="lg"
-        label={labels.player}
-        expanded={!compact || dockOpen}
-        {...(compact && dockOpen ? { controls: dockId } : {})}
-        onPress={toggleDock}
-      >
-        <Music2 />
-      </IconAction>
-      {compact && !dockOpen && (failure || blockedSequence === track.sequence) ? (
+      {compact && !dock.open && (failure || blockedSequence === track.sequence) ? (
         <p role="status" className="sr-only">
           {failure ? failedMessage : labels.blocked} {labels.expandDock}
         </p>
       ) : null}
-      {compact ? (
-        <MusicDock
-          id={dockId}
-          label={labels.player}
-          expandLabel={labels.expandDock}
-          open={dockOpen}
-          onOpen={() => setDockOpen(true)}
-          onClose={closeDock}
-          toolbarTrigger={trigger}
-          handle={dockHandle}
-          panel={dockPanel}
-        >
-          <div data-music-layout="dock" className="flex min-h-0 flex-col">
-            <div className="flex shrink-0 flex-wrap items-center gap-x-2 px-2 py-1 md:flex-nowrap md:px-3">
-              {information}
-              {progress}
-              <div className="order-3 flex w-full items-center justify-between md:contents">
-                {transport}
-                <div className="flex items-center md:order-3">
-                  <IconAction
-                    label={detailsOpen ? labels.hideControls : labels.moreControls}
-                    expanded={detailsOpen}
-                    active={detailsOpen}
-                    {...(detailsOpen ? { controls: detailsId } : {})}
-                    tooltip
-                    onPress={() => setDetailsOpen((open) => !open)}
-                  >
-                    <SlidersHorizontal aria-hidden="true" />
-                  </IconAction>
-                  <IconAction
-                    label={labels.floating}
-                    tooltip
-                    onPress={() => setPresentation('floating')}
-                  >
-                    <PictureInPicture2 aria-hidden="true" />
-                  </IconAction>
-                  <IconAction
-                    label={labels.fullscreen}
-                    tooltip
-                    onPress={() => setPresentation('fullscreen')}
-                  >
-                    <Maximize aria-hidden="true" />
-                  </IconAction>
-                </div>
-              </div>
-              <div className="md:order-4">
-                <IconAction label={labels.collapseDock} tooltip onPress={collapseDock}>
-                  <ChevronDown aria-hidden="true" />
+      <div inert={!compact} className={`relative h-full min-w-0 ${compact ? '' : 'invisible'}`}>
+        <div data-music-layout="dock" className="flex h-full min-h-0 flex-col justify-center">
+          <div className="flex shrink-0 flex-wrap items-center gap-x-2 px-2 py-1 md:flex-nowrap md:px-3">
+            {information}
+            {progress}
+            <div className="order-3 flex w-full items-center justify-between md:contents">
+              {transport}
+              <div className="flex items-center md:order-3">
+                <IconAction
+                  label={detailsOpen ? labels.hideControls : labels.moreControls}
+                  expanded={detailsOpen}
+                  active={detailsOpen}
+                  {...(detailsOpen ? { controls: detailsId } : {})}
+                  tooltip
+                  onPress={() => setDetailsOpen((open) => !open)}
+                >
+                  <SlidersHorizontal aria-hidden="true" />
+                </IconAction>
+                <IconAction
+                  ref={trigger}
+                  label={labels.floating}
+                  tooltip
+                  onPress={() => expandPresentation('floating')}
+                >
+                  <PictureInPicture2 aria-hidden="true" />
+                </IconAction>
+                <IconAction
+                  label={labels.fullscreen}
+                  tooltip
+                  onPress={() => expandPresentation('fullscreen')}
+                >
+                  <Maximize aria-hidden="true" />
                 </IconAction>
               </div>
             </div>
-            {detailsOpen || trackStatus ? (
-              <div className="order-first min-h-0 space-y-2 overflow-y-auto border-b border-border px-2 py-1 md:px-3">
-                {trackStatus}
-                {detailsOpen ? (
-                  <div id={detailsId} className="space-y-2">
-                    <div className="flex items-center">
-                      {repeatControl}
-                      {queueControl}
-                      {volumeControl}
-                    </div>
-                    {queuePanel}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
+            <div className="md:order-4">
+              <IconAction label={labels.collapseDock} tooltip onPress={returnToDock}>
+                <ChevronDown aria-hidden="true" />
+              </IconAction>
+            </div>
           </div>
-        </MusicDock>
-      ) : presentation === 'floating' ? (
+          {detailsOpen || trackStatus ? (
+            <div className="absolute inset-x-0 bottom-full z-sticky max-h-overlay min-h-0 space-y-2 overflow-y-auto rounded-t-panel border border-border bg-surface-raised px-2 py-1 shadow-overlay md:px-3">
+              {trackStatus}
+              {detailsOpen ? (
+                <div id={detailsId} className="space-y-2">
+                  <div className="flex items-center">
+                    {repeatControl}
+                    {queueControl}
+                    {volumeControl}
+                  </div>
+                  {queuePanel}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      </div>
+      {presentation === 'floating' ? (
         <PopoverCard
           triggerLabel={labels.player}
           title={labels.player}
           closeLabel={labels.returnToDock}
-          triggerRef={trigger}
+          triggerRef={floatingTrigger}
           isOpen
           onOpenChange={returnToDock}
           size="comfortable"
         >
           {content}
         </PopoverCard>
-      ) : (
+      ) : presentation === 'fullscreen' ? (
         <DialogSurface
           triggerLabel={labels.player}
           title={labels.player}
@@ -766,7 +760,7 @@ export function MusicPlayer({
         >
           {content}
         </DialogSurface>
-      )}
+      ) : null}
     </>
   );
 }

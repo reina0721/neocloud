@@ -493,7 +493,7 @@ test('网页应用配置和临时文件预览', async ({ page }, info) => {
   const edit = page.getByRole('button', { name: '编辑 ' + viewerName, exact: true });
   const save = page.getByRole('button', { name: '保存文件应用', exact: true });
   const settings = () => page.getByRole('dialog', { name: /^(添加|编辑)网页应用$/ });
-  const viewer = page.getByRole('dialog', { name: viewerName, exact: true });
+  const viewer = page.getByRole('dialog', { name, exact: true });
   const allow = viewer.getByRole('button', { name: '允许并继续', exact: true });
   const currentFile = page.getByRole('button', { name, exact: true });
   let requests = 0;
@@ -722,7 +722,7 @@ test('导入 WOPI 应用并打开真实只读文件', async ({ page }, info) => 
   const discover = importer.getByRole('button', { name: '检查发现地址', exact: true });
   const address = importer.getByLabel('WOPI Discovery Endpoint', { exact: true });
   const draft = page.getByRole('button', { name: '应用到草稿', exact: true });
-  const viewer = page.getByRole('dialog', { name: appName, exact: true });
+  const viewer = page.getByRole('dialog', { name, exact: true });
   const allow = viewer.getByRole('button', { name: '允许并继续', exact: true });
   const file = page.getByRole('button', { name, exact: true });
   const save = page.getByRole('button', { name: '保存文件应用', exact: true });

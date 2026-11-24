@@ -495,7 +495,13 @@ export function createFilesRuntime(
           event.defaultPrevented ||
           event.isComposing ||
           disposed ||
-          document.querySelector('[role="dialog"],[role="alertdialog"],[role="menu"]')
+          Array.from(
+            document.querySelectorAll('[role="dialog"],[role="alertdialog"],[role="menu"]'),
+          ).some(
+            (overlay) =>
+              !overlay.closest('[hidden],[inert],[aria-hidden="true"]') &&
+              overlay.getClientRects().length > 0,
+          )
         )
           return;
         const target = event.target;

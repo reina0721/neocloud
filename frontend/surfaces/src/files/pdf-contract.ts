@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import type { FileEntry } from './model';
+import type { ReaderDraftHandle } from './reader-persistence';
+import type { ReaderDraftStatus } from './reader-draft-autosave';
 
 export const pdfReaderLimitsSchema = z.object({
   maxBytes: z.number().int().positive().safe(),
@@ -20,6 +22,8 @@ export type FileDocumentProps = Readonly<{
   version?: number;
   onClose: () => void;
   closeRequestSequence: number;
+  draft?: ReaderDraftHandle;
+  onDraftState?: (state: ReaderDraftStatus) => void;
 }>;
 /** isPDFDocument 只用于应用分派，读取后仍核验字节签名。 */
 export const isPDFDocument = (entry: Pick<FileEntry, 'name' | 'mediaType'>) =>

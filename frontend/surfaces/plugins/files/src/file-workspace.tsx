@@ -40,6 +40,7 @@ import {
   ChevronDown,
   ChevronRight,
   Menu,
+  Music,
   Package,
   Settings,
   Search,
@@ -52,7 +53,12 @@ import {
   type FileListing,
   type UploadCandidate,
 } from '../../../src/files/model';
-import { FileAccountTools, useFiles, useTransferSnapshot } from '../../../src/files/runtime';
+import {
+  FileAccountTools,
+  useFileMusic,
+  useFiles,
+  useTransferSnapshot,
+} from '../../../src/files/runtime';
 import { transferMatches } from '../../../src/files/transfers';
 import {
   defaultFileSidebarPreferences,
@@ -63,6 +69,7 @@ import { useWorkspaceRevision, WorkspaceCreateContext } from '../stores/workspac
 import { ExplorerNavigation } from './explorer-navigation';
 import { FileLink } from './file-link';
 import { PinnedLinks } from './pinned-links';
+import { useReaderWorkspace } from './reader-workspace-context';
 import type { CreateAction } from './workspace-create';
 import type { TrashPurgeSelection } from '../../../src/files/trash-purge';
 const TrashPurgeDialog = lazy(() => import('./trash-purge-dialog'));
@@ -91,6 +98,8 @@ export function FileWorkspace({
   query: FileBrowseQuery;
   children: ReactNode;
 }) {
+  const reader = useReaderWorkspace();
+  const music = useFileMusic();
   const port = useFiles(),
     snapshot = useTransferSnapshot(),
     { t, locale } = useFrontendTranslation();
@@ -566,6 +575,7 @@ export function FileWorkspace({
   return (
     <div
       data-file-workspace
+      inert={reader.foreground}
       className="surface-file-mobile-root fixed inset-0 flex h-dvh flex-col overflow-clip bg-canvas font-sans text-ink"
     >
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
@@ -598,6 +608,18 @@ export function FileWorkspace({
             </div>
             <div className="order-1 shrink-0 md:order-0">{creationControl}</div>
             <div className="surface-file-account-actions order-2 flex shrink-0 items-center gap-1 md:order-3">
+              {music?.active ? (
+                <span data-file-dock-trigger>
+                  <IconAction
+                    size="lg"
+                    label={t('files.viewer.music')}
+                    expanded={reader.dockOpen}
+                    onPress={reader.toggleDock}
+                  >
+                    <Music />
+                  </IconAction>
+                </span>
+              ) : null}
               <FileAccountTools />
             </div>
             <div

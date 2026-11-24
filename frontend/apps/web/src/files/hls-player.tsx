@@ -10,6 +10,7 @@ import type { FileMediaProps } from '@clouddrive/surface/files/runtime';
 import { privateHlsLoader } from './hls-loader';
 import type { createPrivateHlsSource } from './hls-source';
 import type { VideoToolsProps } from './media-view';
+import { applyReaderPosition, useReaderPlayback } from './reader-playback';
 
 const zh = {
   quality: '清晰度',
@@ -58,14 +59,18 @@ export function HlsPlayer({
   open,
   onDownload,
   videoTools: VideoTools,
-}: Pick<FileMediaProps, 'entry' | 'maxBytes'> & {
+  playback: readerPlayback,
+  claimAudio,
+}: Pick<FileMediaProps, 'entry' | 'maxBytes' | 'playback'> & {
   open: ReturnType<typeof createPrivateHlsSource>;
   onDownload: () => void;
   videoTools?: ComponentType<VideoToolsProps>;
+  claimAudio?: (media: HTMLMediaElement) => void;
 }) {
   const { t, locale } = useFrontendTranslation();
   const labels = locale.startsWith('zh') ? zh : en;
   const video = useRef<HTMLVideoElement>(null);
+  useReaderPlayback(video, readerPlayback);
   const engine = useRef<Hls>(null);
   const [attempt, setAttempt] = useState(0);
   const [selected, setSelected] = useState(auto);
@@ -188,7 +193,11 @@ export function HlsPlayer({
   const currentQuality = qualityName(current.levels[current.active]);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
-      {VideoTools ? <VideoTools entry={entry} media={video} presentation="toolbar" /> : null}
+      {VideoTools ? (
+        <div hidden={readerPlayback?.presentation === 'mini'}>
+          <VideoTools entry={entry} media={video} presentation="toolbar" />
+        </div>
+      ) : null}
       {/* 同目录字幕沿用原生 TextTrack。 */}
       {/* eslint-disable-next-line jsx-a11y-x/media-has-caption */}
       <video
@@ -199,72 +208,82 @@ export function HlsPlayer({
         preload="metadata"
         className="min-h-0 w-full flex-1 rounded-control object-contain"
         style={{ backgroundColor: 'black' }}
+        onLoadedMetadata={(event) =>
+          applyReaderPosition(event.currentTarget, readerPlayback?.position)
+        }
+        onTimeUpdate={(event) => readerPlayback?.onPosition(event.currentTarget.currentTime)}
+        onPlay={(event) => claimAudio?.(event.currentTarget)}
+        onVolumeChange={(event) => claimAudio?.(event.currentTarget)}
       />
-      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-        <div style={{ marginInlineEnd: 'auto' }}>
-          <Action size="sm" variant="secondary" onPress={onDownload}>
-            {t('files.download')}
-          </Action>
-        </div>
-        {failure ? (
-          <>
-            <p role="alert" className="text-sm text-danger">
-              {failure}
-            </p>
-            <Action
-              size="sm"
-              variant="secondary"
-              onPress={() => {
-                setSelected(auto);
-                setAttempt(attempt + 1);
-              }}
-            >
-              {t('files.retry')}
-            </Action>
-          </>
-        ) : (
-          <>
-            {!current.levels.length ? (
-              <p role="status" className="text-sm text-ink-muted">
-                {t('files.mediaLoading')}
+      <div hidden={readerPlayback?.presentation === 'mini'}>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <div style={{ marginInlineEnd: 'auto' }}>
+            {!readerPlayback ? (
+              <Action size="sm" variant="secondary" onPress={onDownload}>
+                {t('files.download')}
+              </Action>
+            ) : null}
+          </div>
+          {failure ? (
+            <>
+              <p role="alert" className="text-sm text-danger">
+                {failure}
               </p>
-            ) : null}
-            {current.live ? (
-              <>
-                <span className="text-sm font-semibold">{labels.live}</span>
-                <Action size="sm" variant="secondary" onPress={goLive}>
-                  {labels.returnToLive}
-                </Action>
-              </>
-            ) : null}
-            {current.levels.length > 1 ? (
-              <SelectField
-                label={labels.quality}
-                presentation="toolbar"
-                popoverPlacement="top"
-                value={String(selected)}
-                onValueChange={changeQuality}
-                options={[
-                  {
-                    value: String(auto),
-                    label: currentQuality
-                      ? `${labels.automatic} · ${currentQuality}`
-                      : labels.automatic,
-                  },
-                  ...current.levels.map((level, index) => ({
-                    value: String(index),
-                    label: current.levels.some(
-                      (other, otherIndex) =>
-                        otherIndex !== index && qualityName(other) === qualityName(level),
-                    )
-                      ? `${qualityName(level)} · ${Math.round(level.bitrate / 1000)} kb/s`
-                      : qualityName(level),
-                  })),
-                ]}
-              />
-            ) : null}
-          </>
-        )}
+              <Action
+                size="sm"
+                variant="secondary"
+                onPress={() => {
+                  setSelected(auto);
+                  setAttempt(attempt + 1);
+                }}
+              >
+                {t('files.retry')}
+              </Action>
+            </>
+          ) : (
+            <>
+              {!current.levels.length ? (
+                <p role="status" className="text-sm text-ink-muted">
+                  {t('files.mediaLoading')}
+                </p>
+              ) : null}
+              {current.live ? (
+                <>
+                  <span className="text-sm font-semibold">{labels.live}</span>
+                  <Action size="sm" variant="secondary" onPress={goLive}>
+                    {labels.returnToLive}
+                  </Action>
+                </>
+              ) : null}
+              {current.levels.length > 1 ? (
+                <SelectField
+                  label={labels.quality}
+                  presentation="toolbar"
+                  popoverPlacement="top"
+                  value={String(selected)}
+                  onValueChange={changeQuality}
+                  options={[
+                    {
+                      value: String(auto),
+                      label: currentQuality
+                        ? `${labels.automatic} · ${currentQuality}`
+                        : labels.automatic,
+                    },
+                    ...current.levels.map((level, index) => ({
+                      value: String(index),
+                      label: current.levels.some(
+                        (other, otherIndex) =>
+                          otherIndex !== index && qualityName(other) === qualityName(level),
+                      )
+                        ? `${qualityName(level)} · ${Math.round(level.bitrate / 1000)} kb/s`
+                        : qualityName(level),
+                    })),
+                  ]}
+                />
+              ) : null}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

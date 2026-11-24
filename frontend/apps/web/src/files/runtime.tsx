@@ -2,7 +2,11 @@
 import { lazy, Suspense } from 'react';
 import type { FileDocumentProps, FileEntry } from '@clouddrive/surface/files';
 import { useFrontendTranslation } from '@clouddrive/i18n';
-import { FilesProvider, type FileMediaProps } from '@clouddrive/surface/files/runtime';
+import {
+  FilesProvider,
+  type FileMediaProps,
+  type ReaderDraft,
+} from '@clouddrive/surface/files/runtime';
 import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
 import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
 import { Action } from '@clouddrive/ui-adapter/action';
@@ -11,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import {
   useCallback,
   useContext,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -25,6 +30,10 @@ import { createFilesRuntime, fileDestinationHrefs } from './backend';
 import { fileDestinationHref } from './destinations';
 import { FileMediaView, type ImageToolsProps, type VideoToolsProps } from './media-view';
 import type { MusicRequest } from './music-player';
+import { createReaderPersistence } from './reader-persistence';
+import { downloadBlob } from './native-download';
+import { createReaderAudioFocus } from './reader-playback';
+import { MusicDock } from './music-dock';
 
 const PDFReader = lazy(() =>
   import('./pdf/reader-view').then((module) => ({ default: module.PDFReaderView })),
@@ -49,6 +58,20 @@ export function FilesRuntime({
   const controller = useContext(AuthContext);
   const account = useAuth().session?.user.id;
   const router = useRouter();
+  const [routing] = useState(() => {
+    let push = router.push.bind(router);
+    return {
+      bind(next: typeof push) {
+        push = next;
+      },
+      navigate(href: string) {
+        push(href);
+      },
+    };
+  });
+  useLayoutEffect(() => {
+    routing.bind(router.push.bind(router));
+  }, [router, routing]);
   const { profile } = useSiteProfile();
   const addresses = profile?.siteAddresses;
   const [transferFailure, setTransferFailure] = useState(false);
@@ -58,34 +81,47 @@ export function FilesRuntime({
     return createFilesRuntime(
       config.apiBaseUrl,
       () => controller?.getState().session?.user.id ?? null,
-      (destination, query) => router.push(fileDestinationHref(destination, query)),
+      (destination, query) => routing.navigate(fileDestinationHref(destination, query)),
       (parent) =>
-        router.push(
+        routing.navigate(
           fileDestinationHrefs.files +
             (parent ? '?' + new URLSearchParams({ parent }).toString() : ''),
         ),
     );
-  }, [controller, account, router]);
+  }, [controller, account, routing]);
   const filePort = useMemo(
     () => runtime && (addresses ? runtime.withSiteAddresses(addresses) : runtime),
     [runtime, addresses],
   );
   const musicSequence = useRef(0);
+  const readerPersistence = useMemo(
+    () => (account ? createReaderPersistence(account) : undefined),
+    [account],
+  );
+  const claimAudio = useMemo(() => runtime && createReaderAudioFocus(), [runtime]);
   const [musicRequest, setMusicRequest] = useState<{
     runtime: NonNullable<typeof runtime>;
     sequence: number;
     playback: MusicRequest;
+    active: { fileId: string; position: number };
   }>();
+  useEffect(() => {
+    if (fileWorkspace) return;
+    const frame = requestAnimationFrame(() => setMusicRequest(undefined));
+    return () => cancelAnimationFrame(frame);
+  }, [fileWorkspace]);
   const playAudio = useCallback(
-    (entry: FileEntry, maxBytes: number) => {
+    (entry: FileEntry, maxBytes: number, position?: number) => {
       if (!runtime) return;
-      let consumed = false;
+      let consumed = position !== undefined;
       setMusicRequest({
         runtime,
         sequence: ++musicSequence.current,
+        active: { fileId: entry.id, position: position ?? 0 },
         playback: {
           entry,
           maxBytes,
+          ...(position === undefined ? {} : { position }),
           consumeAutoplay: () => {
             if (consumed) return false;
             consumed = true;
@@ -97,7 +133,7 @@ export function FilesRuntime({
     [runtime],
   );
   const Media = useMemo(() => {
-    if (!runtime) return undefined;
+    if (!runtime || !claimAudio) return undefined;
     const { readMedia, subtitles, queueImageCopy, publishImageVersion, openPrivateHls } = runtime;
     function VideoTools({ entry, media, presentation }: VideoToolsProps) {
       return (
@@ -115,6 +151,29 @@ export function FilesRuntime({
     function ImageTools(props: ImageToolsProps) {
       const { t } = useFrontendTranslation();
       const [open, setOpen] = useState(false);
+      const [stored, setStored] = useState<ReaderDraft>();
+      const [failed, setFailed] = useState(false);
+      const exportRequest = useRef<AbortController | null>(null);
+      const disk = props.editing.draft;
+      const revision = props.editing.entry.contentRevision;
+      const conflict = stored && stored.revision !== revision ? stored : undefined;
+      useEffect(() => {
+        let active = true;
+        void disk
+          ?.read()
+          .then((draft) => {
+            if (!active) return;
+            setStored(draft);
+            if (draft?.revision === revision) setOpen(true);
+          })
+          .catch(() => {
+            if (active) setFailed(true);
+          });
+        return () => {
+          active = false;
+          exportRequest.current?.abort();
+        };
+      }, [disk, revision]);
       const label = t('files.editImage');
       return (
         <div className="flex flex-wrap items-center gap-2">
@@ -126,13 +185,50 @@ export function FilesRuntime({
           >
             {label}
           </Action>
+          {conflict ? (
+            <>
+              <p role="status">{t('files.viewer.draftConflict')}</p>
+              <Action
+                size="sm"
+                variant="secondary"
+                onPress={() => {
+                  exportRequest.current?.abort();
+                  const controller = new AbortController();
+                  exportRequest.current = controller;
+                  void import('./image-reader-draft')
+                    .then(({ exportImageDraft }) =>
+                      exportImageDraft(conflict.payload, props.maxBytes, controller.signal),
+                    )
+                    .then((file) => {
+                      if (!controller.signal.aborted)
+                        downloadBlob(file, props.editing.entry.name + '.draft.png');
+                    })
+                    .catch(() => {
+                      if (!controller.signal.aborted) setFailed(true);
+                    });
+                }}
+              >
+                {t('files.viewer.downloadDraft')}
+              </Action>
+            </>
+          ) : null}
+          {failed ? <p role="alert">{t('files.viewer.draftFailure')}</p> : null}
           {open ? (
             <Suspense fallback={<p role="status">{t('files.mediaLoading')}</p>}>
               <ImageEditor
                 {...props}
                 queueCopy={queueImageCopy}
                 publishVersion={publishImageVersion}
-                onClose={() => setOpen(false)}
+                initialDraft={stored?.revision === revision ? stored : undefined}
+                onClose={(keepDraft) => {
+                  if (!keepDraft) setStored(undefined);
+                  setOpen(false);
+                  if (keepDraft)
+                    void disk
+                      ?.read()
+                      .then(setStored)
+                      .catch(() => setFailed(true));
+                }}
               />
             </Suspense>
           ) : null}
@@ -147,6 +243,7 @@ export function FilesRuntime({
               {...props}
               open={openPrivateHls}
               videoTools={VideoTools}
+              claimAudio={claimAudio}
               onDownload={props.videoPlaylist.download}
             />
           </Suspense>
@@ -157,13 +254,14 @@ export function FilesRuntime({
           {...props}
           readContent={readMedia}
           videoTools={VideoTools}
+          claimAudio={claimAudio}
           {...(props.imageEditing ? { imageTools: ImageTools } : {})}
         />
       ) : (
         <FileMediaView {...props} readContent={readMedia} />
       );
     };
-  }, [runtime]);
+  }, [claimAudio, runtime]);
   const Document = useMemo(
     () =>
       runtime
@@ -184,7 +282,7 @@ export function FilesRuntime({
       void runtime.dispose().catch(() => setTransferFailure(true));
     };
   }, [runtime]);
-  if (!runtime || !filePort || !Media || !Document)
+  if (!runtime || !filePort || !Media || !Document || !claimAudio)
     return fileWorkspace ? (
       <main id="main-content" tabIndex={-1} className="p-4">
         <Page>
@@ -210,7 +308,9 @@ export function FilesRuntime({
       archives={runtime.archives}
       media={Media}
       pdfReader={Document}
+      mediaDock={MusicDock}
       accountTools={FileAccountMenu}
+      {...(readerPersistence ? { readerPersistence } : {})}
       uploadMarkdownImage={runtime.uploadMarkdownImage}
       drawioEndpoint={
         process.env.NEXT_PUBLIC_CLOUDDRIVE_DRAWIO_URL ?? 'https://embed.diagrams.net/'
@@ -219,18 +319,30 @@ export function FilesRuntime({
         ? {
             music: {
               play: playAudio,
-              player:
+              restore: playAudio,
+              ...(musicRequest?.runtime === runtime ? { active: musicRequest.active } : {}),
+              render: (dock) =>
                 musicRequest?.runtime === runtime ? (
                   <Suspense fallback={<p role="status">{t('files.mediaLoading')}</p>}>
                     <MusicPlayer
                       key={musicRequest.sequence}
                       request={musicRequest.playback}
+                      dock={dock}
+                      claimAudio={claimAudio}
                       listFiles={runtime.port.list}
                       readEntry={runtime.port.detail}
                       readMedia={runtime.readMedia}
+                      onPosition={(fileId, position) =>
+                        setMusicRequest((current) =>
+                          current?.sequence === musicRequest.sequence &&
+                          (current.active.fileId !== fileId || current.active.position !== position)
+                            ? { ...current, active: { fileId, position } }
+                            : current,
+                        )
+                      }
                       onStop={() =>
                         setMusicRequest((current) =>
-                          current === musicRequest ? undefined : current,
+                          current?.sequence === musicRequest.sequence ? undefined : current,
                         )
                       }
                     />

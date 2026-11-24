@@ -507,6 +507,10 @@ test('F279–280：真实文字批注、撤销重做、导出含批注副本再�
   await d.getByRole('button', { name: '撤销标注', exact: true }).click();
   await expect(d.getByRole('button', { name: '重做标注', exact: true })).toBeEnabled();
   await d.getByRole('button', { name: '重做标注', exact: true }).click();
+  await expect(d.getByText('已存为本机草稿', { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(frame.locator('.freeTextAnnotation')).toContainText('PDF annotation acceptance');
+  await expect(d.getByText('有未导出的标注', { exact: true })).toBeVisible();
   const download = page.waitForEvent('download');
   await d.getByRole('button', { name: '导出标注副本', exact: true }).click();
   const file = await download;
@@ -690,7 +694,6 @@ test('真实图像解码：4MP正常显示，9MP按可见预算说明省略', as
   }
 });
 test('后台上传刷新文件列表不重开阅读会话或丢弃临时批注', async ({ page }) => {
-  const parent = new URL(page.url()).searchParams.get('parent');
   const first = await upload(page, fixture('reader.pdf')),
     name = await first.getByRole('heading').innerText();
   await expect(first.getByRole('button', { name: '跳转', exact: true })).toBeEnabled();
@@ -735,21 +738,14 @@ test('后台上传刷新文件列表不重开阅读会话或丢弃临时批注',
     await expect(d.getByText('有未导出的标注', { exact: true })).toBeVisible();
     const document = frame.locator('html');
     await document.evaluate((node) => node.setAttribute('data-test-reader-session', 'retained'));
-    const refreshed = page.waitForResponse(async (response) => {
-      const url = new URL(response.url());
-      if (
-        url.pathname !== '/api/console/v1/native/files' ||
-        url.searchParams.get('parent') !== parent ||
-        url.searchParams.get('pagination') !== 'auto' ||
-        response.request().method() !== 'GET' ||
-        response.status() !== 200
-      )
-        return false;
-      const listing = (await response.json()) as { items: { name: string }[] };
-      return listing.items.some(({ name: listedName }) => listedName === backgroundName);
-    });
+    const published = page.waitForResponse(
+      (response) =>
+        /\/native\/files\/transfers\/[^/]+\/commit$/.test(new URL(response.url()).pathname) &&
+        response.request().method() === 'POST' &&
+        response.ok(),
+    );
     release();
-    await refreshed;
+    await published;
     await expect(document).toHaveAttribute('data-test-reader-session', 'retained');
     await expect(d.getByText('有未导出的标注', { exact: true })).toBeVisible();
     // 阅读模式会卸下编辑层，切回后检查同一会话保有的实际文字。
@@ -763,6 +759,7 @@ test('后台上传刷新文件列表不重开阅读会话或丢弃临时批注',
       .getByRole('dialog', { name: '丢弃未导出的标注？', exact: true })
       .getByRole('button', { name: '丢弃并关闭', exact: true })
       .click();
+    await expect(page.getByRole('button', { name: backgroundName, exact: true })).toBeVisible();
   } finally {
     release();
     await page.unrouteAll({ behavior: 'wait' });

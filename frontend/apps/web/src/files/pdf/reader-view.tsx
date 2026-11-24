@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { FilesError, type FileDocumentProps } from '@clouddrive/surface/files';
+import { useReaderDraftAutosave } from '@clouddrive/surface/files/runtime';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
 import { FileChoiceAction } from '@clouddrive/ui-adapter/file-choice-action';
@@ -42,6 +43,25 @@ import {
 type Props = FileDocumentProps & {
   readContent: (props: FileDocumentProps, signal: AbortSignal) => Promise<ArrayBuffer>;
 };
+type PdfDraft = Readonly<{ bytes: ArrayBuffer; page: number; scale: number }>;
+function pdfDraft(value: unknown, maxBytes: number): PdfDraft | undefined {
+  if (typeof value !== 'object' || value === null) return;
+  const draft = value as Partial<PdfDraft>;
+  if (
+    !(draft.bytes instanceof ArrayBuffer) ||
+    draft.bytes.byteLength > maxBytes ||
+    new TextDecoder().decode(draft.bytes.slice(0, 5)) !== '%PDF-' ||
+    typeof draft.page !== 'number' ||
+    !Number.isSafeInteger(draft.page) ||
+    draft.page < 1 ||
+    typeof draft.scale !== 'number' ||
+    !Number.isFinite(draft.scale) ||
+    draft.scale < pdfMinScale ||
+    draft.scale > pdfMaxScale
+  )
+    return;
+  return { bytes: draft.bytes, page: draft.page, scale: draft.scale };
+}
 const readerModes = ['none', 'text', 'highlight', 'ink'] as const;
 const currentTheme = (): 'light' | 'dark' => {
   const theme = document.documentElement.dataset.theme;
@@ -57,6 +77,8 @@ export function PDFReaderView(props: Props) {
     readContent,
     onClose,
     closeRequestSequence,
+    draft,
+    onDraftState,
   } = props;
   // 会话预算固定在打开时，后台列表返回同值新对象不能重开frame、丢弃临时批注。
   const [limits] = useState(() => ({ ...suppliedLimits }));
@@ -68,6 +90,9 @@ export function PDFReaderView(props: Props) {
   const [toolsOpen, setToolsOpen] = useState(false);
   const [phase, setPhase] = useState<'loading' | 'password' | 'ready' | 'error'>('loading');
   const [state, setState] = useState({ ...emptyPdfState });
+  const [recovered, setRecovered] = useState(false);
+  const [oldDraft, setOldDraft] = useState<PdfDraft>();
+  const recoveredRef = useRef(false);
   const stampImport = useImageOverlayImport();
   const [failure, setFailure] = useState(''),
     [notice, setNotice] = useState(''),
@@ -120,7 +145,7 @@ export function PDFReaderView(props: Props) {
     onClose();
   }, [onClose]);
   const requestClose = useCallback(() => {
-    if (activeState.current.modified) setDiscard(true);
+    if (activeState.current.modified || recoveredRef.current) setDiscard(true);
     else void finishClose();
   }, [finishClose]);
   useEffect(() => {
@@ -140,6 +165,7 @@ export function PDFReaderView(props: Props) {
     if (!element) return;
     const controller = new AbortController();
     let active = true;
+    let restored: PdfDraft | undefined;
     const owned = new PDFFrameSession(element, limits, {
       state: (value) => {
         if (!active) return;
@@ -151,6 +177,13 @@ export function PDFReaderView(props: Props) {
         if (active) {
           setPhase('ready');
           setPassword('');
+          if (restored) {
+            const next = restored;
+            void owned
+              .command({ kind: 'scale', scale: next.scale })
+              .then(() => owned.command({ kind: 'page', page: next.page }))
+              .catch(() => undefined);
+          }
         }
       },
       password: (wrong) => {
@@ -171,8 +204,16 @@ export function PDFReaderView(props: Props) {
     });
     session.current = owned;
     void readContent({ ...props, limits }, controller.signal)
-      .then((bytes) => {
-        if (active) return owned.open(bytes, labels.current.locale, currentTheme());
+      .then(async (bytes) => {
+        const saved = await draft?.read().catch(() => undefined);
+        if (!active) return;
+        const snapshot = pdfDraft(saved?.payload, limits.maxBytes);
+        if (snapshot && saved?.revision === entry.contentRevision) {
+          restored = snapshot;
+          recoveredRef.current = true;
+          setRecovered(true);
+        } else if (snapshot) setOldDraft(snapshot);
+        return owned.open(restored?.bytes ?? bytes, labels.current.locale, currentTheme());
       })
       .catch((error) => {
         if (active && !controller.signal.aborted) {
@@ -198,6 +239,7 @@ export function PDFReaderView(props: Props) {
     readContent,
     attempt,
     errorText,
+    draft,
   ]);
   useEffect(() => {
     const update = () => session.current?.theme(currentTheme());
@@ -211,14 +253,34 @@ export function PDFReaderView(props: Props) {
     };
   }, []);
   useEffect(() => {
-    if (!state.modified) return;
+    if (!state.modified || draft) return;
     const handler = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = '';
     };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [state.modified]);
+  }, [draft, state.modified]);
+  const modified = state.modified || recovered;
+  const backup = useReaderDraftAutosave({
+    draft,
+    dirty: Boolean(draft && modified),
+    change: `${state.annotationRevision}:${state.pendingText}:${state.page}:${state.scale}`,
+    suspend: phase !== 'ready' || busy || state.pendingText,
+    capture: async (closing) => {
+      const owned = session.current;
+      if (!owned || operation.current) throw new PDFFrameError('unavailable');
+      const result = await owned.command({ kind: closing ? 'save' : 'snapshot' });
+      const payload = pdfDraft(
+        { bytes: result.bytes, page: activeState.current.page, scale: activeState.current.scale },
+        limits.maxBytes,
+      );
+      if (!payload) throw new PDFFrameError('invalid');
+      return { revision: entry.contentRevision, payload };
+    },
+    warning: t('files.viewer.draftFailure'),
+    onStatus: onDraftState,
+  });
   const act = useCallback(
     async (
       command: PdfCommand,
@@ -589,8 +651,8 @@ export function PDFReaderView(props: Props) {
         </IconAction>
         <Action
           size="sm"
-          variant={state.modified ? 'primary' : 'quiet'}
-          disabled={!available || !state.modified}
+          variant={modified ? 'primary' : 'quiet'}
+          disabled={!available || !modified}
           onPress={() => {
             void act({ kind: 'save' }, async (value) => {
               if (
@@ -604,6 +666,9 @@ export function PDFReaderView(props: Props) {
                 entry.name.replace(/\.pdf$/i, '') + '.' + p('exportName') + '.pdf',
               );
               await session.current?.command({ kind: 'exported' });
+              recoveredRef.current = false;
+              setRecovered(false);
+              await backup.clear();
               setNotice(p('exported'));
             });
           }}
@@ -614,9 +679,9 @@ export function PDFReaderView(props: Props) {
           {p('imageBudget', { pixels: limits.maxImagePixels.toLocaleString(locale) })}
         </p>
       </div>
-      {state.modified || busy ? (
+      {modified || busy ? (
         <div className="flex shrink-0 flex-wrap gap-3 text-xs text-ink-muted" role="status">
-          {state.modified ? <span>{p('modified')}</span> : null}
+          {modified ? <span>{p('modified')}</span> : null}
           {busy ? <span>{p('working')}</span> : null}
         </div>
       ) : null}
@@ -873,6 +938,20 @@ export function PDFReaderView(props: Props) {
           className="min-h-0 w-full flex-1 rounded-control border border-border"
         />
       </div>
+      {draft && oldDraft ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <p role="status">{t('files.viewer.draftConflict')}</p>
+          <Action
+            size="sm"
+            variant="secondary"
+            onPress={() =>
+              draft.download(entry.name + '.draft.pdf', oldDraft.bytes, 'application/pdf')
+            }
+          >
+            {t('files.viewer.downloadDraft')}
+          </Action>
+        </div>
+      ) : null}
       {discard ? (
         <DialogSurface
           isOpen
@@ -884,9 +963,27 @@ export function PDFReaderView(props: Props) {
           onOpenChange={(open) => {
             if (!open) setDiscard(false);
           }}
-          onConfirm={finishClose}
+          onConfirm={async () => {
+            if (!draft || (await backup.clear())) await finishClose();
+            else throw new PDFFrameError('unavailable');
+          }}
         >
           <p>{p('modified')}</p>
+          {draft ? (
+            <Action
+              variant="secondary"
+              onPress={() => {
+                void backup.saveNow(true).then((ok) => {
+                  if (ok) void finishClose();
+                });
+              }}
+            >
+              {t('files.viewer.keepDraft')}
+            </Action>
+          ) : null}
+          {draft && backup.status === 'failed' ? (
+            <p role="alert">{t('files.viewer.draftFailure')}</p>
+          ) : null}
         </DialogSurface>
       ) : null}
     </section>

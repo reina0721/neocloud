@@ -2,6 +2,7 @@ import { createCipheriv, randomBytes, randomUUID } from 'node:crypto';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
+import { readPreviewAccess } from './reading-fixture';
 
 const samples = join(__dirname, 'fixtures/hls');
 const manifest = (lines: readonly string[]) => ['#EXTM3U', ...lines, ''].join('\n');
@@ -20,14 +21,7 @@ test.use({ actionTimeout: 15_000 });
 
 test('真实私有 HLS 支持多档清晰度、AES、范围分片和直播刷新', async ({ page, context }, info) => {
   test.setTimeout(150_000);
-  const access = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
-  test.skip(!access, '使用隔离文件预览。');
-  const account = JSON.parse((await readFile(access!, 'utf8')).replace(/^\uFEFF/, '')) as {
-    username: string;
-    password: string;
-    url: string;
-  };
-  expect(new URL(account.url).origin).toBe('http://127.0.0.1:4194');
+  const account = readPreviewAccess();
   const folder = 'HLS验收-' + randomUUID().slice(0, 8);
   const directory = info.outputPath(folder);
   const variants = '变体 目录';
@@ -92,7 +86,6 @@ test('真实私有 HLS 支持多档清晰度、AES、范围分片和直播刷新
     await copyFile(join(samples, name), join(directory, name));
 
   const requests = new Set<string>();
-  const published = new Set<string>();
   let external = 0;
   await page.route('https://outside-hls.example.test/**', async (route) => {
     external++;
@@ -103,10 +96,6 @@ test('真实私有 HLS 支持多档清晰度、AES、范围分片和直播刷新
       const range = request.headers().range;
       if (range) requests.add(range);
     }
-  });
-  page.on('response', (response) => {
-    if (response.ok() && /\/native\/files\/transfers\/[^/]+\/commit$/.test(response.url()))
-      published.add(response.url());
   });
   await page.goto('/login?returnTo=%2Fhome');
   await page.getByLabel('邮箱', { exact: true }).fill(account.username);
@@ -119,18 +108,40 @@ test('真实私有 HLS 支持多档清晰度、AES、范围分片和直播刷新
   await page.getByRole('dialog').getByRole('button', { name: '使用此位置', exact: true }).click();
   await (await choose).setFiles(directory);
   const tray = page.getByRole('dialog', { name: '上传队列', exact: true });
-  await expect.poll(() => published.size, { timeout: 30_000 }).toBe(17);
+  let fixtureId = '';
+  await expect
+    .poll(
+      async () => {
+        const fixture = await page.evaluate(async (name) => {
+          type Entry = { id: string; name: string; kind: string };
+          async function list(query: URLSearchParams) {
+            const response = await fetch(`/api/console/v1/native/files?${query}`);
+            if (!response.ok) throw new Error('HLS fixture folder HTTP ' + response.status);
+            return ((await response.json()) as { items: Entry[] }).items;
+          }
+          const root = (await list(new URLSearchParams({ search: name }))).find(
+            (entry) => entry.kind === 'folder' && entry.name === name,
+          );
+          if (!root) return { id: '', count: 0 };
+          const items = await list(new URLSearchParams({ parent: root.id }));
+          const children = await Promise.all(
+            items
+              .filter((entry) => entry.kind === 'folder')
+              .map((entry) => list(new URLSearchParams({ parent: entry.id }))),
+          );
+          return {
+            id: root.id,
+            count: [...items, ...children.flat()].filter((entry) => entry.kind === 'file').length,
+          };
+        }, folder);
+        fixtureId = fixture.id;
+        return fixture.count;
+      },
+      { timeout: 60_000 },
+    )
+    .toBe(17);
   await tray.getByRole('button', { name: '关闭', exact: true }).click();
-  const fixtureId = await page.evaluate(async (name) => {
-    const response = await fetch('/api/console/v1/native/files?search=' + encodeURIComponent(name));
-    if (!response.ok) throw new Error('HLS fixture folder HTTP ' + response.status);
-    const listing = (await response.json()) as {
-      items: { id: string; name: string; kind: string }[];
-    };
-    return listing.items.find((entry) => entry.kind === 'folder' && entry.name === name)?.id;
-  }, folder);
-  expect(fixtureId).toBeDefined();
-  await page.goto('/home?parent=' + encodeURIComponent(fixtureId!));
+  await page.goto('/home?parent=' + encodeURIComponent(fixtureId));
   await page.getByRole('button', { name: 'master.m3u8', exact: true }).click();
   const master = page.getByRole('dialog', { name: 'master.m3u8', exact: true });
   const video = master.locator('video');
@@ -213,7 +224,7 @@ test('真实私有 HLS 支持多档清晰度、AES、范围分片和直播刷新
   await expect(live.getByRole('button', { name: '回到直播', exact: true })).toBeVisible();
   const editor = await context.newPage();
   try {
-    await editor.goto(page.url());
+    await editor.goto('/home?parent=' + encodeURIComponent(fixtureId));
     await editor.getByRole('button', { name: 'live.m3u8 的操作', exact: true }).click();
     const replace = editor.waitForEvent('filechooser');
     await editor.getByRole('menuitem', { name: '上传新版本', exact: true }).click();

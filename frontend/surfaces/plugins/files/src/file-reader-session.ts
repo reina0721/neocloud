@@ -1,4 +1,4 @@
-import type { FileEntry } from '../../../src/files/model';
+import type { FileEntry, FilesPort } from '../../../src/files/model';
 import { isHlsPlaylist } from '../../../src/files/model';
 import { isPDFDocument, type FileDocumentProps } from '../../../src/files/pdf-contract';
 import { isEpubDocument } from '../../../src/files/epub-contract';
@@ -6,6 +6,7 @@ import { isMarkdownFile } from '../../../src/files/markdown';
 import { fileIconExtension } from '../../../src/files/icon-rules';
 import {
   isTextPreview,
+  fileApplicationChoice,
   type FileApplicationID,
   type FileApplicationPolicy,
   type WebFileApplicationItem,
@@ -70,3 +71,104 @@ export type FileReaderSession =
   | { kind: 'archive'; entry: FileEntry }
   | MediaReaderSession
   | { kind: 'web'; entry: FileEntry; application: WebFileApplicationItem };
+
+export type OpenReaderSession = Exclude<FileReaderSession, { kind: 'selecting' }>;
+export type ReaderApplication = FileApplicationID | WebFileApplicationItem;
+export type ReaderLimits = Readonly<{
+  maxTextBytes: number | undefined;
+  maxMediaBytes: number | undefined;
+  pdfReader: FileDocumentProps['limits'] | undefined;
+}>;
+
+export function readerApplications(
+  policy: FileApplicationPolicy,
+  entry: FileEntry,
+  device: 'desktop' | 'mobile',
+) {
+  const extension = fileIconExtension(entry.name);
+  const builtInText = policy.items.some(
+    (item) => item.id === 'text' && !item.customExtensions && item.extensions.includes(extension),
+  );
+  return {
+    choice: fileApplicationChoice(
+      policy,
+      compatibleFileApplications(entry, builtInText),
+      configuredFileApplications(entry),
+      extension,
+      device,
+    ),
+    web: policy.webItems.filter(
+      (app) =>
+        app.enabled &&
+        app.origin &&
+        app.extensions.includes(extension) &&
+        (app.platform === 'all' || app.platform === device),
+    ),
+  };
+}
+
+export function makeReaderSession(
+  entry: FileEntry,
+  application: ReaderApplication,
+  limits: ReaderLimits,
+  options: { plainEdit?: boolean; album?: MediaReaderSession['album'] } = {},
+): OpenReaderSession | undefined {
+  if (typeof application !== 'string') return { kind: 'web', entry, application };
+  switch (application) {
+    case 'archive':
+    case 'epub':
+      return { kind: application, entry };
+    case 'pdf':
+      return limits.pdfReader ? { kind: 'pdf', entry, limits: limits.pdfReader } : undefined;
+    case 'drawio':
+      return limits.maxTextBytes !== undefined && entry.trashedAt === null
+        ? { kind: 'drawio', request: { entry }, maxBytes: limits.maxTextBytes }
+        : undefined;
+    case 'markdown':
+    case 'text':
+      return limits.maxTextBytes === undefined
+        ? undefined
+        : {
+            kind: 'text',
+            request: {
+              mode: 'edit',
+              entry,
+              ...(options.plainEdit
+                ? {}
+                : application === 'markdown'
+                  ? { reading: true }
+                  : { code: true }),
+            },
+            maxBytes: limits.maxTextBytes,
+          };
+    default:
+      return limits.maxMediaBytes === undefined
+        ? undefined
+        : {
+            kind: 'media',
+            entry,
+            maxBytes: limits.maxMediaBytes,
+            ...(options.album ? { album: options.album } : {}),
+            ...(application === 'video' && entry.trashedAt === null && isHlsPlaylist(entry)
+              ? { videoPlaylist: true }
+              : {}),
+          };
+  }
+}
+
+export function readReaderLimits(port: FilesPort, signal: AbortSignal) {
+  return port.list(
+    {
+      parent: '',
+      category: '',
+      search: '',
+      trash: false,
+      sort: 'name',
+      desc: false,
+      page: 1,
+      pageSize: 1,
+      pagination: 'numbered',
+    },
+    signal,
+  );
+}

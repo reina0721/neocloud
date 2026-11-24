@@ -384,15 +384,22 @@ test('目录层级上传与复制、图片画廊、真实音视频播放和剪�
   await expect
     .poll(() => video.evaluate((element: HTMLVideoElement) => element.currentTime))
     .toBeGreaterThan(0);
-  await page.getByRole('dialog').getByRole('button', { name: '关闭', exact: true }).click();
-  await expect(page.locator('video')).toHaveCount(0);
+  await page.getByRole('button', { name: '收为视频小窗', exact: true }).click();
+  const mini = page.getByRole('region', { name: 'video.webm', exact: true });
+  const videoHandle = page.getByRole('button', { name: '展开底部视频', exact: true });
+  await expect(videoHandle).toBeVisible();
+  await expect(mini).toHaveCount(0);
+  await videoHandle.press('Enter');
+  await expect(mini.locator('video')).toBeVisible();
+  await expect(mini).toBeFocused();
   expect(
-    await ownedVideo.evaluate(
-      (element) => (element as HTMLMediaElement).paused && element.getAttribute('src') === null,
-    ),
+    await mini.locator('video').evaluate((element, original) => element === original, ownedVideo),
   ).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(videoHandle).toBeFocused();
   await page.getByRole('button', { name: '子目录', exact: true }).click();
   await page.getByRole('button', { name: 'audio.wav', exact: true }).click();
+  const audioFolder = page.url();
   const audio = page.locator('audio');
   await expect(audio).toHaveAttribute('src', /^blob:/);
   const ownedAudio = await audio.elementHandle();
@@ -407,6 +414,13 @@ test('目录层级上传与复制、图片画廊、真实音视频播放和剪�
   const player = page.getByRole('region', { name: '音乐播放器', exact: true });
   await expect(player).toHaveCount(0);
   await page.getByRole('button', { name: '音乐播放器', exact: true }).click();
+  await player.getByRole('button', { name: '切换到视频', exact: true }).click();
+  await expect(mini.locator('video')).toBeVisible();
+  expect(
+    await mini.locator('video').evaluate((element, original) => element === original, ownedVideo),
+  ).toBe(true);
+  await page.getByRole('button', { name: '切换到音乐播放器', exact: true }).click();
+  await expect(mini).toHaveCount(0);
   await player.getByRole('button', { name: '更多播放控制', exact: true }).click();
   await player.getByRole('button', { name: '停止播放器', exact: true }).click();
   await expect(page.locator('audio')).toHaveCount(0);
@@ -415,6 +429,22 @@ test('目录层级上传与复制、图片画廊、真实音视频播放和剪�
       (element) => (element as HTMLMediaElement).paused && element.getAttribute('src') === null,
     ),
   ).toBe(true);
+  await videoHandle.press('Enter');
+  await mini.getByRole('button', { name: '回到视频页', exact: true }).click();
+  await expect(video).toBeVisible();
+  expect(await video.evaluate((element, original) => element === original, ownedVideo)).toBe(true);
+  expect(await video.evaluate((element: HTMLVideoElement) => element.currentTime)).toBeGreaterThan(
+    0,
+  );
+  await page.getByRole('dialog').getByRole('button', { name: '关闭', exact: true }).click();
+  await expect(page.locator('video')).toHaveCount(0);
+  expect(
+    await ownedVideo.evaluate(
+      (element) => (element as HTMLMediaElement).paused && element.getAttribute('src') === null,
+    ),
+  ).toBe(true);
+  await expect(page).toHaveURL(audioFolder);
+  await expect(page.getByRole('button', { name: 'audio.wav', exact: true })).toBeVisible();
   const transfer = await page.evaluateHandle((name) => {
     const contents = new DataTransfer();
     contents.items.add(new File(['clipboard persistent bytes'], name, { type: 'text/plain' }));

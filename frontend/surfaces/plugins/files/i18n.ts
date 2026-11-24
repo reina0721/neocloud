@@ -6,7 +6,9 @@ import { zhTree, enTree } from './tree-i18n';
 import { zhTime, enTime } from './time-i18n';
 import { zhRetention, enRetention } from './retention-i18n';
 import { zhLocks, enLocks } from './locks-i18n';
+import { zhViewer, enViewer } from './viewer-i18n';
 const zh = {
+  viewer: zhViewer,
   locks: zhLocks,
   retention: zhRetention,
   time: zhTime,
@@ -245,6 +247,7 @@ const zh = {
   },
 };
 const en: typeof zh = {
+  viewer: enViewer,
   locks: enLocks,
   retention: enRetention,
   time: enTime,

@@ -401,6 +401,7 @@ test('图片标注取消读取、限制历史位图数量并释放淘汰素材',
   await expect.poll(closed).toBe(2);
   await expect(button('重做')).toBeDisabled();
   await button('关闭').click();
+  await page.getByRole('button', { name: '放弃草稿并关闭', exact: true }).click();
   await expect.poll(closed).toBe(14);
 });
 
@@ -479,6 +480,10 @@ test('图片按原版本保存并可将过期草稿另存到指定目录', async
   const staleButton = (name: string) => stale.getByRole('button', { name, exact: true });
   await staleButton('水平翻转').click();
   const staleCanvas = stale.getByRole('img', { name: '图片编辑画布', exact: true });
+  await expect.poll(() => topLeft(staleCanvas)).toEqual([0, 255, 0, 255]);
+  await expect(stale.getByText('已存为本机草稿', { exact: true })).toBeVisible();
+  await stalePage.reload();
+  await stalePage.getByRole('button', { name: '编辑图片', exact: true }).click();
   await expect.poll(() => topLeft(staleCanvas)).toEqual([0, 255, 0, 255]);
 
   let release = () => {};
@@ -960,7 +965,7 @@ test('WebP 支持图片水印、透明副本和原件保留', async ({ page }, i
   expect((await copyPixel(page, webpCopy, 'image/webp', 220, 180)).pixel[3]).toBe(0);
   expect(isGold((await copyPixel(page, webpCopy, 'image/webp', 20, 20)).pixel)).toBe(true);
   await button('上传副本到原文件夹').click();
-  await expect(editor.getByRole('status')).toContainText('副本已加入上传队列');
+  await expect(editor.getByText('副本已加入上传队列', { exact: false })).toBeVisible();
   await choose('输出格式', 'PNG');
   const png = await downloadCopy(page, editor, 'logo-copy.png');
   expect(isGold((await copyPixel(page, png, 'image/png', 20, 20)).pixel)).toBe(true);
@@ -971,6 +976,7 @@ test('WebP 支持图片水印、透明副本和原件保留', async ({ page }, i
   expect((await copyPixel(page, jpeg, 'image/jpeg', 220, 180)).pixel).toEqual([255, 255, 255, 255]);
 
   await button('关闭').click();
+  await page.getByRole('button', { name: '放弃草稿并关闭', exact: true }).click();
   await expect.poll(closed).toBe(3);
   const names = ['source.webp', 'logo-copy.webp'];
   for (const [name, base64] of [
@@ -1397,8 +1403,15 @@ test('本人图片可裁剪、变换、调整尺寸、下载与上传独立副�
   await preview.getByRole('button', { name: '关闭', exact: true }).click();
 
   await page.evaluate(() => {
-    const count = { closed: 0 };
+    const count = { opened: 0, closed: 0 };
     Object.defineProperty(window, '__imageBitmapProbe', { value: count });
+    window.createImageBitmap = new Proxy(window.createImageBitmap.bind(window), {
+      async apply(target, receiver: unknown, args: unknown[]) {
+        const bitmap = await (Reflect.apply(target, receiver, args) as Promise<ImageBitmap>);
+        count.opened++;
+        return bitmap;
+      },
+    });
     // eslint-disable-next-line @typescript-eslint/unbound-method -- 记录释放次数后通过 call 传回原位图。
     const close = ImageBitmap.prototype.close;
     ImageBitmap.prototype.close = function () {
@@ -1484,7 +1497,7 @@ test('本人图片可裁剪、变换、调整尺寸、下载与上传独立副�
   expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
   expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([80, 90]);
   await button('上传副本到原文件夹').click();
-  await expect(editor.getByRole('status')).toContainText('副本已加入上传队列');
+  await expect(editor.getByText('副本已加入上传队列', { exact: false })).toBeVisible();
   await expect
     .poll(async () =>
       page.evaluate(async (id) => {
@@ -1529,16 +1542,18 @@ test('本人图片可裁剪、变换、调整尺寸、下载与上传独立副�
   await expect(canvas).toBeVisible();
   await page.screenshot({ path: info.outputPath('image-editor-mobile.png') });
   await button('关闭').click();
+  await page.getByRole('button', { name: '放弃草稿并关闭', exact: true }).click();
   await expect(editor).toHaveCount(0);
   await expect
     .poll(() =>
-      page.evaluate(
-        () =>
-          (window as unknown as { __imageBitmapProbe: { closed: number } }).__imageBitmapProbe
-            .closed,
-      ),
+      page.evaluate(() => {
+        const { opened, closed } = (
+          window as unknown as { __imageBitmapProbe: { opened: number; closed: number } }
+        ).__imageBitmapProbe;
+        return opened >= 2 && opened === closed;
+      }),
     )
-    .toBe(2);
+    .toBe(true);
   await expect(preview.getByRole('img', { name: 'source.png' })).toBeVisible();
   await preview.getByRole('button', { name: '关闭', exact: true }).click();
 

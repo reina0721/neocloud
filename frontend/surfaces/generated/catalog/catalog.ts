@@ -182,6 +182,14 @@ export const generatedRouteCatalog: RouteCatalog = {
       paramNames: [],
     },
     {
+      routeId: 'files.view',
+      pluginId: 'files',
+      path: 'view',
+      segments: ['view'],
+      pattern: '/home/view',
+      paramNames: [],
+    },
+    {
       routeId: 'foundations',
       pluginId: 'foundations',
       path: '',

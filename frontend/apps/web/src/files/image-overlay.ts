@@ -4,7 +4,12 @@ import { rasterType } from './media-signatures';
 export const imageOverlayLimit = { mebibytes: 2, sidePixels: 1024 } as const;
 export const imageOverlayTypes = Object.keys(imageFormats);
 export type ImageOverlayError = 'overlayBytes' | 'overlayDimensions' | 'overlayInvalid';
-export type ImageOverlayAsset = Readonly<{ id: number; name: string; bitmap: ImageBitmap }>;
+export type ImageOverlayAsset = Readonly<{
+  id: number;
+  name: string;
+  bitmap: ImageBitmap;
+  file?: File;
+}>;
 
 function fitsOverlay({ width, height }: { width: number; height: number }) {
   return [width, height].every(

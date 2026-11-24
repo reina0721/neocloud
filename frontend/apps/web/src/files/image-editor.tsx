@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useEffectEvent,
   useId,
   useLayoutEffect,
   useMemo,
@@ -11,7 +12,11 @@ import {
 } from 'react';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { FilesError, type FileEntry } from '@clouddrive/surface/files';
-import type { ImageCopyDestination } from '@clouddrive/surface/files/runtime';
+import {
+  useReaderDraftAutosave,
+  type ImageCopyDestination,
+  type ReaderDraft,
+} from '@clouddrive/surface/files/runtime';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { CheckboxField, SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
@@ -56,6 +61,7 @@ import { ImageAnnotationWorkspace } from './image-annotation-workspace';
 import { ImageAppearanceWorkspace, type ImageAppearanceTool } from './image-appearance-workspace';
 import { ImageCanvas, type ImageCanvasView } from './image-canvas';
 import { downloadBlob } from './native-download';
+import { imageDraftPayload, recoverImageDraft } from './image-reader-draft';
 
 const zh = {
   title: '图片编辑器',
@@ -212,8 +218,11 @@ type EditorProps = ImageToolsProps &
   Readonly<{
     queueCopy: (file: File, parentId: string) => Promise<void>;
     publishVersion: (file: File, target: FileEntry, signal: AbortSignal) => Promise<void>;
-    onClose: () => void;
+    initialDraft: ReaderDraft | undefined;
+    onClose: (keepDraft: boolean) => void;
   }>;
+type CloseImageRequest = Readonly<{ whole: boolean }>;
+type RecoveredImage = Readonly<{ edit: ImageEdit; assets: Set<ImageOverlayAsset> }>;
 
 const cropRatios = [
   { label: '1:1', ratio: 1 },
@@ -404,15 +413,22 @@ function ImageWorkspace({
   queueCopy,
   publishVersion,
   labels,
-}: Omit<EditorProps, 'size' | 'onClose'> &
+  recovery,
+  closeRequest,
+  onClose,
+}: Omit<EditorProps, 'size' | 'initialDraft'> &
   Readonly<{
     bitmap: ImageBitmap;
     labels: Labels;
+    recovery: RecoveredImage | undefined;
+    closeRequest: CloseImageRequest | undefined;
   }>) {
   const { t } = useFrontendTranslation();
   const { entry, destinationPicker: DestinationPicker, onVersionPublished } = editing;
   const [original] = useState(() => originalImage(bitmap));
-  const [history, setHistory] = useState({ edits: [original], index: 0 });
+  const [history, setHistory] = useState(() =>
+    recovery ? { edits: [original, recovery.edit], index: 1 } : { edits: [original], index: 0 },
+  );
   const edit = history.edits[history.index] ?? original;
   const [tool, setTool] = useState<Tool>('transform');
   const [toolSession, setToolSession] = useState(0);
@@ -436,8 +452,35 @@ function ImageWorkspace({
   const inProgress = useRef(false);
   const lifetime = useRef<AbortController>(null);
   const overlayAssets = useRef(new Set<ImageOverlayAsset>());
-  const nextOverlayId = useRef(0);
+  const nextOverlayId = useRef(
+    Math.max(0, ...[...(recovery?.assets ?? [])].map((asset) => asset.id)),
+  );
   const [draftLogo, setDraftLogo] = useState<ImageOverlayAsset>();
+  const [discard, setDiscard] = useState<CloseImageRequest>();
+  const dirty = edit !== original && versionBlocked !== 'published';
+  const backup = useReaderDraftAutosave({
+    draft: editing.draft,
+    dirty,
+    change: edit,
+    capture: () => ({ revision: entry.contentRevision, payload: imageDraftPayload(source, edit) }),
+    warning: t('files.viewer.draftFailure'),
+    onStatus: editing.workspace?.onDraftState,
+  });
+
+  function finishClose(request: CloseImageRequest, keep: boolean) {
+    if (request.whole && editing.workspace) editing.workspace.close();
+    else onClose(keep);
+  }
+  const checkClose = useEffectEvent((request: CloseImageRequest) => {
+    if (inProgress.current) return;
+    if (dirty) setDiscard(request);
+    else finishClose(request, false);
+  });
+  useEffect(() => {
+    if (!closeRequest) return;
+    const frame = requestAnimationFrame(() => checkClose(closeRequest));
+    return () => cancelAnimationFrame(frame);
+  }, [closeRequest]);
   const overlays = useMemo(() => {
     const retained = new Set<ImageOverlayAsset>();
     const annotationAssets = new Set<ImageOverlayAsset>();
@@ -471,14 +514,14 @@ function ImageWorkspace({
     }
   }, [overlays, draftLogo]);
 
-  function adoptOverlay(bitmap: ImageBitmap, name: string): ImageOverlayAsset {
-    const asset = { id: ++nextOverlayId.current, name, bitmap };
+  function adoptOverlay(bitmap: ImageBitmap, name: string, file: File): ImageOverlayAsset {
+    const asset = { id: ++nextOverlayId.current, name, bitmap, file };
     overlayAssets.current.add(asset);
     return asset;
   }
 
-  function adoptLogo(bitmap: ImageBitmap, name: string): ImageOverlayAsset {
-    const asset = adoptOverlay(bitmap, name);
+  function adoptLogo(bitmap: ImageBitmap, name: string, file: File): ImageOverlayAsset {
+    const asset = adoptOverlay(bitmap, name, file);
     setDraftLogo(asset);
     return asset;
   }
@@ -565,6 +608,7 @@ function ImageWorkspace({
         await publishVersion(new File([encoded], entry.name, { type: format }), entry, signal);
         if (signal.aborted) return;
         setVersionBlocked('published');
+        await backup.clear();
         try {
           await onVersionPublished(entry, signal);
         } catch {
@@ -728,6 +772,18 @@ function ImageWorkspace({
 
   return (
     <div className="space-y-3">
+      {editing.draft && backup.status !== 'clean' ? (
+        <p role="status" className="text-xs text-ink-muted">
+          {t(
+            'files.viewer.' +
+              (backup.status === 'saved'
+                ? 'savedDraft'
+                : backup.status === 'saving'
+                  ? 'savingDraft'
+                  : 'draftFailure'),
+          )}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1">
           <Action
@@ -1023,21 +1079,70 @@ function ImageWorkspace({
           </div>
         </div>
       )}
+      {discard && editing.workspace?.visible !== false ? (
+        <DialogSurface
+          isOpen
+          title={t('files.viewer.draft')}
+          triggerLabel={t('files.viewer.draft')}
+          description=""
+          cancelLabel={t('files.viewer.continueEditing')}
+          confirmLabel={t('files.viewer.discardDraft')}
+          onOpenChange={(open) => {
+            if (!open) setDiscard(undefined);
+          }}
+          onConfirm={async () => {
+            if (!editing.draft || (await backup.clear())) finishClose(discard, false);
+            else throw new FilesError('unavailable');
+          }}
+        >
+          {editing.draft ? (
+            <Action
+              variant="secondary"
+              onPress={() => {
+                void backup.saveNow(true).then((ok) => {
+                  if (ok) finishClose(discard, true);
+                });
+              }}
+            >
+              {t('files.viewer.keepDraft')}
+            </Action>
+          ) : null}
+          {backup.status === 'failed' ? <p role="alert">{t('files.viewer.draftFailure')}</p> : null}
+        </DialogSurface>
+      ) : null}
     </div>
   );
 }
 
-export function ImageEditor({ onClose, size, ...props }: EditorProps) {
+export function ImageEditor({ onClose, size, initialDraft, ...props }: EditorProps) {
   const { locale, t } = useFrontendTranslation();
   const labels = locale.startsWith('zh') ? zh : en;
-  const { source } = props;
-  const [result, setResult] = useState<{ bitmap: ImageBitmap } | { failure: ImageStatus }>();
+  const { source, editing } = props;
+  const [result, setResult] = useState<
+    | {
+        bitmap: ImageBitmap;
+        recovery?: RecoveredImage;
+        draftFailed?: true;
+      }
+    | { failure: ImageStatus }
+  >();
+  const [closeRequest, setCloseRequest] = useState<CloseImageRequest>();
   const supportedSize = validImageSize(size);
+  const interceptClose = editing.workspace?.interceptClose;
+  useEffect(
+    () =>
+      interceptClose?.(() => {
+        if (result && 'bitmap' in result) setCloseRequest({ whole: true });
+        else editing.workspace?.close();
+      }),
+    [editing.workspace, interceptClose, result],
+  );
 
   useEffect(() => {
     if (!supportedSize) return;
     const controller = new AbortController();
     let owned: ImageBitmap | undefined;
+    const assets = new Set<ImageOverlayAsset>();
     void (async () => {
       try {
         const bitmap = await createImageBitmap(source, { imageOrientation: 'from-image' });
@@ -1047,7 +1152,23 @@ export function ImageEditor({ onClose, size, ...props }: EditorProps) {
           return;
         }
         owned = bitmap;
-        setResult({ bitmap });
+        if (initialDraft) {
+          try {
+            const recovered = await recoverImageDraft(
+              initialDraft.payload,
+              bitmap,
+              controller.signal,
+            );
+            if (controller.signal.aborted) {
+              for (const asset of recovered.assets) asset.bitmap.close();
+              return;
+            }
+            for (const asset of recovered.assets) assets.add(asset);
+            setResult({ bitmap, recovery: { edit: recovered.edit, assets } });
+          } catch {
+            if (!controller.signal.aborted) setResult({ bitmap, draftFailed: true });
+          }
+        } else setResult({ bitmap });
       } catch {
         if (!controller.signal.aborted) setResult({ failure: 'decodeFailed' });
       }
@@ -1055,8 +1176,10 @@ export function ImageEditor({ onClose, size, ...props }: EditorProps) {
     return () => {
       controller.abort();
       owned?.close();
+      for (const asset of assets) asset.bitmap.close();
+      assets.clear();
     };
-  }, [source, supportedSize]);
+  }, [initialDraft, source, supportedSize]);
 
   const status = !supportedSize
     ? 'sizeLimit'
@@ -1071,13 +1194,39 @@ export function ImageEditor({ onClose, size, ...props }: EditorProps) {
       cancelLabel={t('files.close')}
       size="cover"
       layout="workspace"
-      isOpen
+      keepMounted
+      isOpen={editing.workspace?.visible ?? true}
+      {...(editing.workspace
+        ? {
+            headerAction: (
+              <IconAction
+                label={t('files.viewer.minimize')}
+                tooltip
+                onPress={editing.workspace.minimize}
+              >
+                <Minus aria-hidden="true" />
+              </IconAction>
+            ),
+          }
+        : {})}
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (open) return;
+        if (result && 'bitmap' in result) setCloseRequest({ whole: false });
+        else onClose(false);
       }}
     >
       {result && 'bitmap' in result ? (
-        <ImageWorkspace {...props} bitmap={result.bitmap} labels={labels} />
+        <>
+          {result.draftFailed ? <p role="alert">{t('files.viewer.draftFailure')}</p> : null}
+          <ImageWorkspace
+            {...props}
+            bitmap={result.bitmap}
+            labels={labels}
+            recovery={result.recovery}
+            closeRequest={closeRequest}
+            onClose={onClose}
+          />
+        </>
       ) : (
         <p role={status === 'loading' ? 'status' : 'alert'} className="text-sm text-ink-muted">
           {labels[status]}

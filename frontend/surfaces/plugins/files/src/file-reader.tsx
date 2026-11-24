@@ -3,7 +3,11 @@ import { lazy, Suspense } from 'react';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { FileMedia } from '../../../src/files/runtime';
+import { FileMedia, type FileMediaProps } from '../../../src/files/runtime';
+import type { FileEntry } from '../../../src/files/model';
+import type { OpenReaderSession } from './file-reader-session';
+import { ReaderSurface } from './reader-surface';
+import { useReaderSurface } from './reader-surface-context';
 import { fileApplicationName } from '../../../src/files/file-applications';
 import { ImageCopyDestinationDialog } from './own-folder-picker';
 import { TextDialog } from './text-dialog';
@@ -23,14 +27,27 @@ const WebFilePreviewDialog = lazy(() =>
 const DrawioDialog = lazy(() => import('./drawio-dialog'));
 
 /** 单个阅读会话的呈现边界；真正的媒体和编辑资源仍由各 reader / Host 释放。 */
-export function FileReader({ reader }: { reader: FileReaderController }) {
+export function FileReader({
+  session,
+  close,
+  download,
+  saved,
+  changed,
+  moveImage,
+  refreshPublishedImage,
+  playback,
+}: {
+  session: OpenReaderSession;
+  close: () => void;
+  download: (entry: FileEntry) => void;
+  saved: () => void;
+  changed: () => void;
+  moveImage: (delta: -1 | 1) => void;
+  refreshPublishedImage: (entry: FileEntry, signal: AbortSignal) => Promise<void>;
+  playback: FileMediaProps['playback'] | undefined;
+}) {
   const { t, locale } = useFrontendTranslation();
-  const chinese = locale.startsWith('zh');
-  const openWithLabel = chinese ? '打开方式' : 'Open with';
-  const noApplicationLabel = chinese
-    ? '此文件在当前设备上没有可用的浏览应用。'
-    : 'No viewer is available for this file on this device.';
-  const session = reader.session;
+  const surface = useReaderSurface();
   const textEditor = session?.kind === 'text' ? session : undefined;
   const drawio = session?.kind === 'drawio' ? session : undefined;
   const pdfPreview = session?.kind === 'pdf' ? session : undefined;
@@ -38,7 +55,6 @@ export function FileReader({ reader }: { reader: FileReaderController }) {
   const archiveEntry = session?.kind === 'archive' ? session.entry : undefined;
   const mediaPreview = session?.kind === 'media' ? session : undefined;
   const webPreview = session?.kind === 'web' ? session : undefined;
-  const applicationPicker = session?.kind === 'selecting' && session.visible ? session : undefined;
   const album = mediaPreview?.album;
   const imagePreview = album !== undefined;
   const videoPreview =
@@ -51,23 +67,22 @@ export function FileReader({ reader }: { reader: FileReaderController }) {
           {...(textEditor.request.mode === 'edit'
             ? {
                 onDownload: () => {
-                  if (textEditor.request.mode === 'edit')
-                    void reader.download(textEditor.request.entry);
+                  if (textEditor.request.mode === 'edit') void download(textEditor.request.entry);
                 },
               }
             : {})}
-          onClose={() => reader.close()}
-          onSaved={reader.saved}
+          onClose={() => close()}
+          onSaved={saved}
         />
       ) : null}
       {drawio ? (
         <Suspense fallback={<p role="status">{t('files.mediaLoading')}</p>}>
-          <DrawioDialog {...drawio} onClose={() => reader.close()} onSaved={reader.changed} />
+          <DrawioDialog {...drawio} onClose={() => close()} onSaved={changed} />
         </Suspense>
       ) : null}
       {pdfPreview ? (
         <Suspense fallback={<p role="status">{pdfPreview.entry.name}</p>}>
-          <PdfDialog {...pdfPreview} onClose={() => reader.close()} />
+          <PdfDialog {...pdfPreview} onClose={() => close()} />
         </Suspense>
       ) : null}
       {epubEntry ? (
@@ -75,13 +90,13 @@ export function FileReader({ reader }: { reader: FileReaderController }) {
           <EpubDialog
             key={`${epubEntry.id}:${epubEntry.contentRevision}`}
             entry={epubEntry}
-            onClose={() => reader.close()}
-            onDownload={() => void reader.download(epubEntry)}
+            onClose={() => close()}
+            onDownload={() => void download(epubEntry)}
           />
         </Suspense>
       ) : null}
       {mediaPreview ? (
-        <DialogSurface
+        <ReaderSurface
           triggerLabel={t('files.mediaPreview')}
           title={mediaPreview.entry.name}
           description={t('files.mediaPreview')}
@@ -90,7 +105,7 @@ export function FileReader({ reader }: { reader: FileReaderController }) {
           layout={videoPreview || imagePreview ? 'workspace' : 'standard'}
           isOpen
           onOpenChange={(open) => {
-            if (!open) reader.close();
+            if (!open) close();
           }}
         >
           <div className={videoPreview ? 'flex h-full min-h-0 flex-col gap-4' : 'space-y-4'}>
@@ -104,14 +119,14 @@ export function FileReader({ reader }: { reader: FileReaderController }) {
                   if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
                   if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
                   event.preventDefault();
-                  reader.moveImage(event.key === 'ArrowLeft' ? -1 : 1);
+                  moveImage(event.key === 'ArrowLeft' ? -1 : 1);
                 }}
               >
                 <Action
                   size="sm"
                   variant="secondary"
                   disabled={album.index === 0}
-                  onPress={() => reader.moveImage(-1)}
+                  onPress={() => moveImage(-1)}
                 >
                   {locale.startsWith('zh') ? '上一张' : 'Previous photo'}
                 </Action>
@@ -122,16 +137,9 @@ export function FileReader({ reader }: { reader: FileReaderController }) {
                   size="sm"
                   variant="secondary"
                   disabled={album.index + 1 >= album.entries.length}
-                  onPress={() => reader.moveImage(1)}
+                  onPress={() => moveImage(1)}
                 >
                   {locale.startsWith('zh') ? '下一张' : 'Next photo'}
-                </Action>
-                <Action
-                  size="sm"
-                  variant="secondary"
-                  onPress={() => void reader.download(mediaPreview.entry)}
-                >
-                  {t('files.download')}
                 </Action>
               </div>
             ) : null}
@@ -147,41 +155,64 @@ export function FileReader({ reader }: { reader: FileReaderController }) {
               entry={mediaPreview.entry}
               mode="preview"
               maxBytes={mediaPreview.maxBytes}
+              {...(playback ? { playback } : {})}
               {...(mediaPreview.videoPlaylist
-                ? { videoPlaylist: { download: () => void reader.download(mediaPreview.entry) } }
+                ? { videoPlaylist: { download: () => void download(mediaPreview.entry) } }
                 : {})}
               {...(mediaPreview.entry.kind === 'file' && mediaPreview.entry.trashedAt === null
                 ? {
                     imageEditing: {
                       entry: mediaPreview.entry,
+                      ...(surface?.draft ? { draft: surface.draft } : {}),
+                      ...(surface
+                        ? {
+                            workspace: {
+                              visible: surface.presentation === 'reader',
+                              minimize: surface.minimize,
+                              close: surface.close,
+                              interceptClose: surface.interceptClose,
+                              onDraftState: surface.setDraftState,
+                            },
+                          }
+                        : {}),
                       destinationPicker: ImageCopyDestinationDialog,
-                      onVersionPublished: reader.refreshPublishedImage,
+                      onVersionPublished: refreshPublishedImage,
                     },
                   }
                 : {})}
             />
-            {!mediaPreview.videoPlaylist && !imagePreview ? (
-              <div className="shrink-0">
-                <Action
-                  variant="secondary"
-                  onPress={() => void reader.download(mediaPreview.entry)}
-                >
-                  {t('files.download')}
-                </Action>
-              </div>
-            ) : null}
           </div>
-        </DialogSurface>
+        </ReaderSurface>
       ) : null}
       {archiveEntry ? (
         <Suspense fallback={<p role="status">{t('files.previewLoading')}</p>}>
-          <ArchiveDialog
-            entry={archiveEntry}
-            onClose={() => reader.close()}
-            onChanged={reader.changed}
+          <ArchiveDialog entry={archiveEntry} onClose={() => close()} onChanged={changed} />
+        </Suspense>
+      ) : null}
+      {webPreview ? (
+        <Suspense fallback={<p role="status">{t('files.previewLoading')}</p>}>
+          <WebFilePreviewDialog
+            entry={webPreview.entry}
+            application={webPreview.application}
+            onClose={() => close()}
           />
         </Suspense>
       ) : null}
+    </>
+  );
+}
+
+export function FileApplicationSelection({ reader }: { reader: FileReaderController }) {
+  const { t, locale } = useFrontendTranslation();
+  const chinese = locale.startsWith('zh');
+  const openWithLabel = chinese ? '打开方式' : 'Open with';
+  const noApplicationLabel = chinese
+    ? '此文件在当前设备上没有可用的浏览应用。'
+    : 'No viewer is available for this file on this device.';
+
+  const applicationPicker = reader.picker;
+  return (
+    <>
       {applicationPicker ? (
         <DialogSurface
           triggerLabel={openWithLabel}
@@ -191,7 +222,7 @@ export function FileReader({ reader }: { reader: FileReaderController }) {
           isOpen
           onOpenChange={(open) => {
             if (!open) {
-              reader.close();
+              reader.cancelPending();
             }
           }}
         >
@@ -220,7 +251,7 @@ export function FileReader({ reader }: { reader: FileReaderController }) {
                     key={application.id}
                     variant="secondary"
                     onPress={() => {
-                      reader.chooseWeb(application);
+                      reader.choose(application);
                     }}
                   >
                     {application.name}
@@ -246,15 +277,6 @@ export function FileReader({ reader }: { reader: FileReaderController }) {
             </div>
           </div>
         </DialogSurface>
-      ) : null}
-      {webPreview ? (
-        <Suspense fallback={<p role="status">{t('files.previewLoading')}</p>}>
-          <WebFilePreviewDialog
-            entry={webPreview.entry}
-            application={webPreview.application}
-            onClose={() => reader.close()}
-          />
-        </Suspense>
       ) : null}
     </>
   );

@@ -20,7 +20,7 @@ export function useImageOverlayImport() {
 
   async function read(
     file: File,
-    accept: (bitmap: ImageBitmap, name: string, type: ImageFormat) => void,
+    accept: (bitmap: ImageBitmap, name: string, type: ImageFormat, file: File) => void,
   ) {
     if (request.current) return;
     const controller = new AbortController();
@@ -34,7 +34,7 @@ export function useImageOverlayImport() {
       } else if (controller.signal.aborted) {
         result.bitmap.close();
       } else {
-        accept(result.bitmap, file.name, result.type);
+        accept(result.bitmap, file.name, result.type, file);
       }
     } catch (cause) {
       if (!controller.signal.aborted) throw cause;

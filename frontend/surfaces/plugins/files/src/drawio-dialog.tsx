@@ -4,10 +4,12 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { TextField } from '@clouddrive/ui-adapter/form-field';
+import { ReaderSurface } from './reader-surface';
 import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
 import { fileApplicationDevice } from '../../../src/files/file-applications';
 import { FilesError, type FileEntry } from '../../../src/files/model';
-import { useDrawioEndpoint, useFiles } from '../../../src/files/runtime';
+import { useDrawioEndpoint, useFiles, useReaderDraftAutosave } from '../../../src/files/runtime';
+import { useReaderSurface } from './reader-surface-context';
 import {
   drawioEndpoint,
   drawioHandshakeTimeoutMs,
@@ -32,6 +34,8 @@ export default function DrawioDialog({
   const { t, locale } = useFrontendTranslation();
   const chinese = locale.startsWith('zh');
   const port = useFiles();
+  const viewer = useReaderSurface();
+  const disk = viewer?.draft;
   const configuredEndpoint = useDrawioEndpoint();
   const [name, setName] = useState('');
   const [original, setOriginal] = useState('entry' in request ? undefined : emptyDrawio);
@@ -40,6 +44,7 @@ export default function DrawioDialog({
   const [provider, setProvider] = useState<URL>();
   const [started, setStarted] = useState(false);
   const [draft, setDraft] = useState<string>();
+  const [oldDraft, setOldDraft] = useState<string>();
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState('');
   const [notice, setNotice] = useState('');
@@ -71,6 +76,24 @@ export default function DrawioDialog({
   const savedLabel = chinese ? '图表已保存。' : 'Diagram saved.';
   const errorText = (error: unknown) =>
     t('files.errors.' + (error instanceof FilesError ? error.code : 'unavailable'));
+  const backup = useReaderDraftAutosave({
+    draft: disk,
+    dirty: Boolean(viewer && draft !== undefined),
+    change: draft,
+    capture: () => {
+      const xml = workingXML.current;
+      if (
+        !entry.current ||
+        xml === undefined ||
+        port.textBytes(xml) > maxBytes ||
+        !validDrawioXML(xml)
+      )
+        throw new FilesError('invalid');
+      return { revision: entry.current.contentRevision, payload: xml };
+    },
+    warning: t('files.viewer.draftFailure'),
+    onStatus: viewer?.setDraftState,
+  });
 
   const reportReadFailure = useEffectEvent((error: unknown) => {
     setReadFailure(errorText(error));
@@ -87,15 +110,27 @@ export default function DrawioDialog({
         if (controller.signal.aborted) return;
         const xml = source.decode('utf-8').text;
         if (!validDrawioXML(xml)) throw new FilesError('invalid');
+        const restored = await disk?.read().catch(() => undefined);
+        if (controller.signal.aborted) return;
         entry.current = detail.entry;
         savedXML.current = xml;
         setOriginal(xml);
+        if (
+          typeof restored?.payload === 'string' &&
+          port.textBytes(restored.payload) <= maxBytes &&
+          validDrawioXML(restored.payload)
+        ) {
+          if (restored.revision === detail.entry.contentRevision) {
+            workingXML.current = restored.payload;
+            if (restored.payload !== xml) setDraft(restored.payload);
+          } else setOldDraft(restored.payload);
+        }
       } catch (error) {
         if (!controller.signal.aborted) reportReadFailure(error);
       }
     })();
     return () => controller.abort();
-  }, [request, port, maxBytes, readAttempt]);
+  }, [disk, request, port, maxBytes, readAttempt]);
 
   function requestClose(confirmation: boolean) {
     if (pending.current) return;
@@ -122,6 +157,7 @@ export default function DrawioDialog({
       const hasNewerDraft = workingXML.current !== xml;
       setDraft(hasNewerDraft ? workingXML.current : undefined);
       if (!hasNewerDraft) {
+        await backup.clear();
         if (provider)
           frame.current?.contentWindow?.postMessage(
             JSON.stringify({ action: 'status', message: savedLabel, modified: false }),
@@ -194,7 +230,7 @@ export default function DrawioDialog({
     window.addEventListener('message', listener);
     const timer = window.setTimeout(() => timedOut(), drawioHandshakeTimeoutMs);
     const warn = (event: BeforeUnloadEvent) => {
-      if (!loaded.current) return;
+      if (!loaded.current || disk) return;
       event.preventDefault();
       event.returnValue = '';
     };
@@ -204,7 +240,7 @@ export default function DrawioDialog({
       window.removeEventListener('beforeunload', warn);
       window.clearTimeout(timer);
     };
-  }, [provider]);
+  }, [disk, provider]);
 
   function downloadDraft() {
     if (draft === undefined) return;
@@ -226,7 +262,7 @@ export default function DrawioDialog({
   const discardTitle = chinese ? '放弃未保存的图表？' : 'Discard unsaved diagram changes?';
   return (
     <>
-      <DialogSurface
+      <ReaderSurface
         isOpen
         title={title}
         triggerLabel={title}
@@ -247,6 +283,18 @@ export default function DrawioDialog({
             />
           ) : null}
           {readFailure ? <p role="alert">{readFailure}</p> : null}
+          {disk && oldDraft ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p role="status">{t('files.viewer.draftConflict')}</p>
+              <Action
+                size="sm"
+                variant="secondary"
+                onPress={() => disk.download(title + '.draft.drawio', oldDraft, 'application/xml')}
+              >
+                {t('files.viewer.downloadDraft')}
+              </Action>
+            </div>
+          ) : null}
           {failure ? <p role="alert">{failure}</p> : null}
           {notice || saving ? (
             <p role="status">{saving ? (chinese ? '正在保存图表…' : 'Saving diagram…') : notice}</p>
@@ -290,7 +338,7 @@ export default function DrawioDialog({
                 {t('files.retry')}
               </Action>
             ) : null}
-            {'entry' in request ? (
+            {'entry' in request && !viewer ? (
               <Action
                 variant="secondary"
                 onPress={() => {
@@ -322,7 +370,7 @@ export default function DrawioDialog({
             />
           ) : null}
         </div>
-      </DialogSurface>
+      </ReaderSurface>
       {discard ? (
         <DialogSurface
           isOpen
@@ -338,12 +386,30 @@ export default function DrawioDialog({
           onOpenChange={(open) => {
             if (!open) setDiscard(false);
           }}
-          onConfirm={onClose}
+          onConfirm={async () => {
+            if (!disk || (await backup.clear())) onClose();
+            else throw new FilesError('unavailable');
+          }}
         >
           {draft !== undefined ? (
             <Action variant="secondary" onPress={downloadDraft}>
               {chinese ? '下载草稿' : 'Download draft'}
             </Action>
+          ) : null}
+          {disk && draft !== undefined ? (
+            <Action
+              variant="secondary"
+              onPress={() => {
+                void backup.saveNow(true).then((ok) => {
+                  if (ok) onClose();
+                });
+              }}
+            >
+              {t('files.viewer.keepDraft')}
+            </Action>
+          ) : null}
+          {disk && backup.status === 'failed' ? (
+            <p role="alert">{t('files.viewer.draftFailure')}</p>
           ) : null}
         </DialogSurface>
       ) : null}

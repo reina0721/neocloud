@@ -21,6 +21,7 @@ export type PopoverCardProps = Readonly<{
   triggerIcon?: ReactNode;
   closeLabel?: string;
   size?: 'content' | 'comfortable';
+  placement?: 'bottom-start' | 'top-start';
 }>;
 
 /** Modal 管理焦点与关闭，Popper 提供翻转和视口碰撞处理。 */
@@ -36,6 +37,7 @@ export function PopoverCard({
   triggerIcon,
   closeLabel,
   size = 'content',
+  placement = 'bottom-start',
 }: PopoverCardProps) {
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
@@ -85,7 +87,7 @@ export function PopoverCard({
           open={Boolean(open && target)}
           anchorEl={target}
           disablePortal
-          placement="bottom-start"
+          placement={placement}
           modifiers={[
             { name: 'offset', options: { offset: [0, 8] } },
             { name: 'preventOverflow', options: { padding: 16 } },

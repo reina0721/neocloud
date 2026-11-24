@@ -18,6 +18,7 @@ import { rasterType } from './media-signatures';
 import type { ImageSize } from './image-edit';
 import { editableImageType } from './image-format';
 import { audioMediaType } from './audio-format';
+import { applyReaderPosition, useReaderPlayback } from './reader-playback';
 const videoTypes = new Set(['video/mp4', 'video/webm', 'video/ogg']);
 const ImageViewer = lazy(() => import('./image-viewer'));
 
@@ -42,6 +43,8 @@ export function FileMediaView({
   maxBytes,
   readContent,
   version,
+  playback,
+  claimAudio,
   labels,
   imageEditing,
   videoTools: VideoTools,
@@ -56,6 +59,7 @@ export function FileMediaView({
     ) => Promise<Blob>;
     videoTools?: ComponentType<VideoToolsProps>;
     imageTools?: ComponentType<ImageToolsProps>;
+    claimAudio?: (media: HTMLMediaElement) => void;
   }>) {
   const { t } = useFrontendTranslation();
   const [result, setResult] = useState<
@@ -83,6 +87,7 @@ export function FileMediaView({
   const current = result?.key === requestKey && result.reader === readContent ? result : undefined;
   const url = current?.url ?? '';
   const media = useRef<HTMLMediaElement | null>(null);
+  useReaderPlayback(media, playback);
   // ref 可能先解绑，StrictMode 也会模拟解绑；保留最后的自有节点，交给 effect 真正释放。
   const attachMedia = useCallback((node: HTMLMediaElement | null) => {
     if (node) media.current = node;
@@ -235,17 +240,26 @@ export function FileMediaView({
   if (entry.mediaType.startsWith('video/'))
     return (
       <>
-        {VideoTools ? <VideoTools entry={entry} media={media} /> : null}
+        {VideoTools ? (
+          <div hidden={playback?.presentation === 'mini'}>
+            <VideoTools entry={entry} media={media} />
+          </div>
+        ) : null}
         {/* 本人视频按需通过 TextTrack 接入字幕，其他原始媒体沿用原生控制。 */}
         {/* eslint-disable-next-line jsx-a11y-x/media-has-caption */}
         <video
           ref={attachMedia}
           controls
+          playsInline
           preload="metadata"
           src={url}
           aria-label={entry.name}
-          className="max-h-screen w-full object-contain"
+          className="min-h-0 max-h-full w-full flex-1 object-contain"
           style={VideoTools ? { minHeight: 0, backgroundColor: 'black' } : undefined}
+          onLoadedMetadata={(event) => applyReaderPosition(event.currentTarget, playback?.position)}
+          onTimeUpdate={(event) => playback?.onPosition(event.currentTarget.currentTime)}
+          onPlay={(event) => claimAudio?.(event.currentTarget)}
+          onVolumeChange={(event) => claimAudio?.(event.currentTarget)}
           onError={() =>
             setResult({ key: requestKey, reader: readContent, url: '', failure: 'unsupported' })
           }

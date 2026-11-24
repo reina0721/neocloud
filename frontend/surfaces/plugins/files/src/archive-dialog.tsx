@@ -8,6 +8,8 @@ import {
   SelectField,
   TextField,
 } from '@clouddrive/ui-adapter/form-field';
+import { ReaderSurface } from './reader-surface';
+import { useReaderSurface } from './reader-surface-context';
 import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
 import { SearchBox } from '@clouddrive/ui-adapter/search-box';
 import { FilesError, type FileEntry, type FileListing } from '../../../src/files/model';
@@ -214,6 +216,7 @@ export function ArchiveDialog({
   const port = useArchives(),
     files = useFiles(),
     { t } = useFrontendTranslation();
+  const reader = useReaderSurface();
   const [password, setPassword] = useState(''),
     [appliedPassword, setAppliedPassword] = useState(''),
     [attempt, setAttempt] = useState(0),
@@ -293,7 +296,7 @@ export function ArchiveDialog({
   const selection: ArchiveSelection = { mode: 'selected', paths: selected };
   return (
     <>
-      <DialogSurface
+      <ReaderSurface
         isOpen
         triggerLabel={t('files.archives.title')}
         title={entry.name}
@@ -545,7 +548,7 @@ export function ArchiveDialog({
                 variant="secondary"
                 onPress={() => {
                   files.navigate('tasks');
-                  onClose();
+                  if (!reader) onClose();
                 }}
               >
                 {t('files.archives.tasks.open')}
@@ -573,7 +576,7 @@ export function ArchiveDialog({
                 variant="secondary"
                 onPress={() => {
                   files.openFolder(receipt.destinationId);
-                  onClose();
+                  if (!reader) onClose();
                 }}
               >
                 {t('files.archives.openTarget')}
@@ -581,7 +584,7 @@ export function ArchiveDialog({
             </section>
           ) : null}
         </div>
-      </DialogSurface>
+      </ReaderSurface>
       {extract ? (
         <ArchiveExtractDialog
           access={access}

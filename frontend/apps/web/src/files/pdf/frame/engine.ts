@@ -229,6 +229,7 @@ async function insertStamp(
 }
 let uncommittedText = false;
 let exportedHash = '',
+  lastAnnotationHash = '',
   pendingExportHash: string | undefined,
   modifiedFrame: number | undefined;
 function annotationHash(document: PDFDocumentProxy) {
@@ -242,11 +243,16 @@ function annotationHash(document: PDFDocumentProxy) {
 
 // 采用SDK的实际序列化摘要，覆盖导出后撤销/重做及同一个编辑器再次修改；不复制PDF序列化逻辑。
 function syncModified() {
-  if (doc && !closed && !stampBusy)
+  if (doc && !closed && !stampBusy) {
+    const hash = annotationHash(doc);
     state = {
       ...state,
-      modified: uncommittedText || annotationHash(doc) !== exportedHash,
+      modified: uncommittedText || hash !== exportedHash,
+      pendingText: uncommittedText,
+      annotationRevision: state.annotationRevision + Number(hash !== lastAnnotationHash),
     };
+    lastAnnotationHash = hash;
+  }
 }
 function scheduleModified() {
   if (modifiedFrame !== undefined || closed) return;
@@ -711,6 +717,13 @@ async function command(request: PdfRequest) {
       const output = await doc.saveDocument();
       if (output.byteLength > opening.limits.maxBytes) throw new RangeError('PDF output limit');
       pendingExportHash = savedHash;
+      const bytes = new Uint8Array(output).buffer;
+      result({ bytes }, [bytes]);
+      return;
+    }
+    case 'snapshot': {
+      const output = await doc.saveDocument();
+      if (output.byteLength > opening.limits.maxBytes) throw new RangeError('PDF output limit');
       const bytes = new Uint8Array(output).buffer;
       result({ bytes }, [bytes]);
       return;

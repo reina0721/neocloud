@@ -91,6 +91,7 @@ export const maxWOPIExtensions = 128;
 export const maxWOPIEditBytes = 8 * 1024 * 1024;
 
 export type FileApplicationID = z.infer<typeof applicationID>;
+export const fileApplicationIDs: readonly FileApplicationID[] = applicationID.options;
 export type FileApplicationPlatform = z.infer<typeof platform>;
 export type FileCreationMapping = z.infer<typeof newFile>;
 export type CreationTemplate = Readonly<{ title: string; extension: string; builtIn: boolean }>;

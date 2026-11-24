@@ -5,7 +5,7 @@ import { useFrontendTranslation } from '@clouddrive/i18n';
 import { publishedSiteOrigin, useSiteProfile } from '@clouddrive/surface/administration/runtime';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { HiddenField } from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { ReaderSurface } from './reader-surface';
 import {
   maxWOPIEditBytes,
   type WebFileApplicationItem,
@@ -60,8 +60,7 @@ function WOPILaunch({
             title={title}
             sandbox="allow-forms allow-scripts allow-same-origin"
             referrerPolicy="no-referrer"
-            className="w-full border-0"
-            style={{ height: '65dvh' }}
+            className="min-h-0 w-full flex-1 border-0"
           />
           <form ref={embeddedForm} method="post" action={target.url} target={frameName}>
             {credentials}
@@ -145,18 +144,20 @@ export function WebFilePreviewDialog({
     }
   }
   return (
-    <DialogSurface
+    <ReaderSurface
       isOpen
       title={application.name}
       triggerLabel={application.name}
-      description={entry.name}
+      description={application.name}
       cancelLabel={t('files.close')}
       {...(target && !target.newTab ? { size: 'cover', layout: 'workspace' } : {})}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
     >
-      <div className="space-y-4">
+      <div
+        className={target && !target.newTab ? 'flex h-full min-h-0 flex-col gap-3' : 'space-y-4'}
+      >
         <p>
           {zh ? '接收文件的站点' : 'File recipient'} <strong>{application.origin}</strong>
         </p>
@@ -213,8 +214,7 @@ export function WebFilePreviewDialog({
                 src={target.url}
                 sandbox="allow-forms allow-scripts allow-same-origin"
                 referrerPolicy="no-referrer"
-                className="w-full border-0"
-                style={{ height: '65dvh' }}
+                className="min-h-0 w-full flex-1 border-0"
               />
             ) : null}
             <a
@@ -228,6 +228,6 @@ export function WebFilePreviewDialog({
           </>
         )}
       </div>
-    </DialogSurface>
+    </ReaderSurface>
   );
 }

@@ -147,13 +147,17 @@ test('图表创建、协议边界、版本冲突和保留草稿', async ({ page 
   await editor.getByRole('textbox', { name: 'XML' }).fill('<html>Not a diagram</html>');
   await editor.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(dialog.getByRole('alert')).toContainText('有效的 UTF-8 Draw.io XML');
+  const latest = diagram('My unsaved draft');
+  await editor.getByRole('textbox', { name: 'XML' }).fill(latest);
+  await editor.getByRole('button', { name: 'Change', exact: true }).click();
+  await expect(dialog.getByText('已存为本机草稿', { exact: true })).toBeVisible();
+  await page.reload();
+  await dialog.getByRole('button', { name: '加载 Draw.io', exact: true }).click();
+  await expect(editor.getByRole('textbox', { name: 'XML' })).toHaveValue(latest);
   await filesAPI(page, '/' + entry.id + '/text', 'PUT', {
     expectedRevision: entry.contentRevision,
     text: diagram('Other editor'),
   });
-  const latest = diagram('My unsaved draft');
-  await editor.getByRole('textbox', { name: 'XML' }).fill(latest);
-  await editor.getByRole('button', { name: 'Change', exact: true }).click();
   await editor.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(dialog.getByRole('alert')).toContainText('状态已变化');
   const downloading = page.waitForEvent('download');

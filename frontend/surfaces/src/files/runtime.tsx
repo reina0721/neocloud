@@ -15,7 +15,17 @@ import type { NavigationPort } from './navigation';
 import type { FileDocumentProps } from './pdf-contract';
 import type { ArchivesPort } from './archives';
 import type { TransfersPort } from './transfers';
+import type { ReaderPersistence, ReaderDraftHandle } from './reader-persistence';
+import type { ReaderDraftStatus } from './reader-draft-autosave';
 export { loadFileAnnotationMessages, loadPublicFileMessages } from './messages';
+export type {
+  ReaderPersistence,
+  ReaderBookmark,
+  ReaderDraft,
+  ReaderDraftHandle,
+} from './reader-persistence';
+export { useReaderDraftAutosave } from './reader-draft-autosave';
+export type { ReaderDraftStatus } from './reader-draft-autosave';
 
 export type ImageCopyDestination = Readonly<{ id: string; path: string }>;
 export type ImageCopyDestinationProps = Readonly<{
@@ -25,6 +35,14 @@ export type ImageCopyDestinationProps = Readonly<{
 }>;
 export type ImageEditingAccess = Readonly<{
   entry: FileEntry;
+  draft?: ReaderDraftHandle;
+  workspace?: Readonly<{
+    visible: boolean;
+    minimize: () => void;
+    close: () => void;
+    interceptClose: (request: () => void) => () => void;
+    onDraftState: (status: ReaderDraftStatus) => void;
+  }>;
   destinationPicker: ComponentType<ImageCopyDestinationProps>;
   onVersionPublished: (entry: FileEntry, signal: AbortSignal) => Promise<void>;
 }>;
@@ -37,6 +55,11 @@ export type FileMediaProps = Readonly<{
   version?: number;
   /** 仅在当前本人文件通过视频应用打开 M3U8 时提供。 */
   videoPlaylist?: Readonly<{ download: () => void }>;
+  playback?: Readonly<{
+    presentation: 'reader' | 'mini' | 'parked';
+    position?: number;
+    onPosition: (seconds: number) => void;
+  }>;
   /** 只由本人当前文件预览提供。 */
   imageEditing?: ImageEditingAccess;
   labels?: Readonly<{ loading: string; unsupported: string; tooLarge: string; retry: string }>;
@@ -46,9 +69,27 @@ const AccountToolsContext = createContext<ComponentType | null>(null);
 const MediaContext = createContext<ComponentType<FileMediaProps> | null>(null);
 type FileMusic = Readonly<{
   play: (entry: FileEntry, maxBytes: number) => void;
-  player: ReactNode;
+  restore: (entry: FileEntry, maxBytes: number, position: number) => void;
+  active?: { fileId: string; position: number };
+  render: (props: FileMusicDockProps) => ReactNode;
+}>;
+export type FileMediaDockProps = Readonly<{
+  label: string;
+  expandLabel: string;
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  backCard?: ReactNode;
+  children: (collapse: () => void) => ReactNode;
+}>;
+const MediaDockContext = createContext<ComponentType<FileMediaDockProps> | null>(null);
+export type FileMusicDockProps = Readonly<{
+  open: boolean;
+  activate: () => void;
+  collapse: () => void;
 }>;
 const MusicContext = createContext<FileMusic | undefined>(undefined);
+const ReaderPersistenceContext = createContext<ReaderPersistence | undefined>(undefined);
 type MarkdownImageUpload = (
   parentId: string,
   signal: AbortSignal,
@@ -70,6 +111,8 @@ export function FilesProvider({
   pdfReader: Document,
   accountTools: AccountTools,
   music,
+  mediaDock: MediaDock,
+  readerPersistence,
   uploadMarkdownImage,
   drawioEndpoint,
   transfers,
@@ -88,6 +131,8 @@ export function FilesProvider({
   pdfReader: ComponentType<FileDocumentProps>;
   accountTools: ComponentType;
   music?: FileMusic;
+  mediaDock?: ComponentType<FileMediaDockProps>;
+  readerPersistence?: ReaderPersistence;
   uploadMarkdownImage?: MarkdownImageUpload;
   drawioEndpoint: string;
 }>) {
@@ -104,7 +149,11 @@ export function FilesProvider({
                       <MusicContext value={music}>
                         <MarkdownImageContext value={uploadMarkdownImage}>
                           <DrawioEndpointContext value={drawioEndpoint}>
-                            {children}
+                            <ReaderPersistenceContext value={readerPersistence}>
+                              <MediaDockContext value={MediaDock ?? null}>
+                                {children}
+                              </MediaDockContext>
+                            </ReaderPersistenceContext>
                           </DrawioEndpointContext>
                         </MarkdownImageContext>
                       </MusicContext>
@@ -189,18 +238,25 @@ export function usePublicFiles(): PublicFilesPort {
 
 export function FileAccountTools() {
   const renderer = useContext(AccountToolsContext);
-  const music = useContext(MusicContext);
   if (!renderer) throw new Error('File account tools renderer is required');
-  return (
-    <>
-      {music?.player}
-      {createElement(renderer)}
-    </>
-  );
+  return createElement(renderer);
 }
 
 export function usePlayFileAudio() {
   return useContext(MusicContext)?.play;
+}
+
+export function useFileMusic() {
+  return useContext(MusicContext);
+}
+
+export function FileMediaDock(props: FileMediaDockProps) {
+  const renderer = useContext(MediaDockContext);
+  return renderer ? createElement(renderer, props) : null;
+}
+
+export function useReaderPersistence() {
+  return useContext(ReaderPersistenceContext);
 }
 
 export function useMarkdownImageUpload() {

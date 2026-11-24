@@ -256,7 +256,7 @@ export function ImageAppearanceWorkspace({
   view: ImageCanvasView;
   chinese: boolean;
   onWatermarkTool: (tool: WatermarkTool) => void;
-  adoptLogo: (bitmap: ImageBitmap, name: string) => ImageOverlayAsset;
+  adoptLogo: (bitmap: ImageBitmap, name: string, file: File) => ImageOverlayAsset;
   discardLogo: () => void;
   onCommit: (edit: ImageEdit) => void;
   children: (pending: boolean) => ReactNode;
@@ -298,8 +298,8 @@ export function ImageAppearanceWorkspace({
     );
   }
 
-  function acceptLogo(bitmap: ImageBitmap, name: string) {
-    const asset = adoptLogo(bitmap, name);
+  function acceptLogo(bitmap: ImageBitmap, name: string, _type: string, file: File) {
+    const asset = adoptLogo(bitmap, name, file);
     setDraft((current) => ({
       ...current,
       logo: { ...(current.logo ?? defaultImageLogo), asset },

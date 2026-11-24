@@ -163,7 +163,7 @@ export function ImageAnnotationWorkspace({
   view: ImageCanvasView;
   chinese: boolean;
   imageAssetCount: number;
-  adoptImage: (bitmap: ImageBitmap, name: string) => ImageOverlayAsset;
+  adoptImage: (bitmap: ImageBitmap, name: string, file: File) => ImageOverlayAsset;
   onCommit: (edit: ImageEdit) => void;
   children: (pending: boolean) => ReactNode;
 }) {
@@ -235,7 +235,7 @@ export function ImageAnnotationWorkspace({
     setMode(next);
   }
 
-  function acceptImage(bitmap: ImageBitmap, name: string) {
+  function acceptImage(bitmap: ImageBitmap, name: string, _type: string, file: File) {
     const latest = currentEdit.current;
     const crop = latest.crop;
     const annotation: RasterAnnotation = {
@@ -246,7 +246,7 @@ export function ImageAnnotationWorkspace({
       sizePercent: defaultAnnotationImageSizePercent,
       angleDegrees: 0,
       style: defaultAnnotationStyle,
-      asset: adoptImage(bitmap, name),
+      asset: adoptImage(bitmap, name, file),
     };
     onCommit({ ...latest, annotations: [...latest.annotations, annotation] });
     setMode('select');

@@ -48,18 +48,51 @@
 }
 
 @layer components {
-  .music-dock {
-    --music-dock-bottom: env(safe-area-inset-bottom);
-    bottom: var(--music-dock-bottom);
+  :root {
+    --file-navigation-offset: env(safe-area-inset-bottom);
+    --file-media-card-height: calc(var(--spacing-control-lg) * 2);
+  }
+
+  .file-reader-stage {
+    bottom: var(--file-navigation-offset);
+  }
+
+  .music-dock,
+  .file-reader-mini {
+    bottom: var(--file-navigation-offset);
   }
 
   .music-dock-panel {
-    max-height: calc(100dvh - var(--music-dock-bottom));
+    max-height: calc(100dvh - var(--file-navigation-offset));
+  }
+
+  .file-reader-mini-placeholder,
+  .file-reader-mini {
+    height: var(--file-media-card-height);
+  }
+
+  .file-reader-mini {
+    z-index: calc(var(--z-index-toast) + 1);
+  }
+
+  .file-reader-mini-viewport {
+    width: clamp(7rem, 28vw, 12rem);
+  }
+
+  .file-app-launcher {
+    inset-inline-start: calc(var(--spacing) * 3);
+    bottom: calc(var(--file-navigation-offset) + var(--spacing) * 2);
+  }
+
+  .file-app-box {
+    max-height: calc(100dvh - var(--file-navigation-offset) - var(--spacing-control-lg) * 2);
   }
 
   @media (width < 48rem) {
-    .music-dock {
-      --music-dock-bottom: calc(var(--spacing-mobile-navigation) + env(safe-area-inset-bottom));
+    :root {
+      --file-navigation-offset: calc(
+        var(--spacing-mobile-navigation) + env(safe-area-inset-bottom)
+      );
     }
   }
 

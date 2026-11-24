@@ -2,6 +2,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { Action } from '@clouddrive/ui-adapter/action';
+import { ReaderSurface } from './reader-surface';
 import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
 import { SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
 import { FilesError, type FilesErrorCode, type FileEntry } from '../../../src/files/model';
@@ -12,7 +13,8 @@ import {
   type TextEncoding,
 } from '../../../src/files/text-editor';
 import { isMarkdownFile } from '../../../src/files/markdown';
-import { useFiles } from '../../../src/files/runtime';
+import { useFiles, useReaderDraftAutosave } from '../../../src/files/runtime';
+import { useReaderSurface } from './reader-surface-context';
 import type { CreationTemplate } from '../../../src/files/file-applications';
 
 const MarkdownEditor = lazy(() => import('./markdown-editor'));
@@ -36,6 +38,8 @@ export function TextDialog({
   onDownload?: () => void;
 }>) {
   const port = useFiles();
+  const viewer = useReaderSurface();
+  const draft = viewer?.draft;
   const { t, locale } = useFrontendTranslation();
   const zh = locale.startsWith('zh');
   const markdown =
@@ -59,6 +63,7 @@ export function TextDialog({
   const [saving, setSaving] = useState(false);
   const [imagePending, setImagePending] = useState(false);
   const [discard, setDiscard] = useState(false);
+  const [oldDraft, setOldDraft] = useState<string>();
   const saved = useRef(false);
   useEffect(() => {
     if (request.mode !== 'edit') return;
@@ -75,19 +80,26 @@ export function TextDialog({
               request.reading ? 'file-application' : undefined,
             )
           : await port.openTextSource(detail.entry, controller.signal);
+        const restored = await draft?.read().catch(() => undefined);
+        const draftText =
+          typeof restored?.payload === 'string' && port.textBytes(restored.payload) <= maxBytes
+            ? restored.payload
+            : undefined;
+        const sameRevision = restored?.revision === detail.entry.contentRevision;
         if (!controller.signal.aborted) {
+          if (!sameRevision) setOldDraft(draftText);
           setSnapshot(detail.entry);
           setTextEditable(detail.textEditable === true);
           if (typeof contents === 'string') {
             setOriginal(contents);
-            setText(contents);
+            setText(sameRevision ? (draftText ?? contents) : contents);
           } else {
             setSource(contents);
             try {
               const initial = contents.decode('auto');
               setDecoded(initial);
               setOriginal(initial.text);
-              setText(initial.text);
+              setText(sameRevision ? (draftText ?? initial.text) : initial.text);
               setDecodeFailed(false);
               setEncoding('auto');
             } catch (error) {
@@ -108,13 +120,24 @@ export function TextDialog({
       }
     })();
     return () => controller.abort();
-  }, [request, port, markdown, maxBytes, loadAttempt]);
+  }, [draft, request, port, markdown, maxBytes, loadAttempt]);
   const writeText =
     decoded && decoded.lineEnding !== '\n' ? text.replaceAll('\n', decoded.lineEnding) : text;
   const length = port.textBytes(writeText);
   const dirty = text !== original || (request.mode !== 'edit' && name.trim() !== '');
   const readOnly = request.mode === 'edit' && !markdown && !textEditable;
   const convertsEncoding = decoded !== undefined && decoded.encoding !== 'utf-8';
+  const backup = useReaderDraftAutosave({
+    draft,
+    dirty: Boolean(viewer && snapshot && dirty && !readOnly),
+    change: text,
+    capture: () => {
+      if (!snapshot || length > maxBytes) throw new FilesError('large');
+      return { revision: snapshot.contentRevision, payload: text };
+    },
+    warning: t('files.viewer.draftFailure'),
+    onStatus: viewer?.setDraftState,
+  });
   const suffix =
     request.mode === 'edit' ? '' : '.' + (request.template?.extension ?? (markdown ? 'md' : 'txt'));
   const fileName =
@@ -161,7 +184,7 @@ export function TextDialog({
     }
   }
   return (
-    <DialogSurface
+    <ReaderSurface
       triggerLabel={title}
       title={title}
       description={
@@ -176,7 +199,7 @@ export function TextDialog({
             : t('files.textHint')
       }
       cancelLabel={t(
-        request.mode === 'edit' && (request.reading || request.code)
+        viewer || (request.mode === 'edit' && (request.reading || request.code))
           ? 'files.close'
           : 'files.cancel',
       )}
@@ -212,6 +235,7 @@ export function TextDialog({
           if (request.mode === 'edit') {
             if (!snapshot) throw new FilesError('unavailable');
             await port.replaceText(snapshot.id, snapshot.contentRevision, writeText);
+            await backup.clear();
           } else {
             await port.createText(request.parentId, fileName, text);
           }
@@ -226,6 +250,18 @@ export function TextDialog({
       }}
     >
       <div className={markdown ? 'space-y-4' : 'flex h-full min-h-0 min-w-0 flex-col gap-3'}>
+        {draft && oldDraft !== undefined ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <p role="status">{t('files.viewer.draftConflict')}</p>
+            <Action
+              size="sm"
+              variant="secondary"
+              onPress={() => draft.download(name + '.draft.txt', oldDraft, 'text/plain')}
+            >
+              {t('files.viewer.downloadDraft')}
+            </Action>
+          </div>
+        ) : null}
         {request.mode !== 'edit' ? (
           <TextField
             label={t('files.name')}
@@ -247,9 +283,9 @@ export function TextDialog({
         ) : !markdown && !request.code ? (
           <p className="break-words font-medium">{name}</p>
         ) : null}
-        {onDownload || source ? (
+        {(!viewer && onDownload) || source ? (
           <div className="flex shrink-0 flex-wrap items-center gap-2">
-            {onDownload ? (
+            {!viewer && onDownload ? (
               <Action size="sm" variant="secondary" onPress={onDownload}>
                 {t('files.download')}
               </Action>
@@ -314,7 +350,7 @@ export function TextDialog({
                   ? (snapshot?.parentId ?? request.entry.parentId)
                   : request.parentId
               }
-              reading={request.mode === 'edit' && request.reading === true}
+              reading={request.mode === 'edit' && request.reading === true && !dirty}
               disabled={saving}
               allowImageUpload={request.mode !== 'edit' || snapshot?.trashedAt === null}
               onImagePending={setImagePending}
@@ -352,15 +388,34 @@ export function TextDialog({
           description={zh ? '确认是否关闭编辑器。' : 'Confirm that you want to close the editor.'}
           cancelLabel={zh ? '继续编辑' : 'Keep editing'}
           confirmLabel={zh ? '放弃修改' : 'Discard changes'}
-          onConfirm={onClose}
+          onConfirm={async () => {
+            if (!viewer || (await backup.clear())) onClose();
+            else throw new FilesError('unavailable');
+          }}
           onOpenChange={(open) => {
             if (!open) setDiscard(false);
           }}
         >
           <p>{zh ? '关闭后，本次草稿将丢失。' : 'Closing will discard this draft.'}</p>
+          {draft ? (
+            <Action
+              variant="secondary"
+              disabled={imagePending}
+              onPress={() => {
+                void backup.saveNow(true).then((ok) => {
+                  if (ok) onClose();
+                });
+              }}
+            >
+              {t('files.viewer.keepDraft')}
+            </Action>
+          ) : null}
+          {backup.status === 'failed' && viewer ? (
+            <p role="alert">{t('files.viewer.draftFailure')}</p>
+          ) : null}
         </DialogSurface>
       ) : null}
-    </DialogSurface>
+    </ReaderSurface>
   );
 }
 export type TextRequest = Request;

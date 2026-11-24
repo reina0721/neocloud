@@ -56,6 +56,7 @@ export function EpubReadingViewport({
     const isNavigation = location !== lastLocation.current;
     lastLocation.current = location;
     let preferredRatio = isNavigation ? (location.ratio ?? 0) : ratio.current;
+    if (isNavigation) ratio.current = preferredRatio;
     const fragment = isNavigation ? location.fragment : undefined;
     let anchor = fragment
       ? Array.from(root.querySelectorAll<HTMLElement>('[data-epub-anchor]')).find(
@@ -69,7 +70,7 @@ export function EpubReadingViewport({
     let placedOffset = 0;
 
     function place() {
-      if (!root) return;
+      if (!root || root.clientWidth === 0 || root.clientHeight === 0) return;
       const { extent } = readingMetrics(root, paged);
       let offset = extent * preferredRatio;
       if (anchor) {
@@ -90,11 +91,12 @@ export function EpubReadingViewport({
       }
       measured = geometry();
       placedOffset = readingMetrics(root, paged).offset;
-      report(root);
+      if (extent > 0 || preferredRatio === 0) report(root);
     }
 
     place();
     const handleScroll = () => {
+      if (root.clientWidth === 0 || root.clientHeight === 0) return;
       if (geometry() !== measured) return;
       if (Math.abs(readingMetrics(root, paged).offset - placedOffset) <= edgeTolerancePx) return;
       anchor = undefined;

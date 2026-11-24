@@ -1,5 +1,5 @@
 import type { PDFReaderLimits } from '@clouddrive/surface/files';
-export const pdfProtocolVersion = 2;
+export const pdfProtocolVersion = 3;
 export const pdfWorkerReadyKind = 'clouddrive-pdf-worker-ready';
 export const pdfThumbnailPageSize = 8;
 export const pdfPasswordMaxLength = 1024;
@@ -30,6 +30,8 @@ export type PdfReaderState = Readonly<{
   matchesTotal: number;
   searchPending: boolean;
   modified: boolean;
+  annotationRevision: number;
+  pendingText: boolean;
   undo: boolean;
   redo: boolean;
   editor: PdfEditorMode;
@@ -47,6 +49,8 @@ export const emptyPdfState: PdfReaderState = {
   matchesTotal: 0,
   searchPending: false,
   modified: false,
+  annotationRevision: 0,
+  pendingText: false,
   undo: false,
   redo: false,
   editor: 'none',
@@ -74,6 +78,7 @@ export type PdfCommand =
   | { kind: 'stamp'; page: number; file: File }
   | { kind: 'edit'; action: 'undo' | 'redo' }
   | { kind: 'save' }
+  | { kind: 'snapshot' }
   | { kind: 'exported' }
   | { kind: 'destroy' };
 export type PdfOpen = {
@@ -120,6 +125,7 @@ const kinds = new Set([
   'stamp',
   'edit',
   'save',
+  'snapshot',
   'exported',
   'destroy',
 ]);
@@ -209,7 +215,7 @@ export function isPdfOpen(value: unknown): value is PdfOpen {
 export function isPdfReaderState(value: unknown): value is PdfReaderState {
   if (!record(value)) return false;
   return (
-    ['page', 'pages', 'matchesCurrent', 'matchesTotal', 'stampCount'].every(
+    ['page', 'pages', 'matchesCurrent', 'matchesTotal', 'stampCount', 'annotationRevision'].every(
       (key) =>
         typeof value[key] === 'number' &&
         Number.isSafeInteger(value[key]) &&
@@ -224,6 +230,7 @@ export function isPdfReaderState(value: unknown): value is PdfReaderState {
       'rendered',
       'searchPending',
       'modified',
+      'pendingText',
       'undo',
       'redo',
       'historyBack',

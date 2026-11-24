@@ -16,6 +16,7 @@ export type DialogSurfaceProps = Readonly<{
   /** 压缩包等连续浏览工作区使用cover，普通确认保持lg。 */
   size?: 'lg' | 'cover' | 'fullscreen';
   headerAction?: ReactNode;
+  keepMounted?: boolean;
   /** workspace 为连续阅读保留视口，使用紧凑边距；普通确认保持standard。 */
   layout?: 'standard' | 'workspace';
   /**
@@ -57,6 +58,7 @@ export function DialogSurface({
   isOpen,
   onOpenChange,
   headerAction,
+  keepMounted = false,
 }: DialogSurfaceProps) {
   const titleId = useId();
   const descriptionId = useId();
@@ -97,6 +99,7 @@ export function DialogSurface({
       )}
       <Dialog
         open={open}
+        keepMounted={keepMounted}
         onClose={() => {
           if (!pending) setOpen(false);
         }}

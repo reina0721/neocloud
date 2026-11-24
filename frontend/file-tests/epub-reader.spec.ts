@@ -29,13 +29,18 @@ test('真实 EPUB 的目录、章节、包内图片、字号及失败恢复', as
     },
     { name: 'broken.epub', mimeType: 'application/epub+zip', buffer: Buffer.from('broken ZIP') },
   ]);
-  const files = page.locator('[data-file-item]');
-  await expect(files).toHaveCount(2);
   const tray = page.getByRole('dialog', { name: '上传队列', exact: true });
+  await expect(
+    page.getByRole('button', { name: 'book.EPUB', exact: true, includeHidden: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'broken.epub', exact: true, includeHidden: true }),
+  ).toBeVisible();
   if (await tray.isVisible()) await tray.getByRole('button', { name: '关闭', exact: true }).click();
   await page.getByRole('button', { name: 'book.EPUB', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: '测试电子书', exact: true });
+  const dialog = page.getByRole('dialog', { name: 'book.EPUB', exact: true });
   const chapter = dialog.getByRole('article', { name: '章节正文' });
+  await expect(dialog.getByRole('heading', { name: '测试电子书', exact: true })).toBeVisible();
   await expect(dialog.getByText('示例作者', { exact: true })).toBeVisible();
   await expect(chapter.getByRole('heading', { name: '第一章', exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: '上一章', exact: true })).toBeDisabled();
@@ -127,7 +132,7 @@ test('真实 EPUB 的目录、章节、包内图片、字号及失败恢复', as
   await expect.poll(ratio).toBeCloseTo(0.5, 1);
   await expect(savedBookmark).toBeVisible();
   await page.reload();
-  await page.getByRole('button', { name: 'book.EPUB', exact: true }).click();
+  await expect(dialog).toBeVisible();
   await expect.poll(ratio).toBeCloseTo(0.5, 1);
   await dialog.getByRole('button', { name: '移除书签 · 第 1 章 · 50%', exact: true }).click();
   await expect(savedBookmark).toHaveCount(0);
