@@ -174,8 +174,11 @@ describe('私有整理信息Host与契约', () => {
     expect(resources.en?.translation).toHaveProperty('files.annotations.save', 'Save');
     expect(resources['zh-CN']?.translation).toHaveProperty(
       'files.explorer.copyPending',
-      '加入复制待处理',
+      '复制到剪贴板',
     );
-    expect(resources.en?.translation).toHaveProperty('files.explorer.copyPending', 'Queue copy');
+    expect(resources.en?.translation).toHaveProperty(
+      'files.explorer.copyPending',
+      'Copy to clipboard',
+    );
   });
 });

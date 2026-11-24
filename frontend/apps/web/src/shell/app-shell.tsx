@@ -5,25 +5,23 @@ import { ShellNavigationViewProvider } from '@clouddrive/surface/shell/runtime';
 import { flattenNavigationLeaves } from '@clouddrive/core';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { PluginLocaleProvider } from '@clouddrive/plugin-framework/plugin';
-import { ProductMasthead } from '@clouddrive/surface-foundation/layout';
 import { ShellRoot } from '@clouddrive/surface-foundation/shell-navigation';
 import type { NavigationGroup, NavigationNode } from '@clouddrive/types';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
 import { MobileNavigation } from '@clouddrive/ui-adapter/mobile-navigation';
 import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
 import {
-  Languages,
-  Lock,
+  ArrowLeft,
+  Cloud,
   Menu,
-  Moon,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
   Settings2,
-  Sun,
   Home,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
@@ -42,7 +40,6 @@ import { markForwardRouteIntent, pageTransitionTypes } from '../host/route-trans
 import { resolveScrollOption } from '../host/scroll-preference';
 import { TopProgress } from '../host/top-progress';
 import { useShellStore } from '../state/use-shell-store';
-import { BrandMark } from './brand-mark';
 import { CurrentSiteLogo, useSiteProfile } from '@clouddrive/surface/administration/runtime';
 import { HeaderNavigation } from './header-navigation';
 import { NotificationCenter } from './notification-center';
@@ -99,12 +96,19 @@ function NavigationContent({
   return (
     <>
       <div
-        className={`flex h-20 shrink-0 items-center border-b border-border ${compact ? 'justify-center px-3' : 'gap-3 px-5'}`}
+        className={`flex h-14 shrink-0 items-center border-b border-border ${compact ? 'justify-center px-3' : 'gap-2.5 px-4'}`}
       >
-        <CurrentSiteLogo className="size-9 shrink-0" fallback={<BrandMark />} />
+        <CurrentSiteLogo
+          className="size-8 shrink-0"
+          fallback={
+            <span className="grid size-8 shrink-0 place-items-center rounded-action bg-brand-soft text-brand">
+              <Cloud className="size-4.5" />
+            </span>
+          }
+        />
         {compact ? null : (
           <div className="min-w-0">
-            <p className="truncate text-sm font-extrabold tracking-tight text-ink">
+            <p className="truncate text-sm font-bold tracking-tight text-ink">
               {profile?.name || t('brand.name')}
             </p>
             <p className="truncate text-xs text-ink-muted">{t('brand.edition')}</p>
@@ -203,11 +207,9 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   const { t } = useFrontendTranslation();
   const router = useRouter();
   const desktopTools = useSyncExternalStore(subscribeDesktop, desktopSnapshot, () => false);
-  const theme = useShellStore((state) => state.theme);
   const locale = useShellStore((state) => state.locale);
   const mobileNavigationOpen = useShellStore((state) => state.mobileNavigationOpen);
   const sidebarCollapsed = useShellStore((state) => state.sidebarCollapsed);
-  const setTheme = useShellStore((state) => state.setTheme);
   const setLocale = useShellStore((state) => state.setLocale);
   const setMobileNavigationOpen = useShellStore((state) => state.setMobileNavigationOpen);
   const setSidebarCollapsed = useShellStore((state) => state.setSidebarCollapsed);
@@ -349,9 +351,8 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         ref={shellRef}
         data-shell-section={pathname.startsWith('/settings') ? 'settings' : 'workspace'}
       >
-        <ProductMasthead name={t('brand.name')} description={t('brand.edition')} />
         <div className="sticky top-0 z-sticky" ref={chromeRef} data-shell-chrome>
-          <header className="flex h-14 items-center gap-2 border-b border-border bg-surface/95 px-3 backdrop-blur-xl md:h-16 sm:px-6 xl:px-8">
+          <header className="flex h-14 items-center gap-2 border-b border-border bg-surface/95 px-3 backdrop-blur-xl sm:px-6">
             <div className="lg:hidden">
               <IconAction label={t('shell.menu')} onPress={() => setMobileNavigationOpen(true)}>
                 <Menu className="size-5" />
@@ -381,7 +382,14 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 />
               </div>
             ) : null}
-            <span className="min-w-0 flex-1 truncate text-lg font-bold text-brand md:hidden">
+            <Link
+              href="/home"
+              className="hidden h-9 shrink-0 items-center gap-1.5 rounded-action border border-border bg-surface px-3 text-xs font-medium text-ink transition-colors hover:bg-surface-muted hover:text-brand focus-visible:ring-2 focus-visible:ring-focus-ring sm:inline-flex"
+            >
+              <ArrowLeft className="size-3.5 shrink-0" />
+              <span>{locale.startsWith('zh') ? '返回我的文件' : 'Back to files'}</span>
+            </Link>
+            <span className="min-w-0 flex-1 truncate text-base font-bold text-brand md:hidden">
               {t('brand.name')}
             </span>
             <div className="min-w-0 md:flex-1">
@@ -414,31 +422,13 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 onOpenChange={setCommandOpen}
               />
             </div>
-            <div className="ml-auto flex items-center gap-2">
-              <div className="hidden items-center gap-2 md:flex">
+            <div className="ml-auto flex items-center gap-1.5">
+              <div className="hidden items-center gap-1 md:flex">
                 <IconAction
                   label={t('shell.quickPreferences.open')}
                   onPress={() => setQuickPreferencesOpen(true)}
                 >
                   <Settings2 className="size-4.5" />
-                </IconAction>
-                <IconAction
-                  label={t('shell.lock.action')}
-                  onPress={() => window.dispatchEvent(new Event('clouddrive:lock'))}
-                >
-                  <Lock className="size-4.5" />
-                </IconAction>
-                <IconAction
-                  label={t('shell.locale')}
-                  onPress={() => setLocale(locale === 'zh-CN' ? 'en' : 'zh-CN')}
-                >
-                  <Languages className="size-4.5" />
-                </IconAction>
-                <IconAction
-                  label={t('shell.theme')}
-                  onPress={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                >
-                  {theme === 'light' ? <Moon className="size-4.5" /> : <Sun className="size-4.5" />}
                 </IconAction>
               </div>
               <NotificationCenter />

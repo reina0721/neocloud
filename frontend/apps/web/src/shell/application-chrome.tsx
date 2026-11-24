@@ -26,10 +26,28 @@ const AppShell = dynamic(() => import('./app-shell').then((module) => module.App
   ssr: false,
   loading,
 });
+const PersonalShell = dynamic(
+  () => import('./personal-shell').then((module) => module.PersonalShell),
+  {
+    ssr: false,
+    loading,
+  },
+);
 
 const LockScreen = dynamic(() => import('./lock-screen').then((module) => module.LockScreen), {
   ssr: false,
 });
+
+function isPersonalRoute(pathname: string): boolean {
+  return (
+    pathname === '/settings' ||
+    pathname.startsWith('/settings/') ||
+    pathname === '/account' ||
+    pathname.startsWith('/account/') ||
+    pathname === '/notifications' ||
+    pathname.startsWith('/notifications/')
+  );
+}
 
 export function ApplicationChrome({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
@@ -40,12 +58,15 @@ export function ApplicationChrome({ children }: Readonly<{ children: ReactNode }
   const locked = useLockStore((state) => state.locked);
   const lockedAt = useLockStore((state) => state.lockedAt);
   const fileWorkspace = pathname === '/home' || pathname.startsWith('/home/');
+  const personalSpace = isPersonalRoute(pathname);
   return (
     <FilesRuntime fileWorkspace={fileWorkspace}>
       <LockScreen key={`${account}:${lockedAt}`} />
       <div inert={locked}>
         {fileWorkspace ? (
           <RouteTransition>{children}</RouteTransition>
+        ) : personalSpace ? (
+          <PersonalShell>{children}</PersonalShell>
         ) : (
           <AppShell>{children}</AppShell>
         )}

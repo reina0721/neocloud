@@ -18,14 +18,13 @@
  */
 import { usePathname } from 'next/navigation';
 import { Page } from '@clouddrive/surface-foundation/layout';
-import { SettingsLayout } from '@clouddrive/surface-foundation/detail-settings';
 import type { ReactNode } from 'react';
 
 import {
   SettingsCategoryHeader,
   SettingsContentFrame,
+  SettingsSearch,
   SettingsShellProvider,
-  SettingsResponsiveNavigation,
   SettingsRestoreActions,
 } from '../src/settings-layout-shell';
 import {
@@ -52,22 +51,22 @@ export default function SettingsShellLayout({ children }: Readonly<{ children: R
 
   return (
     <Page>
-      {/* 壳：PageHeader 与 SettingsLayout 均不在 data-route-content 内 → route-enter 不命中、静止。 */}
-      <SettingsCategoryHeader meta={activeMeta} />
-      <SettingsLayout
-        persistentNavigation
-        navigation={<SettingsResponsiveNavigation meta={activeMeta} />}
-      >
-        <SettingsContentFrame banner={banner}>
-          {/* 路由内容容器（SET-012）：随分类路由替换的内容区，走主 Shell 同源进入编排。 */}
-          <div data-route-content>
-            <Page>
-              <SettingsShellProvider ctx={ctx}>{children}</SettingsShellProvider>
-            </Page>
-          </div>
-          <SettingsRestoreActions meta={activeMeta} onResult={setLastResult} />
-        </SettingsContentFrame>
-      </SettingsLayout>
+      {/* 壳：PersonalShell 已提供单一左侧导航，此处仅保留标题与快速搜索，彻底消除双侧栏。 */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <SettingsCategoryHeader meta={activeMeta} />
+        <div className="w-full sm:w-72">
+          <SettingsSearch />
+        </div>
+      </div>
+      <SettingsContentFrame banner={banner}>
+        {/* 路由内容容器（SET-012）：随分类路由替换的内容区，走主 Shell 同源进入编排。 */}
+        <div data-route-content>
+          <Page>
+            <SettingsShellProvider ctx={ctx}>{children}</SettingsShellProvider>
+          </Page>
+        </div>
+        <SettingsRestoreActions meta={activeMeta} onResult={setLastResult} />
+      </SettingsContentFrame>
     </Page>
   );
 }

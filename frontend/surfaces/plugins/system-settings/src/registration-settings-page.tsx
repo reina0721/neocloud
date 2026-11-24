@@ -250,7 +250,7 @@ export function RegistrationSettingsPage() {
   });
   return (
     <Page>
-      <PageHeader title={t('systemSettings.title')} description={t('systemSettings.description')} />
+      <PageHeader title={t('systemSettings.nav')} description={t('systemSettings.description')} />
       {port.mode === 'backend' ? <SettingsSections active="registration" /> : null}
       <IdentityModeNotice mode={port.mode} />
       {port.mode === 'backend' ? (

@@ -53,4 +53,18 @@ describe('管理导航只呈现当前允许的入口', () => {
     );
     expect(visible).toEqual(['overview', 'workspace.root']);
   });
+  it('真实后台默认隐藏开发与模板演示分组，模拟模式仍可见', () => {
+    const withDev: NavigationGroup[] = [
+      ...groups,
+      {
+        id: 'development',
+        labelKey: 'nav.group.development',
+        items: [entry('playground.root'), entry('api-workbench.root')],
+      },
+    ];
+    const prodGroupIds = visibleProductNavigation(withDev, {}, true, [], []).map((g) => g.id);
+    const mockGroupIds = visibleProductNavigation(withDev, {}, false, [], []).map((g) => g.id);
+    expect(prodGroupIds).not.toContain('development');
+    expect(mockGroupIds).toContain('development');
+  });
 });

@@ -2,11 +2,13 @@ export const administrationI18n = {
   'zh-CN': {
     administration: {
       themeModes: { system: '跟随系统', light: '浅色', dark: '深色' },
-      densityLevels: { compact: '紧凑', comfortable: '舒适' },
+      densityLevels: { compact: '紧凑', comfortable: '宽松' },
       colors: { blue: '蓝色', cyan: '青色', green: '绿色', violet: '紫色', orange: '橙色' },
       cyanHint: '当前界面不提供青色主题，保留已有界面主题色。',
       preferencesLoadFailure: '账户偏好读取失败，可在账户页面重试。',
       preferences: '跨设备账户偏好',
+      openAppearanceSettings: '前往外观与偏好设置',
+      selectAccount: '请选择用户…',
       language: '语言',
       timeZone: '时区（IANA）',
       timeZoneAuto: '自动（跟随系统）',
@@ -50,7 +52,7 @@ export const administrationI18n = {
       parent: '上级部门',
       root: '无上级',
       actions: '操作',
-      description: '数据由服务器保存，所有更改均由后端验证权限与版本。',
+      description: '维护站点账户、组织与安全状态，所有变更实时保存。',
       departments: '部门管理',
       positions: '岗位管理',
       assignment: '组织分配',
@@ -122,6 +124,8 @@ export const administrationI18n = {
       preferencesLoadFailure:
         'Account preferences could not be loaded. Retry from the account page.',
       preferences: 'Account preferences across devices',
+      openAppearanceSettings: 'Open appearance & preferences',
+      selectAccount: 'Select a user…',
       language: 'Language',
       timeZone: 'Time zone (IANA)',
       timeZoneAuto: 'Auto (follow system)',
@@ -166,8 +170,7 @@ export const administrationI18n = {
       parent: 'Parent department',
       root: 'No parent',
       actions: 'Actions',
-      description:
-        'Server-persisted data. The backend checks permissions and versions for every change.',
+      description: 'Manage accounts, organization, and security settings across this site.',
       departments: 'Departments',
       positions: 'Positions',
       assignment: 'Organization assignments',

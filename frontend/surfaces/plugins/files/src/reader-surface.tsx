@@ -92,15 +92,10 @@ function ReaderPane({
       }}
     >
       <header
-        className={`flex min-h-control-lg items-center gap-1 px-2 sm:gap-2 sm:px-4 ${mini ? 'min-w-0 flex-1' : 'shrink-0 border-b border-border bg-surface'}`}
+        className={`flex min-h-12 items-center gap-1 px-2 sm:gap-2 sm:px-4 ${mini ? 'min-w-0 flex-1' : 'shrink-0 border-b border-border bg-surface'}`}
       >
         {foreground ? (
-          <IconAction
-            label={t('files.viewer.back')}
-            tooltip
-            disabled={blocked}
-            onPress={session.returnToFiles}
-          >
+          <IconAction label={t('files.viewer.back')} tooltip disabled={blocked} onPress={close}>
             <ArrowLeft />
           </IconAction>
         ) : null}
@@ -119,6 +114,16 @@ function ReaderPane({
         {foreground ? (
           <>
             {headerAction}
+            {confirmLabel && onConfirm ? (
+              <Action
+                size="sm"
+                disabled={Boolean(blocked || confirmDisabled)}
+                loading={pending}
+                onPress={() => void submit()}
+              >
+                {confirmLabel}
+              </Action>
+            ) : null}
             <IconAction label={t('files.download')} tooltip onPress={() => session.download()}>
               <Download />
             </IconAction>
@@ -165,18 +170,9 @@ function ReaderPane({
           {failureMessage}
         </p>
       ) : null}
-      {foreground && (footerAction || (confirmLabel && onConfirm)) ? (
+      {foreground && footerAction ? (
         <footer className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border bg-surface px-3 py-2">
           {footerAction}
-          {confirmLabel && onConfirm ? (
-            <Action
-              disabled={Boolean(blocked || confirmDisabled)}
-              loading={pending}
-              onPress={() => void submit()}
-            >
-              {confirmLabel}
-            </Action>
-          ) : null}
         </footer>
       ) : null}
     </div>

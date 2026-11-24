@@ -30,6 +30,8 @@ export function SearchBox({
     <MuiTextField
       type="search"
       variant="filled"
+      hiddenLabel
+      size="small"
       className="ui-search-field min-w-0 w-full"
       fullWidth
       placeholder={placeholder}
@@ -40,8 +42,9 @@ export function SearchBox({
       slotProps={{
         htmlInput: { 'aria-label': label },
         input: {
+          disableUnderline: true,
           startAdornment: (
-            <InputAdornment position="start">
+            <InputAdornment position="start" sx={{ mt: 0 }}>
               <svg
                 aria-hidden="true"
                 className="size-4 text-ink-muted"

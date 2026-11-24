@@ -77,37 +77,59 @@ export function AccountAdministrationPage() {
         onChange={(event) => setQuery(event.target.value)}
       />
       <RemoteRegion {...state}>
-        <SelectField
-          label={t('administration.accountId')}
-          value={id}
-          onValueChange={setId}
-          options={[
-            { value: '', label: t('administration.empty') },
-            ...(state.value?.items ?? []).map((user) => ({
-              value: user.id,
-              label: user.name + ' · ' + user.email,
-            })),
-          ]}
-        />
-        {id ? (
-          <div className="flex flex-wrap gap-2">
-            <AccountAction
-              version={state.value?.items.find((user) => user.id === id)?.version ?? 0}
-              id={id}
-              archive
-              onSaved={() => {
-                setId('');
-                state.reload();
-              }}
-            />
-            <AccountAction
-              version={state.value?.items.find((user) => user.id === id)?.version ?? 0}
-              id={id}
-              archive={false}
-              onSaved={state.reload}
-            />
-          </div>
-        ) : null}
+        <div className="space-y-4">
+          <SelectField
+            label={t('administration.accountId')}
+            value={id}
+            onValueChange={setId}
+            options={[
+              { value: '', label: t('administration.selectAccount') },
+              ...(state.value?.items ?? []).map((user) => ({
+                value: user.id,
+                label: user.name + ' · ' + user.email,
+              })),
+            ]}
+          />
+          {state.value?.items.length ? (
+            <ul className="divide-y divide-border rounded-panel border border-border bg-surface">
+              {state.value.items.map((user) => {
+                const active = user.id === id;
+                return (
+                  <li
+                    key={user.id}
+                    className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${active ? 'bg-brand-soft/45' : ''}`}
+                  >
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 text-left"
+                      onClick={() => setId(user.id)}
+                    >
+                      <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
+                      <p className="truncate text-xs text-ink-muted">{user.email}</p>
+                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <AccountAction
+                        version={user.version}
+                        id={user.id}
+                        archive={false}
+                        onSaved={state.reload}
+                      />
+                      <AccountAction
+                        version={user.version}
+                        id={user.id}
+                        archive
+                        onSaved={() => {
+                          if (id === user.id) setId('');
+                          state.reload();
+                        }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </div>
       </RemoteRegion>
     </Page>
   );

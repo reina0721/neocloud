@@ -3,12 +3,18 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { Action } from '@clouddrive/ui-adapter/action';
+import { IconAction } from '@clouddrive/ui-adapter/icon-action';
+import { RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
 import type { ImageSize } from './image-edit';
 import { imageMetadataLimitMiB, readImageMetadata } from './image-metadata';
 import type { ImageExifField } from './image-metadata.worker';
 
 const zh = {
   info: '拍摄信息',
+  zoomIn: '放大',
+  zoomOut: '缩小',
+  resetView: '重置视图',
+  rotate: '旋转 90°',
   dimensions: '分辨率',
   format: '格式',
   loading: '正在读取拍摄信息…',
@@ -35,6 +41,10 @@ const zh = {
 };
 const en: typeof zh = {
   info: 'Photo information',
+  zoomIn: 'Zoom in',
+  zoomOut: 'Zoom out',
+  resetView: 'Reset view',
+  rotate: 'Rotate 90°',
   dimensions: 'Resolution',
   format: 'Format',
   loading: 'Reading photo information…',
@@ -60,7 +70,7 @@ const en: typeof zh = {
   software: 'Software',
 };
 
-const photoAreaHeight = 'clamp(12rem, calc(100dvh - 26rem), 68dvh)';
+const photoAreaHeight = 'clamp(18rem, calc(100dvh - 11rem), 80dvh)';
 
 function MetadataFields({ source, labels }: { source: Blob; labels: typeof zh }) {
   const [attempt, setAttempt] = useState(0);
@@ -142,31 +152,84 @@ export default function ImageViewer({
   const { locale } = useFrontendTranslation();
   const labels = locale.startsWith('zh') ? zh : en;
   const [open, setOpen] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [rotation, setRotation] = useState(0);
   const infoId = useId();
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <Action
-          size="sm"
-          variant="secondary"
-          expanded={open}
-          {...(open ? { controls: infoId } : {})}
-          onPress={() => setOpen((value) => !value)}
-        >
-          {labels.info}
-        </Action>
-        {editor}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <IconAction
+            size="sm"
+            label={labels.zoomOut}
+            tooltip
+            disabled={scale <= 0.5}
+            onPress={() =>
+              setScale((value) => Math.max(0.5, Math.round((value - 0.25) * 100) / 100))
+            }
+          >
+            <ZoomOut className="size-4" />
+          </IconAction>
+          <Action
+            size="sm"
+            variant="quiet"
+            onPress={() => {
+              setScale(1);
+              setRotation(0);
+            }}
+          >
+            {Math.round(scale * 100)}%
+          </Action>
+          <IconAction
+            size="sm"
+            label={labels.zoomIn}
+            tooltip
+            disabled={scale >= 3}
+            onPress={() => setScale((value) => Math.min(3, Math.round((value + 0.25) * 100) / 100))}
+          >
+            <ZoomIn className="size-4" />
+          </IconAction>
+          <IconAction
+            size="sm"
+            label={labels.rotate}
+            tooltip
+            onPress={() => setRotation((value) => (value + 90) % 360)}
+          >
+            <RotateCw className="size-4" />
+          </IconAction>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Action
+            size="sm"
+            variant="secondary"
+            expanded={open}
+            {...(open ? { controls: infoId } : {})}
+            onPress={() => setOpen((value) => !value)}
+          >
+            {labels.info}
+          </Action>
+          {editor}
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         <div
-          className="flex min-w-0 items-center justify-center rounded-control"
+          className="flex min-w-0 items-center justify-center overflow-auto rounded-control border border-border/60"
           style={{
             flex: '5 1 28rem',
             height: photoAreaHeight,
             backgroundColor: 'var(--color-surface-inset)',
           }}
         >
-          {children}
+          <div
+            className="flex items-center justify-center"
+            style={{
+              transform: `scale(${scale}) rotate(${rotation}deg)`,
+              transformOrigin: 'center center',
+              transition: 'transform var(--motion-duration-control) var(--ease-product)',
+            }}
+          >
+            {children}
+          </div>
         </div>
         {open ? (
           <section

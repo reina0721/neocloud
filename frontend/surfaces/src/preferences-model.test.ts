@@ -23,7 +23,7 @@ describe('preferences-model 默认值（新用户无记录）', () => {
     expect(PREFERENCE_CATEGORIES).toHaveLength(9);
     const pref = defaultPreferences;
     expect(pref.appearance.themeMode).toBe('system');
-    expect(pref.appearance.accent).toBe('pink');
+    expect(pref.appearance.accent).toBe('blue');
     expect(pref.appearance.density).toBe('standard');
     expect(pref.navigation.pageTabsEnabled).toBe(false);
     expect(pref.navigation.sidebarBehavior).toBe('remember');

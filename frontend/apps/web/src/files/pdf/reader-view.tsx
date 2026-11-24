@@ -569,6 +569,7 @@ export function PDFReaderView(props: Props) {
             <IconAction
               label={p('tools')}
               size="sm"
+              tooltip
               expanded={toolsOpen}
               controls={searchId + '-tools'}
               active={toolsOpen}
@@ -675,9 +676,6 @@ export function PDFReaderView(props: Props) {
         >
           {p('export')}
         </Action>
-        <p className="basis-full text-xs text-ink-muted">
-          {p('imageBudget', { pixels: limits.maxImagePixels.toLocaleString(locale) })}
-        </p>
       </div>
       {modified || busy ? (
         <div className="flex shrink-0 flex-wrap gap-3 text-xs text-ink-muted" role="status">

@@ -99,7 +99,10 @@ export function visibleProductNavigation(
     return first ? { ...node, children: [first, ...rest] } : null;
   }
   const groups: NavigationGroup[] = [];
+  const showDevelopmentNav = process.env.NEXT_PUBLIC_SHOW_DEV_NAV === '1';
   for (const group of regroupNavigation(sourceGroups, overrides)) {
+    // 生产/真实后端默认隐藏内部开发文档与组件展示页（不阻断直达路由与验收测试）。
+    if (backend && group.id === 'development' && !showDevelopmentNav) continue;
     const visibleItems = group.items
       .map(visible)
       .filter((item): item is NavigationNode => item !== null)

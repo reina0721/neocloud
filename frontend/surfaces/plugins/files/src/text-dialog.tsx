@@ -6,6 +6,7 @@ import { ReaderSurface } from './reader-surface';
 import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
 import { SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
 import { FilesError, type FilesErrorCode, type FileEntry } from '../../../src/files/model';
+import { formatFileBytes } from '../../../src/files/format';
 import {
   textEncodings,
   type DecodedFileText,
@@ -376,9 +377,11 @@ export function TextDialog({
               : 'Decoding failed. The editor retains the previous content.'}
           </p>
         ) : null}
-        <p className={length > maxBytes ? 'text-sm text-danger' : 'text-xs text-ink-muted'}>
-          {t('files.textBytes', { count: length, limit: maxBytes })}
-        </p>
+        {length > maxBytes || (!readOnly && (dirty || request.mode !== 'edit')) ? (
+          <p className={length > maxBytes ? 'text-sm text-danger' : 'text-xs text-ink-muted'}>
+            {`${formatFileBytes(length)} / ${formatFileBytes(maxBytes)}`}
+          </p>
+        ) : null}
       </div>
       {discard ? (
         <DialogSurface

@@ -51,7 +51,7 @@ export const authenticationResources = {
         },
         loginTitle: '欢迎回来',
         loginDescription: '登录后继续整理、阅读和分享你的文件。',
-        loginIdentifierHint: '也可输入 IAM 用户名。',
+        loginIdentifierHint: '也可输入用户名。',
         loginIdentifierError: '请输入有效的邮箱地址或用户名。',
         loginCredentialsError: '邮箱、用户名或密码不正确，请重试。',
         loginHelp: {
@@ -199,7 +199,7 @@ export const authenticationResources = {
         },
         loginTitle: 'Welcome back',
         loginDescription: 'Sign in to organize, read, and share your files.',
-        loginIdentifierHint: 'You can also enter your IAM username.',
+        loginIdentifierHint: 'You can also enter your username.',
         loginIdentifierError: 'Enter a valid email address or username.',
         loginCredentialsError: 'Your email, username, or password is incorrect. Try again.',
         loginHelp: {

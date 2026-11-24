@@ -114,7 +114,7 @@ export function FileItem({
       tabIndex={tabStop ? 0 : -1}
       onFocus={onFocus}
       title={entry.name}
-      className={`${isList ? 'block truncate' : 'line-clamp-2 break-all'} max-w-full text-left text-sm font-medium outline-offset-4 hover:text-brand`}
+      className={`${isList ? 'block truncate' : 'line-clamp-2 break-words [overflow-wrap:anywhere]'} max-w-full text-left text-sm font-medium outline-offset-4 hover:text-brand`}
       onClick={(event) => {
         if (event.shiftKey || event.ctrlKey || event.metaKey)
           onSelect({ extend: event.shiftKey, toggle: event.ctrlKey || event.metaKey });
@@ -174,7 +174,7 @@ export function FileItem({
       data-selected={selected || undefined}
       data-file-view={view}
       data-file-kind={entry.kind}
-      className={`surface-file-item ${isList ? 'flex min-w-0 items-center gap-2 border-b border-border py-2' : 'min-w-0 rounded-panel border border-transparent p-3 shadow-panel'} ${selected ? 'bg-brand-soft' : isList ? 'hover:bg-surface-muted' : 'bg-surface hover:bg-surface-muted'} ${cut ? 'opacity-50' : ''}`}
+      className={`group surface-file-item ${isList ? 'flex min-w-0 items-center gap-2 border-b border-border py-2' : 'flex min-w-0 flex-col rounded-panel border border-border/70 p-2.5 shadow-panel'} ${selected ? 'bg-brand-soft' : isList ? 'hover:bg-surface-muted' : 'bg-surface hover:bg-surface-muted/70'} ${cut ? 'opacity-50' : ''}`}
     >
       {isList ? (
         <>
@@ -183,7 +183,7 @@ export function FileItem({
             {cut ? <span className="sr-only">{t('files.explorer.cutMark')}</span> : null}
           </div>
           <div role="cell" className="flex min-w-0 flex-1 items-center gap-3">
-            <div className="size-7 shrink-0 overflow-hidden [&_img]:size-full [&_img]:object-cover">
+            <div className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-control [&_img]:size-full [&_img]:object-cover">
               {icon}
             </div>
             <div className="min-w-0 flex-1">
@@ -199,7 +199,7 @@ export function FileItem({
             <div
               role="cell"
               key={column}
-              className="hidden w-20 shrink-0 truncate text-xs text-ink-muted sm:block"
+              className="hidden w-24 shrink-0 truncate text-xs text-ink-muted sm:block"
               title={columnValue(column)}
             >
               {columnValue(column)}
@@ -211,26 +211,34 @@ export function FileItem({
         </>
       ) : (
         <>
-          <div className="mb-1 flex items-center justify-between gap-2">
-            {selection}
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <div
+              className={
+                selected
+                  ? 'opacity-100'
+                  : 'opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100'
+              }
+            >
+              {selection}
+            </div>
             {cut ? (
               <span className="text-xs text-ink-muted">{t('files.explorer.cutMark')}</span>
             ) : null}
             {actions}
           </div>
-          <div className="surface-file-preview flex min-w-0 items-center gap-2 py-1">
-            {icon}
-            <div className="min-w-0 max-w-full w-full">
+          <div className="surface-file-preview flex min-w-0 flex-1 flex-col gap-2">
+            <div className="surface-file-preview-box flex h-28 w-full items-center justify-center overflow-hidden rounded-control border border-border/50 bg-surface-muted/60 [&_img]:max-h-full [&_img]:max-w-full [&_img]:rounded-control [&_img]:object-contain [&_img]:p-1">
+              {icon}
+            </div>
+            <div className="min-w-0 w-full">
               {title}
               {tags}
               {expiry}
-              <p className="surface-file-metadata mt-1 text-xs text-ink-muted">
-                {entry.kind === 'file' ? formatFileBytes(entry.sizeBytes) : kind}
-              </p>
               <p
                 className="surface-file-metadata mt-1 truncate text-xs text-ink-muted"
                 title={time.full(entry.trashedAt ?? entry.updatedAt)}
               >
+                {entry.kind === 'file' ? formatFileBytes(entry.sizeBytes) : kind} ·{' '}
                 {time.date(entry.trashedAt ?? entry.updatedAt)}
               </p>
             </div>

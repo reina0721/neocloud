@@ -3,6 +3,7 @@ import { useFrontendTranslation } from '@clouddrive/i18n';
 import { useFileTime } from './use-file-time';
 import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
 import { Action } from '@clouddrive/ui-adapter/action';
+import { IconAction } from '@clouddrive/ui-adapter/icon-action';
 import {
   CheckboxField,
   SelectField,
@@ -369,36 +370,36 @@ export function DownloadsPage({ taskId = '' }: { taskId?: string }) {
   return (
     <>
       <Page>
+        <PageHeader
+          title={t('files.downloads.title')}
+          description={t('files.downloads.subtitle')}
+          actions={
+            <>
+              <div className="w-fit">
+                <SwitchField
+                  label={t('files.downloads.autoRefresh')}
+                  description=""
+                  presentation="row"
+                  checked={auto}
+                  onCheckedChange={setAuto}
+                />
+              </div>
+              <IconAction
+                label={t('files.downloads.refresh')}
+                disabled={busy}
+                onPress={refresh}
+                tooltip
+              >
+                <RefreshCw className="size-5" aria-hidden="true" />
+              </IconAction>
+              <Action disabled={!canDownload || loading} onPress={() => setCreating(true)}>
+                {t('files.downloads.create')}
+              </Action>
+            </>
+          }
+        />
         <section className="flex min-w-0 flex-1 flex-col">
-          <header className="flex flex-wrap items-center justify-between gap-4">
-            <Action disabled={!canDownload || loading} onPress={() => setCreating(true)}>
-              {t('files.downloads.create')}
-            </Action>
-            <div className="w-fit">
-              <SwitchField
-                label={t('files.downloads.autoRefresh')}
-                description=""
-                presentation="row"
-                checked={auto}
-                onCheckedChange={setAuto}
-              />
-            </div>
-          </header>
-          <section className="mt-5 flex-1 rounded-panel border border-border bg-surface p-4 sm:p-6">
-            <PageHeader
-              title={t('files.downloads.title')}
-              description={t('files.downloads.subtitle')}
-              actions={
-                <Action
-                  variant="quiet"
-                  disabled={busy}
-                  leadingIcon={<RefreshCw className="size-4" />}
-                  onPress={refresh}
-                >
-                  {t('files.downloads.refresh')}
-                </Action>
-              }
-            />
+          <section className="flex-1 rounded-panel border border-border bg-surface p-4 sm:p-6">
             {page && !page.available && !page.torrent.available ? (
               <p role="status" className="mt-3 text-sm text-ink-muted">
                 {t('files.downloads.unavailable')}

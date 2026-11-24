@@ -25,16 +25,38 @@ import { isMarkdownFile } from '../../../src/files/markdown';
 import { fileClipboardMaxEntries, type FileClipboardMode } from '../../../src/files/clipboard';
 import { formatFileBytes as bytes } from '../../../src/files/format';
 import {
+  Archive,
   ArrowUp,
   ArrowUpDown,
   Cloud,
+  Copy,
+  Download,
+  ExternalLink,
+  Eye,
+  FileGlyph,
+  FolderInput,
+  History,
   Home,
+  Info,
   LayoutGrid,
+  Link2,
   MoreHorizontal,
+  PanelRight,
+  Pencil,
+  Pin,
   RefreshCw,
+  RotateCcw,
+  Scissors,
   Search,
+  Settings,
+  Share2,
+  Shield,
+  SlidersHorizontal,
+  Tag,
   Trash2,
   Upload,
+  UploadCloud,
+  X,
 } from '../../../src/files/icons';
 import {
   FilesError,
@@ -68,6 +90,8 @@ import { ShareDialog } from './share-dialog';
 import { directLinkBatchLimit } from '../../../src/files/direct-links';
 import { SaveShortcutDialog, ShortcutActionDialog } from './shortcut-dialogs';
 import { TagsBatchDialog } from './tags-batch-dialog';
+import { TagBadges } from './tag-badges';
+import { useFileTime } from './use-file-time';
 import { VersionsPanel } from './versions-panel';
 import { ViewOptionsDialog } from './view-options-dialog';
 import { useCursorFileFeed } from './use-cursor-file-feed';
@@ -82,6 +106,11 @@ const ArchiveCreateDialog = lazy(() =>
   import('./archive-create-dialog').then((module) => ({ default: module.ArchiveCreateDialog })),
 );
 const DirectLinksDialog = lazy(() => import('./direct-links-dialog'));
+const HistorySettingsDialog = lazy(() =>
+  import('./history-preferences-dialog').then((module) => ({
+    default: module.HistoryPreferencesDialog,
+  })),
+);
 type Props = Readonly<{
   parent: string;
   category: string;
@@ -149,7 +178,10 @@ export function FilesPage({
     [preferenceBusy, setPreferenceBusy] = useState(false),
     [preferenceReload, setPreferenceReload] = useState(0);
   const [advancedOpen, setAdvancedOpen] = useState(false),
-    [viewOptionsOpen, setViewOptionsOpen] = useState(false);
+    [viewOptionsOpen, setViewOptionsOpen] = useState(false),
+    [inspectorOpen, setInspectorOpen] = useState(false),
+    [historySettingsOpen, setHistorySettingsOpen] = useState(false);
+  const time = useFileTime();
   const [focusedEntry, setFocusedEntry] = useState(''),
     [selectionAnchor, setSelectionAnchor] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
@@ -802,32 +834,19 @@ export function FilesPage({
     : category
       ? t(`files.${category}`)
       : (listing?.breadcrumbs.at(-1)?.name ?? t('files.nav'));
+  const inspectedEntry =
+    targets.length === 1
+      ? targets[0]
+      : focusedEntry
+        ? listing?.items.find((item) => item.id === focusedEntry)
+        : undefined;
+  const selectedTotalBytes = targets.reduce(
+    (sum, entry) => sum + (entry.kind === 'file' ? entry.sizeBytes : 0),
+    0,
+  );
   return (
     <>
       <div className="surface-file-collection flex min-h-full min-w-0 flex-col gap-3">
-        <div className="surface-file-heading">
-          <div className="flex min-w-0 items-center gap-1">
-            {listing?.items.length ? (
-              <div>
-                <CheckboxField
-                  label={t('files.discovery.selectPage')}
-                  presentation="control-only"
-                  checked={selected.length === visibleItems.length}
-                  onCheckedChange={(checked) => {
-                    setSelectionAnchor('');
-                    setSelected(checked ? visibleItems.map((entry) => entry.id) : []);
-                  }}
-                />
-              </div>
-            ) : null}
-            <h1 className="min-w-0 truncate text-lg font-bold text-brand md:text-xl">{title}</h1>
-          </div>
-          {listing ? (
-            <span className="shrink-0 whitespace-nowrap text-xs text-ink-muted">
-              {t('files.workspace.library')} · {listing.total}
-            </span>
-          ) : null}
-        </div>
         <Toolbar
           label={title}
           primary={
@@ -836,6 +855,19 @@ export function FilesPage({
                 data-file-breadcrumbs
                 className="flex min-w-0 flex-1 items-center gap-1 md:gap-2 md:overflow-x-auto"
               >
+                {listing?.items.length ? (
+                  <div className="shrink-0">
+                    <CheckboxField
+                      label={t('files.discovery.selectPage')}
+                      presentation="control-only"
+                      checked={selected.length === visibleItems.length}
+                      onCheckedChange={(checked) => {
+                        setSelectionAnchor('');
+                        setSelected(checked ? visibleItems.map((entry) => entry.id) : []);
+                      }}
+                    />
+                  </div>
+                ) : null}
                 {parent && !trash && !category ? (
                   <IconAction
                     size="sm"
@@ -844,7 +876,7 @@ export function FilesPage({
                     disabled={loading || navigating}
                     onPress={() => navigate({ parent: listing?.breadcrumbs.at(-2)?.id ?? '' })}
                   >
-                    <ArrowUp className="size-5" />
+                    <ArrowUp className="size-4" />
                   </IconAction>
                 ) : null}
                 <div className={parent ? 'md:hidden' : 'hidden'}>
@@ -864,14 +896,18 @@ export function FilesPage({
                     onAction={(id) => navigate({ parent: id === 'root' ? '' : id })}
                   />
                 </div>
-                <div className="hidden min-w-0 items-center gap-2 md:flex">
+                <h1 className="sr-only">{title}</h1>
+                <span className="min-w-0 truncate text-sm font-semibold text-ink md:hidden">
+                  {title}
+                </span>
+                <div className="hidden min-w-0 items-center gap-1.5 md:flex">
                   <BreadcrumbTrail
                     label={t('files.explorer.ancestors')}
                     items={[
                       {
                         id: 'root',
                         label: t('files.nav'),
-                        icon: <Home className="size-5" />,
+                        icon: <Home className="size-4" />,
                         href: port.destinationHref('files'),
                         onNavigate: () => navigate({}),
                       },
@@ -884,20 +920,41 @@ export function FilesPage({
                       ...(trash || category ? [{ id: 'scope', label: title }] : []),
                     ]}
                   />
-                  <IconAction size="sm" label={t('files.refresh')} tooltip onPress={reload}>
-                    <RefreshCw className="size-4" />
-                  </IconAction>
                 </div>
+                {listing ? (
+                  <span className="shrink-0 whitespace-nowrap rounded-action bg-surface-muted px-2 py-0.5 text-xs text-ink-muted">
+                    {t('files.explorer.itemCount', { count: listing.total })}
+                  </span>
+                ) : null}
+                <IconAction size="sm" label={t('files.refresh')} tooltip onPress={reload}>
+                  <RefreshCw className="size-4" />
+                </IconAction>
                 <MenuButton
-                  label={<MoreHorizontal className="size-5" />}
+                  label={<MoreHorizontal className="size-4" />}
                   ariaLabel={t('files.discovery.folderActions')}
                   triggerVariant="icon"
                   triggerSize="sm"
                   items={[
-                    { id: 'save-shortcut', label: t('files.navigation.save') },
-                    { id: 'pin-folder', label: t('files.navigation.pin') },
-                    { id: 'copy-path', label: t('files.explorer.copyPath') },
-                    { id: 'refresh', label: t('files.refresh') },
+                    {
+                      id: 'pin-folder',
+                      label: t('files.navigation.pin'),
+                      icon: <Pin className="size-4" />,
+                    },
+                    {
+                      id: 'save-shortcut',
+                      label: t('files.navigation.save'),
+                      icon: <Link2 className="size-4" />,
+                    },
+                    {
+                      id: 'copy-path',
+                      label: t('files.explorer.copyPath'),
+                      icon: <Copy className="size-4" />,
+                    },
+                    {
+                      id: 'version-retention',
+                      label: t('files.retention.title'),
+                      icon: <Settings className="size-4" />,
+                    },
                     {
                       id: 'select-all',
                       label: t('files.selectAll'),
@@ -915,7 +972,7 @@ export function FilesPage({
                     },
                   ]}
                   onAction={(action) => {
-                    if (action === 'refresh') reload();
+                    if (action === 'version-retention') setHistorySettingsOpen(true);
                     else if (action === 'copy-path')
                       void port.annotations
                         .copyText(
@@ -933,7 +990,7 @@ export function FilesPage({
                   }}
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1">
                 <IconAction
                   size="sm"
                   label={t('files.discovery.advanced')}
@@ -941,31 +998,25 @@ export function FilesPage({
                   disabled={loading || navigating}
                   onPress={() => setAdvancedOpen(true)}
                 >
-                  <Search className="size-4" />
+                  <SlidersHorizontal className="size-4" />
                 </IconAction>
                 <MenuButton
                   triggerSize="sm"
                   ariaLabel={t('files.explorer.view')}
                   triggerVariant="icon"
-                  label={
-                    <span className="flex items-center gap-2">
-                      <LayoutGrid className="size-4" />
-                    </span>
-                  }
-                  items={['grid', 'list', 'gallery']
-                    .map((view) => ({
+                  label={<LayoutGrid className="size-4" />}
+                  items={[
+                    ...(['grid', 'list', 'gallery'] as const).map((view) => ({
                       id: view,
                       label: t('files.' + view),
-                      description: preferences.view === view ? '✓' : '',
-                    }))
-                    .concat([
-                      {
-                        id: 'options',
-                        label: t('files.discovery.viewOptions'),
-                        description: '',
-                      },
-                    ])
-                    .map((item) => ({ ...item, disabled: preferenceBusy || !preferenceSnapshot }))}
+                      selected: preferences.view === view,
+                    })),
+                    {
+                      id: 'options',
+                      label: t('files.discovery.viewOptions'),
+                      icon: <Settings className="size-4" />,
+                    },
+                  ].map((item) => ({ ...item, disabled: preferenceBusy || !preferenceSnapshot }))}
                   onAction={(view) =>
                     view === 'options'
                       ? setViewOptionsOpen(true)
@@ -979,28 +1030,37 @@ export function FilesPage({
                   triggerSize="sm"
                   ariaLabel={t('files.explorer.sort')}
                   triggerVariant="icon"
-                  label={
-                    <span className="flex items-center gap-2">
-                      <ArrowUpDown className="size-4" />
-                    </span>
-                  }
-                  items={[
-                    ...['name', 'size', 'updated', 'created'].map((sort) => ({
-                      id: sort,
-                      label: t('files.' + sort + 'Sort'),
-                      description: preferences.sort === sort ? '✓' : '',
-                    })),
+                  label={<ArrowUpDown className="size-4" />}
+                  groups={[
                     {
-                      id: 'asc',
-                      label: t('files.explorer.ascending'),
-                      description: !preferences.desc ? '✓' : '',
+                      id: 'field',
+                      label: t('files.explorer.sortField'),
+                      items: (['name', 'size', 'updated', 'created'] as const).map((sort) => ({
+                        id: sort,
+                        label: t('files.' + sort + 'Sort'),
+                        selected: preferences.sort === sort,
+                        disabled: preferenceBusy || !preferenceSnapshot,
+                      })),
                     },
                     {
-                      id: 'desc',
-                      label: t('files.explorer.descending'),
-                      description: preferences.desc ? '✓' : '',
+                      id: 'order',
+                      label: t('files.explorer.sortOrder'),
+                      items: [
+                        {
+                          id: 'asc',
+                          label: t('files.explorer.ascending'),
+                          selected: !preferences.desc,
+                          disabled: preferenceBusy || !preferenceSnapshot,
+                        },
+                        {
+                          id: 'desc',
+                          label: t('files.explorer.descending'),
+                          selected: preferences.desc,
+                          disabled: preferenceBusy || !preferenceSnapshot,
+                        },
+                      ],
                     },
-                  ].map((item) => ({ ...item, disabled: preferenceBusy || !preferenceSnapshot }))}
+                  ]}
                   onAction={(sort) =>
                     savePreferences({
                       ...preferences,
@@ -1010,6 +1070,15 @@ export function FilesPage({
                     })
                   }
                 />
+                <IconAction
+                  size="sm"
+                  label={t('files.explorer.inspector')}
+                  tooltip
+                  expanded={inspectorOpen}
+                  onPress={() => setInspectorOpen((value) => !value)}
+                >
+                  <PanelRight className="size-4" />
+                </IconAction>
               </div>
             </>
           }
@@ -1174,419 +1243,745 @@ export function FilesPage({
               : 'File icon rules are unavailable. Showing file type icons.'}
           </p>
         ) : null}
-        {listing?.items.length ? (
-          <div className={`${targets.length ? 'flex' : 'hidden'} flex-wrap items-center gap-3`}>
-            {targets.length ? (
-              <>
-                {!trash ? (
-                  <>
-                    <Action
-                      size="sm"
-                      variant="secondary"
-                      disabled={clipboard.pending}
-                      onPress={() => queueClipboard('copy', targets)}
-                    >
-                      {t('files.explorer.copyPending')}
-                    </Action>
-                    <Action
-                      size="sm"
-                      variant="secondary"
-                      disabled={clipboard.pending}
-                      onPress={() => queueClipboard('cut', targets)}
-                    >
-                      {t('files.explorer.cutPending')}
-                    </Action>
-                    <Action
-                      size="sm"
-                      variant="secondary"
-                      disabled={targets.some((entry) => entry.kind === 'shortcut')}
-                      onPress={() => setZIPSelection({ entries: targets, parent })}
-                    >
-                      {t('files.archives.createZIP.title')}
-                    </Action>
-                    {targets.every((entry) => entry.kind === 'file') ? (
-                      <Action
-                        size="sm"
-                        variant="secondary"
-                        disabled={targets.length > directLinkBatchLimit}
-                        onPress={() => setDirectTargets(targets)}
-                      >
-                        {t('files.directLinks.get')}
-                      </Action>
-                    ) : null}
-                  </>
-                ) : null}
-                {!trash ? (
+        {listing?.items.length && targets.length ? (
+          <div
+            role="region"
+            aria-label={t('files.explorer.selection')}
+            className="surface-bulk-bar flex flex-wrap items-center justify-between gap-2 rounded-panel border border-brand/25 bg-brand-soft/65 px-3 py-2"
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              <IconAction
+                size="sm"
+                label={t('files.explorer.none')}
+                tooltip
+                onPress={() => setSelected([])}
+              >
+                <X className="size-4" />
+              </IconAction>
+              <span className="text-sm font-semibold text-ink">
+                {t('files.selected', { count: targets.length })}
+              </span>
+              {selectedTotalBytes > 0 ? (
+                <span className="text-xs text-ink-muted">· {bytes(selectedTotalBytes)}</span>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {trash ? (
+                <>
                   <Action
-                    size="sm"
                     variant="secondary"
-                    loading={archiving}
-                    disabled={archiving || targets.some((entry) => entry.kind === 'shortcut')}
-                    onPress={() => {
-                      setArchiving(true);
-                      setNotice('');
-                      void port
-                        .archive(selected)
-                        .then(() => setNotice(t('files.archiveReady')))
-                        .catch((error: unknown) => setNotice(errorText(error)))
-                        .finally(() => setArchiving(false));
-                    }}
+                    size="sm"
+                    leadingIcon={<RotateCcw className="size-4" />}
+                    onPress={() => openDialog('restore', targets)}
                   >
-                    {t('files.archive')}
+                    {t('files.restore')}
                   </Action>
-                ) : null}
-                <span className="text-sm text-ink-muted">
-                  {t('files.selected', { count: targets.length })}
-                </span>
-                <span className="text-xs text-ink-muted">
-                  {t('files.explorer.selectedBytes', {
-                    size: bytes(
-                      targets.reduce(
-                        (sum, entry) => sum + (entry.kind === 'file' ? entry.sizeBytes : 0),
-                        0,
-                      ),
-                    ),
-                  })}
-                </span>
-                {!trash ? (
-                  <>
+                  <Action
+                    variant="danger"
+                    size="sm"
+                    leadingIcon={<Trash2 className="size-4" />}
+                    disabled={loading || navigating}
+                    onPress={() =>
+                      setTrashSelection({
+                        scope: 'selection',
+                        ids: targets.map((entry) => entry.id),
+                      })
+                    }
+                  >
+                    {t('files.trashPurge.permanent')}
+                  </Action>
+                </>
+              ) : (
+                <>
+                  {targets.length === 1 && targets[0]?.kind === 'file' ? (
                     <Action
                       size="sm"
                       variant="secondary"
-                      disabled={
-                        loading ||
-                        navigating ||
-                        galleryAnnotationsLoading ||
-                        !!galleryAnnotationFailure
-                      }
-                      onPress={() => openTagsBatch('add')}
+                      leadingIcon={<Download className="size-4" />}
+                      onPress={() => {
+                        if (targets[0]) void download(targets[0]);
+                      }}
                     >
-                      {t('files.annotations.batchAdd')}
+                      {t('files.download')}
                     </Action>
+                  ) : (
                     <Action
                       size="sm"
                       variant="secondary"
-                      disabled={
-                        loading ||
-                        navigating ||
-                        galleryAnnotationsLoading ||
-                        !!galleryAnnotationFailure
-                      }
-                      onPress={() => openTagsBatch('remove')}
+                      leadingIcon={<Download className="size-4" />}
+                      loading={archiving}
+                      disabled={archiving || targets.some((entry) => entry.kind === 'shortcut')}
+                      onPress={() => {
+                        setArchiving(true);
+                        setNotice('');
+                        void port
+                          .archive(selected)
+                          .then(() => setNotice(t('files.archiveReady')))
+                          .catch((error: unknown) => setNotice(errorText(error)))
+                          .finally(() => setArchiving(false));
+                      }}
                     >
-                      {t('files.annotations.batchRemove')}
+                      {t('files.archive')}
                     </Action>
-                  </>
-                ) : null}
-                {trash ? (
-                  <>
+                  )}
+                  {targets.length === 1 && targets[0]?.kind !== 'shortcut' ? (
                     <Action
+                      size="sm"
                       variant="secondary"
-                      size="sm"
-                      onPress={() => openDialog('restore', targets)}
+                      leadingIcon={<Share2 className="size-4" />}
+                      onPress={() => {
+                        if (targets[0]) setShareTarget(targets[0]);
+                      }}
                     >
-                      {t('files.restore')}
+                      {t('files.share')}
                     </Action>
-                    <Action
-                      variant="danger"
-                      size="sm"
-                      disabled={loading || navigating}
-                      onPress={() =>
-                        setTrashSelection({
-                          scope: 'selection',
-                          ids: targets.map((entry) => entry.id),
-                        })
-                      }
-                    >
-                      {t('files.trashPurge.permanent')}
-                    </Action>
-                  </>
-                ) : (
-                  <>
-                    <Action
-                      variant="secondary"
-                      size="sm"
-                      onPress={() => openDialog('move', targets)}
-                    >
-                      {t('files.move')}
-                    </Action>
-                    <Action
-                      variant="danger"
-                      size="sm"
-                      onPress={() => openDialog('remove', targets)}
-                    >
-                      {t('files.remove')}
-                    </Action>
-                  </>
-                )}
-              </>
-            ) : null}
+                  ) : null}
+                  <Action
+                    variant="secondary"
+                    size="sm"
+                    leadingIcon={<FolderInput className="size-4" />}
+                    onPress={() => openDialog('move', targets)}
+                  >
+                    {t('files.move')}
+                  </Action>
+                  <Action
+                    variant="danger"
+                    size="sm"
+                    leadingIcon={<Trash2 className="size-4" />}
+                    onPress={() => openDialog('remove', targets)}
+                  >
+                    {t('files.remove')}
+                  </Action>
+                  <MenuButton
+                    triggerSize="sm"
+                    triggerVariant="standard"
+                    ariaLabel={t('files.explorer.moreActions')}
+                    label={
+                      <span className="flex items-center gap-1">
+                        <MoreHorizontal className="size-4" />
+                        <span className="hidden sm:inline">{t('files.explorer.moreActions')}</span>
+                      </span>
+                    }
+                    items={[
+                      {
+                        id: 'copy-clipboard',
+                        label: t('files.explorer.copyPending'),
+                        icon: <Copy className="size-4" />,
+                        disabled: clipboard.pending,
+                      },
+                      {
+                        id: 'cut-clipboard',
+                        label: t('files.explorer.cutPending'),
+                        icon: <Scissors className="size-4" />,
+                        disabled: clipboard.pending,
+                      },
+                      {
+                        id: 'create-zip',
+                        label: t('files.archives.createZIP.title'),
+                        icon: <Archive className="size-4" />,
+                        disabled: targets.some((entry) => entry.kind === 'shortcut'),
+                      },
+                      ...(targets.every((entry) => entry.kind === 'file')
+                        ? [
+                            {
+                              id: 'direct-links',
+                              label: t('files.directLinks.get'),
+                              icon: <Link2 className="size-4" />,
+                              disabled: targets.length > directLinkBatchLimit,
+                            },
+                          ]
+                        : []),
+                      {
+                        id: 'batch-add-tags',
+                        label: t('files.annotations.batchAdd'),
+                        icon: <Tag className="size-4" />,
+                        disabled:
+                          loading ||
+                          navigating ||
+                          galleryAnnotationsLoading ||
+                          !!galleryAnnotationFailure,
+                      },
+                      {
+                        id: 'batch-remove-tags',
+                        label: t('files.annotations.batchRemove'),
+                        icon: <Tag className="size-4" />,
+                        disabled:
+                          loading ||
+                          navigating ||
+                          galleryAnnotationsLoading ||
+                          !!galleryAnnotationFailure,
+                      },
+                    ]}
+                    onAction={(action) => {
+                      if (action === 'copy-clipboard') queueClipboard('copy', targets);
+                      else if (action === 'cut-clipboard') queueClipboard('cut', targets);
+                      else if (action === 'create-zip')
+                        setZIPSelection({ entries: targets, parent });
+                      else if (action === 'direct-links') setDirectTargets(targets);
+                      else if (action === 'batch-add-tags') openTagsBatch('add');
+                      else if (action === 'batch-remove-tags') openTagsBatch('remove');
+                    }}
+                  />
+                </>
+              )}
+            </div>
           </div>
         ) : null}
-        <section
-          ref={fileContent}
-          tabIndex={-1}
-          aria-label={title}
-          aria-busy={loading || navigating}
-          data-file-content
-          className={`min-h-96 min-w-0 flex-1 rounded-panel bg-surface p-1 ${!loading && !navigating && !failure && !listing?.items.length ? 'flex flex-col' : ''}`}
-        >
-          {loading || navigating ? (
-            <StateSurface
-              state="loading"
-              icon={<Cloud />}
-              title={t('files.loading')}
-              description={t('files.loadingDescription')}
-            />
-          ) : failure ? (
-            <StateSurface
-              state="error"
-              icon={<Cloud />}
-              title={t('files.error')}
-              description={failure}
-              actionLabel={t('files.retry')}
-              onAction={reload}
-            />
-          ) : !listing?.items.length ? (
-            <div data-file-empty className="grid min-h-80 flex-1 place-items-center">
+        <div className="flex min-h-96 min-w-0 flex-1 items-start gap-4">
+          <section
+            ref={fileContent}
+            tabIndex={-1}
+            aria-label={title}
+            aria-busy={loading || navigating}
+            data-file-content
+            className={`min-h-96 min-w-0 flex-1 rounded-panel bg-surface p-2 ${!loading && !navigating && !failure && !listing?.items.length ? 'flex flex-col' : ''}`}
+          >
+            {loading || navigating ? (
               <StateSurface
-                state="empty"
-                icon={
-                  search || category || filterKey ? <Search /> : trash ? <Trash2 /> : <Upload />
-                }
-                title={t(
-                  search || category || filterKey
-                    ? 'files.emptySearch'
-                    : trash
-                      ? 'files.emptyTrash'
-                      : 'files.empty',
-                )}
-                description={t(
-                  search || category || filterKey
-                    ? 'files.emptySearchDescription'
-                    : trash
-                      ? 'files.emptyTrashDescription'
-                      : 'files.emptyDescription',
-                )}
-                {...(search || category || filterKey
-                  ? {
-                      actionLabel: t('files.clearFileFilters'),
-                      onAction: () => navigate({ parent, ...(trash ? { trash: 'true' } : {}) }),
-                    }
-                  : !trash
-                    ? {
-                        actionLabel: t('files.upload'),
-                        onAction: () => {
-                          void port
-                            .chooseFiles()
-                            .then(enqueue)
-                            .catch((error: unknown) => setNotice(errorText(error)));
-                        },
-                      }
-                    : {})}
+                state="loading"
+                icon={<Cloud />}
+                title={t('files.loading')}
+                description={t('files.loadingDescription')}
               />
-            </div>
-          ) : (
-            <div
-              role={preferences.view === 'list' ? 'table' : undefined}
-              aria-label={preferences.view === 'list' ? title : undefined}
-              className={
-                preferences.view === 'grid'
-                  ? 'grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6'
-                  : 'flex flex-col divide-y divide-border'
-              }
-            >
-              {preferences.view === 'list' ? (
-                <FileListHeader
-                  preferences={preferences}
-                  onSort={(sort) =>
-                    savePreferences({
-                      ...preferences,
-                      sort,
-                      desc: preferences.sort === sort ? !preferences.desc : false,
-                    })
+            ) : failure ? (
+              <StateSurface
+                state="error"
+                icon={<Cloud />}
+                title={t('files.error')}
+                description={failure}
+                actionLabel={t('files.retry')}
+                onAction={reload}
+              />
+            ) : !listing?.items.length ? (
+              <div data-file-empty className="grid min-h-80 flex-1 place-items-center">
+                <StateSurface
+                  state="empty"
+                  icon={
+                    search || category || filterKey ? <Search /> : trash ? <Trash2 /> : <Upload />
                   }
+                  title={t(
+                    search || category || filterKey
+                      ? 'files.emptySearch'
+                      : trash
+                        ? 'files.emptyTrash'
+                        : 'files.empty',
+                  )}
+                  description={t(
+                    search || category || filterKey
+                      ? 'files.emptySearchDescription'
+                      : trash
+                        ? 'files.emptyTrashDescription'
+                        : 'files.emptyDescription',
+                  )}
+                  {...(search || category || filterKey
+                    ? {
+                        actionLabel: t('files.clearFileFilters'),
+                        onAction: () => navigate({ parent, ...(trash ? { trash: 'true' } : {}) }),
+                      }
+                    : !trash
+                      ? {
+                          actionLabel: t('files.upload'),
+                          onAction: () => {
+                            void port
+                              .chooseFiles()
+                              .then(enqueue)
+                              .catch((error: unknown) => setNotice(errorText(error)));
+                          },
+                        }
+                      : {})}
                 />
-              ) : null}
-              {visibleItems.map((entry, index) => (
-                <FileItem
-                  key={entry.id}
-                  entry={entry}
-                  annotation={annotationMap.get(entry.id)}
-                  iconRule={
-                    entry.kind === 'file'
-                      ? iconsByExtension.get(fileIconExtension(entry.name))
-                      : undefined
-                  }
-                  onTag={(name) =>
-                    navigate({
-                      filter: encodeFileFilters({
-                        scope: 'all',
-                        tagFilter: { names: [name], match: 'all' },
-                      }),
-                    })
-                  }
-                  view={preferences.view}
-                  folderClick={preferenceSnapshot?.configuration.folderClick}
-                  columns={preferences.columns}
-                  selected={selectedIds.has(entry.id)}
-                  cut={
-                    clipboard.mode === 'cut' &&
-                    clipboard.entries.some((item) => item.id === entry.id)
-                  }
-                  tabStop={focusedEntry === entry.id || (!focusedEntry && index === 0)}
-                  onFocus={() => setFocusedEntry(entry.id)}
-                  onOpen={() => {
-                    if (trash) openDialog('restore', [entry]);
-                    else if (entry.kind === 'folder') navigate({ parent: entry.id });
-                    else void showPreview(entry);
-                  }}
-                  onSelect={(gesture) => selectEntry(entry.id, gesture)}
-                  onChecked={(checked) => {
-                    setSelectionAnchor(entry.id);
-                    setSelected((current) =>
-                      checked
-                        ? [...new Set([...current, entry.id])]
-                        : current.filter((id) => id !== entry.id),
-                    );
-                  }}
-                  onContext={() => {
-                    setContextEntry(entry.id);
-                    setSelectionAnchor(entry.id);
-                    if (!selectedIds.has(entry.id)) setSelected([entry.id]);
-                  }}
-                  thumbnail={
-                    preferences.thumbnails &&
-                    thumbnailIds.has(entry.id) &&
+              </div>
+            ) : (
+              <div
+                role={preferences.view === 'list' ? 'table' : undefined}
+                aria-label={preferences.view === 'list' ? title : undefined}
+                className={
+                  preferences.view === 'grid'
+                    ? 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+                    : 'flex flex-col divide-y divide-border'
+                }
+              >
+                {preferences.view === 'list' ? (
+                  <FileListHeader
+                    preferences={preferences}
+                    onSort={(sort) =>
+                      savePreferences({
+                        ...preferences,
+                        sort,
+                        desc: preferences.sort === sort ? !preferences.desc : false,
+                      })
+                    }
+                  />
+                ) : null}
+                {visibleItems.map((entry, index) => (
+                  <FileItem
+                    key={entry.id}
+                    entry={entry}
+                    annotation={annotationMap.get(entry.id)}
+                    iconRule={
+                      entry.kind === 'file'
+                        ? iconsByExtension.get(fileIconExtension(entry.name))
+                        : undefined
+                    }
+                    onTag={(name) =>
+                      navigate({
+                        filter: encodeFileFilters({
+                          scope: 'all',
+                          tagFilter: { names: [name], match: 'all' },
+                        }),
+                      })
+                    }
+                    view={preferences.view}
+                    folderClick={preferenceSnapshot?.configuration.folderClick}
+                    columns={preferences.columns}
+                    selected={selectedIds.has(entry.id)}
+                    cut={
+                      clipboard.mode === 'cut' &&
+                      clipboard.entries.some((item) => item.id === entry.id)
+                    }
+                    tabStop={focusedEntry === entry.id || (!focusedEntry && index === 0)}
+                    onFocus={() => setFocusedEntry(entry.id)}
+                    onOpen={() => {
+                      if (trash) openDialog('restore', [entry]);
+                      else if (entry.kind === 'folder') navigate({ parent: entry.id });
+                      else void showPreview(entry);
+                    }}
+                    onSelect={(gesture) => selectEntry(entry.id, gesture)}
+                    onChecked={(checked) => {
+                      setSelectionAnchor(entry.id);
+                      setSelected((current) =>
+                        checked
+                          ? [...new Set([...current, entry.id])]
+                          : current.filter((id) => id !== entry.id),
+                      );
+                    }}
+                    onContext={() => {
+                      setContextEntry(entry.id);
+                      setSelectionAnchor(entry.id);
+                      if (!selectedIds.has(entry.id)) setSelected([entry.id]);
+                    }}
+                    thumbnail={
+                      preferences.thumbnails &&
+                      thumbnailIds.has(entry.id) &&
+                      listing &&
+                      entry.sizeBytes <= listing.maxThumbnailBytes ? (
+                        <FileMedia
+                          key={entry.id + ':' + entry.contentRevision}
+                          entry={entry}
+                          mode="thumbnail"
+                          maxBytes={listing.maxThumbnailBytes}
+                        />
+                      ) : null
+                    }
+                    actions={
+                      <MenuButton
+                        label={<MoreHorizontal className="size-5" />}
+                        ariaLabel={t('files.actionsFor', { name: entry.name })}
+                        triggerVariant="icon"
+                        triggerSize="sm"
+                        isOpen={contextEntry === entry.id}
+                        onOpenChange={(open) => setContextEntry(open ? entry.id : undefined)}
+                        {...(trash
+                          ? {
+                              items: [
+                                {
+                                  id: 'restore',
+                                  label: t('files.restore'),
+                                  icon: <RotateCcw className="size-4" />,
+                                },
+                                ...(entry.kind === 'shortcut'
+                                  ? [
+                                      {
+                                        id: 'purge',
+                                        label: t('files.navigation.purge'),
+                                        icon: <Trash2 className="size-4" />,
+                                        tone: 'danger' as const,
+                                      },
+                                    ]
+                                  : [
+                                      {
+                                        id: 'purge-file',
+                                        label: t('files.trashPurge.permanent'),
+                                        icon: <Trash2 className="size-4" />,
+                                        tone: 'danger' as const,
+                                      },
+                                    ]),
+                              ],
+                            }
+                          : {
+                              groups: [
+                                {
+                                  id: 'actions',
+                                  label: t('files.explorer.menuActions'),
+                                  items: [
+                                    {
+                                      id: 'open',
+                                      label: t('files.explorer.open'),
+                                      icon: <Eye className="size-4" />,
+                                    },
+                                    ...(entry.kind === 'file'
+                                      ? [
+                                          {
+                                            id: 'open-with',
+                                            label: openWithLabel,
+                                            icon: <ExternalLink className="size-4" />,
+                                          },
+                                          ...(entry.mediaType.startsWith('text/') ||
+                                          isMarkdownFile(entry) ||
+                                          /\.txt$/i.test(entry.name)
+                                            ? [
+                                                {
+                                                  id: 'edit',
+                                                  label: t('files.edit'),
+                                                  icon: <Pencil className="size-4" />,
+                                                },
+                                              ]
+                                            : []),
+                                          ...(archiveFile(entry)
+                                            ? [
+                                                {
+                                                  id: 'browse-archive',
+                                                  label: t('files.archives.title'),
+                                                  icon: <Archive className="size-4" />,
+                                                },
+                                              ]
+                                            : []),
+                                          {
+                                            id: 'download',
+                                            label: t('files.download'),
+                                            icon: <Download className="size-4" />,
+                                          },
+                                        ]
+                                      : []),
+                                    ...(entry.kind === 'shortcut'
+                                      ? []
+                                      : [
+                                          {
+                                            id: 'share',
+                                            label: t('files.share'),
+                                            icon: <Share2 className="size-4" />,
+                                          },
+                                        ]),
+                                    ...(entry.kind === 'file'
+                                      ? [
+                                          {
+                                            id: 'direct-link',
+                                            label: t('files.directLinks.get'),
+                                            icon: <Link2 className="size-4" />,
+                                          },
+                                        ]
+                                      : []),
+                                  ],
+                                },
+                                {
+                                  id: 'organize',
+                                  label: t('files.explorer.menuOrganize'),
+                                  items: [
+                                    {
+                                      id: 'rename',
+                                      label: t('files.rename'),
+                                      icon: <Pencil className="size-4" />,
+                                    },
+                                    {
+                                      id: 'move',
+                                      label: t('files.move'),
+                                      icon: <FolderInput className="size-4" />,
+                                    },
+                                    {
+                                      id: 'copy',
+                                      label: t('files.copy'),
+                                      icon: <Copy className="size-4" />,
+                                    },
+                                    ...(entry.kind === 'shortcut'
+                                      ? []
+                                      : [
+                                          {
+                                            id: 'queue-copy',
+                                            label: t('files.explorer.copyPending'),
+                                            icon: <Copy className="size-4" />,
+                                            disabled: clipboard.pending,
+                                          },
+                                          {
+                                            id: 'queue-cut',
+                                            label: t('files.explorer.cutPending'),
+                                            icon: <Scissors className="size-4" />,
+                                            disabled: clipboard.pending,
+                                          },
+                                          {
+                                            id: 'create-zip',
+                                            label: t('files.archives.createZIP.title'),
+                                            icon: <Archive className="size-4" />,
+                                          },
+                                        ]),
+                                    ...(entry.kind === 'folder' || entry.kind === 'shortcut'
+                                      ? [
+                                          {
+                                            id: 'pin',
+                                            label: t('files.navigation.pin'),
+                                            icon: <Pin className="size-4" />,
+                                          },
+                                        ]
+                                      : []),
+                                  ],
+                                },
+                                {
+                                  id: 'details',
+                                  label: t('files.explorer.menuDetails'),
+                                  items: [
+                                    {
+                                      id: 'details',
+                                      label: t('files.details'),
+                                      icon: <Info className="size-4" />,
+                                    },
+                                    ...(entry.kind === 'file'
+                                      ? [
+                                          {
+                                            id: 'versions',
+                                            label: t('files.versions.title'),
+                                            icon: <History className="size-4" />,
+                                          },
+                                          {
+                                            id: 'upload-version',
+                                            label: t('files.versions.upload'),
+                                            icon: <UploadCloud className="size-4" />,
+                                          },
+                                        ]
+                                      : []),
+                                    ...(entry.kind === 'shortcut'
+                                      ? []
+                                      : [
+                                          {
+                                            id: 'access',
+                                            label: t('files.access.title'),
+                                            icon: <Shield className="size-4" />,
+                                          },
+                                        ]),
+                                  ],
+                                },
+                                {
+                                  id: 'danger',
+                                  label: t('files.explorer.menuDanger'),
+                                  items: [
+                                    {
+                                      id: 'remove',
+                                      label: t('files.remove'),
+                                      icon: <Trash2 className="size-4" />,
+                                      tone: 'danger' as const,
+                                    },
+                                  ],
+                                },
+                              ],
+                            })}
+                        onAction={(action) => {
+                          setContextEntry(undefined);
+                          if (action === 'open') {
+                            if (entry.kind === 'folder') navigate({ parent: entry.id });
+                            else void showPreview(entry);
+                          } else if (action === 'browse-archive')
+                            void showPreview(entry, 'archive');
+                          else if (action === 'open-with') void showPreview(entry, 'choose');
+                          else if (action === 'create-zip')
+                            setZIPSelection({ entries: [entry], parent: entry.parentId });
+                          else if (action === 'versions') setVersionEntry(entry);
+                          else if (action === 'upload-version') void uploadVersion(entry);
+                          else if (action === 'queue-copy' || action === 'queue-cut')
+                            queueClipboard(
+                              action === 'queue-copy' ? 'copy' : 'cut',
+                              selectedIds.has(entry.id) ? targets : [entry],
+                            );
+                          else if (action === 'details') void showDetails(entry);
+                          else if (action === 'purge') setPurgeTarget(entry);
+                          else if (action === 'purge-file')
+                            setTrashSelection({ scope: 'selection', ids: [entry.id] });
+                          else if (
+                            action === 'pin' &&
+                            (entry.kind === 'folder' || entry.kind === 'shortcut')
+                          )
+                            setPinTarget({ targetKind: entry.kind, targetId: entry.id });
+                          else if (action === 'download') void download(entry);
+                          else if (action === 'direct-link') setDirectTargets([entry]);
+                          else if (action === 'share') setShareTarget(entry);
+                          else if (action === 'access') setAccessTarget(entry);
+                          else if (action === 'edit') reader.edit(entry);
+                          else if (
+                            action === 'rename' ||
+                            action === 'move' ||
+                            action === 'copy' ||
+                            action === 'remove' ||
+                            action === 'restore'
+                          )
+                            openDialog(action, [entry]);
+                        }}
+                      />
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+          {inspectorOpen ? (
+            <aside
+              aria-label={t('files.explorer.inspector')}
+              className="hidden w-80 shrink-0 rounded-panel border border-border bg-surface p-4 shadow-panel lg:block"
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
+                <h2 className="text-sm font-semibold text-ink">{t('files.explorer.inspector')}</h2>
+                <IconAction
+                  size="sm"
+                  label={t('files.close')}
+                  onPress={() => setInspectorOpen(false)}
+                >
+                  <X className="size-4" />
+                </IconAction>
+              </div>
+              {targets.length > 1 ? (
+                <div className="space-y-3 pt-4 text-sm text-ink-muted">
+                  <p className="font-medium text-ink">
+                    {t('files.explorer.inspectorMulti', {
+                      count: targets.length,
+                      size: bytes(selectedTotalBytes),
+                    })}
+                  </p>
+                </div>
+              ) : inspectedEntry ? (
+                <div className="space-y-4 pt-4">
+                  <div className="flex h-36 w-full items-center justify-center overflow-hidden rounded-control border border-border/60 bg-surface-muted/60 [&_img]:max-h-full [&_img]:max-w-full [&_img]:object-contain [&_img]:p-2">
+                    {preferences.thumbnails &&
+                    thumbnailIds.has(inspectedEntry.id) &&
                     listing &&
-                    entry.sizeBytes <= listing.maxThumbnailBytes ? (
+                    inspectedEntry.sizeBytes <= listing.maxThumbnailBytes ? (
                       <FileMedia
-                        key={entry.id + ':' + entry.contentRevision}
-                        entry={entry}
+                        key={inspectedEntry.id + ':' + inspectedEntry.contentRevision}
+                        entry={inspectedEntry}
                         mode="thumbnail"
                         maxBytes={listing.maxThumbnailBytes}
                       />
-                    ) : null
-                  }
-                  actions={
-                    <MenuButton
-                      label={<MoreHorizontal className="size-5" />}
-                      ariaLabel={t('files.actionsFor', { name: entry.name })}
-                      triggerVariant="icon"
-                      triggerSize="sm"
-                      isOpen={contextEntry === entry.id}
-                      onOpenChange={(open) => setContextEntry(open ? entry.id : undefined)}
-                      items={
-                        trash
-                          ? [
-                              { id: 'restore', label: t('files.restore') },
-                              ...(entry.kind === 'shortcut'
-                                ? [
-                                    {
-                                      id: 'purge',
-                                      label: t('files.navigation.purge'),
-                                      tone: 'danger' as const,
-                                    },
-                                  ]
-                                : [
-                                    {
-                                      id: 'purge-file',
-                                      label: t('files.trashPurge.permanent'),
-                                      tone: 'danger' as const,
-                                    },
-                                  ]),
-                            ]
-                          : [
-                              { id: 'details', label: t('files.details') },
-                              {
-                                id: 'queue-copy',
-                                label: t('files.explorer.copyPending'),
-                                disabled: clipboard.pending || entry.kind === 'shortcut',
-                              },
-                              {
-                                id: 'queue-cut',
-                                label: t('files.explorer.cutPending'),
-                                disabled: clipboard.pending || entry.kind === 'shortcut',
-                              },
-                              { id: 'rename', label: t('files.rename') },
-                              { id: 'move', label: t('files.move') },
-                              { id: 'copy', label: t('files.copy') },
-                              ...(entry.kind === 'file'
-                                ? [
-                                    { id: 'download', label: t('files.download') },
-                                    { id: 'open-with', label: openWithLabel },
-                                    { id: 'direct-link', label: t('files.directLinks.get') },
-                                    ...(archiveFile(entry)
-                                      ? [{ id: 'browse-archive', label: t('files.archives.title') }]
-                                      : []),
-                                    { id: 'versions', label: t('files.versions.title') },
-                                    { id: 'upload-version', label: t('files.versions.upload') },
-                                    ...(entry.mediaType.startsWith('text/') ||
-                                    isMarkdownFile(entry) ||
-                                    /\.txt$/i.test(entry.name)
-                                      ? [{ id: 'edit', label: t('files.edit') }]
-                                      : []),
-                                  ]
-                                : []),
-                              ...(entry.kind === 'shortcut'
-                                ? []
-                                : [
-                                    {
-                                      id: 'create-zip',
-                                      label: t('files.archives.createZIP.title'),
-                                    },
-                                    { id: 'share', label: t('files.share') },
-                                    { id: 'access', label: t('files.access.title') },
-                                  ]),
-                              ...(entry.kind === 'folder' || entry.kind === 'shortcut'
-                                ? [{ id: 'pin', label: t('files.navigation.pin') }]
-                                : []),
-                              { id: 'remove', label: t('files.remove'), tone: 'danger' },
-                            ]
-                      }
-                      onAction={(action) => {
-                        setContextEntry(undefined);
-                        if (action === 'browse-archive') void showPreview(entry, 'archive');
-                        else if (action === 'open-with') void showPreview(entry, 'choose');
-                        else if (action === 'create-zip')
-                          setZIPSelection({ entries: [entry], parent: entry.parentId });
-                        else if (action === 'versions') setVersionEntry(entry);
-                        else if (action === 'upload-version') void uploadVersion(entry);
-                        else if (action === 'queue-copy' || action === 'queue-cut')
-                          queueClipboard(
-                            action === 'queue-copy' ? 'copy' : 'cut',
-                            selectedIds.has(entry.id) ? targets : [entry],
-                          );
-                        else if (action === 'details') void showDetails(entry);
-                        else if (action === 'purge') setPurgeTarget(entry);
-                        else if (action === 'purge-file')
-                          setTrashSelection({ scope: 'selection', ids: [entry.id] });
-                        else if (
-                          action === 'pin' &&
-                          (entry.kind === 'folder' || entry.kind === 'shortcut')
-                        )
-                          setPinTarget({ targetKind: entry.kind, targetId: entry.id });
-                        else if (action === 'download') void download(entry);
-                        else if (action === 'direct-link') setDirectTargets([entry]);
-                        else if (action === 'share') setShareTarget(entry);
-                        else if (action === 'access') setAccessTarget(entry);
-                        else if (action === 'edit') reader.edit(entry);
-                        else if (
-                          action === 'rename' ||
-                          action === 'move' ||
-                          action === 'copy' ||
-                          action === 'remove' ||
-                          action === 'restore'
-                        )
-                          openDialog(action, [entry]);
-                      }}
-                    />
-                  }
-                />
-              ))}
-            </div>
-          )}
-        </section>
+                    ) : (
+                      <FileGlyph
+                        kind={inspectedEntry.kind}
+                        mediaType={inspectedEntry.mediaType}
+                        size="large"
+                        emoji={annotationMap.get(inspectedEntry.id)?.emoji}
+                        color={annotationMap.get(inspectedEntry.id)?.folderColor}
+                        rule={
+                          inspectedEntry.kind === 'file'
+                            ? iconsByExtension.get(fileIconExtension(inspectedEntry.name))
+                            : undefined
+                        }
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <p className="break-words text-sm font-semibold text-ink">
+                      {inspectedEntry.name}
+                    </p>
+                    {annotationMap.get(inspectedEntry.id) ? (
+                      <TagBadges
+                        tags={annotationMap.get(inspectedEntry.id)!.tags}
+                        onTag={(tagName) =>
+                          navigate({
+                            filter: encodeFileFilters({
+                              scope: 'all',
+                              tagFilter: { names: [tagName], match: 'all' },
+                            }),
+                          })
+                        }
+                      />
+                    ) : null}
+                  </div>
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                    <div>
+                      <dt className="text-ink-muted">{t('files.explorer.inspectorMetaType')}</dt>
+                      <dd className="mt-0.5 truncate font-medium text-ink">
+                        {inspectedEntry.kind === 'file'
+                          ? inspectedEntry.mediaType || t('files.discovery.file')
+                          : inspectedEntry.kind === 'folder'
+                            ? t('files.folder')
+                            : t('files.navigation.shortcut')}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-ink-muted">{t('files.explorer.inspectorMetaSize')}</dt>
+                      <dd className="mt-0.5 font-medium text-ink">
+                        {inspectedEntry.kind === 'file' ? bytes(inspectedEntry.sizeBytes) : '—'}
+                      </dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="text-ink-muted">{t('files.explorer.inspectorMetaUpdated')}</dt>
+                      <dd className="mt-0.5 font-medium text-ink">
+                        {time.full(inspectedEntry.updatedAt)}
+                      </dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="text-ink-muted">{t('files.explorer.inspectorMetaCreated')}</dt>
+                      <dd className="mt-0.5 font-medium text-ink">
+                        {time.full(inspectedEntry.createdAt)}
+                      </dd>
+                    </div>
+                  </dl>
+                  {!trash ? (
+                    <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+                      <Action
+                        size="sm"
+                        variant="secondary"
+                        leadingIcon={<Eye className="size-4" />}
+                        onPress={() => {
+                          if (inspectedEntry.kind === 'folder')
+                            navigate({ parent: inspectedEntry.id });
+                          else void showPreview(inspectedEntry);
+                        }}
+                      >
+                        {t('files.explorer.open')}
+                      </Action>
+                      {inspectedEntry.kind === 'file' ? (
+                        <Action
+                          size="sm"
+                          variant="secondary"
+                          leadingIcon={<Download className="size-4" />}
+                          onPress={() => void download(inspectedEntry)}
+                        >
+                          {t('files.download')}
+                        </Action>
+                      ) : null}
+                      {inspectedEntry.kind !== 'shortcut' ? (
+                        <Action
+                          size="sm"
+                          variant="secondary"
+                          leadingIcon={<Share2 className="size-4" />}
+                          onPress={() => setShareTarget(inspectedEntry)}
+                        >
+                          {t('files.share')}
+                        </Action>
+                      ) : null}
+                      {inspectedEntry.kind === 'file' ? (
+                        <Action
+                          size="sm"
+                          variant="quiet"
+                          leadingIcon={<History className="size-4" />}
+                          onPress={() => setVersionEntry(inspectedEntry)}
+                        >
+                          {t('files.versions.title')}
+                        </Action>
+                      ) : null}
+                      <Action
+                        size="sm"
+                        variant="quiet"
+                        leadingIcon={<Pencil className="size-4" />}
+                        onPress={() => showDetails(inspectedEntry)}
+                      >
+                        {t('files.explorer.inspectorEditDetails')}
+                      </Action>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="pt-6 text-center text-xs leading-5 text-ink-muted">
+                  {t('files.explorer.inspectorEmpty')}
+                </p>
+              )}
+            </aside>
+          ) : null}
+        </div>
         {listing &&
         listing.total > 0 &&
         !loading &&
@@ -1628,10 +2023,10 @@ export function FilesPage({
             {t('files.discovery.galleryBudget', { count: listing.maxGalleryEntries })}
           </p>
         ) : null}
-        <p className="hidden text-xs text-ink-muted md:block">
-          {t('files.discovery.keyboardHint')}
-        </p>
-        {listing && preferences.thumbnails && thumbnailIds.size > 0 ? (
+        {listing &&
+        preferences.thumbnails &&
+        thumbnailIds.size > 0 &&
+        listing.items.length > listing.maxGalleryEntries ? (
           <p className="text-xs text-ink-muted">
             {t('files.discovery.thumbnailBudget', { count: listing.maxGalleryEntries })}
           </p>
@@ -1669,7 +2064,7 @@ export function FilesPage({
             </Action>
           </div>
         ) : null}
-        {listing ? (
+        {listing && !trash ? (
           <p className="text-xs text-ink-muted">
             {t('files.uploadLimit', {
               size: bytes(listing.maxFileBytes),
@@ -1905,6 +2300,11 @@ export function FilesPage({
             reload();
           }}
         />
+      ) : null}
+      {historySettingsOpen ? (
+        <Suspense fallback={<p role="status">{t('files.retention.loading')}</p>}>
+          <HistorySettingsDialog onClose={() => setHistorySettingsOpen(false)} />
+        </Suspense>
       ) : null}
       {zipSelection ? (
         <Suspense fallback={<p role="status">{t('files.previewLoading')}</p>}>

@@ -62,15 +62,12 @@ export function AuthFrame({ children }: Readonly<{ children: ReactNode }>) {
           className="surface-auth-story hidden min-h-128 flex-col justify-center gap-8 p-10 lg:flex"
           aria-label={profile?.name || t('auth.brandTitle')}
         >
-          <ProductMasthead name={name} description={t('brand.edition')} />
+          <ProductMasthead name={name} description={t('auth.brandTitle')} />
           <div>
-            <p className="text-sm font-semibold text-brand">
-              {profile?.name || t('auth.brandEyebrow')}
-            </p>
-            <h2 className="mt-4 text-balance text-4xl font-extrabold tracking-tight text-ink">
+            <h2 className="text-balance text-3xl font-extrabold tracking-tight text-ink">
               {t('auth.brandTitle')}
             </h2>
-            <p className="mt-5 max-w-sm whitespace-pre-wrap break-words text-base leading-8 text-ink-muted">
+            <p className="mt-4 max-w-sm whitespace-pre-wrap break-words text-base leading-8 text-ink-muted">
               {profile?.description || t('auth.brandDescription')}
             </p>
           </div>

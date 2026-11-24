@@ -61,7 +61,7 @@ describe('AppProviders hydration（clouddrive.shell v0 → v1）', () => {
     await waitFor(() => expect(document.documentElement).toHaveAttribute('data-hydrated', 'true'));
     expect(document.documentElement).toHaveAttribute('lang', 'en');
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
-    expect(document.documentElement).toHaveAttribute('data-accent', 'pink');
+    expect(document.documentElement).toHaveAttribute('data-accent', 'blue');
     expect(screen.getByText('en')).toBeVisible();
     // v0 显式 dark → themeMode=dark；collapsed → sidebarBehavior=collapsed（不套新默认）。
     const prefs = useShellStore.getState().preferences;
@@ -79,15 +79,15 @@ describe('AppProviders hydration（clouddrive.shell v0 → v1）', () => {
     // 内验证——避免跨测试重复 rehydrate 的持久化闩锁）。
     useShellStore.getState().updateCategory('appearance', {
       themeMode: 'light',
-      accent: 'blue',
+      accent: 'pink',
     } as never);
     await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'light'));
-    expect(document.documentElement).toHaveAttribute('data-accent', 'blue');
+    expect(document.documentElement).toHaveAttribute('data-accent', 'pink');
     const updated = JSON.parse(localStorage.getItem('clouddrive.shell') ?? 'null') as {
       state?: { preferences?: { appearance?: { themeMode?: string; accent?: string } } };
     } | null;
     expect(updated?.state?.preferences?.appearance?.themeMode).toBe('light');
-    expect(updated?.state?.preferences?.appearance?.accent).toBe('blue');
+    expect(updated?.state?.preferences?.appearance?.accent).toBe('pink');
     expect(consoleError).not.toHaveBeenCalled();
     consoleError.mockRestore();
   });

@@ -14,7 +14,7 @@ export const navigationContribution = {
       labelKey: 'systemTools.nav.filesystem',
       groupId: 'administration',
       order: 44,
-      iconId: 'resource',
+      iconId: 'settings',
       routeId: 'system-tools.filesystem',
     },
     {
@@ -22,7 +22,7 @@ export const navigationContribution = {
       labelKey: 'systemTools.nav.blobs',
       groupId: 'administration',
       order: 47,
-      iconId: 'resource',
+      iconId: 'data',
       routeId: 'system-tools.blobs',
     },
     {
@@ -30,7 +30,7 @@ export const navigationContribution = {
       labelKey: 'systemTools.nav.files',
       groupId: 'administration',
       order: 46,
-      iconId: 'resource',
+      iconId: 'list',
       routeId: 'system-tools.files',
     },
     {
@@ -38,7 +38,7 @@ export const navigationContribution = {
       labelKey: 'systemTools.nav.shares',
       groupId: 'administration',
       order: 48,
-      iconId: 'resource',
+      iconId: 'navigation',
       routeId: 'system-tools.shares',
     },
     {
@@ -46,7 +46,7 @@ export const navigationContribution = {
       labelKey: 'systemTools.nav.tasks',
       groupId: 'administration',
       order: 49,
-      iconId: 'resource',
+      iconId: 'async',
       routeId: 'system-tools.tasks',
     },
     {
@@ -54,7 +54,7 @@ export const navigationContribution = {
       labelKey: 'systemTools.nav.nodes',
       groupId: 'administration',
       order: 50,
-      iconId: 'resource',
+      iconId: 'api',
       routeId: 'system-tools.nodes',
     },
     {
@@ -62,7 +62,7 @@ export const navigationContribution = {
       labelKey: 'systemTools.nav.storage',
       groupId: 'administration',
       order: 51,
-      iconId: 'resource',
+      iconId: 'surfaces',
       routeId: 'system-tools.storage',
     },
     {
@@ -70,7 +70,7 @@ export const navigationContribution = {
       labelKey: 'administration.runtime',
       groupId: 'administration',
       order: 45,
-      iconId: 'identity',
+      iconId: 'analytics',
       routeId: 'system-tools.runtime',
     },
     {

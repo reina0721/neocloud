@@ -1,9 +1,10 @@
 'use client';
-import { Cloud } from '../../../src/files/icons';
+import { Cloud, RefreshCw } from '../../../src/files/icons';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { useFileTime } from './use-file-time';
-import { Page, Toolbar } from '@clouddrive/surface-foundation/layout';
+import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
 import { Action } from '@clouddrive/ui-adapter/action';
+import { IconAction } from '@clouddrive/ui-adapter/icon-action';
 import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type {
@@ -69,16 +70,16 @@ export function ConnectionsPage() {
   return (
     <>
       <Page>
-        <Toolbar
-          label={t('files.connections.title')}
-          primary={<h1 className="text-2xl font-semibold">{t('files.connections.title')}</h1>}
-          secondary={
-            <div className="flex flex-wrap gap-2">
+        <PageHeader
+          title={t('files.connections.title')}
+          description={t('files.connections.subtitle')}
+          actions={
+            <>
+              <IconAction label={t('files.refresh')} disabled={loading} onPress={refresh} tooltip>
+                <RefreshCw className="size-5" aria-hidden="true" />
+              </IconAction>
               <Action variant="secondary" onPress={() => setShowLocks(true)}>
                 {t('files.locks.title')}
-              </Action>
-              <Action variant="secondary" disabled={loading} onPress={refresh}>
-                {t('files.refresh')}
               </Action>
               <Action
                 disabled={!available || !page || page.metadataLimited}
@@ -86,11 +87,10 @@ export function ConnectionsPage() {
               >
                 {t('files.connections.create')}
               </Action>
-            </div>
+            </>
           }
         />
         <section className="rounded-panel border border-border bg-surface p-4 sm:p-6">
-          <p className="mt-2 text-sm text-ink-muted">{t('files.connections.subtitle')}</p>
           {notice ? (
             <p role="status" className="mt-4">
               {notice}
@@ -197,32 +197,34 @@ export function ConnectionsPage() {
                   ))}
                 </ul>
               )}
-              <div className="mt-4 flex justify-end gap-2">
-                <Action
-                  variant="secondary"
-                  disabled={!previous.length}
-                  onPress={() => {
-                    setCursor(previous.at(-1) ?? '');
-                    setPrevious((value) => value.slice(0, -1));
-                    setLoading(true);
-                    setFailure('');
-                  }}
-                >
-                  {t('files.connections.previous')}
-                </Action>
-                <Action
-                  variant="secondary"
-                  disabled={!page.nextCursor}
-                  onPress={() => {
-                    setPrevious((value) => [...value, cursor]);
-                    setCursor(page.nextCursor);
-                    setLoading(true);
-                    setFailure('');
-                  }}
-                >
-                  {t('files.connections.next')}
-                </Action>
-              </div>
+              {previous.length > 0 || Boolean(page.nextCursor) ? (
+                <div className="mt-4 flex justify-end gap-2">
+                  <Action
+                    variant="secondary"
+                    disabled={!previous.length}
+                    onPress={() => {
+                      setCursor(previous.at(-1) ?? '');
+                      setPrevious((value) => value.slice(0, -1));
+                      setLoading(true);
+                      setFailure('');
+                    }}
+                  >
+                    {t('files.connections.previous')}
+                  </Action>
+                  <Action
+                    variant="secondary"
+                    disabled={!page.nextCursor}
+                    onPress={() => {
+                      setPrevious((value) => [...value, cursor]);
+                      setCursor(page.nextCursor);
+                      setLoading(true);
+                      setFailure('');
+                    }}
+                  >
+                    {t('files.connections.next')}
+                  </Action>
+                </div>
+              ) : null}
             </>
           ) : null}
         </section>

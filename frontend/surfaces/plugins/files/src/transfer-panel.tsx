@@ -6,6 +6,7 @@ import { TextField, SelectField } from '@clouddrive/ui-adapter/form-field';
 import { ProgressMeter } from '@clouddrive/ui-adapter/progress-meter';
 import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
 import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
 import { FilesError, type FileListing } from '../../../src/files/model';
 import {
   transferMatches,
@@ -214,22 +215,27 @@ export function TransferPanel({ compact = false }: Readonly<{ compact?: boolean 
                 {item.replacementId ? (
                   <span className="text-xs text-warning">{t('files.versions.upload')}</span>
                 ) : null}
-                <span role="status" className="text-sm text-ink-muted">
+                <StatusPill
+                  tone={
+                    item.phase === 'completed'
+                      ? 'success'
+                      : item.phase === 'failed'
+                        ? 'danger'
+                        : item.phase === 'paused' || item.phase === 'canceled'
+                          ? 'warning'
+                          : 'neutral'
+                  }
+                >
                   {t(`files.transferPhase.${item.phase}`)}
-                </span>
+                </StatusPill>
               </div>
               {item.expiresAt && !finished ? (
                 <p className="break-words text-xs text-ink-muted">
                   {t('files.time.transferExpires', { value: time.full(item.expiresAt) })}
                 </p>
               ) : null}
-              {item.sizeKnown ? (
-                <ProgressMeter
-                  value={percent}
-                  label={t(hashing ? 'files.hashingProgress' : 'files.uploadProgress', {
-                    name: item.name,
-                  })}
-                />
+              {finished ? null : item.sizeKnown ? (
+                <ProgressMeter value={percent} label={t(`files.transferPhase.${item.phase}`)} />
               ) : (
                 <p role="status" className="text-sm text-ink-muted">
                   {t('files.unknownTransferSize')}

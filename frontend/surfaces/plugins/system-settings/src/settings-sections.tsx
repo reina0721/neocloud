@@ -6,8 +6,8 @@ import { RouteLink, route } from '@clouddrive/plugin-framework/plugin';
 export function SettingsSections({ active }: Readonly<{ active: 'site' | 'registration' }>) {
   const { t } = useFrontendTranslation();
   const links = [
-    { id: 'site', title: t('systemSettings.site.title'), target: route('system-settings.site') },
     { id: 'registration', title: t('systemSettings.title'), target: route('system-settings') },
+    { id: 'site', title: t('systemSettings.site.title'), target: route('system-settings.site') },
   ];
   return (
     <nav

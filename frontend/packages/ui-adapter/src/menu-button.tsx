@@ -15,6 +15,7 @@ export type MenuAction = Readonly<{
   icon?: ReactNode;
   disabled?: boolean;
   tone?: 'default' | 'danger';
+  selected?: boolean;
 }>;
 
 export type MenuChoice = Readonly<{
@@ -82,30 +83,38 @@ export function MenuButton({
     setOpen(false);
     onAction(id);
   };
-  const renderAction = (item: MenuAction, selectable = false, selectedId?: string) => (
-    <MenuItem
-      key={item.id}
-      disabled={item.disabled}
-      onClick={() => act(item.id)}
-      role={selectable ? 'menuitemradio' : 'menuitem'}
-      aria-checked={selectable ? item.id === selectedId : undefined}
-      selected={selectable && item.id === selectedId}
-      className={`ui-option ${item.tone === 'danger' ? 'text-danger' : ''}`}
-    >
-      {item.icon ? (
-        <span aria-hidden="true" className="flex size-icon shrink-0 items-center">
-          {item.icon}
-        </span>
-      ) : null}
-      <span className="min-w-0 flex-1">
-        <span className="block font-medium">{item.label}</span>
-        {item.description ? (
-          <span className="mt-0.5 block text-xs text-ink-muted">{item.description}</span>
+  const renderAction = (item: MenuAction, selectable = false, selectedId?: string) => {
+    const isSelectable = selectable || item.selected !== undefined;
+    const isSelected = Boolean(item.selected || (selectable && item.id === selectedId));
+    return (
+      <MenuItem
+        key={item.id}
+        disabled={item.disabled}
+        onClick={() => act(item.id)}
+        role={isSelectable ? 'menuitemradio' : 'menuitem'}
+        aria-checked={isSelectable ? isSelected : undefined}
+        selected={isSelected}
+        className={`ui-option ${item.tone === 'danger' ? 'text-danger' : ''}`}
+      >
+        {item.icon ? (
+          <span aria-hidden="true" className="flex size-icon shrink-0 items-center">
+            {item.icon}
+          </span>
         ) : null}
-      </span>
-      {selectable && item.id === selectedId ? <span aria-hidden="true">✓</span> : null}
-    </MenuItem>
-  );
+        <span className="min-w-0 flex-1">
+          <span className="block font-medium">{item.label}</span>
+          {item.description ? (
+            <span className="mt-0.5 block text-xs text-ink-muted">{item.description}</span>
+          ) : null}
+        </span>
+        {isSelected ? (
+          <span aria-hidden="true" className="shrink-0 font-semibold text-brand">
+            ✓
+          </span>
+        ) : null}
+      </MenuItem>
+    );
+  };
   const renderItem = (item: MenuAction | MenuChoice) =>
     'options' in item ? (
       <MenuItem
@@ -135,9 +144,14 @@ export function MenuButton({
   const entries = groups
     ? groups.flatMap((group, index) => [
         ...(index ? [<Divider key={group.id + '-divider'} />] : []),
-        <ListSubheader key={group.id + '-header'} component="div" className="px-3 py-2 text-xs">
+        <ListSubheader
+          key={group.id + '-header'}
+          component="div"
+          disableSticky
+          className="px-3 py-1.5 text-xs font-semibold leading-5 text-ink-muted"
+        >
           {index === 0 && header ? (
-            <div className="mb-3 border-b border-border pb-3">{header}</div>
+            <div className="mb-2 border-b border-border pb-2.5">{header}</div>
           ) : null}
           <span>{group.label}</span>
         </ListSubheader>,
@@ -178,7 +192,7 @@ export function MenuButton({
         }}
         slotProps={{
           paper: {
-            className: 'ui-overlay-surface ui-menu-surface min-w-60',
+            className: `ui-overlay-surface ui-menu-surface min-w-56 ${groups ? 'ui-menu-surface-grouped' : ''}`,
             role: 'region',
             'aria-label': ariaLabel,
             tabIndex: 0,

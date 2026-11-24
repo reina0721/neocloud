@@ -272,7 +272,7 @@ export function SettingsResponsiveNavigation({ meta }: Readonly<{ meta: Settings
 export function SettingsCategoryHeader({ meta }: Readonly<{ meta: SettingsCategoryMeta }>) {
   const { t } = useFrontendTranslation();
   return (
-    <div className="hidden md:block">
+    <div className="min-w-0 flex-1">
       <PageHeader
         eyebrow={t('settings.eyebrow')}
         title={t(meta.labelKey)}

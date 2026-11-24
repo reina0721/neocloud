@@ -7,6 +7,7 @@ import { ComboField, SelectField, CheckboxField } from '@clouddrive/ui-adapter/f
 import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
 import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
 import { Action } from '@clouddrive/ui-adapter/action';
+import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
 import { useRequiredAdministration } from '../../../src/administration/context';
 import type { AccountPreferences } from '../../../src/administration/model';
 import { useRemote, RemoteRegion } from '../../../src/administration/resource-state';
@@ -203,11 +204,19 @@ export function BackendPreferences() {
                 ),
               ]}
             />
-            <PreferenceEditor
-              key={state.value.version}
-              value={state.value}
-              onSaved={state.reload}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <PreferenceEditor
+                key={state.value.version}
+                value={state.value}
+                onSaved={state.reload}
+              />
+              <RouteLink
+                target={route('settings')}
+                className="inline-flex min-h-control items-center rounded-action border border-border bg-surface px-4 text-sm font-medium text-ink transition-colors hover:bg-surface-muted hover:text-brand focus-visible:ring-2 focus-visible:ring-focus-ring"
+              >
+                {t('administration.openAppearanceSettings')}
+              </RouteLink>
+            </div>
           </div>
         ) : null}
       </RemoteRegion>

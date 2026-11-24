@@ -47,7 +47,7 @@ it.each(['login', 'expired'] as const)(
     const identifier = screen.getByLabelText('邮箱', { exact: true });
     const password = screen.getByLabelText('密码', { exact: true });
     const submit = screen.getByRole('button', { name: '登录' });
-    expect(identifier).toHaveAccessibleDescription('也可输入 IAM 用户名。');
+    expect(identifier).toHaveAccessibleDescription('也可输入用户名。');
     expect(identifier).toHaveAttribute('type', 'text');
 
     fireEvent.change(identifier, { target: { value: '-Owner' } });
@@ -74,7 +74,7 @@ it.each([
   renderAuth(kind, mode);
   const identifier = await screen.findByLabelText('邮箱', { exact: true });
   expect(identifier).toHaveAttribute('type', 'email');
-  expect(identifier).not.toHaveAccessibleDescription('也可输入 IAM 用户名。');
+  expect(identifier).not.toHaveAccessibleDescription('也可输入用户名。');
   fireEvent.change(identifier, { target: { value: 'Owner_01' } });
   fireEvent.click(screen.getByRole('button', { name: submitName }));
   await waitFor(() => expect(identifier).toHaveAttribute('aria-invalid', 'true'));

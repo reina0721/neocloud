@@ -7,10 +7,7 @@ import {
   CONTENT_WIDTHS,
   DENSITY_LEVELS,
   IDLE_LOCK_MINUTES,
-  LAYOUT_MODES,
   MOTION_PREFERENCES,
-  PAGE_TRANSITIONS,
-  PREFERENCES_VERSION,
   THEME_MODES,
   type Preferences,
 } from '@clouddrive/surface/preferences-model';
@@ -22,20 +19,11 @@ import { TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useSyncExternalStore, useState } from 'react';
 
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-
 /**
  * 快捷偏好抽屉（Host Shell）。
  *
- * 单一事实源：与 `/settings` 共用 `PreferencesPort`（同一 store、同一持久化 key
- * `clouddrive.shell`、同一校验与失败语义），抽屉只提供高频项的即时预览，
- * 不建立第二份偏好状态，也不复制设置页的业务规则。
+ * 单一事实源：与 `/settings` 共用 `PreferencesPort` 与一致文案，仅保留高频外观与安全项。
  */
-/** pageTransition 值 → i18n key 片段（fade-slide → fadeSlide）。 */
-function transitionKey(value: (typeof PAGE_TRANSITIONS)[number]): string {
-  return value.replace(/-([a-z])/g, (_, char: string) => char.toUpperCase());
-}
-
 export function QuickPreferencesDrawer({
   open,
   onOpenChange,
@@ -44,7 +32,6 @@ export function QuickPreferencesDrawer({
   const port = usePreferencesPort<Preferences>();
   const preferences = useSyncExternalStore(port.subscribe, port.getSnapshot, port.getSnapshot);
   const [failure, setFailure] = useState<string | null>(null);
-  const feedback = useFeedback();
 
   const apply = (result: { ok: true } | { ok: false; code: string }) => {
     setFailure(
@@ -53,25 +40,6 @@ export function QuickPreferencesDrawer({
   };
   const update = <C extends keyof Preferences>(category: C, patch: Partial<Preferences[C]>) => {
     apply(port.updateCategory(category, patch));
-  };
-
-  const copyConfiguration = async () => {
-    const payload = JSON.stringify(
-      {
-        kind: 'clouddrive.preferences',
-        version: PREFERENCES_VERSION,
-        exportedAt: new Date().toISOString(),
-        preferences,
-      },
-      null,
-      2,
-    );
-    try {
-      await navigator.clipboard.writeText(payload);
-      feedback.notify({ tone: 'success', title: t('shell.quickPreferences.copied') });
-    } catch {
-      feedback.notify({ tone: 'danger', title: t('shell.quickPreferences.copyFailure') });
-    }
   };
 
   return (
@@ -159,60 +127,6 @@ export function QuickPreferencesDrawer({
               update('appearance', { motion: value as Preferences['appearance']['motion'] })
             }
           />
-          <SelectField
-            label={t('shell.quickPreferences.pageTransition')}
-            options={PAGE_TRANSITIONS.map((value) => ({
-              value,
-              label: t(`shell.quickPreferences.pageTransitions.${transitionKey(value)}`),
-            }))}
-            value={preferences.appearance.pageTransition}
-            onValueChange={(value) =>
-              update('appearance', {
-                pageTransition: value as Preferences['appearance']['pageTransition'],
-              })
-            }
-          />
-        </section>
-
-        <section className="space-y-3">
-          <h3 className="text-sm font-semibold text-ink">{t('shell.quickPreferences.layout')}</h3>
-          <RadioGroupField
-            label={t('shell.quickPreferences.layoutMode')}
-            options={LAYOUT_MODES.map((value) => ({
-              value,
-              label: t(`shell.quickPreferences.layoutModes.${value}`),
-              description: t(`shell.quickPreferences.layoutModes.${value}Hint`),
-            }))}
-            presentation="rows"
-            value={preferences.navigation.layoutMode}
-            onValueChange={(value) =>
-              update('navigation', {
-                layoutMode: value as Preferences['navigation']['layoutMode'],
-              })
-            }
-          />
-          <SwitchField
-            checked={preferences.navigation.pageTabsEnabled}
-            description={t('shell.quickPreferences.pageTabsDescription')}
-            label={t('shell.quickPreferences.pageTabs')}
-            presentation="row"
-            onCheckedChange={(checked) => update('navigation', { pageTabsEnabled: checked })}
-          />
-          <SwitchField
-            checked={preferences.navigation.pageTabsPinned}
-            description={t('shell.quickPreferences.pageTabsPinnedDescription')}
-            disabled={!preferences.navigation.pageTabsEnabled}
-            label={t('shell.quickPreferences.pageTabsPinned')}
-            presentation="row"
-            onCheckedChange={(checked) => update('navigation', { pageTabsPinned: checked })}
-          />
-          <SwitchField
-            checked={preferences.navigation.breadcrumbs}
-            description={t('shell.quickPreferences.breadcrumbsDescription')}
-            label={t('shell.quickPreferences.breadcrumbs')}
-            presentation="row"
-            onCheckedChange={(checked) => update('navigation', { breadcrumbs: checked })}
-          />
         </section>
 
         <section className="space-y-3">
@@ -255,9 +169,6 @@ export function QuickPreferencesDrawer({
 
         <section className="space-y-3 border-t border-border pt-4">
           <div className="flex flex-wrap gap-2">
-            <Action size="sm" variant="secondary" onPress={() => void copyConfiguration()}>
-              {t('shell.quickPreferences.copy')}
-            </Action>
             <Link
               className="inline-flex h-control-sm items-center rounded-control border border-border bg-surface px-3 text-sm font-semibold text-ink outline-none hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-focus-ring"
               href="/settings"

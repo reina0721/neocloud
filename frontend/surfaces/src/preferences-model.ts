@@ -112,7 +112,7 @@ export type AppearancePreferences = Readonly<{
 
 export const defaultAppearance: AppearancePreferences = {
   themeMode: 'system',
-  accent: 'pink',
+  accent: 'blue',
   density: 'standard',
   fontScale: 'standard',
   contentWidth: 'auto',
