@@ -62,6 +62,7 @@ type Workspace = httpbinding.Workspace
 type WorkspaceRecord = httpbinding.WorkspaceRecord
 
 var ErrInvalidCredentials = httpbinding.ErrInvalidCredentials
+var ErrCurrentPasswordMismatch = httpbinding.ErrCurrentPasswordMismatch
 var ErrSessionInvalid = httpbinding.ErrSessionInvalid
 var ErrMFAInvalidCode = httpbinding.ErrMFAInvalidCode
 var ErrMFAChallengeInvalid = httpbinding.ErrMFAChallengeInvalid

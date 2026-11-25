@@ -93,7 +93,11 @@ func (port consoleIAMPort) Logout(ctx context.Context, id string) error {
 	return consoleError(port.service.Logout(ctx, id))
 }
 func (port consoleIAMPort) ChangePassword(ctx context.Context, id, current, next string) error {
-	return consoleError(port.service.ChangePassword(ctx, id, current, next))
+	err := port.service.ChangePassword(ctx, id, current, next)
+	if errors.Is(err, iamservice.ErrCurrentPasswordMismatch) {
+		return fmt.Errorf("%w: %w", console.ErrCurrentPasswordMismatch, err)
+	}
+	return consoleError(err)
 }
 func (port consoleIAMPort) Registration(ctx context.Context) (console.RegistrationSettings, error) {
 	value, err := port.service.Registration(ctx)

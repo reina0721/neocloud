@@ -10,6 +10,7 @@ import type { AccountSecurityPort } from '@clouddrive/surface/identity/runtime';
 import { createJsonClient, ApiError } from '../api/json-client';
 import { readMockDatabase, mutateMockDatabase } from '../identity/mock-database';
 import { passwordDigest, MOCK_DEMO_PASSWORD } from './mock-adapter';
+import { isCurrentPasswordMismatch } from './password-change-problem';
 
 export function createBackendAccountSecurity(
   apiBaseUrl: string,
@@ -23,6 +24,9 @@ export function createBackendAccountSecurity(
       if (!(error instanceof ApiError)) throw new IdentityError('unavailable');
       if (error.code === 'limit') throw error;
       if (error.code !== 'http') throw new IdentityError(error.code);
+      if (path === '/auth/password' && isCurrentPasswordMismatch(error)) {
+        throw new IdentityError('validation', undefined, [{ field: 'password', reason: 'format' }]);
+      }
       const expected =
         error.status === 401
           ? 'unauthenticated'

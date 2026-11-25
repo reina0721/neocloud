@@ -36,6 +36,8 @@ const (
 var (
 	ErrSetupClosed        = errors.New("iam setup is closed")
 	ErrInvalidCredentials = errors.New("iam credentials are invalid")
+	// 确认现有凭据校验成功执行后，单独区分口令内容不匹配。
+	ErrCurrentPasswordMismatch = fmt.Errorf("iam current password does not match: %w", ErrInvalidCredentials)
 	ErrAccountLocked      = errors.New("iam account is locked")
 	ErrAccountDisabled    = errors.New("iam account is disabled")
 	ErrSessionInvalid     = errors.New("iam session is invalid")
@@ -797,7 +799,7 @@ func (s *Service) ChangePassword(ctx context.Context, accountID, currentPassword
 			return credentialVerificationError(verifyErr)
 		}
 		if !verification.Match {
-			return ErrInvalidCredentials
+			return ErrCurrentPasswordMismatch
 		}
 		now := s.clock.Now().UTC()
 		if err = s.ensurePasswordNotReused(txCtx, r, accountID, newPassword); err != nil {

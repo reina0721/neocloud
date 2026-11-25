@@ -224,6 +224,13 @@ func TestConsoleSQLiteDataIsolationAndRestart(t *testing.T) {
 	owner.request(t, "POST", "/auth/password/verify", map[string]any{"password": "owner-password-long", "accountId": ownerID}, 422)
 	owner.request(t, "POST", "/auth/password/verify", map[string]any{"password": "owner-password-long"}, 403, map[string]string{"Origin": "https://untrusted.example"})
 	owner.request(t, "POST", "/auth/password/verify", map[string]any{"password": "owner-password-long"}, 403, map[string]string{"X-CSRF-Token": "incorrect"})
+	wrongPassword := owner.request(t, "POST", "/auth/password", map[string]any{"currentPassword": "incorrect", "newPassword": "proposed-password-long"}, 401)
+	if problem := wrongPassword["error"].(map[string]any); problem["code"] != "unauthenticated" || problem["reason"] != "current-password-invalid" {
+		t.Fatalf("当前密码错误的响应意外：%v", problem)
+	}
+	if current := owner.request(t, "GET", "/auth/session", nil, 200); current["sessionId"] != beforeVerify["sessionId"] {
+		t.Fatal("当前密码错误影响了有效会话")
+	}
 	owner.request(t, "POST", "/native/iam/self/password/verify", map[string]any{"password": "owner-password-long"}, 200)
 	owner.request(t, "GET", "/auth/access", nil, 200)
 	for _, path := range []string{"/native/iam/self/mfa", "/native/iam/api-tokens", "/native/organization/departments", "/native/navigation/menus", "/native/auth/audit"} {
@@ -375,7 +382,10 @@ func TestConsoleSQLiteDataIsolationAndRestart(t *testing.T) {
 	}
 	member.request(t, "GET", "/navigation", nil, 403)
 	member.request(t, "POST", "/auth/password", map[string]any{"currentPassword": "temporary-password-long", "newPassword": "replacement-password-long"}, 204)
-	member.request(t, "GET", "/auth/session", nil, 401)
+	expired := member.request(t, "GET", "/auth/session", nil, 401)
+	if problem := expired["error"].(map[string]any); problem["code"] != "unauthenticated" || problem["reason"] != nil {
+		t.Fatalf("真实会话失效的响应意外：%v", problem)
+	}
 	member.request(t, "POST", "/auth/login", map[string]any{"email": "member@clouddrive.test", "password": "replacement-password-long"}, 200)
 	other := &consoleTestClient{base: member.base, cookies: map[string]string{}}
 	other.request(t, "GET", "/auth/csrf", nil, 200)

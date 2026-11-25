@@ -114,3 +114,25 @@ it('enforces cookie, CSRF and strict session responses without falling back to m
   // A deployment may accept a shorter minimum than the default policy.
   await security.changePassword(MOCK_DEMO_PASSWORD, 'Custom2026!');
 });
+
+it('区分改密时输错当前密码与实际会话失效', async () => {
+  const request = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(Response.json({ token: 'security-csrf' }))
+    .mockResolvedValueOnce(
+      Response.json(
+        { error: { code: 'unauthenticated', reason: 'current-password-invalid' } },
+        { status: 401 },
+      ),
+    )
+    .mockResolvedValueOnce(Response.json({ token: 'security-csrf' }))
+    .mockResolvedValueOnce(Response.json({ error: { code: 'unauthenticated' } }, { status: 401 }));
+  const security = createBackendAccountSecurity('/api', request);
+  await expect(security.changePassword('wrong-password', 'new-password')).rejects.toMatchObject({
+    code: 'validation',
+    fields: [{ field: 'password', reason: 'format' }],
+  });
+  await expect(security.changePassword('wrong-password', 'new-password')).rejects.toMatchObject({
+    code: 'unauthenticated',
+  });
+});

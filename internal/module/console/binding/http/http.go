@@ -391,6 +391,10 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := h.iam.ChangePassword(r.Context(), current(r).Identity.AccountID, body.CurrentPassword, body.NewPassword); err != nil {
+			if errors.Is(err, ErrCurrentPasswordMismatch) {
+				failure(w, http.StatusUnauthorized, "unauthenticated", "current-password-invalid")
+				return
+			}
 			problem(w, err)
 			return
 		}

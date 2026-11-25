@@ -60,6 +60,8 @@ IAM 在 composition 提供普通 WebUI 业务 mutation 共用的窄 Origin/CSRF 
 
 网页自助改密（含强制改密）仅预检非空、最多 128 个字符及新旧密码不同，最小长度、历史和阻止列表由部署的服务端策略裁决，不在浏览器固定为默认最小长度。演示模式没有部署策略，继续采用默认最少 15 位规则。
 
+网页改密接口在当前密码确实不匹配时返回 401 和 `current-password-invalid` 原因。个人账户与强制改密页面把焦点交还当前密码字段，保留可重试的表单。会话失效沿用登录保护，改密成功后需要重新登录。
+
 ## 登录限流（077）
 
 `http.rateLimit` 扩展按路径前缀规则（`rateLimit.routes`，默认空=不启用）：命中路径使用独立 token bucket，未命中继续使用全局规则。`/api/v1/iam/login`、`/api/v1/iam/setup` 可配置更严限流（IP 维度），与账号级锁定（MaxFailedAttempts）构成「IP+账号」双维度防爆破；429 `rate_limited`/503 Problem 与全局门禁同语义，`setup` 仅 loopback/同源语义不变。限流为 per-generation 进程级 token bucket，多实例一致性沿用既有边界。

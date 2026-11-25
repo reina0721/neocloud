@@ -119,6 +119,7 @@ var (
 	ErrSetupClosed         = errors.New("console setup closed")
 	ErrPasswordReused      = errors.New("console password already used")
 	ErrInvalidCredentials  = errors.New("console invalid credentials")
+	ErrCurrentPasswordMismatch = errors.New("console current password does not match")
 	ErrSessionInvalid      = errors.New("console invalid session")
 	ErrMFAInvalidCode      = ErrInvalidCredentials
 	ErrMFAChallengeInvalid = ErrInvalidCredentials

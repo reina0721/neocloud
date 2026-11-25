@@ -12,6 +12,7 @@ export const authenticationResources = {
         changePasswordSubmit: '保存并重新登录',
         changePasswordFailure: '未能修改密码',
         changePasswordCurrentInput: '请输入当前密码，最多 128 个字符。',
+        changePasswordCurrentMismatch: '当前密码不正确，请重试。',
         changePasswordNewInput: '请输入不同于当前密码的新密码，最多 128 个字符。',
         changePasswordAuthentication:
           '当前密码不正确，或登录会话已失效。请核对当前密码或重新登录。',
@@ -152,6 +153,7 @@ export const authenticationResources = {
         changePasswordSubmit: 'Save and sign in again',
         changePasswordFailure: 'Could not change your password',
         changePasswordCurrentInput: 'Enter your current password, up to 128 characters.',
+        changePasswordCurrentMismatch: 'Your current password is incorrect. Try again.',
         changePasswordNewInput:
           'Enter a password different from your current one, up to 128 characters.',
         changePasswordAuthentication:

@@ -83,3 +83,26 @@ it.each([
   expect(alert).toHaveTextContent(description);
   expect(request.mock.calls[1]?.[0]).toBe('/api/console/v1/auth/password');
 });
+
+it('当前密码输错时保留新密码，并将焦点定位回当前密码', async () => {
+  const request = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(Response.json({ token: 'fixture-csrf' }))
+    .mockResolvedValueOnce(
+      Response.json(
+        { error: { code: 'unauthenticated', reason: 'current-password-invalid' } },
+        { status: 401 },
+      ),
+    );
+  renderPasswordChange(request);
+  const current = screen.getByLabelText('当前密码', { exact: true });
+  const next = screen.getByLabelText('新密码', { exact: true });
+  fireEvent.change(current, { target: { value: 'wrong-password' } });
+  fireEvent.change(next, { target: { value: 'new-test' } });
+  fireEvent.click(screen.getByRole('button', { name: '保存并重新登录' }));
+  await waitFor(() => expect(current).toHaveAccessibleDescription(/当前密码不正确/));
+  await waitFor(() => expect(current).toHaveFocus());
+  expect(next).toHaveValue('new-test');
+  fireEvent.change(current, { target: { value: 'correct-password' } });
+  expect(current).not.toHaveAttribute('aria-invalid', 'true');
+});

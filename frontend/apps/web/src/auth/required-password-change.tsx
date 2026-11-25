@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { FoundationForm, useFoundationForm } from '@clouddrive/form-foundation';
 import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
@@ -13,6 +13,7 @@ import { AuthError } from './contract';
 import { ApiError, createJsonClient } from '../api/json-client';
 import { useAuth } from './context';
 import { passwordRuleMessage, usePasswordPolicy } from './password-policy';
+import { isCurrentPasswordMismatch } from './password-change-problem';
 
 function passwordChangeError(error: unknown): string {
   if (error instanceof AuthError && error.code === 'configuration')
@@ -20,6 +21,7 @@ function passwordChangeError(error: unknown): string {
   if (!(error instanceof ApiError)) return 'auth.changePasswordUnavailable';
   if (error.code === 'network' || error.code === 'timeout' || error.code === 'protocol')
     return `auth.errors.${error.code}`;
+  if (isCurrentPasswordMismatch(error)) return 'auth.changePasswordCurrentMismatch';
   if (error.status === 401) return 'auth.changePasswordAuthentication';
   if (error.status === 403) return 'auth.changePasswordForbidden';
   if (error.status === 422) return 'auth.changePasswordPolicy';
@@ -44,11 +46,17 @@ export function RequiredPasswordChange() {
   const auth = useAuth();
   const policy = usePasswordPolicy(true);
   const [failure, setFailure] = useState<string>();
+  const currentPasswordRef = useRef<HTMLInputElement | null>(null);
   const form = useFoundationForm<{ currentPassword: string; newPassword: string }>({
     schema: () =>
       import('@clouddrive/surface/identity').then((module) => module.changePasswordSchema),
     defaultValues: { currentPassword: '', newPassword: '' },
   });
+  const currentPassword = form.registerField('currentPassword');
+  const currentPasswordMismatch = failure === 'auth.changePasswordCurrentMismatch';
+  useEffect(() => {
+    if (!form.isSubmitting && currentPasswordMismatch) currentPasswordRef.current?.focus();
+  }, [currentPasswordMismatch, form.isSubmitting]);
   return (
     <AuthFrame>
       <Page>
@@ -56,7 +64,7 @@ export function RequiredPasswordChange() {
           title={t('auth.requiredPasswordTitle')}
           description={t('auth.requiredPasswordDescription')}
         />
-        {failure ? (
+        {failure && !currentPasswordMismatch ? (
           <AlertBanner
             tone="danger"
             announcement="urgent"
@@ -89,9 +97,23 @@ export function RequiredPasswordChange() {
             purpose="current"
             showLabel={t('auth.showPassword')}
             hideLabel={t('auth.hidePassword')}
-            {...form.registerField('currentPassword')}
-            {...(form.hasError('currentPassword')
-              ? { error: t('auth.changePasswordCurrentInput') }
+            {...currentPassword}
+            ref={(instance) => {
+              currentPasswordRef.current = instance;
+              currentPassword.ref(instance);
+            }}
+            onChange={(event) => {
+              if (currentPasswordMismatch) setFailure(undefined);
+              currentPassword.onChange(event);
+            }}
+            {...(currentPasswordMismatch || form.hasError('currentPassword')
+              ? {
+                  error: t(
+                    currentPasswordMismatch
+                      ? 'auth.changePasswordCurrentMismatch'
+                      : 'auth.changePasswordCurrentInput',
+                  ),
+                }
               : {})}
           />
           <PasswordField
