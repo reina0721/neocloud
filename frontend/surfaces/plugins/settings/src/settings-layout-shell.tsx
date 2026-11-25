@@ -6,31 +6,21 @@
  * - `SETTINGS_CATEGORIES`：单一映射表（shortId/routeId/模型 key/label/iconId/分组）。
  * - `SettingsShellContext`：layout 一次性装配的偏好 ctx 与失败横幅，下传各分类 page
  *   （page 只渲染分类区段，不重复订阅/装配——切换分类仅换右侧内容，壳不重挂载）。
- * - `SettingsSidebar`：SettingsLayout 左栏（固定顶部搜索 + 分组分类导航，含语义
- *   NavigationIcon 与 active 高亮）。
+ * - `SettingsSearch`：位于设置内容顶部，命中后聚焦相应分类字段。
  * - `useSettingsPersistReport`：统一持久化失败呈现（reportingPort + notSaved + 重试）。
  */
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { type PersistResult } from '@clouddrive/plugin-framework/preferences';
 import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
-import { NavigationIcon } from '@clouddrive/surface/icon-presentation';
 import { PageHeader } from '@clouddrive/surface-foundation/layout';
-import { DrawerSurface } from '@clouddrive/ui-adapter/overlays';
 import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { Menu, X } from 'lucide-react';
-import { Panel } from '@clouddrive/ui-adapter/panel';
 import { SearchBox } from '@clouddrive/ui-adapter/search-box';
 
 import type { Ctx } from './category-sections';
 import { SettingsShellContext } from './settings-context';
-import {
-  SETTINGS_CATEGORIES,
-  SETTINGS_NAV_GROUPS,
-  type SettingsCategoryMeta,
-} from './settings-categories';
+import { SETTINGS_CATEGORIES, type SettingsCategoryMeta } from './settings-categories';
 import { RestoreAllButton, RestoreCategoryButton } from './restore-defaults';
 import { PreferencesTransferPanel } from './preferences-transfer-panel';
 import { normalizeSearchTerm, searchSettings } from './settings-index';
@@ -57,16 +47,10 @@ export function SettingsShellProvider({
 /* 跨目录搜索                                                            */
 /* ------------------------------------------------------------------ */
 
-/** 跨目录设置搜索（固定在侧边栏顶部；命中跳对应分类页）。 */
-export function SettingsSearch({
-  onNavigate,
-  query,
-  onQueryChange,
-}: Readonly<{ onNavigate?: () => void; query?: string; onQueryChange?: (value: string) => void }>) {
+/** 跨目录设置搜索，命中后定位对应字段。 */
+export function SettingsSearch() {
   const { t } = useFrontendTranslation();
-  const [internalQuery, setInternalQuery] = useState('');
-  const searchQuery = query ?? internalQuery;
-  const setSearchQuery = onQueryChange ?? setInternalQuery;
+  const [searchQuery, setSearchQuery] = useState('');
   const resolveEntryText = (key: string) => {
     const resolved = t(key);
     return typeof resolved === 'string' ? resolved : key;
@@ -107,7 +91,6 @@ export function SettingsSearch({
                     {},
                     { fragment: `settings-${entry.category}-${entry.fieldId}` },
                   )}
-                  {...(onNavigate ? { onNavigate } : {})}
                 >
                   <span className="min-w-0 truncate font-medium text-ink">{t(entry.nameKey)}</span>
                   <span className="shrink-0 text-xs text-ink-muted">
@@ -123,81 +106,6 @@ export function SettingsSearch({
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* 侧边栏（搜索顶部 + 分组分类导航）                                      */
-/* ------------------------------------------------------------------ */
-
-/** 分类导航项（含语义 Icon + active 高亮；沿用主导航 leaf 视觉规律）。 */
-function NavItem({
-  meta,
-  active,
-  onNavigate,
-}: Readonly<{ meta: SettingsCategoryMeta; onNavigate?: () => void; active: string }>) {
-  const { t } = useFrontendTranslation();
-  const isActive = active === meta.categoryKey;
-  return (
-    <RouteLink
-      ariaLabel={t(meta.labelKey)}
-      className={`flex w-full items-center gap-2.5 rounded-control px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring ${
-        isActive
-          ? 'bg-brand-soft/60 font-semibold text-brand'
-          : 'text-ink-muted hover:bg-surface-muted hover:text-ink'
-      }`}
-      target={route(meta.targetRouteId)}
-      {...(onNavigate ? { onNavigate } : {})}
-    >
-      <NavigationIcon
-        className={isActive ? 'size-4 shrink-0' : 'size-4 shrink-0'}
-        iconId={meta.iconId}
-      />
-      <span className="min-w-0 truncate">{t(meta.labelKey)}</span>
-    </RouteLink>
-  );
-}
-
-/** SettingsLayout 左栏：固定顶部搜索 + 分组分类导航。 */
-export function SettingsSidebar({
-  active,
-  onNavigate,
-  query,
-  onQueryChange,
-  embedded = false,
-}: Readonly<{
-  active: string;
-  onNavigate?: () => void;
-  query?: string;
-  onQueryChange?: (value: string) => void;
-  embedded?: boolean;
-}>) {
-  const { t } = useFrontendTranslation();
-  return (
-    <Panel appearance={embedded ? 'embedded' : 'outlined'} className="p-3">
-      <SettingsSearch
-        {...(onNavigate ? { onNavigate } : {})}
-        {...(query !== undefined ? { query } : {})}
-        {...(onQueryChange ? { onQueryChange } : {})}
-      />
-      <nav aria-label={t('settings.navLabel')} className="mt-4 grid gap-4">
-        {SETTINGS_NAV_GROUPS.map((groupMeta) => (
-          <div className="grid gap-0.5" key={groupMeta.group}>
-            <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-ink-muted">
-              {t(groupMeta.labelKey)}
-            </p>
-            {SETTINGS_CATEGORIES.filter((meta) => meta.group === groupMeta.group).map((meta) => (
-              <NavItem
-                active={active}
-                key={meta.shortId}
-                meta={meta}
-                {...(onNavigate ? { onNavigate } : {})}
-              />
-            ))}
-          </div>
-        ))}
-      </nav>
-    </Panel>
-  );
-}
-
 /** 内容区 wrapper（分类区段 + 失败横幅）。 */
 export function SettingsContentFrame({
   banner,
@@ -208,64 +116,6 @@ export function SettingsContentFrame({
       {banner}
       {children}
     </div>
-  );
-}
-
-export function SettingsResponsiveNavigation({ meta }: Readonly<{ meta: SettingsCategoryMeta }>) {
-  const { t } = useFrontendTranslation();
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  useEffect(() => {
-    const closeOnDesktop = () => {
-      if (globalThis.innerWidth >= 1280) setOpen(false);
-    };
-    globalThis.addEventListener('resize', closeOnDesktop);
-    return () => globalThis.removeEventListener('resize', closeOnDesktop);
-  }, []);
-  return (
-    <>
-      <div className="hidden xl:block">
-        <SettingsSidebar active={meta.categoryKey} query={query} onQueryChange={setQuery} />
-      </div>
-      <div className="xl:hidden">
-        <div className="flex h-14 items-center gap-2 border-b border-border bg-surface px-3 md:hidden">
-          <IconAction label={t('settings.switchCategory')} onPress={() => setOpen(true)}>
-            <Menu className="size-5" />
-          </IconAction>
-          <h1 className="min-w-0 flex-1 truncate text-lg font-bold text-brand">
-            {t(meta.labelKey)}
-          </h1>
-          <RouteLink
-            target={route('files')}
-            ariaLabel={t('common.close')}
-            className="ui-navigation-focus grid size-control shrink-0 place-items-center rounded-full text-ink-muted"
-          >
-            <X className="size-5" aria-hidden="true" />
-          </RouteLink>
-        </div>
-        <div className="hidden md:block">
-          <Action fullWidth variant="secondary" onPress={() => setOpen(true)}>
-            {t('settings.switchCategory')}
-          </Action>
-        </div>
-        <DrawerSurface
-          triggerLabel={t('settings.switchCategory')}
-          title={t('settings.navLabel')}
-          description={t('settings.searchResultHint')}
-          closeLabel={t('settings.closeCategories')}
-          isOpen={open}
-          onOpenChange={setOpen}
-        >
-          <SettingsSidebar
-            embedded
-            active={meta.categoryKey}
-            query={query}
-            onQueryChange={setQuery}
-            onNavigate={() => setOpen(false)}
-          />
-        </DrawerSurface>
-      </div>
-    </>
   );
 }
 

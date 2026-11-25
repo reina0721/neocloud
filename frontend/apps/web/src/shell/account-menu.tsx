@@ -3,6 +3,9 @@
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { Avatar, UserIdentity } from '@clouddrive/ui-adapter/identity';
 import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
+import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
+import { useAccountNotificationSettings } from '@clouddrive/surface/administration/runtime';
+import type { Preferences } from '@clouddrive/surface/preferences-model';
 import {
   ChevronDown,
   Languages,
@@ -36,8 +39,8 @@ export function AccountMenu({
   const user = auth.session?.user;
   const locale = useShellStore((state) => state.locale);
   const themeMode = useShellStore((state) => state.preferences.appearance.themeMode);
-  const setLocale = useShellStore((state) => state.setLocale);
-  const updateCategory = useShellStore((state) => state.updateCategory);
+  const preferences = usePreferencesPort<Preferences>();
+  const readonlyPreferences = useAccountNotificationSettings()?.sharedReadOnly === true;
   const languageName = t(
     locale === 'zh-CN' ? 'shell.accountMenu.chinese' : 'shell.accountMenu.english',
   );
@@ -89,8 +92,16 @@ export function AccountMenu({
               selectedId: `locale:${locale}`,
               icon: <Languages className="size-4" />,
               options: [
-                { id: 'locale:zh-CN', label: t('shell.accountMenu.chinese') },
-                { id: 'locale:en', label: t('shell.accountMenu.english') },
+                {
+                  id: 'locale:zh-CN',
+                  label: t('shell.accountMenu.chinese'),
+                  disabled: readonlyPreferences,
+                },
+                {
+                  id: 'locale:en',
+                  label: t('shell.accountMenu.english'),
+                  disabled: readonlyPreferences,
+                },
               ],
             },
             {
@@ -107,12 +118,23 @@ export function AccountMenu({
                   <Sun className="size-4" />
                 ),
               options: [
-                { id: 'theme:light', label: themeNames.light, icon: <Sun className="size-4" /> },
-                { id: 'theme:dark', label: themeNames.dark, icon: <Moon className="size-4" /> },
+                {
+                  id: 'theme:light',
+                  label: themeNames.light,
+                  icon: <Sun className="size-4" />,
+                  disabled: readonlyPreferences,
+                },
+                {
+                  id: 'theme:dark',
+                  label: themeNames.dark,
+                  icon: <Moon className="size-4" />,
+                  disabled: readonlyPreferences,
+                },
                 {
                   id: 'theme:system',
                   label: themeNames.system,
                   icon: <Monitor className="size-4" />,
+                  disabled: readonlyPreferences,
                 },
               ],
             },
@@ -139,9 +161,11 @@ export function AccountMenu({
       ]}
       onAction={(id) => {
         if (id === 'locale:zh-CN' || id === 'locale:en')
-          setLocale(id === 'locale:en' ? 'en' : 'zh-CN');
+          preferences.updateCategory('localeRegion', {
+            language: id === 'locale:en' ? 'en' : 'zh-CN',
+          });
         else if (id === 'theme:light' || id === 'theme:dark' || id === 'theme:system')
-          updateCategory('appearance', {
+          preferences.updateCategory('appearance', {
             themeMode: id === 'theme:system' ? 'system' : id === 'theme:dark' ? 'dark' : 'light',
           });
         else if (id === 'settings' || id === 'account' || id === 'lock-screen') onNavigate(id);

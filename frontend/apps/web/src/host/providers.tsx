@@ -31,7 +31,7 @@ import { LeaveConfirmationGuard } from './leave-confirm-dialog';
 import { createHostLeaveConfirmPort } from './leave-confirm-port';
 import { MotionPolicyProvider } from './motion-policy';
 import { createHostNotificationsPort } from './notifications-port';
-import { createHostPreferencesPort } from './preferences-port';
+import { createHostPreferencesPort, HostPreferencesContext } from './preferences-port';
 import { createHostWorkbenchPort } from './workbench-port';
 import { createHostWorkspacePort } from './workspace-port';
 import { focusRouteAnchor } from './anchor-focus';
@@ -209,47 +209,49 @@ function RuntimeProviders({ children }: Readonly<{ children: ReactNode }>) {
         {!hasHydrated || !workspaceHasHydrated ? (
           <AppLoadingSurface label="正在加载应用 / Loading application" />
         ) : (
-          <PreferencesProvider port={preferencesPort}>
-            <NavigationAdminPortProvider>
-              <WorkspaceProvider port={workspacePort}>
-                <WorkbenchProvider port={workbenchPort}>
-                  <CommandsProvider port={commandsPort}>
-                    <NotificationsProvider port={notificationsPort}>
-                      <LeaveConfirmProvider port={leaveConfirmPort}>
-                        <LeaveConfirmationGuard>
-                          <FeedbackProvider
-                            closeLabel={t('common.close')}
-                            loadingLabel={t('common.feedbackLoading')}
-                            toastDurationMs={toastDurationMs}
-                          >
-                            {hydrationIssue ? (
-                              <div className="mx-auto max-w-screen-2xl p-4 sm:p-6 xl:p-8">
-                                <AlertBanner
-                                  actionLabel={t('shell.recoverDefaults')}
-                                  announcement="urgent"
-                                  description={hydrationIssue.reason}
-                                  icon={<AlertTriangle className="size-4" aria-hidden="true" />}
-                                  onAction={() => {
-                                    // 恢复默认：清除损坏记录并重载（不触碰收藏/通知/草稿等
-                                    // 独立 Store）。
-                                    window.localStorage.removeItem('clouddrive.shell');
-                                    window.location.reload();
-                                  }}
-                                  title={t('shell.hydrationIssueTitle')}
-                                  tone="warning"
-                                />
-                              </div>
-                            ) : null}
-                            {children}
-                          </FeedbackProvider>
-                        </LeaveConfirmationGuard>
-                      </LeaveConfirmProvider>
-                    </NotificationsProvider>
-                  </CommandsProvider>
-                </WorkbenchProvider>
-              </WorkspaceProvider>
-            </NavigationAdminPortProvider>
-          </PreferencesProvider>
+          <HostPreferencesContext value={preferencesPort}>
+            <PreferencesProvider port={preferencesPort}>
+              <NavigationAdminPortProvider>
+                <WorkspaceProvider port={workspacePort}>
+                  <WorkbenchProvider port={workbenchPort}>
+                    <CommandsProvider port={commandsPort}>
+                      <NotificationsProvider port={notificationsPort}>
+                        <LeaveConfirmProvider port={leaveConfirmPort}>
+                          <LeaveConfirmationGuard>
+                            <FeedbackProvider
+                              closeLabel={t('common.close')}
+                              loadingLabel={t('common.feedbackLoading')}
+                              toastDurationMs={toastDurationMs}
+                            >
+                              {hydrationIssue ? (
+                                <div className="mx-auto max-w-screen-2xl p-4 sm:p-6 xl:p-8">
+                                  <AlertBanner
+                                    actionLabel={t('shell.recoverDefaults')}
+                                    announcement="urgent"
+                                    description={hydrationIssue.reason}
+                                    icon={<AlertTriangle className="size-4" aria-hidden="true" />}
+                                    onAction={() => {
+                                      // 恢复默认：清除损坏记录并重载（不触碰收藏/通知/草稿等
+                                      // 独立 Store）。
+                                      window.localStorage.removeItem('clouddrive.shell');
+                                      window.location.reload();
+                                    }}
+                                    title={t('shell.hydrationIssueTitle')}
+                                    tone="warning"
+                                  />
+                                </div>
+                              ) : null}
+                              {children}
+                            </FeedbackProvider>
+                          </LeaveConfirmationGuard>
+                        </LeaveConfirmProvider>
+                      </NotificationsProvider>
+                    </CommandsProvider>
+                  </WorkbenchProvider>
+                </WorkspaceProvider>
+              </NavigationAdminPortProvider>
+            </PreferencesProvider>
+          </HostPreferencesContext>
         )}
       </RuntimeSiteProfile>
     </MaterialThemeProvider>

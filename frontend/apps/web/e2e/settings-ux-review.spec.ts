@@ -1,4 +1,5 @@
 import { saveEvidenceScreenshot } from './evidence-screenshot';
+import { waitForVisualReadiness } from './visual-readiness';
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { defaultPreferences, PREFERENCES_VERSION } from '@clouddrive/surface/preferences-model';
@@ -28,14 +29,28 @@ async function setup(page: Page, pinned = true) {
   );
 }
 
-async function chooseCategory(page: Page, name: string) {
-  const trigger = page.getByRole('button', { name: /切换分类与搜索/ });
-  await trigger.click();
-  const drawer = page.getByRole('dialog', { name: '设置分类' });
-  await expect(drawer).toBeVisible();
-  await drawer.getByRole('link', { name, exact: true }).click();
-  await expect(drawer).not.toBeVisible();
-  await expect(page.getByRole('heading', { level: 1, name, exact: true })).toBeVisible();
+const personalMenu = (page: Page) =>
+  page.getByRole('button', { name: '打开个人菜单', exact: true });
+const personalDrawer = (page: Page) => page.getByRole('dialog', { name: '个人中心', exact: true });
+
+async function chooseCategory(page: Page, name: string, heading = name) {
+  const mobile = (page.viewportSize()?.width ?? 0) < 1024;
+  const drawer = personalDrawer(page);
+  if (mobile) {
+    await personalMenu(page).click();
+    await expect(drawer).toBeVisible();
+  }
+  const nav = (mobile ? drawer : page).getByRole('navigation', {
+    name: '个人中心导航',
+    exact: true,
+  });
+  await expect(nav).toBeVisible();
+  const link = nav.getByRole('link', { name, exact: true });
+  if (!(await link.isVisible()))
+    await nav.getByRole('button', { name: '更多界面选项', exact: true }).click();
+  await link.click();
+  if (mobile) await expect(drawer).not.toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible();
 }
 
 for (const width of [1440, 390, 320]) {
@@ -282,64 +297,41 @@ for (const width of [1440, 390, 320]) {
   }
 }
 
-test('Sticky consumers resolve actual chrome height across live tabs and viewport changes', async ({
+test('Personal settings keep sticky chrome and fit the viewport independently of page tabs', async ({
   page,
 }) => {
   await setup(page);
   for (const width of [1440, 2560, 390, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/settings/navigation');
-    const enabled = page.getByRole('switch', { name: '顶部页面标签', exact: true });
-    const pinned = page.getByRole('switch', { name: '固定页面标签', exact: true });
-    for (const state of ['pinned', 'unpinned', 'hidden'] as const) {
-      if (state === 'pinned') {
-        if (!(await enabled.isChecked()))
-          await page.locator('label').filter({ has: enabled }).click();
-        if (!(await pinned.isChecked()))
-          await page.locator('label').filter({ has: pinned }).click();
-      } else if (state === 'unpinned') await page.locator('label').filter({ has: pinned }).click();
-      else await page.locator('label').filter({ has: enabled }).click();
+    await expect(page.getByRole('switch', { name: '固定页面标签', exact: true })).toBeChecked();
+    const banner = page.getByRole('banner');
+    const nav = page.getByRole('navigation', { name: '个人中心导航', exact: true });
+    await expect(banner).toBeVisible();
+    await expect(page.getByRole('navigation', { name: '页面标签', exact: true })).toBeHidden();
+    if (width >= 1024) {
+      await expect(nav).toBeVisible();
       await expect
-        .poll(() =>
-          page.locator('.surface-settings-nav').evaluate((nav) => {
-            const style = getComputedStyle(nav);
-            const chrome = Number.parseFloat(style.getPropertyValue('--shell-chrome-height'));
-            const gap =
-              innerWidth >= 1280
-                ? Number.parseFloat(
-                    getComputedStyle(document.documentElement).getPropertyValue('--spacing'),
-                  ) *
-                  Number.parseFloat(getComputedStyle(document.documentElement).fontSize) *
-                  4
-                : 0;
-            return Math.abs(Number.parseFloat(style.top) - chrome - gap);
-          }),
-        )
+        .poll(async () => {
+          const header = await banner.boundingBox();
+          const bounds = await nav.boundingBox();
+          return header && bounds ? Math.abs(bounds.y - header.y - header.height) : Infinity;
+        })
         .toBeLessThan(1);
-      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight / 2));
-      const nav = await page.locator('.surface-settings-nav').boundingBox();
-      if (width < 768) {
-        // 手机设置由自己的任务栏占据顶部，不叠加全局 Chrome 和页面标签。
-        await expect(page.getByRole('banner')).toBeHidden();
-        await expect(page.getByRole('navigation', { name: '页面标签' })).toBeHidden();
-        expect(nav?.y).toBeGreaterThanOrEqual(-1);
-      } else {
-        const header = await page.getByRole('banner').boundingBox();
-        expect(nav?.y).toBeGreaterThanOrEqual((header?.y ?? 0) + (header?.height ?? 0) - 1);
-        if (state === 'pinned') {
-          const tabs = await page.getByRole('navigation', { name: '页面标签' }).boundingBox();
-          expect(nav?.y).toBeGreaterThanOrEqual((tabs?.y ?? 0) + (tabs?.height ?? 0) - 1);
-        }
-      }
-      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
-        width,
-      );
-      await saveEvidenceScreenshot(page, {
-        path: `semantic-final/layout-${width}-${state}.png`,
-      });
-      await page.evaluate(() => window.scrollTo(0, 0));
+    } else {
+      await expect(nav).toBeHidden();
+      await expect(personalMenu(page)).toBeInViewport();
     }
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect
+      .poll(async () => Math.abs((await banner.boundingBox())?.y ?? Infinity))
+      .toBeLessThan(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      width,
+    );
+    await saveEvidenceScreenshot(page, {
+      path: `semantic-final/layout-${width}-personal.png`,
+    });
   }
 });
 
@@ -372,18 +364,18 @@ test('Short desktop window retains access to the last settings category', async 
   await page.setViewportSize({ width: 1440, height: 500 });
   await setup(page);
   await page.goto('/settings/actions');
-  await page.evaluate(() => window.scrollTo(0, 800));
-  const nav = page.locator('.surface-settings-nav');
-  await expect
-    .poll(() => nav.evaluate((element) => element.clientHeight < element.scrollHeight))
-    .toBe(true);
-  await nav.getByRole('link', { name: '快捷键', exact: true }).focus();
-  const target = await nav.getByRole('link', { name: '快捷键', exact: true }).boundingBox();
-  expect(target?.y).toBeGreaterThanOrEqual(139);
-  expect((target?.y ?? 500) + (target?.height ?? 0)).toBeLessThanOrEqual(500);
+  const nav = page.getByRole('navigation', { name: '个人中心导航', exact: true });
+  const advanced = nav.getByRole('button', { name: '更多界面选项', exact: true });
+  await advanced.focus();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL('/settings/shortcuts');
-  await expect(page.getByRole('heading', { name: '快捷键', level: 2, exact: true })).toBeVisible();
+  await expect(advanced).toHaveAttribute('aria-expanded', 'true');
+  const last = nav.getByRole('link', { name: '高级导航', exact: true });
+  for (let index = 0; index < 5; index++) await page.keyboard.press('Tab');
+  await expect(last).toBeFocused();
+  await expect(last).toBeInViewport();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL('/settings/navigation');
+  await expect(page.getByRole('heading', { name: '导航', level: 1, exact: true })).toBeVisible();
   await saveEvidenceScreenshot(page, {
     animations: 'disabled',
     path: 'semantic-final/layout-short-desktop.png',
@@ -451,31 +443,37 @@ for (const width of [320, 390, 430, 768, 1024, 1279]) {
     await setup(page);
     await page.goto('/settings/actions');
     await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
-    await expect(page.locator('.surface-settings-nav')).toBeVisible();
+    const mobile = width < 1024;
+    const nav = page.getByRole('navigation', { name: '个人中心导航', exact: true });
+    const banner = page.getByRole('banner');
+    await expect(banner).toBeVisible();
     for (const offset of [650, 1600, 3000]) {
       await page.evaluate((y) => window.scrollTo(0, y), offset);
       await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
-      const position = await page.locator('.surface-settings-nav').boundingBox();
-      if (width < 768) {
-        await expect(page.getByRole('navigation', { name: '页面标签' })).toBeHidden();
-        expect(position?.y).toBeGreaterThanOrEqual(-1);
-        expect(position?.y).toBeLessThanOrEqual(1);
+      if (mobile) {
+        await expect(nav).toBeHidden();
+        await expect(personalMenu(page)).toBeInViewport();
       } else {
-        const tabs = await page.getByRole('navigation', { name: '页面标签' }).boundingBox();
-        expect(position?.y).toBeGreaterThanOrEqual((tabs?.y ?? 0) + (tabs?.height ?? 0) - 1);
-        expect(position?.y).toBeLessThan(210);
+        await expect(nav).toBeInViewport();
+        const header = await banner.boundingBox();
+        const position = await nav.boundingBox();
+        expect(position?.y).toBeGreaterThanOrEqual((header?.y ?? 0) + (header?.height ?? 0) - 1);
       }
     }
-    await chooseCategory(page, '通知');
+    await chooseCategory(page, '通知提醒', '通知');
     await page.evaluate(() => window.scrollTo(0, 800));
     await chooseCategory(page, '可访问性');
     await page.getByRole('link', { name: '前往外观分类' }).click();
     await expect(page).toHaveURL('/settings');
     await page.evaluate(() => window.scrollTo(0, 1200));
     await chooseCategory(page, '操作偏好');
-    await page.getByRole('button', { name: /切换分类与搜索/ }).click();
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('button', { name: /切换分类与搜索/ })).toBeFocused();
+    if (mobile) {
+      await personalMenu(page).click();
+      await expect(personalDrawer(page)).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(personalDrawer(page)).not.toBeVisible();
+      await expect(personalMenu(page)).toBeFocused();
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,
     );
@@ -492,22 +490,37 @@ test('Pinned page tabs track the header; unpinned tabs scroll and persist after 
   await setup(page);
   await page.goto('/settings/navigation');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
-  await expect(page.getByRole('switch', { name: '顶部页面标签', exact: true })).toBeChecked();
+  const enabled = page.getByRole('switch', { name: '顶部页面标签', exact: true });
+  await expect(enabled).toBeChecked();
   const pinned = page.getByRole('switch', { name: '固定页面标签', exact: true });
   await expect(pinned).toBeChecked();
-  const tabs = page.getByRole('navigation', { name: '页面标签' });
+  const tabs = page.getByRole('navigation', { name: '页面标签', exact: true });
+  await expect(tabs).toBeHidden();
+  const managementPage = '/ui-elements/forms';
+  await page.goto(managementPage);
   await expect(tabs).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 700));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
   const pinnedBounds = await tabs.boundingBox();
   const headerBounds = await page.getByRole('banner').boundingBox();
   expect(pinnedBounds?.y).toBe((headerBounds?.y ?? 0) + (headerBounds?.height ?? 0));
+  await page.goto('/settings/navigation');
   await pinned.focus();
   await page.keyboard.press('Space');
   await expect(pinned).not.toBeChecked();
+  await page.goto(managementPage);
+  await expect(tabs).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 900));
-  expect((await tabs.boundingBox())?.y).toBeLessThan(0);
+  await expect.poll(async () => (await tabs.boundingBox())?.y ?? Infinity).toBeLessThan(0);
+  await page.goto('/settings/navigation');
+  await expect(pinned).not.toBeChecked();
   await page.reload();
   await expect(pinned).not.toBeChecked();
+  await enabled.focus();
+  await page.keyboard.press('Space');
+  await expect(enabled).not.toBeChecked();
+  await page.goto(managementPage);
+  await expect(tabs).toBeHidden();
 });
 
 test('All page tabs stay manageable on desktop and closing active restores useful focus', async ({
@@ -515,19 +528,27 @@ test('All page tabs stay manageable on desktop and closing active restores usefu
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await setup(page);
-  await page.goto('/settings');
-  const nav = page.getByRole('navigation', { name: '设置分类', exact: true });
-  for (const name of ['导航', '数据展示', '操作偏好', '语言与地区', '通知', '可访问性', '快捷键']) {
-    await nav.getByRole('link', { name, exact: true }).click();
-    await expect(page.getByRole('heading', { level: 1, name, exact: true })).toBeVisible();
-  }
-  const tabs = page.getByRole('navigation', { name: '页面标签' });
+  await page.goto('/workspace');
+  const nav = page.getByRole('navigation', { name: '主导航', exact: true });
+  const tabs = page.getByRole('navigation', { name: '页面标签', exact: true });
   const active = tabs.locator('[aria-current="page"]');
+  for (const href of [
+    '/reference-resources',
+    '/foundations',
+    '/motion',
+    '/states',
+    '/system-tools/icons',
+    '/analytics',
+  ]) {
+    await nav.locator(`a[href="${href}"]`).click();
+    await expect(page).toHaveURL(href);
+    await expect(active).toBeVisible();
+  }
   const bounds = await active.boundingBox();
   expect(bounds?.x).toBeGreaterThanOrEqual(0);
   expect((bounds?.x ?? 2000) + (bounds?.width ?? 0)).toBeLessThan(1440);
-  await tabs.getByRole('button', { name: '关闭 快捷键', exact: true }).click();
-  await expect(page).toHaveURL('/settings/accessibility');
+  await tabs.getByRole('button', { name: `关闭 ${await active.innerText()}`, exact: true }).click();
+  await expect(page).toHaveURL('/system-tools/icons');
   await expect(tabs.locator('[aria-current="page"]')).toBeFocused();
   await tabs.getByRole('button', { name: '页面标签', exact: true }).click();
   await page.getByRole('menuitem', { name: '关闭其他页面标签', exact: true }).click();
@@ -540,7 +561,9 @@ test('Settings drawer and form authority retain WCAG AA semantics in dark Englis
   await page.setViewportSize({ width: 390, height: 844 });
   await setup(page);
   await page.goto('/settings');
-  await page.getByRole('button', { name: /切换分类与搜索/ }).click();
+  await personalMenu(page).click();
+  await expect(personalDrawer(page)).toBeVisible();
+  await waitForVisualReadiness(page);
   expect(
     (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
       .violations,
@@ -555,6 +578,10 @@ test('Settings drawer and form authority retain WCAG AA semantics in dark Englis
     .getByRole('radiogroup', { name: '界面语言' })
     .getByText('English', { exact: true })
     .click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Language & region', exact: true }),
+  ).toBeVisible();
+  await waitForVisualReadiness(page);
   expect(
     (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
       .violations,
@@ -575,12 +602,17 @@ test.describe('Touch settings tasks', () => {
     await label.locator('.ui-switch').tap();
     await expect(input).toBeChecked();
     await page.evaluate(() => window.scrollTo(0, 1200));
-    await page.getByRole('button', { name: /切换分类与搜索/ }).tap();
-    await page.getByRole('dialog').getByRole('link', { name: '通知', exact: true }).tap();
+    await personalMenu(page).tap();
+    const drawer = personalDrawer(page);
+    await expect(drawer).toBeVisible();
+    const alerts = drawer.getByRole('link', { name: '通知提醒', exact: true });
+    if (!(await alerts.isVisible()))
+      await drawer.getByRole('button', { name: '更多界面选项', exact: true }).tap();
+    await alerts.tap();
     await expect(page).toHaveURL('/settings/notifications');
-    await expect(page.getByRole('dialog')).not.toBeVisible();
+    await expect(drawer).not.toBeVisible();
     await expect(page.getByRole('heading', { name: '通知', level: 1, exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: '关闭', exact: true })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: '返回我的文件', exact: true })).toHaveAttribute(
       'href',
       '/home',
     );
@@ -594,18 +626,16 @@ test('Settings keep search context, same-category position, and native Back cont
   await page.goto('/settings/actions');
   await page.evaluate(() => window.scrollTo(0, 1100));
   const before = await page.evaluate(() => window.scrollY);
-  await page.getByRole('button', { name: /切换分类与搜索/ }).click();
-  await page.getByRole('dialog').getByRole('link', { name: '操作偏好', exact: true }).click();
-  await expect(page.getByRole('dialog')).not.toBeVisible();
+  await chooseCategory(page, '操作偏好');
   expect(await page.evaluate(() => window.scrollY)).toBe(before);
-  await chooseCategory(page, '通知');
+  await chooseCategory(page, '通知提醒', '通知');
   await page.goBack();
   await expect(page).toHaveURL('/settings/actions');
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(before);
-  await page.getByRole('button', { name: /切换分类与搜索/ }).click();
-  await page.getByRole('searchbox', { name: '搜索设置项' }).fill('固定');
-  await page.getByRole('dialog').getByRole('link', { name: '固定页面标签', exact: true }).click();
+  const content = page.getByRole('main');
+  const search = content.getByRole('searchbox', { name: '搜索设置项', exact: true });
+  await search.fill('固定');
+  await content.getByRole('link', { name: '固定页面标签', exact: true }).click();
   await expect(page).toHaveURL(/#settings-navigation-pageTabsPinned$/);
-  await page.getByRole('button', { name: /切换分类与搜索/ }).click();
-  await expect(page.getByRole('searchbox', { name: '搜索设置项' })).toHaveValue('固定');
+  await expect(search).toHaveValue('固定');
 });

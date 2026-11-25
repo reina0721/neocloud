@@ -1,142 +1,97 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useContext, useLayoutEffect, useState } from 'react';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
 import { AlertTriangle } from 'lucide-react';
 import { useProductAccess } from '@clouddrive/surface/identity/runtime';
-import type { AccountPreferences, AdministrationPort } from '@clouddrive/surface/administration';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
-import { ApiError } from '../api/json-client';
+import type { AdministrationPort } from '@clouddrive/surface/administration';
+import type { AccountNotificationSettings } from '@clouddrive/surface/administration/runtime';
+import { HostPreferencesContext } from '../host/preferences-port';
 import { useShellStore } from '../state/use-shell-store';
-import { applyAccountPreferences } from './preferences';
+import { createAccountPreferencesSync, type AccountPreferencesStatus } from './preferences';
 
-function mapLocalToAccountPatch(
-  local: Preferences,
-  server: AccountPreferences,
-): AccountPreferences | null {
-  const language: AccountPreferences['language'] =
-    local.localeRegion.language === 'en' ? 'en-US' : 'zh-CN';
-  const timeZone = local.localeRegion.timeZone === 'auto' ? '' : local.localeRegion.timeZone;
-  const themeMode = local.appearance.themeMode;
-  const themePreset: AccountPreferences['themePreset'] =
-    local.appearance.accent === 'purple'
-      ? 'violet'
-      : local.appearance.accent === 'pink'
-        ? server.themePreset
-        : local.appearance.accent;
-  const density: AccountPreferences['density'] =
-    local.appearance.density === 'compact' ? 'compact' : 'comfortable';
-  const reduceMotion = local.appearance.motion === 'reduced';
-  const inApp = local.notifications.inAppNotifications;
+export type OwnedAccountNotificationSettings = Readonly<{
+  owner: string;
+  settings: AccountNotificationSettings;
+}>;
 
-  if (
-    server.language === language &&
-    server.timeZone === timeZone &&
-    server.themeMode === themeMode &&
-    server.themePreset === themePreset &&
-    server.density === density &&
-    server.reduceMotion === reduceMotion &&
-    server.notifications.inApp === inApp
-  ) {
-    return null;
-  }
-
-  return {
-    ...server,
-    language,
-    timeZone,
-    themeMode,
-    themePreset,
-    density,
-    reduceMotion,
-    notifications: { ...server.notifications, inApp },
-  };
-}
-
-export function AccountPreferencesSync({ port }: Readonly<{ port: AdministrationPort }>) {
-  const access = useProductAccess();
+export function AccountPreferencesSync({
+  port,
+  owner,
+  currentOwner,
+  publish,
+}: Readonly<{
+  port: AdministrationPort;
+  owner: string;
+  currentOwner: () => string | null;
+  publish: (value: OwnedAccountNotificationSettings | null) => void;
+}>) {
+  // 重新读取同一账号权限期间保留当前写入队列，拒绝或失败后卸载该作用域。
+  const access = useProductAccess({ retainDuringRefresh: true });
   const { t } = useFrontendTranslation();
-  const [failed, setFailed] = useState(false);
-  const [retry, setRetry] = useState(0);
-  const serverRef = useRef<AccountPreferences | null>(null);
-  const syncingRef = useRef(false);
-  const writeBlockedRef = useRef(false);
-  const allowed =
-    access.data?.nativePermissions?.includes('iam:account:self:preferences:read') ?? false;
-  const canWrite =
-    access.data?.nativePermissions?.includes('iam:account:self:preferences:write') ?? false;
+  const host = useContext(HostPreferencesContext);
+  const [notice, setNotice] = useState<{
+    issue: NonNullable<AccountPreferencesStatus['issue']>;
+    retry: () => void;
+    dismiss: () => void;
+  }>();
+  const currentAccess = access.data?.user.id === owner ? access.data.nativePermissions : undefined;
+  const readable = currentAccess?.includes('iam:account:self:preferences:read') ?? false;
+  const writable = currentAccess?.includes('iam:account:self:preferences:write') ?? false;
 
-  useEffect(() => {
-    if (!allowed) return;
-    let active = true;
-    void port.preferences().then(
-      (value) => {
-        if (!active) return;
-        setFailed(false);
-        serverRef.current = value;
-        if (value.version > 0) {
-          syncingRef.current = true;
-          applyAccountPreferences(value);
-          queueMicrotask(() => {
-            syncingRef.current = false;
-          });
-        }
+  useLayoutEffect(() => {
+    if (!readable || !host) return;
+    const ownsAccount = () => currentOwner() === owner;
+    const controller = createAccountPreferencesSync({
+      port,
+      ownsAccount,
+      writable,
+      publish: ({ issue, ...status }) => {
+        setNotice(
+          issue ? { issue, retry: controller.retry, dismiss: controller.dismiss } : undefined,
+        );
+        publish({ owner, settings: { ...status, update: controller.updateNotification } });
       },
-      () => {
-        if (active) setFailed(true);
-      },
-    );
-    return () => {
-      active = false;
-    };
-  }, [port, allowed, retry]);
-
-  useEffect(() => {
-    if (!allowed || !canWrite) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const unsubscribe = useShellStore.subscribe((state) => {
-      if (syncingRef.current || writeBlockedRef.current || !serverRef.current) return;
-      const next = mapLocalToAccountPatch(state.preferences, serverRef.current);
-      if (!next) return;
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        const latest = serverRef.current;
-        if (!latest || writeBlockedRef.current) return;
-        const payload = mapLocalToAccountPatch(useShellStore.getState().preferences, latest);
-        if (!payload) return;
-        syncingRef.current = true;
-        void port
-          .savePreferences(payload)
-          .then((saved) => {
-            serverRef.current = saved;
-          })
-          .catch((error: unknown) => {
-            if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-              writeBlockedRef.current = true;
-            }
-            // 本地已生效；后端同步失败不打断界面操作，等待下次保存或刷新同步。
-          })
-          .finally(() => {
-            queueMicrotask(() => {
-              syncingRef.current = false;
-            });
-          });
-      }, 600);
     });
+    const unbind = host.bindAccountPreferences(controller.accept);
+    publish({
+      owner,
+      settings: {
+        values: null,
+        editable: writable,
+        sharedReadOnly: !writable,
+        pending: false,
+        update: controller.updateNotification,
+      },
+    });
+    void controller.load();
+    window.addEventListener('focus', controller.refresh);
     return () => {
-      unsubscribe();
-      if (timer) clearTimeout(timer);
+      unbind();
+      controller.dispose();
+      window.removeEventListener('focus', controller.refresh);
+      if (ownsAccount()) useShellStore.getState().applyAccountPreferences(undefined);
+      publish(null);
     };
-  }, [port, allowed, canWrite]);
+  }, [currentOwner, host, owner, port, publish, readable, writable]);
 
-  return failed ? (
-    <AlertBanner
-      actionLabel={t('administration.retry')}
-      onAction={() => setRetry((value) => value + 1)}
-      tone="warning"
-      title={t('administration.preferencesLoadFailure')}
-      description={t('administration.failureDescription')}
-      icon={<AlertTriangle aria-hidden="true" />}
-    />
+  return readable && notice ? (
+    <div className="mx-auto max-w-screen-2xl px-4 pt-4">
+      <AlertBanner
+        actionLabel={t(
+          notice.issue === 'conflict'
+            ? 'administration.preferencesOverwrite'
+            : 'administration.retry',
+        )}
+        onAction={notice.retry}
+        dismissLabel={t('administration.preferencesDiscard')}
+        onDismiss={notice.dismiss}
+        announcement="polite"
+        tone="warning"
+        title={t(`administration.preferencesSyncIssue.${notice.issue}.title`)}
+        description={t(`administration.preferencesSyncIssue.${notice.issue}.hint`)}
+        icon={<AlertTriangle aria-hidden="true" />}
+      />
+    </div>
   ) : null;
 }

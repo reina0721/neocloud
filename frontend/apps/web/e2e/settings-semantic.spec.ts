@@ -5,9 +5,11 @@ import AxeBuilder from '@axe-core/playwright';
 for (const width of [1440, 320]) {
   test(`Comparison choices adapt to their container and retain long labels at ${width}`, async ({
     browser,
+    storageState,
   }) => {
     const context = await browser.newContext({
       baseURL: e2eBaseUrl,
+      ...(storageState ? { storageState } : {}),
       viewport: { width, height: 900 },
     });
     try {
@@ -49,8 +51,13 @@ for (const width of [1440, 320]) {
 
 test('System contrast responds independently of the assistive-settings toggle', async ({
   browser,
+  storageState,
 }) => {
-  const context = await browser.newContext({ baseURL: e2eBaseUrl, contrast: 'more' });
+  const context = await browser.newContext({
+    baseURL: e2eBaseUrl,
+    contrast: 'more',
+    ...(storageState ? { storageState } : {}),
+  });
   try {
     const page = await context.newPage();
     await page.goto('/settings/accessibility');
@@ -85,32 +92,37 @@ test('System contrast responds independently of the assistive-settings toggle', 
 
 test('Mobile category navigation honors scroll preference after drawer focus restoration', async ({
   browser,
+  storageState,
 }) => {
   const context = await browser.newContext({
     baseURL: e2eBaseUrl,
+    ...(storageState ? { storageState } : {}),
     viewport: { width: 390, height: 844 },
     hasTouch: true,
   });
   try {
     const page = await context.newPage();
-    const choose = async (name: string) => {
-      await page.getByRole('button', { name: /切换分类与搜索/ }).click();
-      const drawer = page.getByRole('dialog', { name: '设置分类' });
-      await drawer.getByRole('link', { name, exact: true }).click();
+    const choose = async (href: string, advanced = false) => {
+      await page.getByRole('button', { name: '打开个人菜单' }).click();
+      const drawer = page.getByRole('dialog', { name: '个人中心' });
+      if (advanced) {
+        const more = drawer.getByRole('button', { name: '更多界面选项' });
+        if ((await more.getAttribute('aria-expanded')) === 'false') await more.click();
+      }
+      await drawer.locator(`a[href="${href}"]`).click();
       await expect(drawer).not.toBeVisible();
     };
     await page.goto('/settings');
     await page.getByRole('button', { name: '切换预览内容', exact: true }).click();
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
-    await choose('通知');
+    await choose('/settings/notifications', true);
+    await expect(page).toHaveURL(/\/settings\/notifications$/);
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     const title = await page.getByRole('heading', { level: 1 }).boundingBox();
-    const header = await page.locator('.surface-settings-nav').boundingBox();
+    const header = await page.getByRole('banner').boundingBox();
     if (!title || !header) throw new Error('Missing navigation geometry');
-    await expect(page.getByRole('banner')).toBeHidden();
-    expect(title.y).toBeGreaterThanOrEqual(header.y);
-    expect(title.y + title.height).toBeLessThanOrEqual(header.y + header.height);
-    await choose('导航');
+    expect(title.y).toBeGreaterThanOrEqual(header.y + header.height);
+    await choose('/settings/navigation', true);
     const scrollPreference = page.getByRole('switch', {
       name: '跳转后自动滚动到顶部',
       exact: true,
@@ -119,8 +131,9 @@ test('Mobile category navigation honors scroll preference after drawer focus res
     await expect(scrollPreference).not.toBeChecked();
     await page.getByRole('button', { name: '恢复全部默认', exact: true }).press('End');
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-    await choose('外观');
-    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await choose('/settings');
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   } finally {
     await context.close();
   }
@@ -129,9 +142,11 @@ test('Mobile category navigation honors scroll preference after drawer focus res
 for (const width of [1440, 390, 320]) {
   test(`Semantic appearance choices preserve preview, selection and persistence at ${width}`, async ({
     browser,
+    storageState,
   }) => {
     const context = await browser.newContext({
       baseURL: e2eBaseUrl,
+      ...(storageState ? { storageState } : {}),
       locale: 'zh-CN',
       viewport: { width, height: 900 },
       hasTouch: width < 500,

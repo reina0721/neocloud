@@ -16,7 +16,6 @@ import {
 } from '@clouddrive/surface/administration';
 import { refreshServerNavigation } from '../state/use-server-navigation';
 import { createJsonClient, ApiError } from '../api/json-client';
-import { applyAccountPreferences } from './preferences';
 import { createRuntimePort, readRuntimeInformation } from './runtime-backend';
 import { IdentityError } from '@clouddrive/surface/identity/runtime';
 import { createAccountRequest } from '../api/account-request';
@@ -117,16 +116,18 @@ export function createAdministrationPort(
           passwordPolicySchema.parse(await write('/system/password-policy', { version }, 'DELETE')),
         ),
     },
-    preferences: async () =>
-      accountPreferencesSchema.parse(await json(native + '/iam/self/preferences')),
-    savePreferences: async (value) => {
-      const owner = currentUserId?.();
-      const saved = accountPreferencesSchema.parse(
-        await write(native + '/iam/self/preferences', value, 'PATCH'),
-      );
-      if (!currentUserId || owner === currentUserId()) applyAccountPreferences(saved);
-      return saved;
-    },
+    preferences: async (signal) =>
+      accountPreferencesSchema.parse(
+        await json(native + '/iam/self/preferences', signal ? { signal } : undefined),
+      ),
+    savePreferences: async (value, signal) =>
+      accountPreferencesSchema.parse(
+        await json(native + '/iam/self/preferences', {
+          method: 'PATCH',
+          body: value,
+          ...(signal ? { signal } : {}),
+        }),
+      ),
     profile: async () => {
       const [session, me] = await Promise.all([json(native + '/iam/session'), json('/me')]);
       const identity = z

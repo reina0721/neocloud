@@ -7,6 +7,26 @@ export const administrationI18n = {
       cyanHint: '当前界面不提供青色主题，保留已有界面主题色。',
       preferencesLoadFailure: '账户偏好读取失败，可在账户页面重试。',
       preferences: '跨设备账户偏好',
+      preferencesPending: '正在同步账户偏好',
+      preferencesReadOnly: '此账户的跨设备偏好为只读。其他浏览器设置仍可编辑。',
+      accountNotificationPreferencesHint: '这些设置随账户保存。',
+      preferencesOverwrite: '以我的更改重试',
+      preferencesDiscard: '放弃未同步更改',
+      preferencesSyncIssue: {
+        read: { title: '无法读取账户偏好', hint: '可重试读取。未同步的账户更改暂时保留。' },
+        write: {
+          title: '账户偏好未同步',
+          hint: '账户尚未保存这些更改。可重试或放弃未同步的更改。',
+        },
+        conflict: {
+          title: '账户偏好已在其他窗口或设备更改',
+          hint: '可使用其他位置保存的值，或确认以本次修改覆盖冲突的字段。',
+        },
+        forbidden: {
+          title: '账户偏好访问受限',
+          hint: '当前权限无法完成同步。可重试检查权限或放弃未同步的更改。',
+        },
+      },
       openAppearanceSettings: '前往外观与偏好设置',
       selectAccount: '请选择用户…',
       language: '语言',
@@ -124,6 +144,30 @@ export const administrationI18n = {
       preferencesLoadFailure:
         'Account preferences could not be loaded. Retry from the account page.',
       preferences: 'Account preferences across devices',
+      preferencesPending: 'Syncing account preferences',
+      preferencesReadOnly:
+        'Preferences shared across devices are read-only for this account. You can still change other browser settings.',
+      accountNotificationPreferencesHint: 'These settings are saved with your account.',
+      preferencesOverwrite: 'Retry with my changes',
+      preferencesDiscard: 'Discard unsynced changes',
+      preferencesSyncIssue: {
+        read: {
+          title: 'Could not read account preferences',
+          hint: 'Retry to load your preferences. Unsynced changes are kept for now.',
+        },
+        write: {
+          title: 'Account preferences did not sync',
+          hint: 'Your account has not saved these changes. You can retry or discard them.',
+        },
+        conflict: {
+          title: 'Account preferences changed in another tab or on another device',
+          hint: 'Use the saved values or confirm that your changes should replace the conflicting values.',
+        },
+        forbidden: {
+          title: 'Account preference access is restricted',
+          hint: 'Your current permissions prevent sync. Retry to check access or discard unsynced changes.',
+        },
+      },
       openAppearanceSettings: 'Open appearance & preferences',
       selectAccount: 'Select a user…',
       language: 'Language',

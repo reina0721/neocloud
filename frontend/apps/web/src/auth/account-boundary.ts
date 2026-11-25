@@ -7,6 +7,7 @@ import { useWorkspaceStore } from '../state/use-workspace-store';
 import { useWorkbenchStore } from '../state/use-workbench-store';
 import { useNotificationsStore } from '../state/use-notifications-store';
 import { usePageTabsStore } from '../state/use-page-tabs-store';
+import { useShellStore } from '../state/use-shell-store';
 import { AuthError } from './contract';
 
 const owner = createPersistStore<{ userId: string | null }, { userId: string | null }>(
@@ -28,6 +29,7 @@ export function applyAccountBoundary(userId: string | null): void {
   if (lifecycle.status !== 'hydrated') throw new AuthError('unavailable');
   if (owner.getState().userId === userId && userId !== null) return;
   try {
+    useShellStore.getState().applyAccountPreferences(undefined);
     for (const storage of [window.localStorage, window.sessionStorage]) {
       const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index));
       for (const key of keys)

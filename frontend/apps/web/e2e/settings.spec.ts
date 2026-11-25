@@ -82,27 +82,25 @@ test('深链直达：/settings/shortcuts 打开快捷键分类页', async ({ pag
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   await expect(page.getByRole('switch', { name: '启用快捷键' })).toBeVisible();
   await expect(page.getByRole('link', { name: '快捷键', exact: true })).toHaveAttribute(
-    'class',
-    /bg-brand-soft/,
+    'aria-current',
+    'page',
   );
 });
 
 test('左导航跳转：外观(根) 与其他分类互跳且各自 active', async ({ page }) => {
   await resetPreferences(page);
+  const sidebar = page.getByRole('navigation', { name: '个人中心导航' });
+  const appearance = sidebar.locator('a[href="/settings"]');
+  const navigation = sidebar.locator('a[href="/settings/navigation"]');
   // 根页 = 外观 active。
-  await expect(page.getByRole('link', { name: '外观', exact: true })).toHaveAttribute(
-    'class',
-    /bg-brand-soft/,
-  );
+  await expect(appearance).toHaveAttribute('aria-current', 'page');
   // 跳导航分类。
-  await page.getByRole('link', { name: '导航', exact: true }).click();
+  await sidebar.getByRole('button', { name: '更多界面选项' }).click();
+  await navigation.click();
   await expect(page).toHaveURL(/\/settings\/navigation/);
-  await expect(page.getByRole('link', { name: '导航', exact: true })).toHaveAttribute(
-    'class',
-    /bg-brand-soft/,
-  );
+  await expect(navigation).toHaveAttribute('aria-current', 'page');
   // 回外观（根）。
-  await page.getByRole('link', { name: '外观', exact: true }).click();
+  await appearance.click();
   await expect(page).toHaveURL(/\/settings$/);
   await expect(page.getByRole('heading', { level: 1, name: '外观' })).toBeVisible();
 });

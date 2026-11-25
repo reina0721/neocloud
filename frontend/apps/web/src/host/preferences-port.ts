@@ -17,13 +17,15 @@ import type {
   PersistFailureCode,
   PersistResult,
 } from '@clouddrive/plugin-framework/preferences';
+import { createContext } from 'react';
 import {
+  defaultPreferences,
   validatePreferences,
   PREFERENCES_VERSION,
   type Preferences,
 } from '@clouddrive/surface/preferences-model';
 
-import { useShellStore } from '../state/use-shell-store';
+import { persistedShellPreferences, useShellStore } from '../state/use-shell-store';
 
 const PERSIST_KEY = 'clouddrive.shell';
 
@@ -84,9 +86,27 @@ function toPersistResult(fn: () => void): PersistResult {
  * 后续同值写入无害。成功后返回 true，失败抛错由 toPersistResult 归类。
  */
 function persistSnapshot(): void {
-  const preferences = useShellStore.getState().preferences;
-  const envelope = JSON.stringify({ state: { preferences }, version: PREFERENCES_VERSION });
+  const state = persistedShellPreferences(useShellStore.getState());
+  const envelope = JSON.stringify({ state, version: PREFERENCES_VERSION });
   window.localStorage.setItem(PERSIST_KEY, envelope);
+}
+
+type AccountPreferenceIntent = (before: Preferences, after: Preferences) => boolean;
+
+function keepDeviceAccountFields(next: Preferences, device: Preferences): Preferences {
+  return {
+    ...next,
+    appearance: { ...next.appearance, themeMode: device.appearance.themeMode },
+    localeRegion: {
+      ...next.localeRegion,
+      language: device.localeRegion.language,
+      timeZone: device.localeRegion.timeZone,
+    },
+    notifications: {
+      ...next.notifications,
+      inAppNotifications: device.notifications.inAppNotifications,
+    },
+  };
 }
 
 /** 创建 Preferences Port（Host composition root 单次调用）。 */
@@ -95,25 +115,39 @@ export function createHostPreferencesPort(): PreferencesPort<Preferences> & {
   subscribeStore: (listener: () => void) => () => void;
   /** 跨窗口 storage 事件监听启动/停止（返回停止函数）。 */
   startCrossWindowSync: () => () => void;
+  bindAccountPreferences: (accept: AccountPreferenceIntent) => () => void;
 } {
+  let accountIntent: AccountPreferenceIntent | undefined;
+  let deviceNotSaved = false;
+
+  function change(next: Preferences, resetSidebar = false): PersistResult {
+    const state = useShellStore.getState();
+    const synchronized = accountIntent?.(state.preferences, next) === true;
+    const device = synchronized ? keepDeviceAccountFields(next, state.devicePreferences) : next;
+    return toPersistResult(() => {
+      if (resetSidebar || JSON.stringify(state.devicePreferences) !== JSON.stringify(device)) {
+        deviceNotSaved = true;
+        state.applyPersistedPreferences(device, resetSidebar ? false : undefined);
+      }
+      if (deviceNotSaved) {
+        persistSnapshot();
+        deviceNotSaved = false;
+      }
+    });
+  }
+
   const port: PreferencesPort<Preferences> = {
     getSnapshot: () => useShellStore.getState().preferences,
     subscribe: (listener) => useShellStore.subscribe(listener),
-    updateCategory: (category, patch) =>
-      toPersistResult(() => {
-        useShellStore.getState().updateCategory(category, patch);
-        persistSnapshot();
-      }),
-    resetCategory: (category) =>
-      toPersistResult(() => {
-        useShellStore.getState().resetCategory(category);
-        persistSnapshot();
-      }),
-    resetAll: () =>
-      toPersistResult(() => {
-        useShellStore.getState().resetAll();
-        persistSnapshot();
-      }),
+    updateCategory: (category, patch) => {
+      const old = useShellStore.getState().preferences;
+      return change({ ...old, [category]: { ...old[category], ...patch } });
+    },
+    resetCategory: (category) => {
+      const old = useShellStore.getState().preferences;
+      return change({ ...old, [category]: defaultPreferences[category] });
+    },
+    resetAll: () => change(defaultPreferences, true),
   };
 
   const subscribeStore = (listener: () => void) => useShellStore.subscribe(listener);
@@ -125,7 +159,7 @@ export function createHostPreferencesPort(): PreferencesPort<Preferences> & {
       const incoming = parseStoredSnapshot(event.newValue);
       if (!incoming) return; // 损坏/不完整 → 忽略，保留本窗口会话
       const current = useShellStore.getState();
-      if (JSON.stringify(current.preferences) === JSON.stringify(incoming)) return; // no-op
+      if (JSON.stringify(current.devicePreferences) === JSON.stringify(incoming)) return;
       // 应用完整快照并同步兼容投影（setState 触发 persist 回写；storage 事件不在本 tab
       // 触发，不会循环）。
       useShellStore.getState().applyPersistedPreferences(incoming);
@@ -134,5 +168,16 @@ export function createHostPreferencesPort(): PreferencesPort<Preferences> & {
     return () => window.removeEventListener('storage', onStorage);
   }
 
-  return { ...port, subscribeStore, startCrossWindowSync };
+  function bindAccountPreferences(accept: AccountPreferenceIntent) {
+    accountIntent = accept;
+    return () => {
+      if (accountIntent === accept) accountIntent = undefined;
+    };
+  }
+
+  return { ...port, subscribeStore, startCrossWindowSync, bindAccountPreferences };
 }
+
+export const HostPreferencesContext = createContext<ReturnType<
+  typeof createHostPreferencesPort
+> | null>(null);

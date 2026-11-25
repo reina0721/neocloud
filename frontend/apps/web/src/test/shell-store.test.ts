@@ -15,6 +15,8 @@ describe('useShellStore（v1 嵌套偏好）', () => {
   beforeEach(() => {
     useShellStore.setState({
       preferences: defaultPreferences,
+      devicePreferences: defaultPreferences,
+      accountPreferences: undefined,
       theme: 'light',
       locale: 'zh-CN',
       hasHydrated: false,

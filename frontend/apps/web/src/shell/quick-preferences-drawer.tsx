@@ -2,6 +2,7 @@
 
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
+import { useAccountNotificationSettings } from '@clouddrive/surface/administration/runtime';
 import {
   ACCENT_PRESETS,
   CONTENT_WIDTHS,
@@ -30,6 +31,7 @@ export function QuickPreferencesDrawer({
 }: Readonly<{ open: boolean; onOpenChange: (open: boolean) => void }>) {
   const { t } = useFrontendTranslation();
   const port = usePreferencesPort<Preferences>();
+  const readonlyPreferences = useAccountNotificationSettings()?.sharedReadOnly === true;
   const preferences = useSyncExternalStore(port.subscribe, port.getSnapshot, port.getSnapshot);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -68,6 +70,7 @@ export function QuickPreferencesDrawer({
           </h3>
           <RadioGroupField
             label={t('shell.quickPreferences.themeMode')}
+            disabled={readonlyPreferences}
             options={THEME_MODES.map((value) => ({
               value,
               label: t(`shell.quickPreferences.themeModes.${value}`),

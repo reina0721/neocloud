@@ -335,6 +335,30 @@ func TestSelfPreferencesContract(t *testing.T) {
 	if notif.Code != http.StatusOK || !bytes.Contains(notif.Body.Bytes(), []byte(`"emailDigest":false`)) || !bytes.Contains(notif.Body.Bytes(), []byte(`"inApp":true`)) {
 		t.Fatalf("notification preferences = %d, %s", notif.Code, notif.Body.String())
 	}
+	zone := serve(router, http.MethodPatch, "http://example.test/api/v1/iam/self/preferences", []byte(`{"version":2,"timeZone":"Asia/Shanghai","reduceMotion":true}`), &resolved, withCSRF)
+	if zone.Code != http.StatusOK {
+		t.Fatalf("set timezone and motion = %d, %s", zone.Code, zone.Body.String())
+	}
+	partial := serve(router, http.MethodPatch, "http://example.test/api/v1/iam/self/preferences", []byte(`{"version":3,"themeMode":"light"}`), &resolved, withCSRF)
+	if partial.Code != http.StatusOK || !bytes.Contains(partial.Body.Bytes(), []byte(`"timeZone":"Asia/Shanghai"`)) || !bytes.Contains(partial.Body.Bytes(), []byte(`"reduceMotion":true`)) {
+		t.Fatalf("omitted timezone and motion must retain values = %d, %s", partial.Code, partial.Body.String())
+	}
+	stale := serve(router, http.MethodPatch, "http://example.test/api/v1/iam/self/preferences", []byte(`{"version":3,"timeZone":"","reduceMotion":false}`), &resolved, withCSRF)
+	if stale.Code != http.StatusConflict {
+		t.Fatalf("stale clear = %d, %s", stale.Code, stale.Body.String())
+	}
+	cleared := serve(router, http.MethodPatch, "http://example.test/api/v1/iam/self/preferences", []byte(`{"version":4,"timeZone":"","reduceMotion":false}`), &resolved, withCSRF)
+	if cleared.Code != http.StatusOK {
+		t.Fatalf("explicitly clear timezone and motion = %d, %s", cleared.Code, cleared.Body.String())
+	}
+	loaded := serve(router, http.MethodGet, "http://example.test/api/v1/iam/self/preferences", nil, &resolved)
+	var prefs preferencesResponse
+	if err := json.Unmarshal(loaded.Body.Bytes(), &prefs); err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Code != http.StatusOK || prefs.Version != 5 || prefs.TimeZone != "" || prefs.ReduceMotion || prefs.ThemeMode != "light" || !prefs.Notifications.DailySummary {
+		t.Fatalf("cleared and untouched preferences = %d, %s", loaded.Code, loaded.Body.String())
+	}
 	// 非法枚举 → 422（Huma schema enum 校验在到达 service 前拦截）。
 	invalid := serve(router, http.MethodPatch, "http://example.test/api/v1/iam/self/preferences", []byte(`{"themeMode":"neon"}`), &resolved, withCSRF)
 	if invalid.Code != http.StatusUnprocessableEntity || !bytes.Contains(invalid.Body.Bytes(), []byte(`body.themeMode`)) {

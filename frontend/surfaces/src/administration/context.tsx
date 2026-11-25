@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, type ReactNode } from 'react';
-import type { AdministrationPort } from './model';
+import type { AccountNotificationPreferences, AdministrationPort } from './model';
 export {
   CurrentSiteLogo,
   publishedSiteOrigin,
@@ -9,6 +9,23 @@ export {
   useSiteProfile,
 } from './site-profile-runtime';
 const Context = createContext<AdministrationPort | null>(null);
+
+export type AccountNotificationSettings = Readonly<{
+  values: AccountNotificationPreferences | null;
+  editable: boolean;
+  sharedReadOnly: boolean;
+  pending: boolean;
+  update: (field: keyof AccountNotificationPreferences, value: boolean) => void;
+}>;
+
+export const AccountNotificationSettingsContext = createContext<AccountNotificationSettings | null>(
+  null,
+);
+
+export function useAccountNotificationSettings() {
+  return useContext(AccountNotificationSettingsContext);
+}
+
 export function AdministrationProvider({
   port,
   children,

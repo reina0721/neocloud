@@ -199,7 +199,7 @@ type updatePreferencesInput struct {
 	Body      struct {
 		Version       *uint64 `json:"version,omitempty"`
 		Language      string  `json:"language,omitempty" enum:"zh-CN,en-US"`
-		TimeZone      string  `json:"timeZone,omitempty" maxLength:"64"`
+		TimeZone      *string `json:"timeZone,omitempty" maxLength:"64"`
 		ThemeMode     string  `json:"themeMode,omitempty" enum:"system,light,dark"`
 		ThemePreset   string  `json:"themePreset,omitempty" enum:"blue,cyan,green,violet,orange"`
 		Density       string  `json:"density,omitempty" enum:"comfortable,compact"`
@@ -407,21 +407,20 @@ func RegisterHuma(api huma.API, handler *Handler) {
 	selfPreferencesWrite.Middlewares = huma.Middlewares{handler.requireMutation}
 	huma.Register(api, selfPreferencesWrite, func(ctx context.Context, in *updatePreferencesInput) (*jsonOutput[preferencesResponse], error) {
 		_, current, _ := service.SessionFromContext(ctx)
-		updates := model.UserPreferences{
-			Language: model.PreferenceLanguage(in.Body.Language), TimeZone: model.PreferenceTimeZone(in.Body.TimeZone),
+		updates := service.PreferenceUpdate{
+			Language: model.PreferenceLanguage(in.Body.Language), TimeZone: (*model.PreferenceTimeZone)(in.Body.TimeZone),
 			ThemeMode: model.PreferenceThemeMode(in.Body.ThemeMode), ThemePreset: model.PreferenceThemePreset(in.Body.ThemePreset),
-			Density: model.PreferenceDensity(in.Body.Density), ReduceMotion: in.Body.ReduceMotion != nil && *in.Body.ReduceMotion,
+			Density: model.PreferenceDensity(in.Body.Density), ReduceMotion: in.Body.ReduceMotion,
 		}
-		var notifications *service.NotificationUpdate
 		if in.Body.Notifications != nil {
-			notifications = &service.NotificationUpdate{
+			updates.Notifications = &service.NotificationUpdate{
 				EmailDigest:   in.Body.Notifications.EmailDigest,
 				InApp:         in.Body.Notifications.InApp,
 				ShowSummaries: in.Body.Notifications.ShowSummaries,
 				DailySummary:  in.Body.Notifications.DailySummary,
 			}
 		}
-		value, err := handler.service.UpdateSelfPreferences(ctx, current.Identity.AccountID, updates, notifications, optionalVersion(in.Body.Version)...)
+		value, err := handler.service.UpdateSelfPreferences(ctx, current.Identity.AccountID, updates, optionalVersion(in.Body.Version)...)
 		if err != nil {
 			return nil, problem(ctx, err)
 		}

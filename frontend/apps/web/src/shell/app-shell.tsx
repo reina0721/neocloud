@@ -5,6 +5,8 @@ import { ShellNavigationViewProvider } from '@clouddrive/surface/shell/runtime';
 import { flattenNavigationLeaves } from '@clouddrive/core';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { PluginLocaleProvider } from '@clouddrive/plugin-framework/plugin';
+import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
+import type { Preferences } from '@clouddrive/surface/preferences-model';
 import { ShellRoot } from '@clouddrive/surface-foundation/shell-navigation';
 import type { NavigationGroup, NavigationNode } from '@clouddrive/types';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
@@ -210,7 +212,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   const locale = useShellStore((state) => state.locale);
   const mobileNavigationOpen = useShellStore((state) => state.mobileNavigationOpen);
   const sidebarCollapsed = useShellStore((state) => state.sidebarCollapsed);
-  const setLocale = useShellStore((state) => state.setLocale);
+  const preferencesPort = usePreferencesPort<Preferences>();
   const setMobileNavigationOpen = useShellStore((state) => state.setMobileNavigationOpen);
   const setSidebarCollapsed = useShellStore((state) => state.setSidebarCollapsed);
   const shortcutsEnabled = useShellStore((state) => state.preferences.shortcuts.enabled);
@@ -475,7 +477,8 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               port={{
                 locale,
                 changeLocale: (next) => {
-                  if (next === 'en' || next === 'zh-CN') setLocale(next);
+                  if (next === 'en' || next === 'zh-CN')
+                    preferencesPort.updateCategory('localeRegion', { language: next });
                 },
               }}
             >

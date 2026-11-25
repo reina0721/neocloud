@@ -3,6 +3,8 @@ import './install-translations';
 import { ShellNavigationViewProvider } from '@clouddrive/surface/shell/runtime';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { PluginLocaleProvider } from '@clouddrive/plugin-framework/plugin';
+import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
+import type { Preferences } from '@clouddrive/surface/preferences-model';
 import { CurrentSiteLogo, useSiteProfile } from '@clouddrive/surface/administration/runtime';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
 import { DrawerSurface } from '@clouddrive/ui-adapter/overlays';
@@ -149,6 +151,7 @@ function PersonalNav({
   canAdmin: boolean;
   onNavigate?: () => void;
 }>) {
+  const router = useRouter();
   const isAdvancedActive = advancedPreferenceLinks.some((item) => pathname === item.href);
   const [advancedOpen, setAdvancedOpen] = useState(isAdvancedActive);
   const renderLink = (item: NavLinkItem) => {
@@ -160,7 +163,21 @@ function PersonalNav({
         key={item.href}
         href={item.href}
         aria-current={active ? 'page' : undefined}
-        {...(onNavigate ? { onClick: onNavigate } : {})}
+        onNavigate={(event) => {
+          event.preventDefault();
+          void proceedAfterLeaveConfirm(item.href).then((proceed) => {
+            if (!proceed) {
+              if (active) onNavigate?.();
+              return;
+            }
+            onNavigate?.();
+            markForwardRouteIntent();
+            router.push(item.href, {
+              transitionTypes: [pageTransitionTypes.forward],
+              ...resolveScrollOption(),
+            });
+          });
+        }}
         className={`flex items-center gap-2.5 rounded-control px-3 py-2 text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
           active
             ? 'bg-brand-soft font-semibold text-brand'
@@ -230,7 +247,7 @@ export function PersonalShell({ children }: Readonly<{ children: ReactNode }>) {
   const { profile } = useSiteProfile();
   const siteName = profile?.name || t('brand.name');
   const locale = useShellStore((state) => state.locale);
-  const setLocale = useShellStore((state) => state.setLocale);
+  const preferencesPort = usePreferencesPort<Preferences>();
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigation = useProductNavigation();
   const labelOverrides = useNavigationLabelOverrides();
@@ -335,7 +352,8 @@ export function PersonalShell({ children }: Readonly<{ children: ReactNode }>) {
               port={{
                 locale,
                 changeLocale: (next) => {
-                  if (next === 'en' || next === 'zh-CN') setLocale(next);
+                  if (next === 'en' || next === 'zh-CN')
+                    preferencesPort.updateCategory('localeRegion', { language: next });
                 },
               }}
             >

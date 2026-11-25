@@ -21,6 +21,8 @@ describe('Host Preferences Port', () => {
     window.localStorage.clear();
     useShellStore.setState({
       preferences: defaultPreferences,
+      devicePreferences: defaultPreferences,
+      accountPreferences: undefined,
       theme: 'light',
       locale: 'zh-CN',
       hasHydrated: false,

@@ -63,10 +63,8 @@ for (const entry of CASES) {
       await expect(locator.first()).toBeVisible();
     }
     // 左导航当前项高亮。
-    await expect(page.getByRole('link', { name: entry.heading, exact: true })).toHaveAttribute(
-      'class',
-      /bg-brand-soft/,
-    );
+    const nav = page.getByRole('navigation', { name: '个人中心导航' });
+    await expect(nav.locator(`a[href="${entry.path}"]`)).toHaveAttribute('aria-current', 'page');
     // 刷新保持（独立 URL）。
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
@@ -74,74 +72,48 @@ for (const entry of CASES) {
   });
 }
 
-test('左导航含全部 8 分类（外观=根），点击可跳转', async ({ page }) => {
+test('个人导航可访问全部设置分类，且标记当前页', async ({ page }) => {
   await page.goto('/settings');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
-  const nav = page.getByRole('navigation', { name: '设置分类' });
-  const headings = [
-    '外观',
-    '导航',
-    '数据展示',
-    '操作偏好',
-    '语言与地区',
-    '通知',
-    '可访问性',
-    '快捷键',
-  ];
-  for (const heading of headings) {
-    await expect(nav.getByRole('link', { name: heading, exact: true })).toBeVisible();
+  const nav = page.getByRole('navigation', { name: '个人中心导航' });
+  await nav.getByRole('button', { name: '更多界面选项' }).click();
+  for (const path of [...CASES.map((entry) => entry.path), '/settings/security']) {
+    await expect(nav.locator(`a[href="${path}"]`)).toBeVisible();
   }
-  // 外观(根) active；点导航分类跳子路由。
-  await expect(nav.getByRole('link', { name: '外观', exact: true })).toHaveAttribute(
-    'class',
-    /bg-brand-soft/,
-  );
-  await nav.getByRole('link', { name: '导航', exact: true }).click();
+  await expect(nav.locator('a[href="/settings"]')).toHaveAttribute('aria-current', 'page');
+  await nav.locator('a[href="/settings/navigation"]').click();
   await expect(page).toHaveURL(/\/settings\/navigation/);
 });
 
 test('内页壳持久化：切换分类不重建侧边栏，搜索输入与结果保留（SET-011）', async ({ page }) => {
   await page.goto('/settings');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
-  // 搜索固定在侧边栏顶部（Panel 内、分类导航上方）。
-  const sidebar = page.getByRole('navigation', { name: '设置分类' });
+  const sidebar = page.getByRole('navigation', { name: '个人中心导航' });
   const search = page.getByRole('searchbox', { name: '搜索设置项' });
   await expect(search).toBeVisible();
   await search.fill('记住');
   // 切到另一分类：URL 变、标题变，但搜索输入保留（壳未重挂）。
-  await sidebar.getByRole('link', { name: '导航', exact: true }).click();
+  await sidebar.getByRole('button', { name: '更多界面选项' }).click();
+  await sidebar.locator('a[href="/settings/navigation"]').click();
   await expect(page).toHaveURL(/\/settings\/navigation/);
   await expect(page.getByRole('heading', { level: 1, name: '导航' })).toBeVisible();
   await expect(page.getByRole('searchbox', { name: '搜索设置项' })).toHaveValue('记住');
 });
 
-test('侧边栏：搜索顶置 + 分组导航 + 每分类语义图标（SET-011）', async ({ page }) => {
+test('个人中心保持单侧导航与内容区搜索，分类项提供图标', async ({ page }) => {
   await page.goto('/settings');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
-  const sidebar = page.getByRole('navigation', { name: '设置分类' });
-  // 分组标题。
-  await expect(sidebar.getByText('显示与数据', { exact: true })).toBeVisible();
-  await expect(sidebar.getByText('偏好与反馈', { exact: true })).toBeVisible();
-  await expect(sidebar.getByText('辅助与输入', { exact: true })).toBeVisible();
-  // 每分类项带语义 svg 图标。
-  for (const heading of [
-    '外观',
-    '导航',
-    '数据展示',
-    '操作偏好',
-    '语言与地区',
-    '通知',
-    '可访问性',
-    '快捷键',
-  ]) {
-    const item = sidebar.getByRole('link', { name: heading, exact: true });
+  const sidebar = page.getByRole('navigation', { name: '个人中心导航' });
+  await expect(sidebar).toHaveCount(1);
+  await expect(page.getByRole('main').getByRole('searchbox', { name: '搜索设置项' })).toBeVisible();
+  await expect(sidebar.getByText('账户', { exact: true })).toBeVisible();
+  await expect(sidebar.getByText('偏好设置', { exact: true })).toBeVisible();
+  await sidebar.getByRole('button', { name: '更多界面选项' }).click();
+  for (const { path } of CASES) {
+    const item = sidebar.locator(`a[href="${path}"]`);
     await expect(item.locator('svg')).toBeVisible();
   }
-  // 当前分类（外观=根）active。
-  await expect(sidebar.getByRole('link', { name: '外观', exact: true })).toHaveAttribute(
-    'class',
-    /bg-brand-soft/,
-  );
+  await expect(sidebar.locator('a[href="/settings"]')).toHaveAttribute('aria-current', 'page');
 });
 
 test('分类切换复用主 Shell route-enter 动效：内容区段淡入、壳静止（SET-012）', async ({ page }) => {
@@ -153,7 +125,9 @@ test('分类切换复用主 Shell route-enter 动效：内容区段淡入、壳�
   // 壳（PageHeader）opacity 恒 1（不参与 route-enter、不闪）。
   let sawFade = false;
   const shellOpacities: number[] = [];
-  await page.getByRole('link', { name: '导航', exact: true }).click();
+  const sidebar = page.getByRole('navigation', { name: '个人中心导航' });
+  await sidebar.getByRole('button', { name: '更多界面选项' }).click();
+  await sidebar.locator('a[href="/settings/navigation"]').click();
   await expect(page).toHaveURL(/\/settings\/navigation/);
   await expect(page.getByRole('heading', { level: 1, name: '导航' })).toBeVisible();
   for (let i = 0; i < 40; i++) {

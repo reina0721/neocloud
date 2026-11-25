@@ -18,6 +18,8 @@ describe('AppProviders hydration（clouddrive.shell v0 → v1）', () => {
     localStorage.clear();
     useShellStore.setState({
       preferences: defaultPreferences,
+      devicePreferences: defaultPreferences,
+      accountPreferences: undefined,
       theme: 'light',
       locale: 'zh-CN',
       hasHydrated: false,

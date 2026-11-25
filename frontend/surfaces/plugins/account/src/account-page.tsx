@@ -4,6 +4,7 @@ import { useFrontendTranslation } from '@clouddrive/i18n';
 import { useIdentityPort, IdentityError } from '@clouddrive/surface/identity/runtime';
 import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
 import { Action } from '@clouddrive/ui-adapter/action';
+import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import {
   IdentityQueryState,
@@ -13,7 +14,6 @@ import {
 import { UserForm } from '../../../src/identity/user-form';
 import { AccountSecurity } from './account-security';
 import { BackendProfile } from './backend-profile';
-import { BackendPreferences } from './backend-preferences';
 export function AccountPage() {
   const { t } = useFrontendTranslation();
   const port = useIdentityPort();
@@ -87,7 +87,11 @@ export function AccountPage() {
           {port.mode === 'backend' ? (
             <>
               <BackendProfile onSaved={query.reload} />
-              <BackendPreferences />
+              <Section title={t('administration.preferences')} contentInset>
+                <RouteLink target={route('settings')} presentation="action" variant="secondary">
+                  {t('administration.openAppearanceSettings')}
+                </RouteLink>
+              </Section>
             </>
           ) : null}
           <AccountSecurity />

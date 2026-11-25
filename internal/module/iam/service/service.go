@@ -1381,17 +1381,10 @@ func (s *Service) SelfPreferences(ctx context.Context, accountID string) (model.
 	return effective, nil
 }
 
-// UpdateSelfPreferences 合并并持久化当前账号的偏好覆盖：只接受白名单键，
-// 未知键或非法值返回 model.ErrInvalidPreferences；调用方（HTTP binding）
-// 负责以完整或部分对象调用，service 把存储覆盖与默认值合并后返回有效值。
-// notifications 为显式指针集合：nil 表示该字段未提交（保持现值），显式
-// 布尔值表示用户开启/关闭。
-func (s *Service) UpdateSelfPreferences(ctx context.Context, accountID string, updates model.UserPreferences, notifications *NotificationUpdate, expected ...uint64) (model.UserPreferences, error) {
+// UpdateSelfPreferences 合并并持久化当前账号的偏好覆盖，返回带新版本的有效值。
+func (s *Service) UpdateSelfPreferences(ctx context.Context, accountID string, updates PreferenceUpdate, expected ...uint64) (model.UserPreferences, error) {
 	if strings.TrimSpace(accountID) == "" {
 		return model.UserPreferences{}, model.ErrInvalidID
-	}
-	if err := updates.ValidatePartial(); err != nil {
-		return model.UserPreferences{}, err
 	}
 	var effective model.UserPreferences
 	err := s.store.WithinTx(ctx, func(txCtx context.Context, r *repo.Unit) error {
@@ -1416,7 +1409,7 @@ func (s *Service) UpdateSelfPreferences(ctx context.Context, accountID string, u
 		if len(expected) > 0 && record.Version != expected[0] {
 			return ErrVersionConflict
 		}
-		merged := mergePreferenceUpdates(stored, updates, notifications)
+		merged := mergePreferenceUpdates(stored, updates)
 		if err := merged.Validate(); err != nil {
 			return err
 		}

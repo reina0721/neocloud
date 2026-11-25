@@ -48,6 +48,7 @@ import {
 export type Ctx = {
   port: PreferencesPort<Preferences>;
   prefs: Preferences;
+  readOnlyAccountPreferences?: boolean;
 };
 
 function updateSetting<C extends keyof Preferences>(
@@ -114,6 +115,7 @@ export function AppearanceSection({ ctx }: Readonly<{ ctx: Ctx }>) {
           labelIcon={<SunMoon className="size-5" />}
           hint={t('settings.appearance.themeModeDescription')}
           label={t('settings.appearance.themeMode')}
+          disabled={ctx.readOnlyAccountPreferences === true}
           options={[
             {
               label: t('settings.appearance.themeLight'),
@@ -332,6 +334,7 @@ function switchRow(
   checked: boolean,
   label: string,
   description: string,
+  disabled = false,
 ) {
   return (
     <SwitchField
@@ -339,6 +342,7 @@ function switchRow(
       checked={checked}
       description={description}
       label={label}
+      disabled={disabled}
       onCheckedChange={(next) => updateSetting(ctx, category, { [field]: next })}
     />
   );
@@ -619,6 +623,7 @@ export function LocaleRegionSection({ ctx }: Readonly<{ ctx: Ctx }>) {
           presentation="inline"
           hint=""
           label={t('settings.localeRegion.language')}
+          disabled={ctx.readOnlyAccountPreferences === true}
           options={[
             { label: '简体中文', value: 'zh-CN' },
             { label: 'English', value: 'en' },
@@ -641,6 +646,7 @@ export function LocaleRegionSection({ ctx }: Readonly<{ ctx: Ctx }>) {
         <ComboField
           hint={t('settings.localeRegion.timeZoneHint')}
           label={t('settings.localeRegion.timeZone')}
+          disabled={ctx.readOnlyAccountPreferences === true}
           placeholder={t('settings.localeRegion.timeZoneHint')}
           options={supportedTimeZones(region.timeZone).map((zone) => ({
             label: zone === 'auto' ? t('settings.localeRegion.timeZoneAuto') : zone,
@@ -718,6 +724,7 @@ export function NotificationsSection({ ctx }: Readonly<{ ctx: Ctx }>) {
           n.inAppNotifications,
           t('settings.notifications.inAppNotifications'),
           '',
+          ctx.readOnlyAccountPreferences === true,
         )}
         {switchRow(
           ctx,

@@ -8,10 +8,7 @@ test('角色名称读取失败不阻断本人资料、偏好和会话，重试�
   let coreReads = 0;
   page.on('request', (request) => {
     const path = new URL(request.url()).pathname;
-    if (
-      request.method() === 'GET' &&
-      (path.endsWith('/me') || path.endsWith('/iam/session') || path.endsWith('/self/preferences'))
-    )
+    if (request.method() === 'GET' && (path.endsWith('/me') || path.endsWith('/iam/session')))
       coreReads += 1;
   });
   await page.route('**/roles?scope=self', async (route) => {
@@ -25,7 +22,8 @@ test('角色名称读取失败不阻断本人资料、偏好和会话，重试�
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await expect(page.getByRole('button', { name: '重试', exact: true })).toBeVisible();
   await expect(page.getByLabel('扩展资料', { exact: true })).toBeVisible();
-  await expect(page.getByLabel('跨设备账户偏好', { exact: true })).toBeVisible();
+  const settings = page.getByRole('link', { name: '前往外观与偏好设置', exact: true });
+  await expect(settings).toBeVisible();
   await expect(page.getByRole('heading', { name: '有效登录会话', exact: true })).toBeVisible();
   expect(attempts).toBe(1);
   const beforeRetry = coreReads;
@@ -34,5 +32,5 @@ test('角色名称读取失败不阻断本人资料、偏好和会话，重试�
   await expect(page.getByRole('button', { name: '重试', exact: true })).toHaveCount(0);
   expect(attempts).toBe(2);
   expect(coreReads).toBe(beforeRetry);
-  await expect(page.getByLabel('跨设备账户偏好', { exact: true })).toBeVisible();
+  await expect(settings).toBeVisible();
 });

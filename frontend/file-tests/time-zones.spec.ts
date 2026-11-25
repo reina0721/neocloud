@@ -90,6 +90,14 @@ async function zone(page: Page, value: string, dateFormat = 'YYYY-MM-DD') {
     .click();
   const seconds = page.getByRole('switch', { name: '显示秒', exact: true });
   if (!(await seconds.isChecked())) await seconds.press('Space');
+  await expect
+    .poll(async () => {
+      const response = await page.request.get('/api/console/v1/native/iam/self/preferences');
+      if (!response.ok()) return response.status();
+      const preferences = (await response.json()) as { timeZone: string };
+      return preferences.timeZone;
+    })
+    .toBe(value === 'auto' ? '' : value);
 }
 // 此夹具只比较三个无DST的固定偏移区，用独立算术验证数据流，不调用生产格式化器。
 const fixtureOffsetMinutes: Readonly<Record<string, number>> = {

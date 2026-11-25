@@ -113,17 +113,26 @@ type NotificationUpdate struct {
 	DailySummary  *bool
 }
 
-// mergePreferenceUpdates 把「当前有效值」与「本次更新」合并：更新中出现的
-// 字段覆盖，未出现的字段保持原值；主题/密度/语言枚举按空串表示未设置。
-// notifications 以显式指针集合传入（HTTP binding 从 JSON 指针构造），
-// 从而区分「未提交」与「显式关闭」。
-func mergePreferenceUpdates(current model.UserPreferences, updates model.UserPreferences, notifications *NotificationUpdate) model.UserPreferences {
+// PreferenceUpdate 区分省略与可显式清除的时区、动效和通知字段。
+// 枚举字段使用空值表示省略。
+type PreferenceUpdate struct {
+	Language      model.PreferenceLanguage
+	TimeZone      *model.PreferenceTimeZone
+	ThemeMode     model.PreferenceThemeMode
+	ThemePreset   model.PreferenceThemePreset
+	Density       model.PreferenceDensity
+	ReduceMotion  *bool
+	Notifications *NotificationUpdate
+}
+
+// mergePreferenceUpdates 仅覆盖本次提交的字段。
+func mergePreferenceUpdates(current model.UserPreferences, updates PreferenceUpdate) model.UserPreferences {
 	merged := current
 	if updates.Language != "" {
 		merged.Language = updates.Language
 	}
-	if updates.TimeZone != "" {
-		merged.TimeZone = updates.TimeZone
+	if updates.TimeZone != nil {
+		merged.TimeZone = *updates.TimeZone
 	}
 	if updates.ThemeMode != "" {
 		merged.ThemeMode = updates.ThemeMode
@@ -134,10 +143,10 @@ func mergePreferenceUpdates(current model.UserPreferences, updates model.UserPre
 	if updates.Density != "" {
 		merged.Density = updates.Density
 	}
-	if updates.ReduceMotion {
-		merged.ReduceMotion = true
+	if updates.ReduceMotion != nil {
+		merged.ReduceMotion = *updates.ReduceMotion
 	}
-	if notifications != nil {
+	if notifications := updates.Notifications; notifications != nil {
 		if notifications.EmailDigest != nil {
 			merged.Notifications.EmailDigest = *notifications.EmailDigest
 		}

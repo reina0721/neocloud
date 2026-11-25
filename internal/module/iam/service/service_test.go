@@ -1102,9 +1102,9 @@ func TestSelfPreferencesMergeDefaultsAndPersist(t *testing.T) {
 		t.Fatalf("initial preferences = %#v, want defaults %#v", initial, defaults)
 	}
 	// PATCH 合并更新：只改主题与密度，语言/通知保持默认。
-	updated, err := iam.UpdateSelfPreferences(t.Context(), accountID, model.UserPreferences{
+	updated, err := iam.UpdateSelfPreferences(t.Context(), accountID, service.PreferenceUpdate{
 		ThemeMode: model.PreferenceThemeModeDark, ThemePreset: model.PreferenceThemePresetGreen, Density: model.PreferenceDensityCompact,
-	}, nil)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1126,11 +1126,12 @@ func TestSelfPreferencesMergeDefaultsAndPersist(t *testing.T) {
 		t.Fatalf("persisted preferences = %#v", again)
 	}
 	// 非法主题拒绝。
-	if _, err := iam.UpdateSelfPreferences(t.Context(), accountID, model.UserPreferences{ThemeMode: "neon"}, nil); !errors.Is(err, model.ErrInvalidPreferences) {
+	if _, err := iam.UpdateSelfPreferences(t.Context(), accountID, service.PreferenceUpdate{ThemeMode: "neon"}); !errors.Is(err, model.ErrInvalidPreferences) {
 		t.Fatalf("invalid theme mode error = %v", err)
 	}
 	// 非法时区拒绝。
-	if _, err := iam.UpdateSelfPreferences(t.Context(), accountID, model.UserPreferences{TimeZone: "not a zone"}, nil); !errors.Is(err, model.ErrInvalidPreferences) {
+	invalidZone := model.PreferenceTimeZone("not a zone")
+	if _, err := iam.UpdateSelfPreferences(t.Context(), accountID, service.PreferenceUpdate{TimeZone: &invalidZone}); !errors.Is(err, model.ErrInvalidPreferences) {
 		t.Fatalf("invalid time zone error = %v", err)
 	}
 	// 缺失账号返回 not-found。
@@ -1149,8 +1150,10 @@ func TestSelfPreferencesSupportsNotificationToggles(t *testing.T) {
 		t.Fatal(err)
 	}
 	accountID := session.Identity.AccountID
-	updated, err := iam.UpdateSelfPreferences(t.Context(), accountID, model.UserPreferences{}, &service.NotificationUpdate{
-		EmailDigest: testBoolPointer(false), InApp: testBoolPointer(true), ShowSummaries: testBoolPointer(false), DailySummary: testBoolPointer(true),
+	updated, err := iam.UpdateSelfPreferences(t.Context(), accountID, service.PreferenceUpdate{
+		Notifications: &service.NotificationUpdate{
+			EmailDigest: testBoolPointer(false), InApp: testBoolPointer(true), ShowSummaries: testBoolPointer(false), DailySummary: testBoolPointer(true),
+		},
 	})
 	if err != nil {
 		t.Fatal(err)

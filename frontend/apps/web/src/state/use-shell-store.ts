@@ -10,6 +10,13 @@ import {
 
 import type { SupportedLocale as AppLocale } from '../i18n/i18n';
 
+export type ShellAccountPreferences = Readonly<{
+  language?: Preferences['localeRegion']['language'];
+  timeZone?: string;
+  themeMode?: Preferences['appearance']['themeMode'];
+  inAppNotifications?: boolean;
+}>;
+
 /**
  * Shell Store（Host 拥有）—— 经 state-foundation 契约创建。
  *
@@ -29,8 +36,10 @@ import type { SupportedLocale as AppLocale } from '../i18n/i18n';
  * 呈现恢复动作（SET-003-005 细化）。
  */
 type ShellState = {
-  /** 八分类偏好（持久化单一事实源）。 */
+  /** 设备设置及当前账号偏好的界面投影。 */
   preferences: Preferences;
+  devicePreferences: Preferences;
+  accountPreferences: ShellAccountPreferences | undefined;
   /** 兼容投影：resolved 主题（light|dark；system 在应用层解析后写回此处）。 */
   theme: 'light' | 'dark';
   locale: AppLocale;
@@ -54,7 +63,11 @@ type ShellState = {
   /** 恢复全部默认。 */
   resetAll: () => void;
   /** 应用跨窗口同步来的完整偏好快照（校验由调用方完成；同步兼容投影）。 */
-  applyPersistedPreferences: (preferences: Preferences) => void;
+  applyPersistedPreferences: (
+    preferences: Preferences,
+    rememberedSidebarCollapsed?: boolean,
+  ) => void;
+  applyAccountPreferences: (preferences: ShellAccountPreferences | undefined) => void;
 };
 
 /** 白名单：八分类偏好 + remember 时的上次侧栏状态；瞬时 UI 不入库。 */
@@ -70,6 +83,50 @@ function projectPreferences(preferences: Preferences, rememberedSidebarCollapsed
       preferences.navigation.sidebarBehavior === 'remember'
         ? rememberedSidebarCollapsed
         : preferences.navigation.sidebarBehavior === 'collapsed',
+  };
+}
+
+function projectShell(
+  devicePreferences: Preferences,
+  accountPreferences: ShellAccountPreferences | undefined,
+  sidebarCollapsed: boolean,
+) {
+  const account = accountPreferences;
+  const preferences = account
+    ? {
+        ...devicePreferences,
+        appearance: {
+          ...devicePreferences.appearance,
+          themeMode: account.themeMode ?? devicePreferences.appearance.themeMode,
+        },
+        localeRegion: {
+          ...devicePreferences.localeRegion,
+          language: account.language ?? devicePreferences.localeRegion.language,
+          timeZone: account.timeZone ?? devicePreferences.localeRegion.timeZone,
+        },
+        notifications: {
+          ...devicePreferences.notifications,
+          inAppNotifications:
+            account.inAppNotifications ?? devicePreferences.notifications.inAppNotifications,
+        },
+      }
+    : devicePreferences;
+  return {
+    preferences,
+    devicePreferences,
+    accountPreferences,
+    ...projectPreferences(preferences, sidebarCollapsed),
+  };
+}
+
+export function persistedShellPreferences(
+  state: Pick<ShellState, 'devicePreferences' | 'sidebarCollapsed'>,
+): ShellPersisted {
+  return {
+    preferences: state.devicePreferences,
+    ...(state.devicePreferences.navigation.sidebarBehavior === 'remember'
+      ? { rememberedSidebarCollapsed: state.sidebarCollapsed }
+      : {}),
   };
 }
 
@@ -103,8 +160,7 @@ function parsePersistedPreferences(persisted: unknown): Preferences | null {
 
 export const useShellStore = createPersistStore<ShellState, ShellPersisted>(
   (set) => ({
-    preferences: defaultPreferences,
-    ...projectPreferences(defaultPreferences),
+    ...projectShell(defaultPreferences, undefined, false),
     hasHydrated: false,
     hydrationIssue: null,
     mobileNavigationOpen: false,
@@ -112,60 +168,69 @@ export const useShellStore = createPersistStore<ShellState, ShellPersisted>(
     // 顶栏主题快捷切换：写入偏好 themeMode 显式 light|dark（离开 system）并同步投影。
     setTheme: (theme) =>
       set((state) => {
+        const device = state.devicePreferences;
         const preferences: Preferences = {
-          ...state.preferences,
-          appearance: { ...state.preferences.appearance, themeMode: theme },
+          ...device,
+          appearance: { ...device.appearance, themeMode: theme },
         };
-        return { preferences, ...projectPreferences(preferences, state.sidebarCollapsed) };
+        return projectShell(preferences, state.accountPreferences, state.sidebarCollapsed);
       }),
     setLocale: (locale) =>
       set((state) => {
+        const device = state.devicePreferences;
         const preferences: Preferences = {
-          ...state.preferences,
-          localeRegion: { ...state.preferences.localeRegion, language: locale },
+          ...device,
+          localeRegion: { ...device.localeRegion, language: locale },
         };
-        return { preferences, ...projectPreferences(preferences, state.sidebarCollapsed) };
+        return projectShell(preferences, state.accountPreferences, state.sidebarCollapsed);
       }),
     setMobileNavigationOpen: (mobileNavigationOpen) => set({ mobileNavigationOpen }),
     // remember 保留策略并通过 partialize 记录上次模式；显式策略则写偏好。
     setSidebarCollapsed: (collapsed) =>
       set((state) => {
-        const behavior = state.preferences.navigation.sidebarBehavior;
+        const device = state.devicePreferences;
+        const behavior = device.navigation.sidebarBehavior;
         if (behavior === 'remember') {
           return { sidebarCollapsed: collapsed };
         }
         const preferences: Preferences = {
-          ...state.preferences,
+          ...device,
           navigation: {
-            ...state.preferences.navigation,
+            ...device.navigation,
             sidebarBehavior: collapsed ? 'collapsed' : 'expanded',
           },
         };
-        return { preferences, ...projectPreferences(preferences, state.sidebarCollapsed) };
+        return projectShell(preferences, state.accountPreferences, state.sidebarCollapsed);
       }),
     updateCategory: (category, patch) =>
       set((state) => {
+        const device = state.devicePreferences;
         const preferences: Preferences = {
-          ...state.preferences,
-          [category]: { ...state.preferences[category], ...patch },
+          ...device,
+          [category]: { ...device[category], ...patch },
         };
-        return { preferences, ...projectPreferences(preferences, state.sidebarCollapsed) };
+        return projectShell(preferences, state.accountPreferences, state.sidebarCollapsed);
       }),
     resetCategory: (category) =>
       set((state) => {
         const preferences: Preferences = {
-          ...state.preferences,
+          ...state.devicePreferences,
           [category]: defaultPreferences[category],
         };
-        return { preferences, ...projectPreferences(preferences, state.sidebarCollapsed) };
+        return projectShell(preferences, state.accountPreferences, state.sidebarCollapsed);
       }),
     resetAll: () =>
-      set(() => {
-        const preferences = defaultPreferences;
-        return { preferences, ...projectPreferences(preferences) };
-      }),
-    applyPersistedPreferences: (preferences) =>
-      set((state) => ({ preferences, ...projectPreferences(preferences, state.sidebarCollapsed) })),
+      set((state) => projectShell(defaultPreferences, state.accountPreferences, false)),
+    applyPersistedPreferences: (preferences, rememberedSidebarCollapsed) =>
+      set((state) =>
+        projectShell(
+          preferences,
+          state.accountPreferences,
+          rememberedSidebarCollapsed ?? state.sidebarCollapsed,
+        ),
+      ),
+    applyAccountPreferences: (preferences) =>
+      set((state) => projectShell(state.devicePreferences, preferences, state.sidebarCollapsed)),
   }),
   {
     name: 'clouddrive.shell',
@@ -173,12 +238,7 @@ export const useShellStore = createPersistStore<ShellState, ShellPersisted>(
     version: PREFERENCES_VERSION,
     skipHydration: true,
     storage: createLocalStorage(),
-    partialize: ({ preferences, sidebarCollapsed }) => ({
-      preferences,
-      ...(preferences.navigation.sidebarBehavior === 'remember'
-        ? { rememberedSidebarCollapsed: sidebarCollapsed }
-        : {}),
-    }),
+    partialize: persistedShellPreferences,
     // 读取期解析：v0 保真迁移 / v1 校验；损坏（无法解析）→ 抛错走 hydration 失败语义，
     // 不静默覆盖（调用方呈现原因 + 恢复动作）。
     migrate: (persisted) => {
@@ -204,8 +264,7 @@ export const useShellStore = createPersistStore<ShellState, ShellPersisted>(
       if (!result.ok) return currentState;
       return {
         ...currentState,
-        preferences: result.value,
-        ...projectPreferences(result.value, typed.rememberedSidebarCollapsed === true),
+        ...projectShell(result.value, undefined, typed.rememberedSidebarCollapsed === true),
       };
     },
     // 保持迁移前语义：hydration 完成后标记 hasHydrated（供 RuntimeProviders 门控）。

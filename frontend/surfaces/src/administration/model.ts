@@ -155,6 +155,16 @@ export const accountPreferencesSchema = z.object({
   }),
 });
 export type AccountPreferences = z.infer<typeof accountPreferencesSchema>;
+export type AccountPreferencesPatch = Readonly<
+  Pick<AccountPreferences, 'version'> &
+    Partial<Pick<AccountPreferences, 'language' | 'timeZone' | 'themeMode'>> & {
+      notifications?: Partial<AccountPreferences['notifications']>;
+    }
+>;
+export type AccountNotificationPreferences = Pick<
+  AccountPreferences['notifications'],
+  'emailDigest' | 'showSummaries' | 'dailySummary'
+>;
 export const passwordPolicySchema = z
   .object({
     minLength: z.number().int().min(1).max(128),
@@ -172,8 +182,11 @@ export interface AdministrationPort {
     update(input: PasswordPolicyInput): Promise<PasswordPolicy>;
     reset(version: number): Promise<PasswordPolicy>;
   };
-  preferences(): Promise<AccountPreferences>;
-  savePreferences(value: AccountPreferences): Promise<AccountPreferences>;
+  preferences(signal?: AbortSignal): Promise<AccountPreferences>;
+  savePreferences(
+    value: AccountPreferencesPatch,
+    signal?: AbortSignal,
+  ): Promise<AccountPreferences>;
   profile(): Promise<AccountProfile>;
   saveProfile(value: AccountProfile): Promise<void>;
   organization(kind: OrganizationKind): Promise<readonly OrganizationItem[]>;
