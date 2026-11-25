@@ -7,14 +7,22 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/reina0721/clouddrive/internal/module/navigation/model"
-	"github.com/reina0721/clouddrive/internal/module/navigation/service"
 	"sort"
 	"strings"
+
+	"github.com/reina0721/clouddrive/internal/module/navigation/model"
+	"github.com/reina0721/clouddrive/internal/module/navigation/service"
 )
 
 //go:embed catalog.json
 var source []byte
+
+// 该对目录版本只改变菜单图标、API 工作台的默认父级和默认顺序。
+// 保留旧策略版本写入兼容，回滚时旧二进制仍能读取此版本写入的策略。
+const (
+	previousPolicyRevision = "71b1e8f16b4b55c335ded8adf0de79c1c6e846d2d81db5b78e7b702711158ee6"
+	presentationRevision   = "ac4588884d725df00a5c5ea47cdd30861d7a1dd4d89ac12e5def214a58c7f773"
+)
 
 type Catalog struct{ snapshot service.CatalogSnapshot }
 
@@ -24,10 +32,16 @@ func New() (*Catalog, error) {
 		return nil, err
 	}
 	hash := sha256.Sum256(source)
-	return &Catalog{snapshot: service.CatalogSnapshot{Revision: hex.EncodeToString(hash[:]), Definitions: definitions}}, nil
+	snapshot := service.CatalogSnapshot{Revision: hex.EncodeToString(hash[:]), Definitions: definitions}
+	if snapshot.Revision == presentationRevision {
+		snapshot.PolicyRevision = previousPolicyRevision
+	}
+	return &Catalog{snapshot: snapshot}, nil
 }
 func (c *Catalog) Snapshot() service.CatalogSnapshot {
-	return service.CatalogSnapshot{Revision: c.snapshot.Revision, Definitions: append([]model.Definition(nil), c.snapshot.Definitions...)}
+	snapshot := c.snapshot
+	snapshot.Definitions = append([]model.Definition(nil), snapshot.Definitions...)
+	return snapshot
 }
 func (c *Catalog) Validate(snapshot service.CatalogSnapshot, policies []model.Policy) (string, error) {
 	if snapshot.Revision != c.snapshot.Revision {

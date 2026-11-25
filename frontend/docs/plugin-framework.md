@@ -485,6 +485,9 @@ expectedVersion)`、`resetPresentation`、`clear`、`clearAll`、`recover`（清
 - Backend 管理概览 `/workspace` 不依赖待办权限；待办区域分别要求 `todos:read/write`。
   分享、任务、节点与存储管理入口分别使用对应原生读取权限。Backend 隐藏会重复回到文件的
   静态根概览；mock 的概览保留。
+- API 工作台默认位于系统管理，Backend 入口要求 `console:workbench:read`。菜单策略仍可覆盖
+  其父级、顺序、标题和可见性，开发中心的默认过滤继续生效。菜单目录由同一份前端声明生成，
+  修改后更新 Go 内嵌目录并配套发布 Web Host。
 - 边界：覆盖只改变**入口呈现**，不放宽任何真实权限；路由与组件仍来自部署期 Registry；
   直接 URL 访问仍由数据服务授权。
 

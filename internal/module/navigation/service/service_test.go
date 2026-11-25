@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/reina0721/clouddrive/internal/module/navigation/binding/consolecatalog"
 	migrationbinding "github.com/reina0721/clouddrive/internal/module/navigation/binding/migration"
 	"github.com/reina0721/clouddrive/internal/module/navigation/model"
 	"github.com/reina0721/clouddrive/internal/module/navigation/repo"
@@ -78,6 +79,120 @@ func TestUnknownAndCatalogChangeFailClosed(t *testing.T) {
 	if err := navigation.Compatible(t.Context()); !errors.Is(err, model.ErrCatalogChanged) {
 		t.Fatalf("catalog change error = %v", err)
 	}
+	if _, err := navigation.Update(t.Context(), service.UpdateCommand{NavigationID: "root", Enabled: true, Version: 1}); !errors.Is(err, model.ErrCatalogChanged) {
+		t.Fatalf("update with unknown catalog revision = %v", err)
+	}
+	catalog.snapshot.Revision = "catalog-a"
+	after, err := navigation.Snapshot(t.Context())
+	if err != nil || len(after.Policies) != 1 || after.Policies[0].Enabled || after.Policies[0].Version != 1 {
+		t.Fatalf("rejected update changed the original policy: %#v, %v", after.Policies, err)
+	}
+}
+
+func TestPresentationCatalogPreservesPoliciesAcrossUpgradeAndRollback(t *testing.T) {
+	const previousRevision = "71b1e8f16b4b55c335ded8adf0de79c1c6e846d2d81db5b78e7b702711158ee6"
+	const workbenchID = "api-workbench.root"
+	ctx := t.Context()
+	catalog, err := consolecatalog.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	current := catalog.Snapshot()
+	if current.Revision == previousRevision || current.PolicyRevision != previousRevision {
+		t.Fatalf("content and rollback policy revisions = %q, %q", current.Revision, current.PolicyRevision)
+	}
+	previous := catalog.Snapshot()
+	previous.Revision = previousRevision
+	previous.PolicyRevision = ""
+	for index := range previous.Definitions {
+		if previous.Definitions[index].ID == workbenchID {
+			previous.Definitions[index].DefaultParentID = "group:development"
+			previous.Definitions[index].DefaultOrder = 45
+		}
+	}
+	rollbackCatalog := &fakeCatalog{snapshot: previous}
+	older, resource := newService(t, rollbackCatalog)
+	defer resource.Close()
+	parent := "group:management"
+	order := 12
+	command := service.UpdateCommand{
+		NavigationID: workbenchID, Enabled: true, Label: "自定义工作台",
+		ParentOverride: &parent, OrderOverride: &order, PresentationPermission: "console:workbench:read",
+	}
+	before, err := older.Update(ctx, command)
+	if err != nil {
+		t.Fatal(err)
+	}
+	upgraded := serviceWithResource(t, catalog, resource)
+	menus, upgradeSnapshot, err := upgraded.MenuSnapshot(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if upgradeSnapshot.CatalogRevision != current.Revision || upgradeSnapshot.NavigationRevision == before.NavigationRevision {
+		t.Fatalf("upgrade revisions = %q, %q", upgradeSnapshot.CatalogRevision, upgradeSnapshot.NavigationRevision)
+	}
+	var found bool
+	for _, menu := range menus {
+		if menu.ID != workbenchID {
+			continue
+		}
+		found = true
+		if menu.DefaultParentID != "group:administration" || menu.DefaultOrder != 52 ||
+			menu.ParentID != parent || menu.Order != model.Order(order) || !menu.ParentOverridden || !menu.OrderOverridden ||
+			menu.Label != command.Label || menu.PresentationPermission != command.PresentationPermission || !menu.Enabled || menu.Version != 1 {
+			t.Fatalf("upgrade lost menu defaults or overrides: %#v", menu)
+		}
+	}
+	if !found {
+		t.Fatal("workbench missing from upgraded catalog")
+	}
+	if _, err := upgraded.Update(ctx, command); !errors.Is(err, model.ErrConflict) {
+		t.Fatalf("stale policy version = %v", err)
+	}
+	command.Version = 1
+	command.Enabled = false
+	if _, err := upgraded.Update(ctx, command); err != nil {
+		t.Fatal(err)
+	}
+	// 首次在升级版本新增的覆写也必须可由旧版本读取。
+	if _, err := upgraded.Update(ctx, service.UpdateCommand{NavigationID: "system-tools.runtime", Enabled: false}); err != nil {
+		t.Fatal(err)
+	}
+	rolledBack := serviceWithResource(t, rollbackCatalog, resource)
+	back, err := rolledBack.Snapshot(ctx)
+	if err != nil || len(back.Policies) != 2 {
+		t.Fatalf("rollback cannot read both policies: %#v, %v", back, err)
+	}
+	for _, policy := range back.Policies {
+		if policy.CatalogRevision != previousRevision || policy.Enabled {
+			t.Fatalf("rollback policy = %#v", policy)
+		}
+	}
+	command.Version = 2
+	if _, err := rolledBack.Update(ctx, command); err != nil {
+		t.Fatalf("rollback cannot edit the policy version written on upgrade: %v", err)
+	}
+
+	// 接受以精确当前内容版本保存的策略，下次编辑写入回退兼容版本。
+	strictCurrent := current
+	strictCurrent.PolicyRevision = ""
+	strictService, otherResource := newService(t, &fakeCatalog{snapshot: strictCurrent})
+	defer otherResource.Close()
+	command.Version = 0
+	if _, err := strictService.Update(ctx, command); err != nil {
+		t.Fatal(err)
+	}
+	upgradedOther := serviceWithResource(t, catalog, otherResource)
+	if err := upgradedOther.Compatible(ctx); err != nil {
+		t.Fatal(err)
+	}
+	command.Version = 1
+	if _, err := upgradedOther.Update(ctx, command); err != nil {
+		t.Fatal(err)
+	}
+	if err := serviceWithResource(t, rollbackCatalog, otherResource).Compatible(ctx); err != nil {
+		t.Fatal(err)
+	}
 }
 
 type fakeCatalog struct{ snapshot service.CatalogSnapshot }
@@ -113,6 +228,11 @@ func newService(t *testing.T, catalog service.NavigationCatalog) (*service.Servi
 	if err != nil {
 		t.Fatal(err)
 	}
+	return serviceWithResource(t, catalog, resource), resource
+}
+
+func serviceWithResource(t *testing.T, catalog service.NavigationCatalog, resource database.Resource) *service.Service {
+	t.Helper()
 	store, err := repo.New(resourceAccess{resource})
 	if err != nil {
 		t.Fatal(err)
@@ -121,7 +241,7 @@ func newService(t *testing.T, catalog service.NavigationCatalog) (*service.Servi
 	if err != nil {
 		t.Fatal(err)
 	}
-	return navigation, resource
+	return navigation
 }
 
 type resourceAccess struct{ resource database.Resource }

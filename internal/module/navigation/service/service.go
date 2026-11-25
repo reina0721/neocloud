@@ -12,9 +12,23 @@ import (
 )
 
 type CatalogSnapshot struct {
-	Revision    string
-	Definitions []model.Definition
+	Revision string
+	// PolicyRevision 是已确认兼容的持久化版本。留空时使用当前目录版本。
+	PolicyRevision string
+	Definitions    []model.Definition
 }
+
+func (catalog CatalogSnapshot) policyRevision() string {
+	if catalog.PolicyRevision != "" {
+		return catalog.PolicyRevision
+	}
+	return catalog.Revision
+}
+
+func (catalog CatalogSnapshot) acceptsPolicyRevision(revision string) bool {
+	return revision == catalog.Revision || revision == catalog.policyRevision()
+}
+
 type NavigationCatalog interface {
 	Snapshot() CatalogSnapshot
 	Validate(CatalogSnapshot, []model.Policy) (string, error)
@@ -118,7 +132,7 @@ func (service *Service) Update(ctx context.Context, command UpdateCommand) (mode
 	if !definition.Manageable {
 		return model.Snapshot{}, model.ErrNotManageable
 	}
-	policy := model.Policy{Label: command.Label, PresentationPermission: command.PresentationPermission, NavigationID: command.NavigationID, Enabled: command.Enabled, ParentOverride: cloneString(command.ParentOverride), OrderOverride: orderOverride(command.OrderOverride), CatalogRevision: catalog.Revision, Version: command.Version, UpdatedAt: service.clock.Now().UTC()}
+	policy := model.Policy{Label: command.Label, PresentationPermission: command.PresentationPermission, NavigationID: command.NavigationID, Enabled: command.Enabled, ParentOverride: cloneString(command.ParentOverride), OrderOverride: orderOverride(command.OrderOverride), CatalogRevision: catalog.policyRevision(), Version: command.Version, UpdatedAt: service.clock.Now().UTC()}
 	if err := model.ValidatePolicy(policy); err != nil {
 		return model.Snapshot{}, err
 	}
@@ -128,6 +142,9 @@ func (service *Service) Update(ctx context.Context, command UpdateCommand) (mode
 			return err
 		}
 		candidate := policyModels(current)
+		if err := validatePolicyRevisions(catalog, candidate); err != nil {
+			return err
+		}
 		replaced := false
 		for index := range candidate {
 			if candidate[index].NavigationID == policy.NavigationID {
@@ -157,7 +174,7 @@ func (service *Service) Update(ctx context.Context, command UpdateCommand) (mode
 		if err != nil {
 			return err
 		}
-		if existing.CatalogRevision != catalog.Revision {
+		if !catalog.acceptsPolicyRevision(existing.CatalogRevision) {
 			return model.ErrCatalogChanged
 		}
 		return unit.Update(txCtx, record, command.Version)
@@ -174,16 +191,8 @@ func (service *Service) Update(ctx context.Context, command UpdateCommand) (mode
 }
 
 func (service *Service) Compatible(ctx context.Context) error {
-	catalog, policies, _, err := service.load(ctx)
-	if err != nil {
-		return err
-	}
-	for _, policy := range policies {
-		if policy.CatalogRevision != catalog.Revision {
-			return model.ErrCatalogChanged
-		}
-	}
-	return nil
+	_, _, _, err := service.load(ctx)
+	return err
 }
 func (service *Service) load(ctx context.Context) (CatalogSnapshot, []model.Policy, string, error) {
 	catalog := service.catalog.Snapshot()
@@ -193,10 +202,8 @@ func (service *Service) load(ctx context.Context) (CatalogSnapshot, []model.Poli
 		return CatalogSnapshot{}, nil, "", err
 	}
 	policies := policyModels(records)
-	for _, policy := range policies {
-		if policy.CatalogRevision != catalog.Revision {
-			return CatalogSnapshot{}, nil, "", model.ErrCatalogChanged
-		}
+	if err := validatePolicyRevisions(catalog, policies); err != nil {
+		return CatalogSnapshot{}, nil, "", err
 	}
 	if err := validateCandidate(catalog, policies); err != nil {
 		return CatalogSnapshot{}, nil, "", err
@@ -207,6 +214,16 @@ func (service *Service) load(ctx context.Context) (CatalogSnapshot, []model.Poli
 	}
 	return catalog, policies, revision, nil
 }
+
+func validatePolicyRevisions(catalog CatalogSnapshot, policies []model.Policy) error {
+	for _, policy := range policies {
+		if !catalog.acceptsPolicyRevision(policy.CatalogRevision) {
+			return model.ErrCatalogChanged
+		}
+	}
+	return nil
+}
+
 func merge(definitions []model.Definition, policies []model.Policy) []model.Menu {
 	byID := map[string]model.Policy{}
 	for _, policy := range policies {

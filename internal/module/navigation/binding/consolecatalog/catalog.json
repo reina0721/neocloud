@@ -95,8 +95,8 @@
     "RouteID": "api-workbench",
     "TitleMessageID": "apiWorkbench.nav.title",
     "IconID": "api",
-    "DefaultParentID": "group:development",
-    "DefaultOrder": 45,
+    "DefaultParentID": "group:administration",
+    "DefaultOrder": 52,
     "Manageable": true
   },
   {
@@ -404,7 +404,7 @@
     "ModuleID": "system-tools",
     "RouteID": "system-tools.filesystem",
     "TitleMessageID": "systemTools.nav.filesystem",
-    "IconID": "resource",
+    "IconID": "settings",
     "DefaultParentID": "group:administration",
     "DefaultOrder": 44,
     "Manageable": true
@@ -414,7 +414,7 @@
     "ModuleID": "system-tools",
     "RouteID": "system-tools.blobs",
     "TitleMessageID": "systemTools.nav.blobs",
-    "IconID": "resource",
+    "IconID": "data",
     "DefaultParentID": "group:administration",
     "DefaultOrder": 47,
     "Manageable": true
@@ -424,7 +424,7 @@
     "ModuleID": "system-tools",
     "RouteID": "system-tools.files",
     "TitleMessageID": "systemTools.nav.files",
-    "IconID": "resource",
+    "IconID": "list",
     "DefaultParentID": "group:administration",
     "DefaultOrder": 46,
     "Manageable": true
@@ -434,7 +434,7 @@
     "ModuleID": "system-tools",
     "RouteID": "system-tools.shares",
     "TitleMessageID": "systemTools.nav.shares",
-    "IconID": "resource",
+    "IconID": "navigation",
     "DefaultParentID": "group:administration",
     "DefaultOrder": 48,
     "Manageable": true
@@ -444,7 +444,7 @@
     "ModuleID": "system-tools",
     "RouteID": "system-tools.tasks",
     "TitleMessageID": "systemTools.nav.tasks",
-    "IconID": "resource",
+    "IconID": "async",
     "DefaultParentID": "group:administration",
     "DefaultOrder": 49,
     "Manageable": true
@@ -454,7 +454,7 @@
     "ModuleID": "system-tools",
     "RouteID": "system-tools.nodes",
     "TitleMessageID": "systemTools.nav.nodes",
-    "IconID": "resource",
+    "IconID": "api",
     "DefaultParentID": "group:administration",
     "DefaultOrder": 50,
     "Manageable": true
@@ -464,7 +464,7 @@
     "ModuleID": "system-tools",
     "RouteID": "system-tools.storage",
     "TitleMessageID": "systemTools.nav.storage",
-    "IconID": "resource",
+    "IconID": "surfaces",
     "DefaultParentID": "group:administration",
     "DefaultOrder": 51,
     "Manageable": true
@@ -474,7 +474,7 @@
     "ModuleID": "system-tools",
     "RouteID": "system-tools.runtime",
     "TitleMessageID": "administration.runtime",
-    "IconID": "identity",
+    "IconID": "analytics",
     "DefaultParentID": "group:administration",
     "DefaultOrder": 45,
     "Manageable": true
