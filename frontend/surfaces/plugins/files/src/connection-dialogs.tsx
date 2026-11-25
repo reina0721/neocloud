@@ -1,11 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { CheckboxField, TextField, SelectField } from '@clouddrive/ui-adapter/form-field';
 import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { NumberedFilePagination } from './file-pagination';
-import { useConnections, useFiles } from '../../../src/files/runtime';
+import { OwnFolderPicker } from './own-folder-picker';
+import { useConnections } from '../../../src/files/runtime';
 import { FilesError, type FileListing } from '../../../src/files/model';
 import type {
   ConnectionIssued,
@@ -22,41 +22,15 @@ export function CreateConnectionDialog({
   onClose(): void;
   onIssued(value: ConnectionIssued): void;
 }>) {
-  const port = useConnections(),
-    files = useFiles();
+  const port = useConnections();
   const { t } = useFrontendTranslation();
-  const [name, setName] = useState(''),
-    [parent, setParent] = useState('');
-  const [readOnly, setReadOnly] = useState(false),
-    [block, setBlock] = useState(true);
+  const [name, setName] = useState('');
+  const [parent, setParent] = useState('');
+  const [readOnly, setReadOnly] = useState(false);
+  const [block, setBlock] = useState(true);
   const [age, setAge] = useState(String(policy.defaultAgeSeconds));
-  const [directory, setDirectory] = useState<FileListing>(),
-    [failure, setFailure] = useState('');
-  const [retry, setRetry] = useState(0);
-  const [page, setPage] = useState(1);
-  useEffect(() => {
-    const controller = new AbortController();
-    void files
-      .list(
-        { parent, category: '', search: '', trash: false, sort: 'name', desc: false, page },
-        controller.signal,
-      )
-      .then((value) => {
-        if (!controller.signal.aborted) setDirectory(value);
-      })
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted)
-          setFailure(t(`files.errors.${error instanceof FilesError ? error.code : 'unavailable'}`));
-      });
-    return () => controller.abort();
-  }, [files, parent, page, retry, t]);
-  function open(id: string) {
-    setDirectory(undefined);
-    setFailure('');
-    setParent(id);
-    setPage(1);
-    setRetry((value) => value + 1);
-  }
+  const [directory, setDirectory] = useState<FileListing>();
+  const [failure, setFailure] = useState('');
   const ages = [
     ...new Set(
       [86400, 604800, policy.defaultAgeSeconds, policy.maxAgeSeconds].filter(
@@ -100,59 +74,15 @@ export function CreateConnectionDialog({
           onChange={(event) => setName(event.target.value)}
           autoComplete="off"
         />
-        <section
-          className="rounded-control border border-border p-3"
-          aria-label={t('files.connections.root')}
-        >
-          <h2 className="font-semibold">{t('files.connections.root')}</h2>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Action variant="secondary" onPress={() => open('')}>
-              /
-            </Action>
-            {directory?.breadcrumbs.map((entry) => (
-              <Action key={entry.id} variant="secondary" onPress={() => open(entry.id)}>
-                {entry.name}
-              </Action>
-            ))}
-          </div>
-          <p className="my-3 break-words text-sm">
-            {t('files.connections.selectedRoot')}: /
-            {directory?.breadcrumbs.map((entry) => entry.name).join('/')}
-          </p>
-          {failure ? (
-            <p role="alert" className="text-danger">
-              {failure}
-            </p>
-          ) : null}
-          {!directory ? (
-            <Action variant="secondary" onPress={() => open(parent)}>
-              {t('files.refresh')}
-            </Action>
-          ) : (
-            <ul className="max-h-48 space-y-2 overflow-auto">
-              {directory.items
-                .filter((entry) => entry.kind === 'folder')
-                .map((entry) => (
-                  <li key={entry.id}>
-                    <Action variant="secondary" onPress={() => open(entry.id)}>
-                      {entry.name}/
-                    </Action>
-                  </li>
-                ))}
-            </ul>
-          )}
-          {directory && directory.total > directory.pageSize ? (
-            <NumberedFilePagination
-              page={directory.page}
-              pageSize={directory.pageSize}
-              total={directory.total}
-              onPage={(next) => {
-                setDirectory(undefined);
-                setPage(next);
-              }}
-            />
-          ) : null}
-        </section>
+        <OwnFolderPicker
+          purpose="access"
+          value={parent}
+          onChange={(next) => {
+            setParent(next);
+            setFailure('');
+          }}
+          onListing={setDirectory}
+        />
         <CheckboxField
           label={t('files.connections.readOnly')}
           checked={readOnly}

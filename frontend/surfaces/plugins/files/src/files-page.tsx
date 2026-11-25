@@ -5,8 +5,9 @@ import { BreadcrumbTrail } from '@clouddrive/ui-adapter/navigation';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { CheckboxField, TextField } from '@clouddrive/ui-adapter/form-field';
+import { useContainerBreakpoint } from '@clouddrive/ui-adapter/container-layout';
 import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { DialogSurface, DrawerSurface } from '@clouddrive/ui-adapter/overlays';
 import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
 import {
   lazy,
@@ -130,6 +131,7 @@ type Dialog = {
 const FileAccessDialog = lazy(() =>
   import('./access-dialog').then((module) => ({ default: module.FileAccessDialog })),
 );
+
 export function FilesPage({
   parent,
   category,
@@ -181,6 +183,18 @@ export function FilesPage({
     [viewOptionsOpen, setViewOptionsOpen] = useState(false),
     [inspectorOpen, setInspectorOpen] = useState(false),
     [historySettingsOpen, setHistorySettingsOpen] = useState(false);
+
+  const { ref: measureCollection, matches: inspectorDocked } = useContainerBreakpoint('4xl');
+  const inspectorTrigger = useRef<HTMLButtonElement>(null);
+  const compactActions = useRef<HTMLDivElement>(null);
+  const inspectorHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (!inspectorOpen || !inspectorDocked) return;
+    const frame = requestAnimationFrame(() =>
+      inspectorHeading.current?.focus({ preventScroll: true }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [inspectorOpen, inspectorDocked]);
   const time = useFileTime();
   const [focusedEntry, setFocusedEntry] = useState(''),
     [selectionAnchor, setSelectionAnchor] = useState('');
@@ -844,19 +858,342 @@ export function FilesPage({
     (sum, entry) => sum + (entry.kind === 'file' ? entry.sizeBytes : 0),
     0,
   );
+  const folderActions = [
+    { id: 'pin-folder', label: t('files.navigation.pin'), icon: <Pin className="size-4" /> },
+    { id: 'save-shortcut', label: t('files.navigation.save'), icon: <Link2 className="size-4" /> },
+    { id: 'copy-path', label: t('files.explorer.copyPath'), icon: <Copy className="size-4" /> },
+    {
+      id: 'version-retention',
+      label: t('files.retention.title'),
+      icon: <Settings className="size-4" />,
+    },
+    {
+      id: 'select-all',
+      label: t('files.selectAll'),
+      disabled: loading || navigating || !visibleIds.length,
+    },
+    { id: 'select-none', label: t('files.explorer.none'), disabled: !selected.length },
+    {
+      id: 'select-invert',
+      label: t('files.explorer.invert'),
+      disabled: loading || navigating || !visibleIds.length,
+    },
+  ];
+  const sortGroups = [
+    {
+      id: 'field',
+      label: t('files.explorer.sortField'),
+      items: (['name', 'size', 'updated', 'created'] as const).map((sort) => ({
+        id: sort,
+        label: t('files.' + sort + 'Sort'),
+        selected: preferences.sort === sort,
+        disabled: preferenceBusy || !preferenceSnapshot,
+      })),
+    },
+    {
+      id: 'order',
+      label: t('files.explorer.sortOrder'),
+      items: [
+        {
+          id: 'asc',
+          label: t('files.explorer.ascending'),
+          selected: !preferences.desc,
+          disabled: preferenceBusy || !preferenceSnapshot,
+        },
+        {
+          id: 'desc',
+          label: t('files.explorer.descending'),
+          selected: preferences.desc,
+          disabled: preferenceBusy || !preferenceSnapshot,
+        },
+      ],
+    },
+  ];
+  function runFolderAction(action: string) {
+    if (action === 'version-retention') setHistorySettingsOpen(true);
+    else if (action === 'copy-path')
+      void port.annotations
+        .copyText('/' + (listing?.breadcrumbs.map((entry) => entry.name).join('/') ?? ''))
+        .then(() => setNotice(t('files.explorer.pathCopied')))
+        .catch((error) => setNotice(errorText(error)));
+    else if (action === 'select-all') setSelected([...visibleIds]);
+    else if (action === 'select-none') setSelected([]);
+    else if (action === 'select-invert')
+      setSelected(visibleIds.filter((id) => !selectedIds.has(id)));
+    else if (action === 'save-shortcut') setSaveShortcut(true);
+    else if (action === 'pin-folder') setPinTarget({ targetKind: 'folder', targetId: parent });
+  }
+
+  function changeSort(sort: string) {
+    void savePreferences({
+      ...preferences,
+      ...(sort === 'asc' || sort === 'desc'
+        ? { desc: sort === 'desc' }
+        : { sort: sort as FileViewPreferences['sort'] }),
+    });
+  }
+
+  const closeInspector = useCallback(() => {
+    setInspectorOpen(false);
+    requestAnimationFrame(() => {
+      const trigger = inspectorTrigger.current?.getClientRects().length
+        ? inspectorTrigger.current
+        : compactActions.current?.querySelector('button');
+      trigger?.focus({ preventScroll: true });
+    });
+  }, []);
+
+  useEffect(() => {
+    const element = inspectorHeading.current?.closest('.surface-file-collection');
+    if (!element || !inspectorOpen || !inspectorDocked) return;
+    function escape(event: Event) {
+      if (event instanceof KeyboardEvent && event.key === 'Escape' && !event.defaultPrevented) {
+        event.preventDefault();
+        closeInspector();
+      }
+    }
+    element.addEventListener('keydown', escape);
+    return () => element.removeEventListener('keydown', escape);
+  }, [closeInspector, inspectorDocked, inspectorOpen]);
+
+  function toggleInspector() {
+    if (inspectorOpen) closeInspector();
+    else setInspectorOpen(true);
+  }
+
+  function runInspectorAction(action: () => void) {
+    if (!inspectorDocked) setInspectorOpen(false);
+    action();
+  }
+
+  function runCompactAction(action: string) {
+    if (action === 'refresh') reload();
+    else if (action === 'advanced') setAdvancedOpen(true);
+    else if (action === 'inspector') toggleInspector();
+    else if (folderActions.some(({ id }) => id === action)) runFolderAction(action);
+    else changeSort(action);
+  }
+  const inspectorContent =
+    targets.length > 1 ? (
+      <div className="space-y-3 pt-4 text-sm text-ink-muted">
+        <p className="font-medium text-ink">
+          {t('files.explorer.inspectorMulti', {
+            count: targets.length,
+            size: bytes(selectedTotalBytes),
+          })}
+        </p>
+      </div>
+    ) : inspectedEntry ? (
+      <div className="space-y-4 pt-4">
+        <div className="flex h-36 w-full items-center justify-center overflow-hidden rounded-control border border-border/60 bg-surface-muted/60 [&_img]:max-h-full [&_img]:max-w-full [&_img]:object-contain [&_img]:p-2">
+          {preferences.thumbnails &&
+          thumbnailIds.has(inspectedEntry.id) &&
+          listing &&
+          inspectedEntry.sizeBytes <= listing.maxThumbnailBytes ? (
+            <FileMedia
+              key={inspectedEntry.id + ':' + inspectedEntry.contentRevision}
+              entry={inspectedEntry}
+              mode="thumbnail"
+              maxBytes={listing.maxThumbnailBytes}
+            />
+          ) : (
+            <FileGlyph
+              kind={inspectedEntry.kind}
+              mediaType={inspectedEntry.mediaType}
+              size="large"
+              emoji={annotationMap.get(inspectedEntry.id)?.emoji}
+              color={annotationMap.get(inspectedEntry.id)?.folderColor}
+              rule={
+                inspectedEntry.kind === 'file'
+                  ? iconsByExtension.get(fileIconExtension(inspectedEntry.name))
+                  : undefined
+              }
+            />
+          )}
+        </div>
+        <div className="space-y-1">
+          <p className="break-words text-sm font-semibold text-ink">{inspectedEntry.name}</p>
+          {annotationMap.get(inspectedEntry.id) ? (
+            <TagBadges
+              tags={annotationMap.get(inspectedEntry.id)!.tags}
+              onTag={(tagName) =>
+                navigate({
+                  filter: encodeFileFilters({
+                    scope: 'all',
+                    tagFilter: { names: [tagName], match: 'all' },
+                  }),
+                })
+              }
+            />
+          ) : null}
+        </div>
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+          <div>
+            <dt className="text-ink-muted">{t('files.explorer.inspectorMetaType')}</dt>
+            <dd className="mt-0.5 truncate font-medium text-ink">
+              {inspectedEntry.kind === 'file'
+                ? inspectedEntry.mediaType || t('files.discovery.file')
+                : inspectedEntry.kind === 'folder'
+                  ? t('files.folder')
+                  : t('files.navigation.shortcut')}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-ink-muted">{t('files.explorer.inspectorMetaSize')}</dt>
+            <dd className="mt-0.5 font-medium text-ink">
+              {inspectedEntry.kind === 'file' ? bytes(inspectedEntry.sizeBytes) : '—'}
+            </dd>
+          </div>
+          <div className="col-span-2">
+            <dt className="text-ink-muted">{t('files.explorer.inspectorMetaUpdated')}</dt>
+            <dd className="mt-0.5 font-medium text-ink">{time.full(inspectedEntry.updatedAt)}</dd>
+          </div>
+          <div className="col-span-2">
+            <dt className="text-ink-muted">{t('files.explorer.inspectorMetaCreated')}</dt>
+            <dd className="mt-0.5 font-medium text-ink">{time.full(inspectedEntry.createdAt)}</dd>
+          </div>
+        </dl>
+        {!trash ? (
+          <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+            <Action
+              size="sm"
+              variant="secondary"
+              leadingIcon={<Eye className="size-4" />}
+              onPress={() =>
+                runInspectorAction(() => {
+                  if (inspectedEntry.kind === 'folder') navigate({ parent: inspectedEntry.id });
+                  else void showPreview(inspectedEntry);
+                })
+              }
+            >
+              {t('files.explorer.open')}
+            </Action>
+            {inspectedEntry.kind === 'file' ? (
+              <Action
+                size="sm"
+                variant="secondary"
+                leadingIcon={<Download className="size-4" />}
+                onPress={() => void download(inspectedEntry)}
+              >
+                {t('files.download')}
+              </Action>
+            ) : null}
+            {inspectedEntry.kind !== 'shortcut' ? (
+              <Action
+                size="sm"
+                variant="secondary"
+                leadingIcon={<Share2 className="size-4" />}
+                onPress={() => runInspectorAction(() => setShareTarget(inspectedEntry))}
+              >
+                {t('files.share')}
+              </Action>
+            ) : null}
+            {inspectedEntry.kind === 'file' ? (
+              <Action
+                size="sm"
+                variant="quiet"
+                leadingIcon={<History className="size-4" />}
+                onPress={() => runInspectorAction(() => setVersionEntry(inspectedEntry))}
+              >
+                {t('files.versions.title')}
+              </Action>
+            ) : null}
+            <Action
+              size="sm"
+              variant="quiet"
+              leadingIcon={<Pencil className="size-4" />}
+              onPress={() => runInspectorAction(() => showDetails(inspectedEntry))}
+            >
+              {t('files.explorer.inspectorEditDetails')}
+            </Action>
+          </div>
+        ) : null}
+      </div>
+    ) : (
+      <p className="pt-6 text-center text-xs leading-5 text-ink-muted">
+        {t('files.explorer.inspectorEmpty')}
+      </p>
+    );
   return (
     <>
-      <div className="surface-file-collection flex min-h-full min-w-0 flex-col gap-3">
+      <div
+        ref={measureCollection}
+        className="surface-file-collection flex min-h-full min-w-0 flex-col gap-3"
+      >
         <Toolbar
           label={title}
           primary={
-            <>
-              <div
-                data-file-breadcrumbs
-                className="flex min-w-0 flex-1 items-center gap-1 md:gap-2 md:overflow-x-auto"
-              >
-                {listing?.items.length ? (
-                  <div className="shrink-0">
+            <div className="@container w-full min-w-0">
+              <div className="flex min-w-0 flex-wrap items-center gap-2 @min-[48rem]:flex-nowrap">
+                <div
+                  data-file-breadcrumbs
+                  className="flex min-w-0 basis-full items-center gap-1 @min-[48rem]:flex-1"
+                >
+                  {parent && !trash && !category ? (
+                    <IconAction
+                      size="sm"
+                      label={t('files.explorer.parent')}
+                      tooltip
+                      disabled={loading || navigating}
+                      onPress={() => navigate({ parent: listing?.breadcrumbs.at(-2)?.id ?? '' })}
+                    >
+                      <ArrowUp className="size-4" />
+                    </IconAction>
+                  ) : null}
+                  {parent ? (
+                    <div className="shrink-0 @min-[48rem]:hidden">
+                      <MenuButton
+                        ariaLabel={t('files.explorer.ancestors')}
+                        triggerVariant="icon"
+                        label={<MoreHorizontal className="size-4" />}
+                        triggerSize="sm"
+                        items={[
+                          { id: 'root', label: t('files.nav') },
+                          ...(listing?.breadcrumbs.map((entry) => ({
+                            id: entry.id,
+                            label: entry.name,
+                          })) ?? []),
+                        ]}
+                        onAction={(id) => navigate({ parent: id === 'root' ? '' : id })}
+                      />
+                    </div>
+                  ) : null}
+                  <h1 className="sr-only">{title}</h1>
+                  <span
+                    className="min-w-0 flex-1 truncate text-sm font-semibold text-ink @min-[48rem]:hidden"
+                    title={title}
+                  >
+                    {title}
+                  </span>
+                  <div className="hidden min-w-0 flex-1 overflow-x-auto @min-[48rem]:block">
+                    <BreadcrumbTrail
+                      label={t('files.explorer.ancestors')}
+                      items={[
+                        {
+                          id: 'root',
+                          label: t('files.nav'),
+                          icon: <Home className="size-4" />,
+                          href: port.destinationHref('files'),
+                          onNavigate: () => navigate({}),
+                        },
+                        ...(listing?.breadcrumbs.map((entry) => ({
+                          id: entry.id,
+                          label: entry.name,
+                          href: port.destinationHref('files', { parent: entry.id }),
+                          onNavigate: () => navigate({ parent: entry.id }),
+                        })) ?? []),
+                        ...(trash || category ? [{ id: 'scope', label: title }] : []),
+                      ]}
+                    />
+                  </div>
+                  {listing ? (
+                    <span className="shrink-0 whitespace-nowrap rounded-action bg-surface-muted px-2 py-0.5 text-xs text-ink-muted">
+                      {t('files.explorer.itemCount', { count: listing.total })}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  {listing?.items.length ? (
                     <CheckboxField
                       label={t('files.discovery.selectPage')}
                       presentation="control-only"
@@ -866,221 +1203,117 @@ export function FilesPage({
                         setSelected(checked ? visibleItems.map((entry) => entry.id) : []);
                       }}
                     />
+                  ) : null}
+                  <div className="hidden items-center gap-1 @min-[48rem]:flex">
+                    <IconAction size="sm" label={t('files.refresh')} tooltip onPress={reload}>
+                      <RefreshCw className="size-4" />
+                    </IconAction>
+                    <MenuButton
+                      label={<MoreHorizontal className="size-4" />}
+                      ariaLabel={t('files.discovery.folderActions')}
+                      triggerVariant="icon"
+                      triggerSize="sm"
+                      items={folderActions}
+                      onAction={runFolderAction}
+                    />
+                    <IconAction
+                      size="sm"
+                      label={t('files.discovery.advanced')}
+                      tooltip
+                      disabled={loading || navigating}
+                      onPress={() => setAdvancedOpen(true)}
+                    >
+                      <SlidersHorizontal className="size-4" />
+                    </IconAction>
                   </div>
-                ) : null}
-                {parent && !trash && !category ? (
-                  <IconAction
-                    size="sm"
-                    label={t('files.explorer.parent')}
-                    tooltip
-                    disabled={loading || navigating}
-                    onPress={() => navigate({ parent: listing?.breadcrumbs.at(-2)?.id ?? '' })}
-                  >
-                    <ArrowUp className="size-4" />
-                  </IconAction>
-                ) : null}
-                <div className={parent ? 'md:hidden' : 'hidden'}>
                   <MenuButton
-                    ariaLabel={t('files.explorer.ancestors')}
-                    triggerVariant="icon"
-                    label={<MoreHorizontal className="size-4" />}
                     triggerSize="sm"
+                    ariaLabel={t('files.explorer.view')}
+                    triggerVariant="icon"
+                    label={<LayoutGrid className="size-4" />}
                     items={[
-                      { id: 'root', label: t('files.nav') },
-                      ...(listing?.breadcrumbs.map((entry, index) => ({
-                        id: entry.id,
-                        label:
-                          index === 0 ? '/' + entry.name : String(index + 1) + '. ' + entry.name,
-                      })) ?? []),
-                    ]}
-                    onAction={(id) => navigate({ parent: id === 'root' ? '' : id })}
-                  />
-                </div>
-                <h1 className="sr-only">{title}</h1>
-                <span className="min-w-0 truncate text-sm font-semibold text-ink md:hidden">
-                  {title}
-                </span>
-                <div className="hidden min-w-0 items-center gap-1.5 md:flex">
-                  <BreadcrumbTrail
-                    label={t('files.explorer.ancestors')}
-                    items={[
-                      {
-                        id: 'root',
-                        label: t('files.nav'),
-                        icon: <Home className="size-4" />,
-                        href: port.destinationHref('files'),
-                        onNavigate: () => navigate({}),
-                      },
-                      ...(listing?.breadcrumbs.map((entry) => ({
-                        id: entry.id,
-                        label: entry.name,
-                        href: port.destinationHref('files', { parent: entry.id }),
-                        onNavigate: () => navigate({ parent: entry.id }),
-                      })) ?? []),
-                      ...(trash || category ? [{ id: 'scope', label: title }] : []),
-                    ]}
-                  />
-                </div>
-                {listing ? (
-                  <span className="shrink-0 whitespace-nowrap rounded-action bg-surface-muted px-2 py-0.5 text-xs text-ink-muted">
-                    {t('files.explorer.itemCount', { count: listing.total })}
-                  </span>
-                ) : null}
-                <IconAction size="sm" label={t('files.refresh')} tooltip onPress={reload}>
-                  <RefreshCw className="size-4" />
-                </IconAction>
-                <MenuButton
-                  label={<MoreHorizontal className="size-4" />}
-                  ariaLabel={t('files.discovery.folderActions')}
-                  triggerVariant="icon"
-                  triggerSize="sm"
-                  items={[
-                    {
-                      id: 'pin-folder',
-                      label: t('files.navigation.pin'),
-                      icon: <Pin className="size-4" />,
-                    },
-                    {
-                      id: 'save-shortcut',
-                      label: t('files.navigation.save'),
-                      icon: <Link2 className="size-4" />,
-                    },
-                    {
-                      id: 'copy-path',
-                      label: t('files.explorer.copyPath'),
-                      icon: <Copy className="size-4" />,
-                    },
-                    {
-                      id: 'version-retention',
-                      label: t('files.retention.title'),
-                      icon: <Settings className="size-4" />,
-                    },
-                    {
-                      id: 'select-all',
-                      label: t('files.selectAll'),
-                      disabled: loading || navigating || !visibleIds.length,
-                    },
-                    {
-                      id: 'select-none',
-                      label: t('files.explorer.none'),
-                      disabled: !selected.length,
-                    },
-                    {
-                      id: 'select-invert',
-                      label: t('files.explorer.invert'),
-                      disabled: loading || navigating || !visibleIds.length,
-                    },
-                  ]}
-                  onAction={(action) => {
-                    if (action === 'version-retention') setHistorySettingsOpen(true);
-                    else if (action === 'copy-path')
-                      void port.annotations
-                        .copyText(
-                          '/' + (listing?.breadcrumbs.map((entry) => entry.name).join('/') ?? ''),
-                        )
-                        .then(() => setNotice(t('files.explorer.pathCopied')))
-                        .catch((error) => setNotice(errorText(error)));
-                    else if (action === 'select-all') setSelected([...visibleIds]);
-                    else if (action === 'select-none') setSelected([]);
-                    else if (action === 'select-invert')
-                      setSelected(visibleIds.filter((id) => !selectedIds.has(id)));
-                    else if (action === 'save-shortcut') setSaveShortcut(true);
-                    else if (action === 'pin-folder')
-                      setPinTarget({ targetKind: 'folder', targetId: parent });
-                  }}
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-1">
-                <IconAction
-                  size="sm"
-                  label={t('files.discovery.advanced')}
-                  tooltip
-                  disabled={loading || navigating}
-                  onPress={() => setAdvancedOpen(true)}
-                >
-                  <SlidersHorizontal className="size-4" />
-                </IconAction>
-                <MenuButton
-                  triggerSize="sm"
-                  ariaLabel={t('files.explorer.view')}
-                  triggerVariant="icon"
-                  label={<LayoutGrid className="size-4" />}
-                  items={[
-                    ...(['grid', 'list', 'gallery'] as const).map((view) => ({
-                      id: view,
-                      label: t('files.' + view),
-                      selected: preferences.view === view,
-                    })),
-                    {
-                      id: 'options',
-                      label: t('files.discovery.viewOptions'),
-                      icon: <Settings className="size-4" />,
-                    },
-                  ].map((item) => ({ ...item, disabled: preferenceBusy || !preferenceSnapshot }))}
-                  onAction={(view) =>
-                    view === 'options'
-                      ? setViewOptionsOpen(true)
-                      : savePreferences({
-                          ...preferences,
-                          view: view as FileViewPreferences['view'],
-                        })
-                  }
-                />
-                <MenuButton
-                  triggerSize="sm"
-                  ariaLabel={t('files.explorer.sort')}
-                  triggerVariant="icon"
-                  label={<ArrowUpDown className="size-4" />}
-                  groups={[
-                    {
-                      id: 'field',
-                      label: t('files.explorer.sortField'),
-                      items: (['name', 'size', 'updated', 'created'] as const).map((sort) => ({
-                        id: sort,
-                        label: t('files.' + sort + 'Sort'),
-                        selected: preferences.sort === sort,
-                        disabled: preferenceBusy || !preferenceSnapshot,
+                      ...(['grid', 'list', 'gallery'] as const).map((view) => ({
+                        id: view,
+                        label: t('files.' + view),
+                        selected: preferences.view === view,
                       })),
-                    },
-                    {
-                      id: 'order',
-                      label: t('files.explorer.sortOrder'),
-                      items: [
+                      {
+                        id: 'options',
+                        label: t('files.discovery.viewOptions'),
+                        icon: <Settings className="size-4" />,
+                      },
+                    ].map((item) => ({ ...item, disabled: preferenceBusy || !preferenceSnapshot }))}
+                    onAction={(view) =>
+                      view === 'options'
+                        ? setViewOptionsOpen(true)
+                        : savePreferences({
+                            ...preferences,
+                            view: view as FileViewPreferences['view'],
+                          })
+                    }
+                  />
+                  <div className="hidden items-center gap-1 @min-[48rem]:flex">
+                    <MenuButton
+                      triggerSize="sm"
+                      ariaLabel={t('files.explorer.sort')}
+                      triggerVariant="icon"
+                      label={<ArrowUpDown className="size-4" />}
+                      groups={sortGroups}
+                      onAction={changeSort}
+                    />
+                    <IconAction
+                      size="sm"
+                      label={t('files.explorer.inspector')}
+                      tooltip
+                      ref={inspectorTrigger}
+                      expanded={inspectorOpen}
+                      onPress={toggleInspector}
+                    >
+                      <PanelRight className="size-4" />
+                    </IconAction>
+                  </div>
+                  <div ref={compactActions} className="shrink-0 @min-[48rem]:hidden">
+                    <MenuButton
+                      ariaLabel={t('files.explorer.moreActions')}
+                      label={<MoreHorizontal className="size-4" />}
+                      triggerVariant="icon"
+                      triggerSize="sm"
+                      groups={[
                         {
-                          id: 'asc',
-                          label: t('files.explorer.ascending'),
-                          selected: !preferences.desc,
-                          disabled: preferenceBusy || !preferenceSnapshot,
+                          id: 'tools',
+                          label: t('files.explorer.menuActions'),
+                          items: [
+                            {
+                              id: 'refresh',
+                              label: t('files.refresh'),
+                              icon: <RefreshCw className="size-4" />,
+                            },
+                            {
+                              id: 'advanced',
+                              label: t('files.discovery.advanced'),
+                              icon: <SlidersHorizontal className="size-4" />,
+                              disabled: loading || navigating,
+                            },
+                            {
+                              id: 'inspector',
+                              label: t('files.explorer.inspector'),
+                              icon: <PanelRight className="size-4" />,
+                            },
+                          ],
                         },
                         {
-                          id: 'desc',
-                          label: t('files.explorer.descending'),
-                          selected: preferences.desc,
-                          disabled: preferenceBusy || !preferenceSnapshot,
+                          id: 'folder',
+                          label: t('files.discovery.folderActions'),
+                          items: folderActions,
                         },
-                      ],
-                    },
-                  ]}
-                  onAction={(sort) =>
-                    savePreferences({
-                      ...preferences,
-                      ...(sort === 'asc' || sort === 'desc'
-                        ? { desc: sort === 'desc' }
-                        : { sort: sort as FileViewPreferences['sort'] }),
-                    })
-                  }
-                />
-                <IconAction
-                  size="sm"
-                  label={t('files.explorer.inspector')}
-                  tooltip
-                  expanded={inspectorOpen}
-                  onPress={() => setInspectorOpen((value) => !value)}
-                >
-                  <PanelRight className="size-4" />
-                </IconAction>
+                        ...sortGroups,
+                      ]}
+                      onAction={runCompactAction}
+                    />
+                  </div>
+                </div>
               </div>
-            </>
+            </div>
           }
         />
         {listing && !loading && !navigating ? (
@@ -1819,168 +2052,42 @@ export function FilesPage({
               </div>
             )}
           </section>
-          {inspectorOpen ? (
-            <aside
-              aria-label={t('files.explorer.inspector')}
-              className="hidden w-80 shrink-0 rounded-panel border border-border bg-surface p-4 shadow-panel lg:block"
+          {inspectorDocked ? (
+            inspectorOpen ? (
+              <aside
+                aria-label={t('files.explorer.inspector')}
+                className="w-80 shrink-0 rounded-panel border border-border bg-surface p-4 shadow-panel"
+              >
+                <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
+                  <h2
+                    ref={inspectorHeading}
+                    tabIndex={-1}
+                    className="text-sm font-semibold text-ink"
+                  >
+                    {t('files.explorer.inspector')}
+                  </h2>
+                  <IconAction size="sm" label={t('files.close')} onPress={closeInspector}>
+                    <X className="size-4" />
+                  </IconAction>
+                </div>
+                {inspectorContent}
+              </aside>
+            ) : null
+          ) : (
+            <DrawerSurface
+              triggerLabel={t('files.explorer.inspector')}
+              title={t('files.explorer.inspector')}
+              description=""
+              closeLabel={t('files.close')}
+              placement="bottom"
+              isOpen={inspectorOpen}
+              onOpenChange={(open) => {
+                if (!open) closeInspector();
+              }}
             >
-              <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
-                <h2 className="text-sm font-semibold text-ink">{t('files.explorer.inspector')}</h2>
-                <IconAction
-                  size="sm"
-                  label={t('files.close')}
-                  onPress={() => setInspectorOpen(false)}
-                >
-                  <X className="size-4" />
-                </IconAction>
-              </div>
-              {targets.length > 1 ? (
-                <div className="space-y-3 pt-4 text-sm text-ink-muted">
-                  <p className="font-medium text-ink">
-                    {t('files.explorer.inspectorMulti', {
-                      count: targets.length,
-                      size: bytes(selectedTotalBytes),
-                    })}
-                  </p>
-                </div>
-              ) : inspectedEntry ? (
-                <div className="space-y-4 pt-4">
-                  <div className="flex h-36 w-full items-center justify-center overflow-hidden rounded-control border border-border/60 bg-surface-muted/60 [&_img]:max-h-full [&_img]:max-w-full [&_img]:object-contain [&_img]:p-2">
-                    {preferences.thumbnails &&
-                    thumbnailIds.has(inspectedEntry.id) &&
-                    listing &&
-                    inspectedEntry.sizeBytes <= listing.maxThumbnailBytes ? (
-                      <FileMedia
-                        key={inspectedEntry.id + ':' + inspectedEntry.contentRevision}
-                        entry={inspectedEntry}
-                        mode="thumbnail"
-                        maxBytes={listing.maxThumbnailBytes}
-                      />
-                    ) : (
-                      <FileGlyph
-                        kind={inspectedEntry.kind}
-                        mediaType={inspectedEntry.mediaType}
-                        size="large"
-                        emoji={annotationMap.get(inspectedEntry.id)?.emoji}
-                        color={annotationMap.get(inspectedEntry.id)?.folderColor}
-                        rule={
-                          inspectedEntry.kind === 'file'
-                            ? iconsByExtension.get(fileIconExtension(inspectedEntry.name))
-                            : undefined
-                        }
-                      />
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <p className="break-words text-sm font-semibold text-ink">
-                      {inspectedEntry.name}
-                    </p>
-                    {annotationMap.get(inspectedEntry.id) ? (
-                      <TagBadges
-                        tags={annotationMap.get(inspectedEntry.id)!.tags}
-                        onTag={(tagName) =>
-                          navigate({
-                            filter: encodeFileFilters({
-                              scope: 'all',
-                              tagFilter: { names: [tagName], match: 'all' },
-                            }),
-                          })
-                        }
-                      />
-                    ) : null}
-                  </div>
-                  <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                    <div>
-                      <dt className="text-ink-muted">{t('files.explorer.inspectorMetaType')}</dt>
-                      <dd className="mt-0.5 truncate font-medium text-ink">
-                        {inspectedEntry.kind === 'file'
-                          ? inspectedEntry.mediaType || t('files.discovery.file')
-                          : inspectedEntry.kind === 'folder'
-                            ? t('files.folder')
-                            : t('files.navigation.shortcut')}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-ink-muted">{t('files.explorer.inspectorMetaSize')}</dt>
-                      <dd className="mt-0.5 font-medium text-ink">
-                        {inspectedEntry.kind === 'file' ? bytes(inspectedEntry.sizeBytes) : '—'}
-                      </dd>
-                    </div>
-                    <div className="col-span-2">
-                      <dt className="text-ink-muted">{t('files.explorer.inspectorMetaUpdated')}</dt>
-                      <dd className="mt-0.5 font-medium text-ink">
-                        {time.full(inspectedEntry.updatedAt)}
-                      </dd>
-                    </div>
-                    <div className="col-span-2">
-                      <dt className="text-ink-muted">{t('files.explorer.inspectorMetaCreated')}</dt>
-                      <dd className="mt-0.5 font-medium text-ink">
-                        {time.full(inspectedEntry.createdAt)}
-                      </dd>
-                    </div>
-                  </dl>
-                  {!trash ? (
-                    <div className="flex flex-wrap gap-2 border-t border-border pt-3">
-                      <Action
-                        size="sm"
-                        variant="secondary"
-                        leadingIcon={<Eye className="size-4" />}
-                        onPress={() => {
-                          if (inspectedEntry.kind === 'folder')
-                            navigate({ parent: inspectedEntry.id });
-                          else void showPreview(inspectedEntry);
-                        }}
-                      >
-                        {t('files.explorer.open')}
-                      </Action>
-                      {inspectedEntry.kind === 'file' ? (
-                        <Action
-                          size="sm"
-                          variant="secondary"
-                          leadingIcon={<Download className="size-4" />}
-                          onPress={() => void download(inspectedEntry)}
-                        >
-                          {t('files.download')}
-                        </Action>
-                      ) : null}
-                      {inspectedEntry.kind !== 'shortcut' ? (
-                        <Action
-                          size="sm"
-                          variant="secondary"
-                          leadingIcon={<Share2 className="size-4" />}
-                          onPress={() => setShareTarget(inspectedEntry)}
-                        >
-                          {t('files.share')}
-                        </Action>
-                      ) : null}
-                      {inspectedEntry.kind === 'file' ? (
-                        <Action
-                          size="sm"
-                          variant="quiet"
-                          leadingIcon={<History className="size-4" />}
-                          onPress={() => setVersionEntry(inspectedEntry)}
-                        >
-                          {t('files.versions.title')}
-                        </Action>
-                      ) : null}
-                      <Action
-                        size="sm"
-                        variant="quiet"
-                        leadingIcon={<Pencil className="size-4" />}
-                        onPress={() => showDetails(inspectedEntry)}
-                      >
-                        {t('files.explorer.inspectorEditDetails')}
-                      </Action>
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="pt-6 text-center text-xs leading-5 text-ink-muted">
-                  {t('files.explorer.inspectorEmpty')}
-                </p>
-              )}
-            </aside>
-          ) : null}
+              {inspectorContent}
+            </DrawerSurface>
+          )}
         </div>
         {listing &&
         listing.total > 0 &&
