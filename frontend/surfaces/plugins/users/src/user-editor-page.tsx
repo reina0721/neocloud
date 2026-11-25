@@ -15,13 +15,13 @@ export function UserEditorPage({ id }: Readonly<{ id?: string }>) {
     const access = await service.access();
     if (!access.permissions.includes(mode === 'create' ? 'users.create' : 'users.update'))
       throw new IdentityError('forbidden');
+    if (id === undefined && port.mode === 'backend' && !access.permissions.includes('roles.read'))
+      throw new IdentityError('forbidden', 'role-catalog-required');
     if (id !== undefined && !identifierSchema.safeParse(id).success)
       throw new IdentityError('not-found');
-    const [roles, user] = await Promise.all([
-      service.roles(),
-      id === undefined ? Promise.resolve(undefined) : service.read(id),
-    ]);
-    return { access, roles, user };
+    return id === undefined
+      ? { access, roles: await service.roles() }
+      : { access, roles: [], user: await service.read(id) };
   });
   return (
     <Page>

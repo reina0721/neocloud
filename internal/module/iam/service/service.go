@@ -1304,6 +1304,20 @@ func (s *Service) archiveConfirmationTTL() time.Duration {
 	return defaultArchiveConfirmationTTL
 }
 
+// SelfProfile 从同一个账号快照读取本人资料及其写入版本。
+func (s *Service) SelfProfile(ctx context.Context, accountID string) (model.Account, error) {
+	var profile model.Account
+	err := s.store.Use(ctx, func(r *repo.Unit) error {
+		record, err := accountByID(ctx, r, accountID)
+		if err != nil {
+			return err
+		}
+		profile = modelAccount(record)
+		return nil
+	})
+	return profile, err
+}
+
 // UpdateSelfProfile 更新当前账号主页资料（昵称/介绍/出生日期，072）。
 // 资料变更不 bump 安全修订号（不撤销会话）；乐观锁版本过期返回 ErrVersionConflict。
 func (s *Service) UpdateSelfProfile(ctx context.Context, accountID string, expectedVersion uint64, nickname, bio, birthDate string) (model.Account, error) {

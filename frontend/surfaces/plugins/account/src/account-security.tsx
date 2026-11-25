@@ -25,7 +25,7 @@ import type { Preferences } from '@clouddrive/surface/preferences-model';
 import { IdentityQueryState, IdentityMutationError } from '../../../src/identity/query-state';
 import { useRemote } from '../../../src/administration/resource-state';
 
-export function AccountSecurity() {
+export function AccountSecurity({ canChangePassword }: Readonly<{ canChangePassword: boolean }>) {
   const port = useAccountSecurityPort();
   const { t, locale } = useFrontendTranslation();
   const { notify } = useFeedback();
@@ -46,11 +46,11 @@ export function AccountSecurity() {
   useRegisterDirtySource({
     pageId: 'account.security',
     message: () => t('identityProduct.unsaved'),
-    isDirty: () => form.isDirty,
+    isDirty: () => canChangePassword && form.isDirty,
     isSubmitting: () => pending || form.isSubmitting,
   });
   async function changePassword(values: { currentPassword: string; newPassword: string }) {
-    if (lock.current) return;
+    if (!canChangePassword || lock.current) return;
     lock.current = true;
     setPending(true);
     setPasswordError(null);
@@ -111,82 +111,86 @@ export function AccountSecurity() {
       <Section
         appearance="outlined"
         title={t('account.security')}
-        description={t('account.passwordImpact')}
+        description={t(canChangePassword ? 'account.passwordImpact' : 'identityProduct.readonly')}
       >
-        <div className="grid min-w-0 gap-4 p-5">
-          <IdentityMutationError error={passwordError} />
-          <FoundationForm
-            form={form}
-            className="grid w-full min-w-0 max-w-2xl gap-4"
-            onSubmit={changePassword}
-          >
-            <FoundationControlledField form={form} name="currentPassword">
-              {(field) => (
-                <PasswordField
-                  label={t('account.currentPassword')}
-                  purpose="current"
-                  showLabel={t('account.showPassword')}
-                  hideLabel={t('account.hidePassword')}
-                  value={field.value}
-                  name={field.name}
-                  onBlur={field.onBlur}
-                  ref={(instance) => {
-                    currentPasswordRef.current = instance;
-                    field.ref(instance);
-                  }}
-                  onChange={(event) => {
+        {canChangePassword ? (
+          <div className="grid min-w-0 gap-4 p-5">
+            <IdentityMutationError error={passwordError} />
+            <FoundationForm
+              form={form}
+              className="grid w-full min-w-0 max-w-2xl gap-4"
+              onSubmit={changePassword}
+            >
+              <FoundationControlledField form={form} name="currentPassword">
+                {(field) => (
+                  <PasswordField
+                    label={t('account.currentPassword')}
+                    purpose="current"
+                    showLabel={t('account.showPassword')}
+                    hideLabel={t('account.hidePassword')}
+                    value={field.value}
+                    name={field.name}
+                    onBlur={field.onBlur}
+                    ref={(instance) => {
+                      currentPasswordRef.current = instance;
+                      field.ref(instance);
+                    }}
+                    onChange={(event) => {
+                      setPasswordError(null);
+                      field.onChange(event.target.value);
+                    }}
+                    disabled={pending || form.isSubmitting}
+                    {...(form.hasError('currentPassword') ||
+                    passwordError?.fields.some((field) => field.field === 'password')
+                      ? { error: t('account.currentPasswordInvalid') }
+                      : {})}
+                  />
+                )}
+              </FoundationControlledField>
+              <FoundationControlledField form={form} name="newPassword">
+                {(field) => (
+                  <PasswordField
+                    label={t('account.newPassword')}
+                    purpose="new"
+                    hint={t('account.passwordHint')}
+                    showLabel={t('account.showPassword')}
+                    hideLabel={t('account.hidePassword')}
+                    value={field.value}
+                    name={field.name}
+                    onBlur={field.onBlur}
+                    ref={(instance) => {
+                      field.ref(instance);
+                    }}
+                    onChange={(event) => field.onChange(event.target.value)}
+                    disabled={pending || form.isSubmitting}
+                    {...(form.hasError('newPassword')
+                      ? { error: t('account.passwordInvalid') }
+                      : {})}
+                  />
+                )}
+              </FoundationControlledField>
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                <Action
+                  variant="quiet"
+                  disabled={pending || form.isSubmitting}
+                  onPress={() => {
+                    form.reset({ currentPassword: '', newPassword: '' });
                     setPasswordError(null);
-                    field.onChange(event.target.value);
                   }}
-                  disabled={pending || form.isSubmitting}
-                  {...(form.hasError('currentPassword') ||
-                  passwordError?.fields.some((field) => field.field === 'password')
-                    ? { error: t('account.currentPasswordInvalid') }
-                    : {})}
-                />
-              )}
-            </FoundationControlledField>
-            <FoundationControlledField form={form} name="newPassword">
-              {(field) => (
-                <PasswordField
-                  label={t('account.newPassword')}
-                  purpose="new"
-                  hint={t('account.passwordHint')}
-                  showLabel={t('account.showPassword')}
-                  hideLabel={t('account.hidePassword')}
-                  value={field.value}
-                  name={field.name}
-                  onBlur={field.onBlur}
-                  ref={(instance) => {
-                    field.ref(instance);
-                  }}
-                  onChange={(event) => field.onChange(event.target.value)}
-                  disabled={pending || form.isSubmitting}
-                  {...(form.hasError('newPassword') ? { error: t('account.passwordInvalid') } : {})}
-                />
-              )}
-            </FoundationControlledField>
-            <div className="flex flex-wrap items-center justify-end gap-3">
-              <Action
-                variant="quiet"
-                disabled={pending || form.isSubmitting}
-                onPress={() => {
-                  form.reset({ currentPassword: '', newPassword: '' });
-                  setPasswordError(null);
-                }}
-              >
-                {t('account.clearPassword')}
-              </Action>
-              <Action
-                type="submit"
-                disabled={pending || form.isSubmitting || !form.isDirty}
-                loading={form.isSubmitting}
-              >
-                {t('account.changePassword')}
-              </Action>
-            </div>
-          </FoundationForm>
-        </div>
+                >
+                  {t('account.clearPassword')}
+                </Action>
+                <Action
+                  type="submit"
+                  disabled={pending || form.isSubmitting || !form.isDirty}
+                  loading={form.isSubmitting}
+                >
+                  {t('account.changePassword')}
+                </Action>
+              </div>
+            </FoundationForm>
+          </div>
+        ) : null}
       </Section>
       <Section
         appearance="outlined"

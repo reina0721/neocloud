@@ -10,6 +10,7 @@ import (
 	"github.com/reina0721/clouddrive/internal/module/iam"
 	"github.com/reina0721/clouddrive/internal/module/iam/repo"
 	"github.com/reina0721/clouddrive/internal/module/iam/service"
+	"github.com/reina0721/clouddrive/internal/transport/http/mutationproof"
 	"github.com/reina0721/clouddrive/pkg/httpx"
 )
 
@@ -93,7 +94,7 @@ func (adapter iamMutationGuardAdapter) ValidateMutation(request *http.Request) e
 		}
 	}
 	id, _, ok := service.SessionFromContext(request.Context())
-	if !ok || adapter.mutation.ValidateCSRF(request.Context(), id, request.Header.Get("X-CSRF-Token")) != nil {
+	if !ok || (!mutationproof.Matches(request, id) && adapter.mutation.ValidateCSRF(request.Context(), id, request.Header.Get("X-CSRF-Token")) != nil) {
 		return &httpx.StatusError{StatusCode: http.StatusForbidden, Code: "csrf_invalid", Message: "CSRF token is invalid"}
 	}
 	return nil

@@ -62,7 +62,7 @@ func consoleError(err error) error {
 	return err
 }
 func consoleSession(value iamservice.Session) console.Session {
-	return console.Session{ID: value.ID, CSRFToken: value.CSRFToken, Identity: console.SessionIdentity{AccountID: value.Identity.AccountID, Username: value.Identity.Username, DisplayName: value.Identity.DisplayName, Permissions: value.Identity.Permissions, MustChangePassword: value.Identity.MustChangePassword}, CreatedAt: value.CreatedAt, IdleExpiresAt: value.IdleExpiresAt, AbsoluteExpiresAt: value.AbsoluteExpiresAt}
+	return console.Session{ID: value.ID, Identity: console.SessionIdentity{AccountID: value.Identity.AccountID, Username: value.Identity.Username, DisplayName: value.Identity.DisplayName, Permissions: value.Identity.Permissions, MustChangePassword: value.Identity.MustChangePassword}, CreatedAt: value.CreatedAt, IdleExpiresAt: value.IdleExpiresAt, AbsoluteExpiresAt: value.AbsoluteExpiresAt}
 }
 func consoleAccount(value iammodel.Account) console.Account {
 	return console.Account{ID: value.ID, Username: value.Username, DisplayName: value.DisplayName, Status: string(value.Status), Version: value.Version, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt}

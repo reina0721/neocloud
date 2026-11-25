@@ -33,6 +33,7 @@ export type IdentityErrorReason =
   | 'stale-version'
   | 'protected-user'
   | 'protected-role'
+  | 'role-catalog-required'
   | 'last-administrator';
 export class IdentityError extends Error {
   constructor(

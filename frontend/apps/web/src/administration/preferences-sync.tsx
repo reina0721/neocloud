@@ -1,5 +1,5 @@
 'use client';
-import { useContext, useLayoutEffect, useState } from 'react';
+import { useContext, useLayoutEffect, useRef, useState } from 'react';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
 import { AlertTriangle } from 'lucide-react';
@@ -8,7 +8,11 @@ import type { AdministrationPort } from '@clouddrive/surface/administration';
 import type { AccountNotificationSettings } from '@clouddrive/surface/administration/runtime';
 import { HostPreferencesContext } from '../host/preferences-port';
 import { useShellStore } from '../state/use-shell-store';
-import { createAccountPreferencesSync, type AccountPreferencesStatus } from './preferences';
+import {
+  createAccountPreferencesSync,
+  type AccountPreferencesAccess,
+  type AccountPreferencesStatus,
+} from './preferences';
 
 export type OwnedAccountNotificationSettings = Readonly<{
   owner: string;
@@ -26,26 +30,38 @@ export function AccountPreferencesSync({
   currentOwner: () => string | null;
   publish: (value: OwnedAccountNotificationSettings | null) => void;
 }>) {
-  // 重新读取同一账号权限期间保留当前写入队列，拒绝或失败后卸载该作用域。
+  // 同一账号重新确权时保留队列，收到结果后更新可读写范围。
   const access = useProductAccess({ retainDuringRefresh: true });
   const { t } = useFrontendTranslation();
   const host = useContext(HostPreferencesContext);
+  const actor = useRef<ReturnType<typeof createAccountPreferencesSync> | null>(null);
+  const reloadAccess = useRef(access.reload);
   const [notice, setNotice] = useState<{
     issue: NonNullable<AccountPreferencesStatus['issue']>;
     retry: () => void;
     dismiss: () => void;
   }>();
-  const currentAccess = access.data?.user.id === owner ? access.data.nativePermissions : undefined;
-  const readable = currentAccess?.includes('iam:account:self:preferences:read') ?? false;
-  const writable = currentAccess?.includes('iam:account:self:preferences:write') ?? false;
+  const currentAccess = access.data?.user.id === owner ? access.data : null;
+  const scopes = currentAccess?.nativePermissions;
+  const accessMode: AccountPreferencesAccess = !currentAccess
+    ? 'unavailable'
+    : !scopes?.includes('iam:account:self:preferences:read')
+      ? 'device'
+      : scopes.includes('iam:account:self:preferences:write')
+        ? 'writable'
+        : 'read-only';
 
   useLayoutEffect(() => {
-    if (!readable || !host) return;
+    reloadAccess.current = access.reload;
+  }, [access.reload]);
+
+  useLayoutEffect(() => {
+    if (!host) return;
     const ownsAccount = () => currentOwner() === owner;
     const controller = createAccountPreferencesSync({
       port,
       ownsAccount,
-      writable,
+      refreshAccess: () => reloadAccess.current(),
       publish: ({ issue, ...status }) => {
         setNotice(
           issue ? { issue, retry: controller.retry, dismiss: controller.dismiss } : undefined,
@@ -53,43 +69,41 @@ export function AccountPreferencesSync({
         publish({ owner, settings: { ...status, update: controller.updateNotification } });
       },
     });
+    actor.current = controller;
     const unbind = host.bindAccountPreferences(controller.accept);
-    publish({
-      owner,
-      settings: {
-        values: null,
-        editable: writable,
-        sharedReadOnly: !writable,
-        pending: false,
-        update: controller.updateNotification,
-      },
-    });
-    void controller.load();
     window.addEventListener('focus', controller.refresh);
     return () => {
+      actor.current = null;
       unbind();
       controller.dispose();
       window.removeEventListener('focus', controller.refresh);
       if (ownsAccount()) useShellStore.getState().applyAccountPreferences(undefined);
       publish(null);
     };
-  }, [currentOwner, host, owner, port, publish, readable, writable]);
+  }, [currentOwner, host, owner, port, publish]);
 
-  return readable && notice ? (
+  useLayoutEffect(() => {
+    actor.current?.setAccess(accessMode);
+    actor.current?.refresh();
+  }, [accessMode, currentOwner, host, owner, port, publish]);
+
+  const alert = access.error ? { issue: 'access' as const, retry: access.reload } : notice;
+  return alert ? (
     <div className="mx-auto max-w-screen-2xl px-4 pt-4">
       <AlertBanner
         actionLabel={t(
-          notice.issue === 'conflict'
+          alert.issue === 'conflict'
             ? 'administration.preferencesOverwrite'
             : 'administration.retry',
         )}
-        onAction={notice.retry}
-        dismissLabel={t('administration.preferencesDiscard')}
-        onDismiss={notice.dismiss}
+        onAction={alert.retry}
+        {...('dismiss' in alert
+          ? { dismissLabel: t('administration.preferencesDiscard'), onDismiss: alert.dismiss }
+          : {})}
         announcement="polite"
         tone="warning"
-        title={t(`administration.preferencesSyncIssue.${notice.issue}.title`)}
-        description={t(`administration.preferencesSyncIssue.${notice.issue}.hint`)}
+        title={t(`administration.preferencesSyncIssue.${alert.issue}.title`)}
+        description={t(`administration.preferencesSyncIssue.${alert.issue}.hint`)}
         icon={<AlertTriangle aria-hidden="true" />}
       />
     </div>

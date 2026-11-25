@@ -150,6 +150,134 @@ test('无管理权限与仅分享读取的账户看到一致入口，待办不�
   }
 });
 
+test('用户资料编辑只读取用户，创建页仍要求角色目录', async ({ page, browser }) => {
+  await login(page);
+  const suffix = randomUUID().slice(0, 8);
+  const role = (
+    await write(page, '/roles', 'POST', { name: `资料目标-${suffix}`, permissions: [] })
+  ).role as { id: string };
+  const target = (
+    await write(page, '/users', 'POST', {
+      email: `profile-target-${suffix}@clouddrive.test`,
+      password: randomUUID(),
+      name: `资料目标-${suffix}`,
+      roleIds: [role.id],
+      status: 'active',
+    })
+  ).user as { id: string; name: string };
+  const editor = await member(page, ['iam:account:read', 'iam:account:write']);
+  const context = await browser.newContext({ baseURL: editor.origin, locale: 'zh-CN' });
+  try {
+    const visitor = await context.newPage();
+    await login(visitor, editor);
+    const catalogRequests: string[] = [];
+    visitor.on('request', (request) => {
+      const path = new URL(request.url()).pathname;
+      if (path === '/api/console/v1/roles' || path === '/api/console/v1/native/iam/roles')
+        catalogRequests.push(path);
+    });
+    await visitor.goto(`/users/edit?id=${target.id}`);
+    const name = visitor.getByRole('textbox', { name: '姓名', exact: true });
+    await expect(name).toHaveValue(target.name);
+    await name.fill(`已更新-${suffix}`);
+    const saved = visitor.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === `/api/console/v1/users/${target.id}` &&
+        response.request().method() === 'PATCH',
+    );
+    await visitor.getByRole('button', { name: '保存', exact: true }).click();
+    expect((await saved).ok()).toBe(true);
+    await visitor.reload();
+    await expect(name).toHaveValue(`已更新-${suffix}`);
+    expect(catalogRequests).toEqual([]);
+
+    await visitor.goto('/users');
+    await expect(visitor.getByRole('row', { name: new RegExp(`已更新-${suffix}`) })).toBeVisible();
+    await expect(visitor.locator('main a[href="/users/create"]')).toHaveCount(0);
+    await visitor.goto('/users/create');
+    await expect(
+      visitor.getByText('创建用户时须选择角色。请联系管理员授予角色目录读取权限。'),
+    ).toBeVisible();
+    await expect(visitor.getByRole('textbox', { name: '姓名', exact: true })).toHaveCount(0);
+    expect(catalogRequests).toEqual([]);
+  } finally {
+    await context.close();
+  }
+
+  await page.goto('/users/create');
+  await page.getByRole('textbox', { name: '姓名', exact: true }).fill(`新成员-${suffix}`);
+  await page
+    .getByRole('textbox', { name: '邮箱', exact: true })
+    .fill(`created-${suffix}@clouddrive.test`);
+  await page.getByLabel('初始密码', { exact: true }).fill(randomUUID());
+  const targetRole = page.getByRole('checkbox', { name: `资料目标-${suffix}`, exact: true });
+  await expect(targetRole).not.toBeChecked();
+  await targetRole.press('Space');
+  const [created] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === '/api/console/v1/users' &&
+        response.request().method() === 'POST',
+    ),
+    page.getByRole('button', { name: '保存', exact: true }).click(),
+  ]);
+  expect(created.ok()).toBe(true);
+  expect(created.request().postDataJSON()).toMatchObject({ roleIds: [role.id] });
+  await expect(page.getByRole('heading', { level: 1, name: `新成员-${suffix}` })).toBeVisible();
+});
+
+test('没有权限目录读取权的角色维护者可以修改名称，原授权保留', async ({ page, browser }) => {
+  await login(page);
+  const suffix = randomUUID().slice(0, 8);
+  const target = (
+    await write(page, '/roles', 'POST', {
+      name: `待改名-${suffix}`,
+      permissions: ['account.update'],
+    })
+  ).role as { id: string; name: string };
+  const editor = await member(page, ['iam:role:read', 'iam:role:write']);
+  const context = await browser.newContext({ baseURL: editor.origin, locale: 'zh-CN' });
+  try {
+    const visitor = await context.newPage();
+    await login(visitor, editor);
+    const legacyWrites: string[] = [];
+    const catalogRequests: string[] = [];
+    visitor.on('request', (request) => {
+      const path = new URL(request.url()).pathname;
+      if (path === `/api/console/v1/roles/${target.id}` && request.method() === 'PATCH')
+        legacyWrites.push(path);
+      if (path === '/api/console/v1/native/iam/permissions') catalogRequests.push(path);
+    });
+    await visitor.goto(`/roles/detail?id=${target.id}`);
+    await visitor.getByRole('link', { name: '修改角色名称', exact: true }).click();
+    const name = visitor.getByRole('textbox', { name: '角色名称', exact: true });
+    await expect(name).toHaveValue(target.name);
+    await expect(visitor.getByRole('checkbox')).toHaveCount(0);
+    const newName = `已改名-${suffix}`;
+    await name.fill(newName);
+    await visitor.getByRole('button', { name: '保存', exact: true }).click();
+    const confirmation = visitor.getByRole('alertdialog', { name: '修改角色名称', exact: true });
+    await expect(confirmation).toBeVisible();
+    const [saved] = await Promise.all([
+      visitor.waitForResponse(
+        (response) =>
+          new URL(response.url()).pathname === `/api/console/v1/native/iam/roles/${target.id}` &&
+          response.request().method() === 'PATCH',
+      ),
+      confirmation.getByRole('button', { name: '保存', exact: true }).click(),
+    ]);
+    expect(saved.ok()).toBe(true);
+    await expect(visitor.getByRole('heading', { level: 1, name: newName })).toBeVisible();
+    await expect(
+      visitor.getByText('iam:account:self:profile:write', { exact: true }),
+    ).toBeVisible();
+    expect(legacyWrites).toEqual([]);
+    expect(catalogRequests).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
+
 test('菜单延迟和读取失败不伪装为空权限，重试保留统一的隐藏与标题覆盖', async ({ page }) => {
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {

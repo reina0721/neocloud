@@ -215,8 +215,35 @@ test('empty SQLite setup, real business writes, protected native pages and logou
   await page.reload();
   await page.getByRole('tab', { name: '历史', exact: true }).click();
   await expect(page.getByRole('button', { name: policyUrl, exact: false })).toBeVisible();
+  await test.step('读取与保存账号资料后，同一会话仍能同步偏好', async () => {
+    const profilePath = '/api/console/v1/native/iam/self/profile';
+    const profileRead = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'GET' && new URL(response.url()).pathname === profilePath,
+    );
+    await page.goto('/account');
+    const initial = await profileRead;
+    expect(initial.status()).toBe(200);
+    const { version } = (await initial.json()) as { version: number };
+    const profile = page
+      .locator('section')
+      .filter({ has: page.getByRole('heading', { name: '扩展资料', exact: true }) });
+    await profile.getByRole('button', { name: '编辑', exact: true }).click();
+    const editor = page.getByRole('dialog', { name: '扩展资料', exact: true });
+    await editor.getByLabel('昵称', { exact: true }).fill('验收昵称');
+    const saved = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'PATCH' && new URL(response.url()).pathname === profilePath,
+    );
+    await editor.getByRole('button', { name: '保存', exact: true }).click();
+    const response = await saved;
+    expect(response.status()).toBe(200);
+    expect(response.request().postDataJSON()).toMatchObject({ expectedVersion: version });
+    await expect(profile.getByText('验收昵称', { exact: true })).toBeVisible();
+    await page.getByRole('link', { name: '前往外观与偏好设置', exact: true }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+  });
   await test.step('账号主题同步，界面密度留在当前设备', async () => {
-    await page.goto('/settings');
     await page
       .getByRole('radiogroup', { name: '界面密度' })
       .getByText('紧凑', { exact: true })

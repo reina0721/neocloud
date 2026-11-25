@@ -52,7 +52,8 @@ export default function SettingsShellLayout({ children }: Readonly<{ children: R
   const { t } = useFrontendTranslation();
   const ctx = {
     ...ctxFor(preferences),
-    readOnlyAccountPreferences: account?.sharedReadOnly === true,
+    accountPreferencesBlocked:
+      account?.sharedReadOnly === true || account?.sharedUnavailable === true,
   };
 
   return (

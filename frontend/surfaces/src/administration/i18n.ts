@@ -13,6 +13,10 @@ export const administrationI18n = {
       preferencesOverwrite: '以我的更改重试',
       preferencesDiscard: '放弃未同步更改',
       preferencesSyncIssue: {
+        access: {
+          title: '无法确认账户偏好权限',
+          hint: '可重试检查权限。其他浏览器设置仍可编辑。',
+        },
         read: { title: '无法读取账户偏好', hint: '可重试读取。未同步的账户更改暂时保留。' },
         write: {
           title: '账户偏好未同步',
@@ -24,7 +28,11 @@ export const administrationI18n = {
         },
         forbidden: {
           title: '账户偏好访问受限',
-          hint: '当前权限无法完成同步。可重试检查权限或放弃未同步的更改。',
+          hint: '服务器拒绝了账户偏好操作。可重试检查权限或放弃未同步的更改。',
+        },
+        rejected: {
+          title: '账户偏好保存请求被拒绝',
+          hint: '未同步的更改仍保留，可重试保存或放弃。',
         },
       },
       openAppearanceSettings: '前往外观与偏好设置',
@@ -151,6 +159,10 @@ export const administrationI18n = {
       preferencesOverwrite: 'Retry with my changes',
       preferencesDiscard: 'Discard unsynced changes',
       preferencesSyncIssue: {
+        access: {
+          title: 'Could not check account preference access',
+          hint: 'Retry to check access. You can still change other browser settings.',
+        },
         read: {
           title: 'Could not read account preferences',
           hint: 'Retry to load your preferences. Unsynced changes are kept for now.',
@@ -165,7 +177,11 @@ export const administrationI18n = {
         },
         forbidden: {
           title: 'Account preference access is restricted',
-          hint: 'Your current permissions prevent sync. Retry to check access or discard unsynced changes.',
+          hint: 'The server denied the account preference operation. Retry to check access or discard unsynced changes.',
+        },
+        rejected: {
+          title: 'Account preference save was rejected',
+          hint: 'Unsynced changes are kept. You can retry saving or discard them.',
         },
       },
       openAppearanceSettings: 'Open appearance & preferences',

@@ -14,6 +14,7 @@ export type AccountNotificationSettings = Readonly<{
   values: AccountNotificationPreferences | null;
   editable: boolean;
   sharedReadOnly: boolean;
+  sharedUnavailable: boolean;
   pending: boolean;
   update: (field: keyof AccountNotificationPreferences, value: boolean) => void;
 }>;

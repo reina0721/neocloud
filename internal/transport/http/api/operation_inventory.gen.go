@@ -218,6 +218,7 @@ const (
 	OperationIamSelfPasswordVerify          OperationID = "iam.self.password.verify"
 	OperationIamSelfPreferencesRead         OperationID = "iam.self.preferences.read"
 	OperationIamSelfPreferencesWrite        OperationID = "iam.self.preferences.write"
+	OperationIamSelfProfileRead             OperationID = "iam.self.profile.read"
 	OperationIamSelfProfileUpdate           OperationID = "iam.self.profile.update"
 	OperationIamSessionRead                 OperationID = "iam.session.read"
 	OperationIamSessionsList                OperationID = "iam.sessions.list"
@@ -446,6 +447,7 @@ var operationInventory = [...]Operation{
 	{ID: OperationIamSelfPasswordVerify, Method: "POST", Path: "/api/v1/iam/self/password/verify", Policy: "protected", Scope: "iam:account:self:read", Action: "iam.self.password.verify"},
 	{ID: OperationIamSelfPreferencesRead, Method: "GET", Path: "/api/v1/iam/self/preferences", Policy: "protected", Scope: "iam:account:self:preferences:read", Action: "iam.self.preferences.read"},
 	{ID: OperationIamSelfPreferencesWrite, Method: "PATCH", Path: "/api/v1/iam/self/preferences", Policy: "protected", Scope: "iam:account:self:preferences:write", Action: "iam.self.preferences.write"},
+	{ID: OperationIamSelfProfileRead, Method: "GET", Path: "/api/v1/iam/self/profile", Policy: "protected", Scope: "iam:account:self:read", Action: "iam.self.profile.read"},
 	{ID: OperationIamSelfProfileUpdate, Method: "PATCH", Path: "/api/v1/iam/self/profile", Policy: "protected", Scope: "iam:account:self:profile:write", Action: "iam.self.profile.update"},
 	{ID: OperationIamSessionRead, Method: "GET", Path: "/api/v1/iam/session", Policy: "protected", Scope: "iam:account:self:read", Action: "iam.session.read"},
 	{ID: OperationIamSessionsList, Method: "GET", Path: "/api/v1/iam/sessions", Policy: "protected", Scope: "iam:account:self:read", Action: "iam.sessions.list"},

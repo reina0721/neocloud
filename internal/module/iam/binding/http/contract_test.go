@@ -289,6 +289,49 @@ func TestDynamicAssignmentContractVersion409AndSnapshot(t *testing.T) {
 	}
 }
 
+func TestSelfProfileReadReturnsCurrentDataWithoutRotatingCSRF(t *testing.T) {
+	iam, resource := testService(t)
+	defer resource.Close()
+	handler, err := NewHandler(iam, nil, httpx.CookiePolicy{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	session, err := iam.Setup(t.Context(), "setup-secret", "owner", "Owner", "123456789012345")
+	if err != nil {
+		t.Fatal(err)
+	}
+	router := humaRouter(handler)
+	const path = "http://example.test/api/v1/iam/self/profile"
+	read := func() profileResponse {
+		t.Helper()
+		response := serve(router, http.MethodGet, path, nil, &session)
+		if response.Code != http.StatusOK || response.Header().Get("Cache-Control") != "no-store" || response.Header().Get("Set-Cookie") != "" || bytes.Contains(response.Body.Bytes(), []byte(`"csrfToken"`)) {
+			t.Fatalf("profile status = %d, headers = %v, body = %s", response.Code, response.Header(), response.Body.String())
+		}
+		var value profileResponse
+		if err := json.Unmarshal(response.Body.Bytes(), &value); err != nil {
+			t.Fatal(err)
+		}
+		return value
+	}
+	initial := read()
+	if initial.Username != "owner" || initial.Version != 1 {
+		t.Fatalf("initial profile = %+v", initial)
+	}
+	patch := []byte(`{"expectedVersion":1,"nickname":"Nick","bio":"Hello","birthDate":"1990-01-02"}`)
+	withCSRF := func(request *http.Request) { request.Header.Set("X-CSRF-Token", session.CSRFToken) }
+	updated := serve(router, http.MethodPatch, path, patch, &session, withCSRF)
+	if updated.Code != http.StatusOK {
+		t.Fatalf("the original token should still be valid: %d, %s", updated.Code, updated.Body.String())
+	}
+	if value := read(); value != (profileResponse{Username: "owner", Nickname: "Nick", Bio: "Hello", BirthDate: "1990-01-02", Version: 2}) {
+		t.Fatalf("updated profile = %+v", value)
+	}
+	if stale := serve(router, http.MethodPatch, path, patch, &session, withCSRF); stale.Code != http.StatusConflict {
+		t.Fatalf("stale profile version = %d, %s", stale.Code, stale.Body.String())
+	}
+}
+
 // TestSelfPreferencesContract 验证跨设备用户偏好 HTTP 契约（BE-090-005）：
 // 未设置返回默认；PATCH 合并更新并持久化；非法值 400；缺失权限 403。
 func TestSelfPreferencesContract(t *testing.T) {

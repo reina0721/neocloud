@@ -116,13 +116,16 @@ export function createHostPreferencesPort(): PreferencesPort<Preferences> & {
   /** 跨窗口 storage 事件监听启动/停止（返回停止函数）。 */
   startCrossWindowSync: () => () => void;
   bindAccountPreferences: (accept: AccountPreferenceIntent) => () => void;
+  /** 已有账号、同步模块尚未绑定时保护账号字段。 */
+  waitForAccountPreferences: (ownsAccount: () => boolean) => () => void;
 } {
   let accountIntent: AccountPreferenceIntent | undefined;
+  let waitingForAccount: (() => boolean) | undefined;
   let deviceNotSaved = false;
 
   function change(next: Preferences, resetSidebar = false): PersistResult {
     const state = useShellStore.getState();
-    const synchronized = accountIntent?.(state.preferences, next) === true;
+    const synchronized = accountIntent?.(state.preferences, next) ?? waitingForAccount?.();
     const device = synchronized ? keepDeviceAccountFields(next, state.devicePreferences) : next;
     return toPersistResult(() => {
       if (resetSidebar || JSON.stringify(state.devicePreferences) !== JSON.stringify(device)) {
@@ -175,7 +178,20 @@ export function createHostPreferencesPort(): PreferencesPort<Preferences> & {
     };
   }
 
-  return { ...port, subscribeStore, startCrossWindowSync, bindAccountPreferences };
+  function waitForAccountPreferences(ownsAccount: () => boolean) {
+    waitingForAccount = ownsAccount;
+    return () => {
+      if (waitingForAccount === ownsAccount) waitingForAccount = undefined;
+    };
+  }
+
+  return {
+    ...port,
+    subscribeStore,
+    startCrossWindowSync,
+    bindAccountPreferences,
+    waitForAccountPreferences,
+  };
 }
 
 export const HostPreferencesContext = createContext<ReturnType<

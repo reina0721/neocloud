@@ -67,7 +67,7 @@ export function RoleDetailPage({ id }: Readonly<{ id: string | null }>) {
               !data.access.user.roleIds.includes(data.role.id) &&
               data.access.permissions.includes('roles.update') ? (
                 <RouteLink target={route('roles.edit', {}, { query: { id: data.role.id } })}>
-                  {t(nativeEditor ? 'roles.editName' : 'roles.edit')}
+                  {t(port.mode === 'backend' ? 'roles.editName' : 'roles.edit')}
                 </RouteLink>
               ) : null}
               {native ? (

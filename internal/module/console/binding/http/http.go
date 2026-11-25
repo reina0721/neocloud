@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	permission "github.com/reina0721/clouddrive/internal/permission"
+	"github.com/reina0721/clouddrive/internal/transport/http/mutationproof"
 	"github.com/reina0721/clouddrive/pkg/database"
 	"github.com/reina0721/clouddrive/pkg/execution"
 	"github.com/reina0721/clouddrive/pkg/httpx"
@@ -26,7 +27,7 @@ const Prefix = "/api/console/v1"
 const NativePrefix = Prefix + "/native/"
 const NativeTargetPrefix = "/api/v1/"
 const csrfCookie = "__Host-clouddrive_console_csrf"
-const nativeCSRFCookie = "__Host-clouddrive_native_csrf"
+const legacyNativeCSRFCookie = "__Host-clouddrive_native_csrf"
 
 type Handler struct {
 	cookies             httpx.CookiePolicy
@@ -105,12 +106,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" && r.Method != "HEAD" {
 		origin := r.Header.Get("Origin")
 		if origin == "" || (!httpx.SameOrigin(r, origin) && !h.origins[origin]) {
-			failure(w, http.StatusForbidden, "forbidden", "")
+			failure(w, http.StatusForbidden, "forbidden", "origin_rejected")
 			return
 		}
 		cookie, err := r.Cookie(h.cookies.Name(csrfCookie))
 		if err != nil || cookie.Value == "" || subtle.ConstantTimeCompare([]byte(cookie.Value), []byte(r.Header.Get("X-CSRF-Token"))) != 1 {
-			failure(w, 403, "forbidden", "")
+			failure(w, http.StatusForbidden, "forbidden", "csrf_rejected")
 			return
 		}
 	}
@@ -374,7 +375,7 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: h.cookieName, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: -1}))
-		http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: nativeCSRFCookie, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: -1}))
+		h.clearLegacyNativeCSRFCookie(w, r)
 		w.WriteHeader(204)
 		return
 	}
@@ -448,8 +449,14 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: h.cookieName, Value: session.ID, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode}))
-	http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: nativeCSRFCookie, Value: session.CSRFToken, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode}))
+	h.clearLegacyNativeCSRFCookie(w, r)
 	h.session(w, session)
+}
+
+func (h *Handler) clearLegacyNativeCSRFCookie(w http.ResponseWriter, r *http.Request) {
+	if _, err := r.Cookie(h.cookies.Name(legacyNativeCSRFCookie)); err == nil {
+		http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: legacyNativeCSRFCookie, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: -1}))
+	}
 }
 
 func (h *Handler) sessions(w http.ResponseWriter, r *http.Request) {
@@ -504,13 +511,14 @@ func (h *Handler) forwardNative(w http.ResponseWriter, r *http.Request) {
 	copy.URL = &u
 	copy.URL.Path = NativeTargetPrefix + strings.TrimPrefix(r.URL.Path, NativePrefix)
 	if r.Method != "GET" && r.Method != "HEAD" {
-		// 登录时镜像 IAM 会话的 CSRF token；每次转发轮换会让并发上传互相失效。
-		csrf, err := r.Cookie(h.cookies.Name(nativeCSRFCookie))
-		if err != nil || csrf.Value == "" {
+		id, _, ok := SessionFromContext(r.Context())
+		if !ok || id == "" {
 			failure(w, http.StatusUnauthorized, "unauthenticated", "")
 			return
 		}
-		copy.Header.Set("X-CSRF-Token", csrf.Value)
+		// Huma 的参数契约仍要求 CSRF 请求头。原生路由独立解析会话和授权，
+		// 只有匹配此次转发的进程内证明才会采用 Console 的校验结果。
+		copy = mutationproof.WithVerifiedConsoleMutation(copy, id)
 	}
 	h.native.ServeHTTP(w, copy)
 }

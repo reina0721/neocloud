@@ -128,16 +128,7 @@ export function createAdministrationPort(
           ...(signal ? { signal } : {}),
         }),
       ),
-    profile: async () => {
-      const [session, me] = await Promise.all([json(native + '/iam/session'), json('/me')]);
-      const identity = z
-        .object({
-          identity: z.object({ nickname: z.string(), bio: z.string(), birthDate: z.string() }),
-        })
-        .parse(session).identity;
-      const version = z.object({ user: z.object({ version: z.number() }) }).parse(me).user.version;
-      return profileSchema.parse({ ...identity, version });
-    },
+    profile: async () => profileSchema.parse(await json(native + '/iam/self/profile')),
     saveProfile: async (value) => {
       await write(
         native + '/iam/self/profile',

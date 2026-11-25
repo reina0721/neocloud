@@ -5,7 +5,7 @@ import { defaultPreferences, type Preferences } from '@clouddrive/surface/prefer
 import { ApiError } from '../api/json-client';
 import { createHostPreferencesPort } from '../host/preferences-port';
 import { useShellStore } from '../state/use-shell-store';
-import { createAccountPreferencesSync } from './preferences';
+import { createAccountPreferencesSync, type AccountPreferencesAccess } from './preferences';
 
 const base: AccountPreferences = {
   version: 2,
@@ -20,26 +20,36 @@ const base: AccountPreferences = {
 
 function deferredPreferences() {
   let resolve!: (value: AccountPreferences) => void;
-  const promise = new Promise<AccountPreferences>((finish) => {
+  let reject!: (reason: Error) => void;
+  const promise = new Promise<AccountPreferences>((finish, fail) => {
     resolve = finish;
+    reject = fail;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 
-function start(writable = true) {
+function start(access: AccountPreferencesAccess = 'writable') {
   let owner = true;
   const host = createHostPreferencesPort();
   const publish = vi.fn();
+  const refreshAccess = vi.fn();
   const port = {
     preferences: vi.fn<AdministrationPort['preferences']>().mockResolvedValue(base),
     savePreferences: vi.fn<AdministrationPort['savePreferences']>(),
   };
-  const sync = createAccountPreferencesSync({ port, ownsAccount: () => owner, writable, publish });
+  const sync = createAccountPreferencesSync({
+    port,
+    ownsAccount: () => owner,
+    refreshAccess,
+    publish,
+  });
+  sync.setAccess(access);
   const unbind = host.bindAccountPreferences(sync.accept);
   return {
     host,
     publish,
     port,
+    refreshAccess,
     sync,
     end: () => {
       owner = false;
@@ -96,7 +106,7 @@ describe('账户偏好同步', () => {
   });
 
   it('只读账号可显示服务端偏好并编辑设备设置', async () => {
-    const { sync, host, publish, port, end } = start(false);
+    const { sync, host, publish, port, end } = start('read-only');
     await sync.load();
     expect(publish).toHaveBeenLastCalledWith(
       expect.objectContaining({ sharedReadOnly: true, editable: false }),
@@ -108,6 +118,110 @@ describe('账户偏好同步', () => {
     });
     expect(port.savePreferences).not.toHaveBeenCalled();
     expect(useShellStore.getState().devicePreferences.appearance.themeMode).toBe('system');
+    end();
+  });
+
+  it('授权尚未确定时只允许设备项，确认无读权限后使用本机账户类设置', async () => {
+    const { host, sync, publish, port, end } = start('unavailable');
+    host.updateCategory('appearance', { themeMode: 'dark', accent: 'pink' });
+    await sync.load();
+    expect(publish).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sharedUnavailable: true, sharedReadOnly: false }),
+    );
+    expect(host.getSnapshot().appearance).toMatchObject({ themeMode: 'system', accent: 'pink' });
+    sync.setAccess('device');
+    host.updateCategory('appearance', { themeMode: 'dark' });
+    expect(useShellStore.getState().devicePreferences.appearance.themeMode).toBe('dark');
+    expect(port.preferences).not.toHaveBeenCalled();
+    expect(port.savePreferences).not.toHaveBeenCalled();
+    end();
+  });
+
+  it.each([
+    { error: { code: 'forbidden' } },
+    { error: { code: 'forbidden', reason: 'origin_rejected' } },
+    { code: 'csrf_rejected' },
+  ])('请求被拒后保留账号编辑权限与草稿 %j', async (payload) => {
+    const { host, sync, publish, port, refreshAccess, end } = start();
+    port.savePreferences
+      .mockRejectedValueOnce(new ApiError('http', 403, payload))
+      .mockResolvedValueOnce({ ...base, version: 3, themeMode: 'dark' });
+    await sync.load();
+    host.updateCategory('appearance', { themeMode: 'dark' });
+    await vi.waitFor(() =>
+      expect(publish).toHaveBeenLastCalledWith(
+        expect.objectContaining({ issue: 'rejected', sharedReadOnly: false, editable: true }),
+      ),
+    );
+    expect(refreshAccess).not.toHaveBeenCalled();
+    expect(host.getSnapshot().appearance.themeMode).toBe('dark');
+    sync.retry();
+    await vi.waitFor(() => expect(port.savePreferences).toHaveBeenCalledTimes(2));
+    expect(port.savePreferences.mock.calls[1]?.[0]).toEqual({ version: 2, themeMode: 'dark' });
+    end();
+  });
+
+  it('读取被通用拒绝时保持当前账号投影，不写入设备偏好', async () => {
+    const { host, sync, publish, port, refreshAccess, end } = start();
+    await sync.load();
+    port.preferences.mockRejectedValueOnce(new ApiError('http', 403));
+    await sync.load();
+    expect(publish).toHaveBeenLastCalledWith(
+      expect.objectContaining({ issue: 'read', sharedReadOnly: false, editable: true }),
+    );
+    expect(refreshAccess).not.toHaveBeenCalled();
+    expect(host.getSnapshot().appearance.themeMode).toBe('light');
+    host.updateCategory('appearance', { density: 'comfortable' });
+    expect(useShellStore.getState().devicePreferences.appearance.themeMode).toBe('system');
+    end();
+  });
+
+  it('明确授权拒绝会重新确权，只有确认的只读权限才禁用账号字段', async () => {
+    const { host, sync, publish, port, refreshAccess, end } = start();
+    port.savePreferences
+      .mockRejectedValueOnce(new ApiError('http', 403, { code: 'permission_denied' }))
+      .mockResolvedValueOnce({ ...base, version: 3, themeMode: 'dark' });
+    await sync.load();
+    host.updateCategory('appearance', { themeMode: 'dark' });
+    await vi.waitFor(() => expect(refreshAccess).toHaveBeenCalledTimes(1));
+    expect(publish).toHaveBeenLastCalledWith(
+      expect.objectContaining({ issue: 'forbidden', sharedReadOnly: false, editable: true }),
+    );
+    sync.setAccess('read-only');
+    sync.retry();
+    expect(publish).toHaveBeenLastCalledWith(
+      expect.objectContaining({ issue: 'forbidden', sharedReadOnly: true, editable: false }),
+    );
+    expect(host.getSnapshot().appearance.themeMode).toBe('light');
+    expect(port.savePreferences).toHaveBeenCalledTimes(1);
+    sync.setAccess('writable');
+    sync.retry();
+    await vi.waitFor(() => expect(port.savePreferences).toHaveBeenCalledTimes(2));
+    expect(port.savePreferences.mock.calls[1]?.[0]).toEqual({ version: 2, themeMode: 'dark' });
+    end();
+  });
+
+  it('保存期间无法确认权限时保留失败的写入，权限恢复后重试', async () => {
+    const { host, sync, publish, port, end } = start();
+    const first = deferredPreferences();
+    port.savePreferences
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValueOnce({ ...base, version: 3, themeMode: 'dark' });
+    await sync.load();
+    host.updateCategory('appearance', { themeMode: 'dark' });
+    await vi.waitFor(() => expect(port.savePreferences).toHaveBeenCalledTimes(1));
+    sync.setAccess('unavailable');
+    first.reject(new ApiError('http', 403, { code: 'csrf_rejected' }));
+    await vi.waitFor(() =>
+      expect(publish).toHaveBeenLastCalledWith(
+        expect.objectContaining({ issue: 'rejected', sharedUnavailable: true, editable: false }),
+      ),
+    );
+    sync.setAccess('writable');
+    expect(port.savePreferences).toHaveBeenCalledTimes(1);
+    sync.retry();
+    await vi.waitFor(() => expect(port.savePreferences).toHaveBeenCalledTimes(2));
+    expect(port.savePreferences.mock.calls[1]?.[0]).toEqual({ version: 2, themeMode: 'dark' });
     end();
   });
 

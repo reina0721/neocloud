@@ -25,6 +25,7 @@ export function AccountPage() {
   });
   const roles = useIdentityQuery('account.roles', (service) => service.roles(true));
   const data = query.data;
+  const nativePermissions = data?.access.nativePermissions;
   const roleLabel = (id: string) =>
     ['administrator', 'operator', 'viewer'].includes(id)
       ? t(`identityProduct.roleNames.${id}`)
@@ -86,7 +87,12 @@ export function AccountPage() {
           </Section>
           {port.mode === 'backend' ? (
             <>
-              <BackendProfile onSaved={query.reload} />
+              {nativePermissions?.includes('iam:account:self:read') ? (
+                <BackendProfile
+                  editable={nativePermissions.includes('iam:account:self:profile:write')}
+                  onSaved={query.reload}
+                />
+              ) : null}
               <Section title={t('administration.preferences')} contentInset>
                 <RouteLink target={route('settings')} presentation="action" variant="secondary">
                   {t('administration.openAppearanceSettings')}
@@ -94,7 +100,12 @@ export function AccountPage() {
               </Section>
             </>
           ) : null}
-          <AccountSecurity />
+          <AccountSecurity
+            canChangePassword={
+              port.mode === 'mock' ||
+              nativePermissions?.includes('iam:account:self:password:write') === true
+            }
+          />
         </>
       )}
     </Page>

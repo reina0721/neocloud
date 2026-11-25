@@ -30,7 +30,6 @@ import {
   IdentityMutationError,
 } from '../../../src/identity/query-state';
 import { useAdministration } from '../../../src/administration/context';
-import { canEditNativeRolePermissions } from './role-permission-access';
 
 function RoleForm({
   role,
@@ -295,7 +294,7 @@ function RoleForm({
 export function RoleEditorPage({ id }: Readonly<{ id?: string }>) {
   const { t } = useFrontendTranslation();
   const port = useIdentityPort();
-  const administration = useAdministration();
+  const nameOnly = port.mode === 'backend' && id !== undefined;
   const result = useIdentityQuery(`roles.editor:${id ?? 'create'}`, async (service) => {
     const { identifierSchema } = await import('../../../src/identity/model');
     const access = await service.access();
@@ -305,18 +304,13 @@ export function RoleEditorPage({ id }: Readonly<{ id?: string }>) {
       throw new IdentityError('not-found');
     const role = id === undefined ? undefined : await service.readRole(id);
     const members =
-      role && access.permissions.includes('users.read')
+      role && !nameOnly && access.permissions.includes('users.read')
         ? (await service.list({ ...defaultUserQuery, roleId: role.id, pageSize: 10 })).total
         : role
           ? null
           : 0;
     return { access, role, members };
   });
-  const nameOnly = Boolean(
-    administration &&
-    result.data?.role &&
-    canEditNativeRolePermissions(result.data.access, result.data.role),
-  );
   return (
     <Page>
       <PageHeader

@@ -8,7 +8,7 @@ test('角色名称读取失败不阻断本人资料、偏好和会话，重试�
   let coreReads = 0;
   page.on('request', (request) => {
     const path = new URL(request.url()).pathname;
-    if (request.method() === 'GET' && (path.endsWith('/me') || path.endsWith('/iam/session')))
+    if (request.method() === 'GET' && (path.endsWith('/me') || path.endsWith('/iam/self/profile')))
       coreReads += 1;
   });
   await page.route('**/roles?scope=self', async (route) => {

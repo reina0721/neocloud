@@ -47,4 +47,6 @@ IAM 通过独立 `iam_schema_migrations` 管理三驱动 schema（含 authorizat
 
 ## HTTP 传输策略
 
+本人资料读取通过 `GET /api/v1/iam/self/profile` 取得同一个账号快照的资料及版本，要求 `iam:account:self:read`。PATCH 要求 `iam:account:self:profile:write` 并验证写入版本。资料读取不轮换会话令牌。
+
 `iam.local.allowInsecureHTTP` 默认为 false；IAM HTTP Module 显式输出当前 `CookiePolicy` 及 Cookie 名称，由 composition 注入 Session 解析与 Console。显式 HTTP 模式使用无 `__Host-` 前缀的 Cookie，保留 HttpOnly、SameSite、Origin 与 CSRF；不从客户端转发头推断或自动降级。切换传输模式需要重新登录，但不重置或迁移账号和业务数据。

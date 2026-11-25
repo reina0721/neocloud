@@ -52,6 +52,20 @@ describe('Host Preferences Port', () => {
     unsubscribe();
   });
 
+  it('等待账号偏好模块期间只保存设备项，确认使用设备后恢复本地写入', () => {
+    const port = createHostPreferencesPort();
+    const stopWaiting = port.waitForAccountPreferences(() => true);
+    port.updateCategory('appearance', { themeMode: 'dark', density: 'compact' });
+    expect(storedPreferences().appearance.themeMode).toBe(defaultPreferences.appearance.themeMode);
+    expect(storedPreferences().appearance.density).toBe('compact');
+
+    const unbind = port.bindAccountPreferences(() => false);
+    port.updateCategory('appearance', { themeMode: 'dark' });
+    expect(storedPreferences().appearance.themeMode).toBe('dark');
+    unbind();
+    stopWaiting();
+  });
+
   it('跨窗口 storage 事件：完整快照收敛，损坏快照忽略', () => {
     const port = createHostPreferencesPort();
     const stop = port.startCrossWindowSync();

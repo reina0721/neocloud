@@ -13,6 +13,7 @@ import (
 	"github.com/reina0721/clouddrive/internal/module/iam/service"
 	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
 	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
+	"github.com/reina0721/clouddrive/internal/transport/http/mutationproof"
 	"github.com/reina0721/clouddrive/pkg/httpx"
 )
 
@@ -380,7 +381,15 @@ func RegisterHuma(api huma.API, handler *Handler) {
 		return &emptyOutput{}, nil
 	})
 
-	// 072：自服务主页资料更新：昵称/介绍/出生日期（乐观锁），不撤销会话。
+	// 本人资料及写入版本来自同一个快照，读取不轮换会话令牌。
+	huma.Register(api, protected(opSelfProfile, http.MethodGet, "/api/v1/iam/self/profile", string(iampermission.SelfRead), "read"), func(ctx context.Context, _ *struct{}) (*jsonOutput[profileResponse], error) {
+		_, current, _ := service.SessionFromContext(ctx)
+		profile, err := handler.service.SelfProfile(ctx, current.Identity.AccountID)
+		if err != nil {
+			return nil, problem(ctx, err)
+		}
+		return jsonEnvelope(profileOutput(profile)), nil
+	})
 	selfProfile := protected(opSelfProfileUpdate, http.MethodPatch, "/api/v1/iam/self/profile", string(iampermission.SelfProfileWrite), "update")
 	selfProfile.Middlewares = huma.Middlewares{handler.requireMutation}
 	huma.Register(api, selfProfile, func(ctx context.Context, in *updateSelfProfileInput) (*jsonOutput[profileResponse], error) {
@@ -389,7 +398,7 @@ func RegisterHuma(api huma.API, handler *Handler) {
 		if err != nil {
 			return nil, problem(ctx, err)
 		}
-		return jsonEnvelope(profileResponse{Username: updated.Username, Nickname: updated.Nickname, Bio: updated.Bio, BirthDate: updated.BirthDate, Version: updated.Version}), nil
+		return jsonEnvelope(profileOutput(updated)), nil
 	})
 
 	// 090 BE-090-005：跨设备用户偏好（自服务）：读取有效偏好（默认+覆盖）与
@@ -855,7 +864,8 @@ func (handler *Handler) requireOrigin(ctx huma.Context, next func(huma.Context))
 func (handler *Handler) requireMutation(ctx huma.Context, next func(huma.Context)) {
 	request, writer := humabinding.UnwrapHTTP(ctx)
 	id, _, ok := service.SessionFromContext(request.Context())
-	if !ok || handler == nil || !handler.originAllowed(request) || handler.service.ValidateCSRF(request.Context(), id, request.Header.Get("X-CSRF-Token")) != nil {
+	if !ok || handler == nil || !handler.originAllowed(request) ||
+		(!mutationproof.Matches(request, id) && handler.service.ValidateCSRF(request.Context(), id, request.Header.Get("X-CSRF-Token")) != nil) {
 		httpx.WriteProblem(writer, request, statusError(http.StatusForbidden, "csrf_rejected", nil))
 		return
 	}

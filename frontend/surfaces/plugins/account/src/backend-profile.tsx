@@ -63,7 +63,10 @@ function ProfileEditor({
     </>
   );
 }
-export function BackendProfile({ onSaved }: Readonly<{ onSaved: () => void }>) {
+export function BackendProfile({
+  editable,
+  onSaved,
+}: Readonly<{ editable: boolean; onSaved: () => void }>) {
   const port = useRequiredAdministration();
   const { t } = useFrontendTranslation();
   const state = useRemote(useCallback(() => port.profile(), [port]));
@@ -81,14 +84,18 @@ export function BackendProfile({ onSaved }: Readonly<{ onSaved: () => void }>) {
                 description: state.value?.[field] || '—',
               }))}
             />
-            <ProfileEditor
-              key={state.value.version}
-              profile={state.value}
-              onSaved={() => {
-                state.reload();
-                onSaved();
-              }}
-            />
+            {editable ? (
+              <ProfileEditor
+                key={state.value.version}
+                profile={state.value}
+                onSaved={() => {
+                  state.reload();
+                  onSaved();
+                }}
+              />
+            ) : (
+              <p className="text-sm text-ink-muted">{t('identityProduct.readonly')}</p>
+            )}
           </>
         ) : null}
       </RemoteRegion>

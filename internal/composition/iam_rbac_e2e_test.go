@@ -172,7 +172,7 @@ func doJSON(t *testing.T, address, method, path, body, cookie, csrf string) iamR
 	result := iamResponse{code: response.StatusCode, body: string(payload), csrf: jsonField(string(payload), "csrfToken")}
 	for _, value := range response.Header.Values("Set-Cookie") {
 		parsed, err := http.ParseSetCookie(value)
-		if err == nil && parsed.Name == service.SessionCookieName {
+		if err == nil && (parsed.Name == service.SessionCookieName || parsed.Name == strings.TrimPrefix(service.SessionCookieName, "__Host-")) {
 			result.cookie = parsed.Name + "=" + parsed.Value
 		}
 	}

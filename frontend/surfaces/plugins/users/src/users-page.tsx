@@ -306,7 +306,8 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
         title={t('users.title')}
         description={t('users.description')}
         actions={
-          data?.access.permissions.includes('users.create') ? (
+          data?.access.permissions.includes('users.create') &&
+          (port.mode === 'mock' || data.access.permissions.includes('roles.read')) ? (
             <RouteLink
               target={route('users.create')}
               presentation="action"

@@ -40,7 +40,9 @@ export function AccountMenu({
   const locale = useShellStore((state) => state.locale);
   const themeMode = useShellStore((state) => state.preferences.appearance.themeMode);
   const preferences = usePreferencesPort<Preferences>();
-  const readonlyPreferences = useAccountNotificationSettings()?.sharedReadOnly === true;
+  const account = useAccountNotificationSettings();
+  const sharedEditsBlocked =
+    account?.sharedReadOnly === true || account?.sharedUnavailable === true;
   const languageName = t(
     locale === 'zh-CN' ? 'shell.accountMenu.chinese' : 'shell.accountMenu.english',
   );
@@ -95,12 +97,12 @@ export function AccountMenu({
                 {
                   id: 'locale:zh-CN',
                   label: t('shell.accountMenu.chinese'),
-                  disabled: readonlyPreferences,
+                  disabled: sharedEditsBlocked,
                 },
                 {
                   id: 'locale:en',
                   label: t('shell.accountMenu.english'),
-                  disabled: readonlyPreferences,
+                  disabled: sharedEditsBlocked,
                 },
               ],
             },
@@ -122,19 +124,19 @@ export function AccountMenu({
                   id: 'theme:light',
                   label: themeNames.light,
                   icon: <Sun className="size-4" />,
-                  disabled: readonlyPreferences,
+                  disabled: sharedEditsBlocked,
                 },
                 {
                   id: 'theme:dark',
                   label: themeNames.dark,
                   icon: <Moon className="size-4" />,
-                  disabled: readonlyPreferences,
+                  disabled: sharedEditsBlocked,
                 },
                 {
                   id: 'theme:system',
                   label: themeNames.system,
                   icon: <Monitor className="size-4" />,
-                  disabled: readonlyPreferences,
+                  disabled: sharedEditsBlocked,
                 },
               ],
             },

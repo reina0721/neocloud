@@ -56,7 +56,7 @@ export function UserForm({
     email: record?.email ?? '',
     password: '',
     status: record?.status ?? 'active',
-    roleIds: record?.roleIds ?? ['viewer'],
+    roleIds: record?.roleIds ?? (port.mode === 'mock' ? ['viewer'] : []),
   });
   const [defaults] = useState(() => valuesFor(user));
   const allowed = access.permissions.includes(

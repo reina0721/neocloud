@@ -42,7 +42,7 @@ type SessionIdentity struct {
 	MustChangePassword               bool
 }
 type Session struct {
-	ID, CSRFToken                               string
+	ID                                          string
 	Identity                                    SessionIdentity
 	CreatedAt, IdleExpiresAt, AbsoluteExpiresAt time.Time
 }

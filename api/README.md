@@ -11,7 +11,9 @@ npx --yes pnpm@10.22.0 codegen:contracts
 npx --yes pnpm@10.22.0 codegen:contracts:check
 ~~~
 
-身份使用 HttpOnly Cookie。所有控制台写请求必须携带受信任 Origin、控制台 CSRF Cookie 和 X-CSRF-Token；GET /api/console/v1/auth/csrf 返回双提交令牌。原生转发还会执行原生权限和 CSRF 检查。
+身份使用 HttpOnly Cookie。所有控制台写请求必须携带受信任 Origin、控制台 CSRF Cookie 和 X-CSRF-Token；GET /api/console/v1/auth/csrf 返回双提交令牌。控制台内部转发时将已验证的会话与请求绑定，原生路由继续校验会话和操作权限。直连原生 API 仍使用原生会话令牌。
+
+`GET /api/v1/iam/self/profile` 需要 `iam:account:self:read`，一次读取本人昵称、介绍、出生日期和版本，不轮换 CSRF 令牌。PATCH 使用该版本并要求 `iam:account:self:profile:write`。
 
 `GET/PATCH /api/v1/iam/self/preferences` 读取和更新本人账号偏好。PATCH 省略的字段保持原值，`timeZone: ""` 恢复自动时区，`reduceMotion: false` 关闭减少动效。提交已有 `version` 时，版本冲突返回 409。
 
@@ -27,7 +29,7 @@ npx --yes pnpm@10.22.0 codegen:contracts:check
 
 文件权限维护新增 `GET/PUT /api/v1/files/{id}/access`（PUT携带独立revision，policy为null明确恢复继承）、`POST /api/v1/files/audience/lookup`（精确账号/角色查找）及 `POST /api/v1/files/{id}/access/effective`（实际分享及匿名/账号的已保存权限）。均使用原IAM、文件scope与写请求CSRF边界。分享管理投影增加audience，公开metadata增加denied/signInRequired，目录和条目返回实际permissions。公开路由保留public profile，同时可选解析同源Session获取受众事实；存在但无效的会话不会静默降级匿名。详见[文件管理](../docs/operations/file-management.md)。
 
-原生 OpenAPI 与 operation inventory 通过 `internal/composition/httpcatalog` 的同一清单生成，当前共 225 个操作。生成器不再单独选择模块，也不导入带资源的应用组合根。
+原生 OpenAPI 与 operation inventory 通过 `internal/composition/httpcatalog` 的同一清单生成，当前共 226 个操作。生成器不再单独选择模块，也不导入带资源的应用组合根。
 
 管理端 `GET /api/v1/files/admin-tasks`、`GET /api/v1/files/admin-tasks/summary` 及 `GET /api/v1/files/admin-tasks/{kind}/{id}` 要求 `files:task-admin:read`。摘要按任务范围独立聚合，不受列表页码、排序或状态筛选影响。`GET /admin-tasks/cleanup-preview` 与 `POST /admin-tasks/cleanup` 另需 `files:task-admin:cleanup`，变更需要 CSRF。清理接受最多 20 个任务快照，返回逐项状态。过期或已变化的选择以详情及结果为准。
 

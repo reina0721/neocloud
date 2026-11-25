@@ -22,6 +22,7 @@ const (
 	opLogout               = "iam.logout"
 	opChangePassword       = "iam.self.password.change"
 	opVerifyPassword       = "iam.self.password.verify"
+	opSelfProfile          = "iam.self.profile.read"
 	opSelfProfileUpdate    = "iam.self.profile.update"
 	opSelfPreferences      = "iam.self.preferences.read"
 	opSelfPreferencesWrite = "iam.self.preferences.write"
@@ -182,6 +183,11 @@ type profileResponse struct {
 	BirthDate string `json:"birthDate"`
 	Version   uint64 `json:"version"`
 }
+
+func profileOutput(account model.Account) profileResponse {
+	return profileResponse{Username: account.Username, Nickname: account.Nickname, Bio: account.Bio, BirthDate: account.BirthDate, Version: account.Version}
+}
+
 type roleResponse struct {
 	ID          string `json:"id"`
 	Code        string `json:"code"`

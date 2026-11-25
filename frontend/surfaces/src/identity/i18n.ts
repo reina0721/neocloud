@@ -62,6 +62,7 @@ export const identityI18n = {
         'duplicate-email': '该邮箱已被使用，请修改邮箱。',
         'stale-version': '记录已被其他操作修改，请重新读取后再保存。',
         'protected-user': '自身状态与角色受到保护。',
+        'role-catalog-required': '创建用户时须选择角色。请联系管理员授予角色目录读取权限。',
         'last-administrator': '必须保留至少一位启用的管理员。',
       },
     },
@@ -135,6 +136,8 @@ export const identityI18n = {
         'duplicate-email': 'This email is already in use. Choose another email.',
         'stale-version': 'Another operation changed this record. Reload before saving.',
         'protected-user': 'Your own status and roles are protected.',
+        'role-catalog-required':
+          'Creating a user requires selecting a role. Ask your administrator for access to the role directory.',
         'last-administrator': 'At least one active administrator must remain.',
       },
     },
