@@ -2,9 +2,11 @@
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { DesktopNotificationSettingsContext } from '@clouddrive/surface/administration/runtime';
 import { useAuth } from '../auth/context';
 import { AppLoadingSurface } from '../host/app-loading-surface';
 import { RouteTransition } from '../host/route-transition';
+import { useDesktopNotificationSettings } from '../host/use-desktop-notification';
 import { useLockStore } from '../state/use-lock-store';
 import { useShellStore } from '../state/use-shell-store';
 import { useIdleLock } from './use-idle-lock';
@@ -52,6 +54,7 @@ function isPersonalRoute(pathname: string): boolean {
 export function ApplicationChrome({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
   const account = useAuth().session?.user.id ?? null;
+  const desktopNotifications = useDesktopNotificationSettings(account);
   const idleLockMinutes = useShellStore((state) => state.preferences.security.idleLockMinutes);
   const lockOnHidden = useShellStore((state) => state.preferences.security.lockOnHidden);
   useIdleLock(account, { idleLockMinutes, lockOnHidden });
@@ -60,17 +63,19 @@ export function ApplicationChrome({ children }: Readonly<{ children: ReactNode }
   const fileWorkspace = pathname === '/home' || pathname.startsWith('/home/');
   const personalSpace = isPersonalRoute(pathname);
   return (
-    <FilesRuntime fileWorkspace={fileWorkspace}>
-      <LockScreen key={`${account}:${lockedAt}`} />
-      <div inert={locked}>
-        {fileWorkspace ? (
-          <RouteTransition>{children}</RouteTransition>
-        ) : personalSpace ? (
-          <PersonalShell>{children}</PersonalShell>
-        ) : (
-          <AppShell>{children}</AppShell>
-        )}
-      </div>
-    </FilesRuntime>
+    <DesktopNotificationSettingsContext value={desktopNotifications}>
+      <FilesRuntime fileWorkspace={fileWorkspace}>
+        <LockScreen key={`${account}:${lockedAt}`} />
+        <div inert={locked}>
+          {fileWorkspace ? (
+            <RouteTransition>{children}</RouteTransition>
+          ) : personalSpace ? (
+            <PersonalShell>{children}</PersonalShell>
+          ) : (
+            <AppShell>{children}</AppShell>
+          )}
+        </div>
+      </FilesRuntime>
+    </DesktopNotificationSettingsContext>
   );
 }

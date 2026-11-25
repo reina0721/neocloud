@@ -1,6 +1,7 @@
+import { assertPreviewOrigin } from './reading-fixture';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 
 test('节点检查按需读取，关联任务范围可传入并清除', async ({ page }, info) => {
   const accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
@@ -103,7 +104,7 @@ test('节点管理显示真实 aria2 诊断和已筛选的关联任务', async (
     (await readFile(resolve(__dirname, accessPath!), 'utf8')).replace(/^\uFEFF/, ''),
   ) as { url: string; username: string; password: string };
   const origin = new URL(account.url).origin;
-  expect(origin).toBe('http://127.0.0.1:4194');
+  assertPreviewOrigin(origin);
   await page.goto(origin + '/login?returnTo=%2Fsystem-tools%2Fnodes');
   await page.getByLabel('邮箱', { exact: true }).fill(account.username);
   await page.getByLabel('密码', { exact: true }).fill(account.password);

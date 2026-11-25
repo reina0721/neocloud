@@ -1,6 +1,7 @@
+import { assertPreviewOrigin } from './reading-fixture';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './preview-test';
 
 type IconState = { revision: number; inherit: boolean; items: unknown[] };
 const iconSource = 'https://icons.example.test/fixture.svg';
@@ -37,7 +38,7 @@ test('扩展名图标保存、主题渲染、外部图片失败回退与恢复�
     password: string;
     url: string;
   };
-  expect(new URL(account.url).origin).toBe('http://127.0.0.1:4194');
+  assertPreviewOrigin(account.url);
   await page.goto('/login?returnTo=%2Fhome');
   await page.getByLabel('邮箱', { exact: true }).fill(account.username);
   await page.getByLabel('密码', { exact: true }).fill(account.password);
@@ -156,7 +157,7 @@ test('扩展名图标保存、主题渲染、外部图片失败回退与恢复�
     await expect(brokenFile.locator('svg.lucide-file-text, svg.lucide-file')).toBeVisible();
     await expect(brokenFile.locator('img[data-file-icon="image-url"]')).toHaveCount(0);
     await page.getByRole('button', { name: '视图', exact: true }).click();
-    await page.getByRole('menuitem', { name: '列表', exact: true }).click();
+    await page.getByRole('menuitemradio', { name: '列表', exact: true }).click();
     await expect(archiveFile).toHaveAttribute('role', 'row');
     await expect(glyph).toBeVisible();
     await page.getByRole('button', { name: '当前用户', exact: true }).click();
@@ -164,7 +165,7 @@ test('扩展名图标保存、主题渲染、外部图片失败回退与恢复�
     await page.getByRole('menuitemradio', { name: '深色', exact: true }).click();
     await expect(glyph).toHaveCSS('color', 'rgb(171, 205, 238)');
     await page.getByRole('button', { name: '视图', exact: true }).click();
-    await page.getByRole('menuitem', { name: '网格', exact: true }).click();
+    await page.getByRole('menuitemradio', { name: '网格', exact: true }).click();
     await expect(glyph).toBeVisible();
     await page.screenshot({ path: info.outputPath('icons-dark-grid.png') });
     await api(page, '/' + existing.id + '/annotations', 'PUT', {

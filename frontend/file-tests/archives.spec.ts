@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
@@ -80,7 +80,8 @@ test('F481–F491：单项菜单、多选、目标冲突、持久 ZIP 和结果�
     if (!(await checkbox.isChecked())) await checkbox.press('Space');
     await expect(checkbox).toBeChecked();
   }
-  await page.getByRole('button', { name: '创建 ZIP 压缩包', exact: true }).click();
+  await page.getByRole('button', { name: '更多操作', exact: true }).click();
+  await page.getByRole('menuitem', { name: '创建 ZIP 压缩包', exact: true }).click();
   await expect(name).toHaveValue('archive.zip');
   await dialog.getByRole('button', { name: '取消', exact: true }).click();
 

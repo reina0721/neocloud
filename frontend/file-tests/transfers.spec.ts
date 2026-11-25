@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -135,7 +135,7 @@ test('大文件暂停、跨路由、刷新重选校验、断点接续和原生�
       .click();
     // 根目录有分页；通过真实搜索找到本次上传，不能假设它仍在第一页。
     await page.getByRole('searchbox', { name: '搜索文件', exact: true }).fill(name);
-    await page.getByRole('button', { name: '搜索文件', exact: true }).click();
+    await page.getByRole('searchbox', { name: '搜索文件', exact: true }).press('Enter');
     await page.getByRole('button', { name: name + ' 的操作', exact: true }).click();
     const downloadEvent = page.waitForEvent('download');
     await page.getByRole('menuitem', { name: '下载', exact: true }).click();

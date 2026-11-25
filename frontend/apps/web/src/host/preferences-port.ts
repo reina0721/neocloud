@@ -80,10 +80,8 @@ function toPersistResult(fn: () => void): PersistResult {
 }
 
 /**
- * 显式持久化当前偏好完整快照（v1 envelope）。zustand persist 的写入经 toThenable
- * catch 吞错（quota/安全错误不向上抛），因此 Port 在内存变更后**显式**写一次
- * localStorage 以取得真实失败语义（SET-003-005：不静默宣称保存成功）；zustand 的
- * 后续同值写入无害。成功后返回 true，失败抛错由 toPersistResult 归类。
+ * 显式持久化当前设备偏好快照。重试时内存里可能已经是目标值，
+ * 仍须补写 localStorage。失败由 toPersistResult 归类。
  */
 function persistSnapshot(): void {
   const state = persistedShellPreferences(useShellStore.getState());

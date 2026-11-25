@@ -7,8 +7,8 @@
  * - 订阅 Host notifications store：真实新发布项到达时按偏好发声 / 弹桌面通知；
  * - sound：WebAudio 短提示音（无资源文件；播放失败不抛错——静默降级可观测）；
  * - desktopNotifications：仅当 Notification.permission === 'granted' 时真正弹出；
- *   开启偏好时由 RuntimeProviders 触发权限请求，拒绝/不支持则回退偏好并呈现原因
- *   （见 useDesktopNotificationGate）；关键（error/critical）通知不受关闭影响——
+ *   开关操作由认证壳申请权限，拒绝或不支持时回退偏好并呈现原因。
+ *   关键（error/critical）通知不受关闭影响。
  *   桌面通知默认关时关键项仍走应用内通知中心（既有能力），此处不重复。
  */
 import { useEffect, useRef } from 'react';

@@ -1,4 +1,4 @@
-import { test, expect, type Locator, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
@@ -85,7 +85,7 @@ async function setupTracks(page: Page) {
   });
   await page.goto('/home?parent=' + parent);
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '列表', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '列表', exact: true }).click();
 
   const cover = await page.evaluate(() => {
     const canvas = document.createElement('canvas');

@@ -140,6 +140,47 @@ const advancedPreferenceLinks: readonly NavLinkItem[] = [
   },
 ];
 
+function PersonalLink({
+  href,
+  className,
+  current = false,
+  onAccepted,
+  children,
+}: Readonly<{
+  href: string;
+  className: string;
+  current?: boolean;
+  onAccepted?: (() => void) | undefined;
+  children: ReactNode;
+}>) {
+  const router = useRouter();
+  return (
+    <Link
+      href={href}
+      className={className}
+      aria-current={current ? 'page' : undefined}
+      onNavigate={(event) => {
+        event.preventDefault();
+        void proceedAfterLeaveConfirm(href).then((proceed) => {
+          if (!proceed) {
+            if (current && href === location.pathname + location.search + location.hash)
+              onAccepted?.();
+            return;
+          }
+          onAccepted?.();
+          markForwardRouteIntent();
+          void router.push(href, {
+            transitionTypes: [pageTransitionTypes.forward],
+            ...resolveScrollOption(),
+          });
+        });
+      }}
+    >
+      {children}
+    </Link>
+  );
+}
+
 function PersonalNav({
   pathname,
   zh,
@@ -151,7 +192,6 @@ function PersonalNav({
   canAdmin: boolean;
   onNavigate?: () => void;
 }>) {
-  const router = useRouter();
   const isAdvancedActive = advancedPreferenceLinks.some((item) => pathname === item.href);
   const [advancedOpen, setAdvancedOpen] = useState(isAdvancedActive);
   const renderLink = (item: NavLinkItem) => {
@@ -159,25 +199,11 @@ function PersonalNav({
       ? pathname === item.href
       : pathname === item.href || pathname.startsWith(`${item.href}/`);
     return (
-      <Link
+      <PersonalLink
         key={item.href}
         href={item.href}
-        aria-current={active ? 'page' : undefined}
-        onNavigate={(event) => {
-          event.preventDefault();
-          void proceedAfterLeaveConfirm(item.href).then((proceed) => {
-            if (!proceed) {
-              if (active) onNavigate?.();
-              return;
-            }
-            onNavigate?.();
-            markForwardRouteIntent();
-            router.push(item.href, {
-              transitionTypes: [pageTransitionTypes.forward],
-              ...resolveScrollOption(),
-            });
-          });
-        }}
+        current={active}
+        onAccepted={onNavigate}
         className={`flex items-center gap-2.5 rounded-control px-3 py-2 text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
           active
             ? 'bg-brand-soft font-semibold text-brand'
@@ -186,7 +212,7 @@ function PersonalNav({
       >
         {item.icon}
         <span className="truncate">{zh ? item.labelZh : item.labelEn}</span>
-      </Link>
+      </PersonalLink>
     );
   };
 
@@ -225,14 +251,14 @@ function PersonalNav({
       </div>
       {canAdmin ? (
         <div className="mt-auto border-t border-border pt-3">
-          <Link
+          <PersonalLink
             href="/workspace"
-            {...(onNavigate ? { onClick: onNavigate } : {})}
+            onAccepted={onNavigate}
             className="flex items-center justify-between gap-2 rounded-control px-3 py-2 text-xs font-medium text-ink-muted transition-colors hover:bg-surface-muted hover:text-brand"
           >
             <span>{zh ? '进入管理面板' : 'Admin console'}</span>
             <ChevronRight className="size-3.5 shrink-0" />
-          </Link>
+          </PersonalLink>
         </div>
       ) : null}
     </nav>
@@ -259,8 +285,8 @@ export function PersonalShell({ children }: Readonly<{ children: ReactNode }>) {
     <div className="flex min-h-dvh flex-col bg-canvas font-sans text-ink">
       <NotificationAlerts />
       <TopProgress />
-      <header className="sticky top-0 z-sticky flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-surface/95 px-3 backdrop-blur-xl sm:px-6">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      <header className="sticky top-0 z-sticky flex h-14 shrink-0 items-center justify-between gap-1 border-b border-border bg-surface/95 px-2 backdrop-blur-xl sm:gap-3 sm:px-6">
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-3">
           <div className="lg:hidden">
             <IconAction
               label={zh ? '打开个人菜单' : 'Open personal menu'}
@@ -269,15 +295,15 @@ export function PersonalShell({ children }: Readonly<{ children: ReactNode }>) {
               <Menu className="size-5" />
             </IconAction>
           </div>
-          <Link
+          <PersonalLink
             href="/home"
-            className="inline-flex h-9 items-center gap-1.5 rounded-action border border-border bg-surface px-3 text-sm font-medium text-ink transition-colors hover:bg-surface-muted hover:text-brand focus-visible:ring-2 focus-visible:ring-focus-ring"
+            className="inline-flex h-9 min-w-0 items-center gap-1.5 rounded-action border border-border bg-surface px-2 text-sm font-medium text-ink transition-colors hover:bg-surface-muted hover:text-brand focus-visible:ring-2 focus-visible:ring-focus-ring sm:px-3"
           >
             <ArrowLeft className="size-4 shrink-0" />
-            <span>{zh ? '返回我的文件' : 'Back to files'}</span>
-          </Link>
+            <span className="truncate">{zh ? '返回我的文件' : 'Back to files'}</span>
+          </PersonalLink>
           <span className="hidden h-5 w-px bg-border sm:block" aria-hidden="true" />
-          <Link
+          <PersonalLink
             href="/home"
             className="hidden min-w-0 items-center gap-2 text-sm font-bold text-ink sm:flex"
           >
@@ -293,9 +319,9 @@ export function PersonalShell({ children }: Readonly<{ children: ReactNode }>) {
             <span className="rounded-action bg-surface-muted px-2 py-0.5 text-xs font-medium text-ink-muted">
               {zh ? '个人中心' : 'Personal'}
             </span>
-          </Link>
+          </PersonalLink>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1.5">
           <NotificationCenter />
           <AccountMenu
             compact={false}

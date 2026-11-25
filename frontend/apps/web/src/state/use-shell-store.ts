@@ -130,6 +130,29 @@ export function persistedShellPreferences(
   };
 }
 
+function createShellStorage() {
+  const storage = createLocalStorage<ShellPersisted>();
+  let projections = 0;
+  return {
+    storage: {
+      ...storage,
+      setItem(name: string, value: Parameters<typeof storage.setItem>[1]) {
+        if (!projections) return storage.setItem(name, value);
+      },
+    },
+    projectAccount(apply: () => void) {
+      projections++;
+      try {
+        apply();
+      } finally {
+        projections--;
+      }
+    },
+  };
+}
+
+const shellStorage = createShellStorage();
+
 /** 把（可能损坏/缺失的）持久化输入解析为 typed Preferences；失败返回 null（不静默覆盖）。 */
 function parsePersistedPreferences(persisted: unknown): Preferences | null {
   const legacy = persisted as Record<string, unknown> | null | undefined;
@@ -230,14 +253,16 @@ export const useShellStore = createPersistStore<ShellState, ShellPersisted>(
         ),
       ),
     applyAccountPreferences: (preferences) =>
-      set((state) => projectShell(state.devicePreferences, preferences, state.sidebarCollapsed)),
+      shellStorage.projectAccount(() =>
+        set((state) => projectShell(state.devicePreferences, preferences, state.sidebarCollapsed)),
+      ),
   }),
   {
     name: 'clouddrive.shell',
     // v1 = 八分类嵌套偏好（107 设置中心）。
     version: PREFERENCES_VERSION,
     skipHydration: true,
-    storage: createLocalStorage(),
+    storage: shellStorage.storage,
     partialize: persistedShellPreferences,
     // 读取期解析：v0 保真迁移 / v1 校验；损坏（无法解析）→ 抛错走 hydration 失败语义，
     // 不静默覆盖（调用方呈现原因 + 恢复动作）。

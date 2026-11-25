@@ -47,7 +47,7 @@ export default function SettingsShellLayout({ children }: Readonly<{ children: R
   const pathname = usePathname();
   const activeMeta = resolveActiveMeta(pathname);
   const preferences = useSettingsPreferences();
-  const { banner, setLastResult, ctxFor } = useSettingsPersistReport();
+  const { banner, persist, ctxFor } = useSettingsPersistReport();
   const account = useAccountNotificationSettings();
   const { t } = useFrontendTranslation();
   const ctx = {
@@ -80,7 +80,7 @@ export default function SettingsShellLayout({ children }: Readonly<{ children: R
             <SettingsShellProvider ctx={ctx}>{children}</SettingsShellProvider>
           </Page>
         </div>
-        <SettingsRestoreActions meta={activeMeta} onResult={setLastResult} />
+        <SettingsRestoreActions meta={activeMeta} persist={persist} />
       </SettingsContentFrame>
     </Page>
   );

@@ -35,6 +35,8 @@ const zh = {
   editWeb: (name: string) => `编辑 ${name}`,
   removeWeb: (name: string) => `移除 ${name}`,
   webKind: '网页应用',
+  originNotAllowed: '请在部署的 ALLOWED_ORIGINS 中加入此应用的精确站点来源。',
+  originUnverified: '当前入口未能验证部署白名单。',
   app: '应用',
   extensions: '扩展名',
   inheritedExtensions: '内置关联',
@@ -84,6 +86,8 @@ const en: typeof zh = {
   editWeb: (name) => `Edit ${name}`,
   removeWeb: (name) => `Remove ${name}`,
   webKind: 'Web application',
+  originNotAllowed: 'Add this application’s exact origin to the deployment’s ALLOWED_ORIGINS.',
+  originUnverified: 'This entry point could not verify the deployment’s allowed origins.',
   app: 'Application',
   extensions: 'Extensions',
   inheritedExtensions: 'Built-in associations',
@@ -124,6 +128,24 @@ const en: typeof zh = {
   readonly: 'This account has read-only access.',
   conflict: 'Another administrator saved new settings. Refresh before editing again.',
 };
+
+function WebOriginStatus({ application, labels }: { application: string; labels: typeof zh }) {
+  const files = useFiles();
+  const load = useCallback(
+    (signal: AbortSignal) =>
+      files.checkWebFilePreview?.(application, signal) ?? Promise.resolve('unverified' as const),
+    [application, files],
+  );
+  const { result } = useCatalogRequest(load);
+  if (!result || ('value' in result && result.value === 'allowed')) return null;
+  return (
+    <p role="status" className="text-xs font-normal text-ink-muted">
+      {'value' in result && result.value === 'denied'
+        ? labels.originNotAllowed
+        : labels.originUnverified}
+    </p>
+  );
+}
 
 function FileApplicationsForm({
   initial,
@@ -436,6 +458,17 @@ function FileApplicationsForm({
                     <p className="text-xs text-ink-muted">
                       {app.protocol === 'wopi' ? labels.wopiKind : labels.webKind}
                     </p>
+                    {app.protocol !== 'wopi' &&
+                    app.enabled &&
+                    view.webItems.some(
+                      (saved) => saved.id === app.id && saved.origin === app.origin,
+                    ) ? (
+                      <WebOriginStatus
+                        key={`${view.revision}:${app.id}`}
+                        application={app.id}
+                        labels={labels}
+                      />
+                    ) : null}
                   </th>
                   <td className="p-2 text-ink-muted">
                     <p>{app.extensions.map((suffix) => `.${suffix}`).join(', ')}</p>

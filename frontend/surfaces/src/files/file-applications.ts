@@ -70,6 +70,12 @@ export const fileApplicationViewSchema = fileApplicationPolicySchema.extend({
   canSave: z.boolean(),
 });
 
+export const webPreviewReadinessSchema = z.object({
+  status: z.enum(['allowed', 'denied', 'unavailable']),
+});
+export type WebPreviewReadiness =
+  z.infer<typeof webPreviewReadinessSchema>['status'] | 'unverified';
+
 export const webFilePreviewSchema = z.object({
   urlTemplate: z.string(),
   origin: z.string(),

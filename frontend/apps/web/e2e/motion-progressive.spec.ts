@@ -10,11 +10,8 @@ test('settings keeps its shell stable and enters semantic regions inside the nes
 }) => {
   await page.goto('/settings');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
-  await page
-    .getByRole('navigation', { name: '主导航' })
-    .getByRole('link', { name: '工作台', exact: true })
-    .click();
-  await expect(page).toHaveURL('/');
+  await page.getByRole('link', { name: '进入管理面板', exact: true }).click();
+  await expect(page).toHaveURL('/workspace');
   await page
     .getByRole('navigation', { name: '主导航' })
     .getByRole('link', { name: '个人偏好', exact: true })
@@ -159,11 +156,8 @@ test('anchor refresh and browser return never leave reading content hidden', asy
   await expect(target).toBeInViewport();
   await expect(target.getByRole('switch')).toBeFocused();
   await expect(region).toHaveCSS('opacity', '1');
-  await page
-    .getByRole('navigation', { name: '主导航' })
-    .getByRole('link', { name: '工作台', exact: true })
-    .click();
-  await expect(page).toHaveURL('/');
+  await page.getByRole('link', { name: '返回我的文件', exact: true }).click();
+  await expect(page).toHaveURL('/home');
   await page.goBack();
   await expect(page).toHaveURL(/settings\/actions/);
   await expect(region).toHaveCSS('opacity', '1');

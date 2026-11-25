@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -75,7 +75,8 @@ async function open(page: Page, name: unknown) {
 }
 async function menu(page: Page, label: string, action: string) {
   await page.getByRole('button', { name: label, exact: true }).click();
-  await page.getByRole('menuitem', { name: action, exact: true }).click();
+  const role = label === '视图' || label === '排序方式' ? 'menuitemradio' : 'menuitem';
+  await page.getByRole(role, { name: action, exact: true }).click();
 }
 async function choose(page: Page, name: unknown) {
   await page
@@ -166,7 +167,7 @@ test('复制待处理跨目录使用新名称，冲突不覆盖且可取消', as
   await page.goto('/home?parent=' + String(f.from.id));
   await expect(row(page, f.file.id)).toBeVisible();
   await row(page, f.file.id).click({ button: 'right' });
-  await page.getByRole('menuitem', { name: '加入复制待处理', exact: true }).click();
+  await page.getByRole('menuitem', { name: '复制到剪贴板', exact: true }).click();
   await expect(page.getByRole('region', { name: '待复制 1 项', exact: true })).toBeVisible();
   await api(page, '/' + String(f.file.id), 'PATCH', { name: 'renamed-' + f.suffix + '.txt' });
   await up(page);
@@ -242,7 +243,7 @@ test('批量剪切部分成功保留失败项，刷新清空与输入快捷键�
   await expect(page.getByRole('region', { name: /待移动/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: String(f.file.name), exact: true })).toBeVisible();
   await choose(page, f.file.name);
-  await page.getByRole('button', { name: '加入复制待处理', exact: true }).click();
+  await menu(page, '更多操作', '复制到剪贴板');
   await page.getByRole('button', { name: '高级搜索', exact: true }).click();
   await page.keyboard.press('Control+v');
   await expect(page.getByRole('dialog')).toBeVisible();

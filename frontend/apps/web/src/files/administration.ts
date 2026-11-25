@@ -20,6 +20,7 @@ import {
   fileApplicationViewSchema,
   fileApplicationPolicySchema,
   webFilePreviewSchema,
+  webPreviewReadinessSchema,
   wopiDiscoverySchema,
   storagePolicySchema,
   storageUsageSchema,
@@ -27,6 +28,7 @@ import {
   storageNameRuleCheckSchema,
   propertyDefinitionsViewSchema,
   type FilesPort,
+  FilesError,
 } from '@clouddrive/surface/files';
 import type { createJsonClient } from '../api/json-client';
 
@@ -55,6 +57,7 @@ type FileAdministration = Pick<
   | 'readFileApplications'
   | 'saveFileApplications'
   | 'readActiveFileApplications'
+  | 'checkWebFilePreview'
   | 'launchWebFilePreview'
   | 'discoverWOPI'
   | 'readStoragePolicy'
@@ -152,6 +155,18 @@ export function createFileAdministration(
       fileApplicationViewSchema.parse(await call('/applications', { method: 'PUT', body })),
     readActiveFileApplications: async (signal) =>
       fileApplicationPolicySchema.parse(await call('/applications/active', { signal })),
+    checkWebFilePreview: async (application, signal) => {
+      try {
+        return webPreviewReadinessSchema.parse(
+          await call(`/applications/${encodeURIComponent(application)}/web-preview-readiness`, {
+            signal,
+          }),
+        ).status;
+      } catch (error) {
+        if (error instanceof FilesError && error.code === 'missing') return 'unverified';
+        throw error;
+      }
+    },
     launchWebFilePreview: async (entry, application, signal, mode) =>
       webFilePreviewSchema.parse(
         await call('/' + encodeURIComponent(entry.id) + '/web-preview', {

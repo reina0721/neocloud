@@ -73,7 +73,12 @@ export function MenuButton({
   const controlled = isOpen !== undefined;
   const open = controlled ? isOpen : internalOpen;
   const id = useId();
-  const [choice, setChoice] = useState<{ item: MenuChoice; anchor: HTMLElement } | null>(null);
+  const [choice, setChoice] = useState<{ id: string; anchor: HTMLElement } | null>(null);
+  const choiceItem = choice
+    ? groups
+        ?.flatMap((group) => group.items)
+        .find((item): item is MenuChoice => item.id === choice.id && 'options' in item)
+    : undefined;
   const setOpen = (next: boolean) => {
     if (!next) setChoice(null);
     if (!controlled) setInternalOpen(next);
@@ -120,15 +125,16 @@ export function MenuButton({
       <MenuItem
         key={item.id}
         aria-haspopup="menu"
-        aria-expanded={choice?.item.id === item.id}
-        onClick={(event) => setChoice({ item, anchor: event.currentTarget })}
+        aria-expanded={choiceItem?.id === item.id}
+        onClick={(event) => setChoice({ id: item.id, anchor: event.currentTarget })}
         onPointerEnter={(event) => {
-          if (event.pointerType === 'mouse') setChoice({ item, anchor: event.currentTarget });
+          if (event.pointerType === 'mouse')
+            setChoice({ id: item.id, anchor: event.currentTarget });
         }}
         onKeyDown={(event) => {
           if (event.key === 'ArrowRight') {
             event.preventDefault();
-            setChoice({ item, anchor: event.currentTarget });
+            setChoice({ id: item.id, anchor: event.currentTarget });
           }
         }}
         className="ui-option"
@@ -180,11 +186,11 @@ export function MenuButton({
       </Button>
       <Menu
         id={id}
-        disableEnforceFocus={Boolean(choice)}
+        disableEnforceFocus={Boolean(choiceItem)}
         open={Boolean(open && anchor)}
         anchorEl={anchor}
         onClose={(_, reason) => {
-          if (reason === 'escapeKeyDown' && choice) {
+          if (reason === 'escapeKeyDown' && choice && choiceItem) {
             const target = choice.anchor;
             setChoice(null);
             target.focus();
@@ -203,7 +209,7 @@ export function MenuButton({
         {entries}
       </Menu>
       <Popper
-        open={Boolean(open && choice)}
+        open={Boolean(open && choiceItem)}
         anchorEl={choice?.anchor}
         placement={submenuLayout === 'stacked' ? 'bottom-start' : 'right-start'}
         sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }}
@@ -211,7 +217,7 @@ export function MenuButton({
         <Paper className="ui-overlay-surface ui-menu-surface min-w-44">
           <MenuList
             autoFocusItem
-            aria-label={choice?.item.label}
+            aria-label={choiceItem?.label}
             onKeyDown={(event) => {
               if (event.key === 'Escape' || event.key === 'ArrowLeft') {
                 event.preventDefault();
@@ -225,7 +231,7 @@ export function MenuButton({
               }
             }}
           >
-            {choice?.item.options.map((item) => renderAction(item, true, choice.item.selectedId))}
+            {choiceItem?.options.map((item) => renderAction(item, true, choiceItem.selectedId))}
           </MenuList>
         </Paper>
       </Popper>

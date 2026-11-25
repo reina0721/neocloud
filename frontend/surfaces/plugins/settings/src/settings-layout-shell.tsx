@@ -136,8 +136,11 @@ export function SettingsCategoryHeader({ meta }: Readonly<{ meta: SettingsCatego
 
 export function SettingsRestoreActions({
   meta,
-  onResult,
-}: Readonly<{ meta: SettingsCategoryMeta; onResult: (result: PersistResult) => void }>) {
+  persist,
+}: Readonly<{
+  meta: SettingsCategoryMeta;
+  persist: (apply: () => PersistResult) => PersistResult;
+}>) {
   const { t } = useFrontendTranslation();
   return (
     <div className="grid gap-4 border-t border-border pt-4">
@@ -145,12 +148,12 @@ export function SettingsRestoreActions({
         <RestoreCategoryButton
           category={meta.categoryKey}
           categoryLabel={t(meta.labelKey)}
-          onResult={onResult}
+          persist={persist}
         />
-        <RestoreAllButton onResult={onResult} />
+        <RestoreAllButton persist={persist} />
       </div>
       {/* 配置输出/导入：分类页脚常驻，保存与恢复之外提供可携带的配置。 */}
-      <PreferencesTransferPanel onResult={onResult} />
+      <PreferencesTransferPanel persist={persist} />
     </div>
   );
 }

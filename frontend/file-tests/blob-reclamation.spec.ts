@@ -1,8 +1,9 @@
+import { assertPreviewOrigin, readPreviewAccess } from './reading-fixture';
 import { randomUUID } from 'node:crypto';
 import { access, readFile, realpath } from 'node:fs/promises';
-import { join, resolve, sep } from 'node:path';
+import { join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 
 test('管理员能确认回收验收对象，保护期内仍显示候选', async ({ page }, testInfo) => {
   const accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
@@ -12,11 +13,10 @@ test('管理员能确认回收验收对象，保护期内仍显示候选', async
     JSON.parse((await readFile(resolve(__dirname, path), 'utf8')).replace(/^\uFEFF/, ''));
   const account = (await parse(accessPath!)) as { username: string; password: string; url: string };
   const state = (await parse(qaStatePath!)) as { directory: string };
-  expect(new URL(account.url).origin).toBe('http://127.0.0.1:4194');
-  const root = await realpath(resolve(__dirname, '../../.data/135-validation-suites'));
+  assertPreviewOrigin(account.url);
   const directory = await realpath(state.directory);
-  expect(directory.toLowerCase().startsWith((root + sep).toLowerCase())).toBe(true);
-  await page.goto('http://127.0.0.1:4194/login?returnTo=%2Fsystem-tools%2Fblobs');
+  expect(directory).toBe(readPreviewAccess().dataDirectory);
+  await page.goto('/login?returnTo=%2Fsystem-tools%2Fblobs');
   await page.getByLabel('邮箱', { exact: true }).fill(account.username);
   await page.getByLabel('密码', { exact: true }).fill(account.password);
   await page.getByRole('button', { name: '登录', exact: true }).click();

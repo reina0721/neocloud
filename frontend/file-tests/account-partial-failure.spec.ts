@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 import { readPreviewAccess } from './reading-fixture';
 
 test('角色名称读取失败不阻断本人资料、偏好和会话，重试只恢复角色查询', async ({ page }) => {

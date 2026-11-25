@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 
 test('回收站期限只作用于未来回收，并可在桌面和窄屏管理', async ({ page }, testInfo) => {
   const access = JSON.parse(
@@ -103,7 +103,7 @@ test('回收站期限只作用于未来回收，并可在桌面和窄屏管理',
   await page.screenshot({ path: testInfo.outputPath('trash-retention-desktop.png') });
   const chooseView = async (name: string) => {
     await page.getByRole('button', { name: '视图', exact: true }).click();
-    await page.getByRole('menuitem', { name, exact: true }).click();
+    await page.getByRole('menuitemradio', { name, exact: true }).click();
   };
   await chooseView('列表');
   await expect(card(future.name)).toHaveAttribute('role', 'row');

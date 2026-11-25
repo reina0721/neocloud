@@ -1,18 +1,21 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './preview-test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { defaultFilePreferences, type FilePreferences } from '../surfaces/src/files/preferences';
+import { assertPreviewOrigin } from './reading-fixture';
 
 async function login(page: Page, admin = false) {
   const path = admin
-    ? (process.env.CLOUDDRIVE_FILE_TEST_ADMIN_ACCESS ?? '../../.data/135-isolated-access.json')
+    ? (process.env.CLOUDDRIVE_FILE_TEST_ADMIN_ACCESS ??
+      process.env.CLOUDDRIVE_FILE_TEST_SECOND_ACCESS)
     : (process.env.CLOUDDRIVE_FILE_TEST_ACCESS ?? '../../.data/136-isolated-access.json');
+  if (!path) throw new Error('Account isolation requires a second preview account.');
   const access = JSON.parse(
     (await readFile(resolve(__dirname, path), 'utf8')).replace(/^\uFEFF/, ''),
   ) as { url: string; username: string; password: string };
-  await page.goto(new URL('/login?returnTo=%2Fhome', access.url).href);
+  await page.goto(assertPreviewOrigin(access.url) + '/login?returnTo=%2Fhome');
   await page.getByLabel('邮箱', { exact: true }).fill(access.username);
   await page.getByLabel('密码', { exact: true }).fill(access.password);
   await page.getByRole('button', { name: '登录', exact: true }).click();
@@ -60,7 +63,7 @@ async function save(page: Page) {
 }
 async function view(page: Page, label: string) {
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: label, exact: true }).click();
+  await page.getByRole('menuitemradio', { name: label, exact: true }).click();
   await expect(page.getByText('文件偏好已保存', { exact: true })).toBeVisible();
 }
 async function currentView(page: Page) {

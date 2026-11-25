@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './preview-test';
 import { openReadingFixtureFolder, readPreviewAccess } from './reading-fixture';
 import { encodeFileFilters } from '../surfaces/src/files/search';
 import AxeBuilder from '@axe-core/playwright';

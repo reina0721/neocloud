@@ -1,7 +1,7 @@
 import { createCipheriv, randomBytes, randomUUID } from 'node:crypto';
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 import { readPreviewAccess } from './reading-fixture';
 
 const samples = join(__dirname, 'fixtures/hls');

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 import { readPreviewAccess } from './reading-fixture';
 
 test('资料保存失败保留草稿，账号偏好通过个人设置编辑和重试', async ({ page }, info) => {

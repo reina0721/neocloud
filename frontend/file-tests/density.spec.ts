@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './preview-test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -123,7 +123,7 @@ test('F316–319：紧凑网格、长名称、列表和键盘焦点', async ({ p
   await expect(long).toHaveAttribute('title', fixture.longName);
   await page.screenshot({ path: info.outputPath('compact-grid.png') });
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '列表', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '列表', exact: true }).click();
   await expect(page.getByRole('table')).toBeVisible();
   expect((await cards.first().boundingBox())?.height).toBeLessThan(72);
   await long.focus();
@@ -132,7 +132,7 @@ test('F316–319：紧凑网格、长名称、列表和键盘焦点', async ({ p
   await expect(page.locator('[data-file-entry]:focus')).toBeInViewport();
   await noHorizontalOverflow(page);
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '网格', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '网格', exact: true }).click();
 });
 test('F314–315：根目录隐藏无效返回，长路径和完整路径菜单可用', async ({ page }) => {
   await page.goto('/home');

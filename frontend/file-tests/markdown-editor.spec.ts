@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 import { openReadingFixtureFolder, readPreviewAccess } from './reading-fixture';
 
 test('私有 Markdown 创建、渲染、编辑和安全图片', async ({ page }, info) => {

@@ -8,12 +8,16 @@ import { HiddenField } from '@clouddrive/ui-adapter/form-field';
 import { ReaderSurface } from './reader-surface';
 import {
   maxWOPIEditBytes,
+  fileApplicationDevice,
+  type FileApplicationID,
   type WebFileApplicationItem,
 } from '../../../src/files/file-applications';
 import { fileIconExtension } from '../../../src/files/icon-rules';
 import { FilesError, type FileEntry } from '../../../src/files/model';
 import { useFiles } from '../../../src/files/runtime';
 import { webFilePreviewURL } from '../../../src/files/web-file-preview';
+import { makeReaderSession, readerApplications, readReaderLimits } from './file-reader-session';
+import type { OpenReaderSession } from './file-reader-session';
 
 type PreviewTarget = {
   url: string;
@@ -75,10 +79,12 @@ export function WebFilePreviewDialog({
   entry,
   application,
   onClose,
+  replaceWithBuiltIn,
 }: {
   entry: FileEntry;
   application: WebFileApplicationItem;
   onClose: () => void;
+  replaceWithBuiltIn: (application: FileApplicationID, session: OpenReaderSession) => void;
 }) {
   const port = useFiles();
   const { readPublishedAddresses } = useSiteProfile();
@@ -87,13 +93,15 @@ export function WebFilePreviewDialog({
   const [target, setTarget] = useState<PreviewTarget>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [unverified, setUnverified] = useState(false);
+  const [canUseFallback, setCanUseFallback] = useState(false);
   const request = useRef<AbortController>(null);
   useEffect(() => () => request.current?.abort(), []);
   const oversized = application.maxBytes > 0 && entry.sizeBytes > application.maxBytes;
   const editable = application.editExtensions?.includes(fileIconExtension(entry.name));
   const canEdit = editable && entry.sizeBytes <= maxWOPIEditBytes;
   async function launch(mode?: 'edit') {
-    if (loading || !application.origin || oversized) return;
+    if (request.current || !application.origin || oversized) return;
     setLoading(true);
     setError('');
     const controller = new AbortController();
@@ -105,6 +113,22 @@ export function WebFilePreviewDialog({
       const applicationOrigin = new URL(application.origin).origin;
       if (applicationOrigin === currentOrigin || applicationOrigin === callbackOrigin)
         throw new FilesError('unsupported');
+      if (application.protocol !== 'wopi') {
+        const readiness = port.checkWebFilePreview
+          ? await port.checkWebFilePreview(application.id, controller.signal)
+          : 'unverified';
+        controller.signal.throwIfAborted();
+        if (readiness === 'denied' || readiness === 'unavailable') {
+          setCanUseFallback(true);
+          setError(t(`files.webPreview.${readiness}`));
+          return;
+        }
+        if (readiness === 'unverified' && !unverified) {
+          setUnverified(true);
+          setCanUseFallback(true);
+          return;
+        }
+      }
       const preview = await port.launchWebFilePreview(entry, application, controller.signal, mode);
       if (preview.origin !== application.origin) throw new FilesError('conflict');
       if (application.protocol === 'wopi') {
@@ -140,6 +164,36 @@ export function WebFilePreviewDialog({
       if (!controller.signal.aborted)
         setError(t(`files.errors.${cause instanceof FilesError ? cause.code : 'unavailable'}`));
     } finally {
+      if (request.current === controller) request.current = null;
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  }
+
+  async function openBuiltIn() {
+    if (request.current) return;
+    const controller = new AbortController();
+    request.current = controller;
+    setLoading(true);
+    try {
+      const [policy, limits] = await Promise.all([
+        port.readActiveFileApplications(controller.signal),
+        readReaderLimits(port, controller.signal),
+      ]);
+      controller.signal.throwIfAborted();
+      const { choice } = readerApplications(
+        policy,
+        entry,
+        fileApplicationDevice(window.innerWidth),
+      );
+      const id = choice.options.find((option) => option !== 'drawio');
+      const session = id && makeReaderSession(entry, id, limits);
+      if (!id || !session) throw new FilesError('unsupported');
+      replaceWithBuiltIn(id, session);
+    } catch (cause) {
+      if (!controller.signal.aborted)
+        setError(t(`files.errors.${cause instanceof FilesError ? cause.code : 'unavailable'}`));
+    } finally {
+      if (request.current === controller) request.current = null;
       if (!controller.signal.aborted) setLoading(false);
     }
   }
@@ -176,13 +230,23 @@ export function WebFilePreviewDialog({
               </p>
             ) : null}
             {error ? <p role="alert">{error}</p> : null}
+            {unverified ? <p role="status">{t('files.webPreview.unverified')}</p> : null}
             <Action
               disabled={loading || oversized || !application.origin}
               loading={loading}
               onPress={() => void launch()}
             >
-              {zh ? '允许并继续' : 'Allow and continue'}
+              {unverified
+                ? t('files.webPreview.continueUnverified')
+                : zh
+                  ? '允许并继续'
+                  : 'Allow and continue'}
             </Action>
+            {canUseFallback ? (
+              <Action variant="secondary" disabled={loading} onPress={() => void openBuiltIn()}>
+                {t('files.webPreview.openBuiltIn')}
+              </Action>
+            ) : null}
             {editable ? (
               <>
                 <p className="text-sm text-ink-muted">

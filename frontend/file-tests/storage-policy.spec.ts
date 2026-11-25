@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 import type { StoragePolicy } from '../surfaces/src/files/storage-policy';
 import {
   customizeLimit,

@@ -89,12 +89,12 @@ export function RadioGroupField({
         {options.map((option) => (
           <label
             key={option.value}
-            className={`ui-choice-content flex min-w-0 cursor-pointer border rounded-control ${comparison ? 'p-2 border-transparent bg-transparent' : 'p-3'} ${comparison ? (value === option.value ? 'text-brand' : 'text-ink') : value === option.value ? 'border-brand bg-brand-soft text-ink' : 'border-border bg-surface text-ink'} ${disabled || option.disabled ? 'cursor-not-allowed opacity-50' : ''} ${comparison ? 'flex-row @sm:flex-col @sm:items-start' : 'items-start'}`}
+            className={`ui-choice-content flex min-w-0 cursor-pointer border rounded-control ${comparison ? 'p-2 border-transparent bg-transparent' : 'p-3'} ${comparison ? (value === option.value ? 'text-brand' : 'text-ink') : value === option.value ? 'border-brand bg-brand-soft text-ink' : 'border-border bg-surface text-ink'} ${disabled || option.disabled ? 'cursor-not-allowed opacity-50' : ''} ${comparison ? 'flex-col items-start' : 'items-start'}`}
           >
             {option.preview ? (
               <span
                 aria-hidden="true"
-                className={`pointer-events-none block min-w-0 ${comparison ? `w-28 shrink-0 rounded-control border-2 ${value === option.value ? 'border-brand' : 'border-transparent'} @sm:w-full` : 'w-full'}`}
+                className={`pointer-events-none block w-full min-w-0 ${comparison ? `rounded-control border-2 ${value === option.value ? 'border-brand' : 'border-transparent'}` : ''}`}
               >
                 {option.preview}
               </span>

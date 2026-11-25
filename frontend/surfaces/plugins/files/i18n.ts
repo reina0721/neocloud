@@ -8,6 +8,13 @@ import { zhRetention, enRetention } from './retention-i18n';
 import { zhLocks, enLocks } from './locks-i18n';
 import { zhViewer, enViewer } from './viewer-i18n';
 const zh = {
+  webPreview: {
+    denied: '部署尚未允许此阅读器的站点来源。请联系管理员配置跨域白名单，或改用内置阅读器。',
+    unavailable: '暂时无法核对阅读器的部署配置。请重试或改用内置阅读器。',
+    unverified: '当前入口无法核对阅读器的部署配置。确认部署已允许该来源后再继续。',
+    continueUnverified: '确认后继续打开',
+    openBuiltIn: '改用内置阅读器',
+  },
   viewer: zhViewer,
   locks: zhLocks,
   retention: zhRetention,
@@ -247,6 +254,16 @@ const zh = {
   },
 };
 const en: typeof zh = {
+  webPreview: {
+    denied:
+      'This deployment has not allowed the viewer’s origin. Ask an administrator to configure allowed origins, or switch to a built-in viewer.',
+    unavailable:
+      'Could not verify the viewer deployment. Try again or switch to a built-in viewer.',
+    unverified:
+      'This entry point cannot verify the viewer deployment. Continue after confirming that the viewer’s origin is allowed.',
+    continueUnverified: 'Confirm and continue',
+    openBuiltIn: 'Use a built-in viewer',
+  },
   viewer: enViewer,
   locks: enLocks,
   retention: enRetention,

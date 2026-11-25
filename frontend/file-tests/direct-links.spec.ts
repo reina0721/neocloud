@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 
 test('单项和批量获取直链、复制、管理与撤销', async ({ page, context }, testInfo) => {
   const access = JSON.parse(
@@ -67,7 +67,8 @@ test('单项和批量获取直链、复制、管理与撤销', async ({ page, co
     await selection.press('Space');
     await expect(selection).toBeChecked();
   }
-  await page.getByRole('button', { name: '获取直链', exact: true }).click();
+  await page.getByRole('button', { name: '更多操作', exact: true }).click();
+  await page.getByRole('menuitem', { name: '获取直链', exact: true }).click();
   await issue.getByRole('button', { name: '生成直链', exact: true }).click();
   await expect(issue.getByRole('link')).toHaveCount(2);
   await issue.getByRole('button', { name: '复制全部链接', exact: true }).click();

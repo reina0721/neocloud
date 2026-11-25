@@ -8,7 +8,7 @@ import type { FileEntry } from '../../../src/files/model';
 import type { OpenReaderSession } from './file-reader-session';
 import { ReaderSurface } from './reader-surface';
 import { useReaderSurface } from './reader-surface-context';
-import { fileApplicationName } from '../../../src/files/file-applications';
+import { fileApplicationName, type FileApplicationID } from '../../../src/files/file-applications';
 import { ImageCopyDestinationDialog } from './own-folder-picker';
 import { TextDialog } from './text-dialog';
 import type { FileReaderController } from './use-file-reader';
@@ -36,6 +36,7 @@ export function FileReader({
   moveImage,
   refreshPublishedImage,
   playback,
+  replaceWithBuiltIn,
 }: {
   session: OpenReaderSession;
   close: () => void;
@@ -45,6 +46,7 @@ export function FileReader({
   moveImage: (delta: -1 | 1) => void;
   refreshPublishedImage: (entry: FileEntry, signal: AbortSignal) => Promise<void>;
   playback: FileMediaProps['playback'] | undefined;
+  replaceWithBuiltIn: (application: FileApplicationID, session: OpenReaderSession) => void;
 }) {
   const { t, locale } = useFrontendTranslation();
   const surface = useReaderSurface();
@@ -195,6 +197,7 @@ export function FileReader({
             entry={webPreview.entry}
             application={webPreview.application}
             onClose={() => close()}
+            replaceWithBuiltIn={replaceWithBuiltIn}
           />
         </Suspense>
       ) : null}

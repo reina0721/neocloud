@@ -1,6 +1,9 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useFrontendTranslation } from '@clouddrive/i18n';
+import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
+import type { Preferences } from '@clouddrive/surface/preferences-model';
+import { AuthContext } from '../auth/context';
 import { useShellStore } from '../state/use-shell-store';
 import { useNotificationsStore } from '../state/use-notifications-store';
 /** 请求桌面通知权限；返回最终状态（granted / denied / unsupported）。 */
@@ -18,30 +21,68 @@ export async function requestDesktopNotificationPermission(): Promise<
   }
 }
 
-/** RuntimeProviders 装配：desktopNotifications 开启时请求权限；拒绝/不支持 → 回退偏好。 */
-export function useDesktopNotificationGate(): void {
+/** 在认证壳内复用设备授权，权限弹窗由设置开关的用户操作触发。 */
+export function useDesktopNotificationSettings(owner: string | null) {
   const { t } = useFrontendTranslation();
-  const desktopNotifications = useShellStore(
-    (state) => state.preferences.notifications.desktopNotifications,
-  );
-  const handledRef = useRef(false);
-  useEffect(() => {
-    if (!desktopNotifications || handledRef.current) return;
-    handledRef.current = true;
-    void requestDesktopNotificationPermission().then((status) => {
-      if (status === 'granted') return;
-      // 拒绝或不支持：回退偏好（避免"无效开关"——无法交付时不让开关保留假象），
-      // 并经真实通知管线（应用内通知中心）呈现原因——不静默。
-      useShellStore.getState().updateCategory('notifications', { desktopNotifications: false });
-      useNotificationsStore.getState().publish({
-        category: 'warning',
-        severity: 'notice',
-        title: t('shell.desktopNotificationDeniedTitle'),
-        description:
-          status === 'unsupported'
-            ? t('shell.desktopNotificationUnsupported')
-            : t('shell.desktopNotificationDenied'),
-      });
+  const auth = useContext(AuthContext);
+  const preferences = usePreferencesPort<Preferences>();
+  const enabled = useShellStore((state) => state.preferences.notifications.desktopNotifications);
+  const operation = useRef<symbol | null>(null);
+  const [pendingOwner, setPendingOwner] = useState<string | null>(null);
+
+  function warn(status: 'denied' | 'unsupported') {
+    useNotificationsStore.getState().publish({
+      category: 'warning',
+      severity: 'notice',
+      title: t('shell.desktopNotificationDeniedTitle'),
+      description:
+        status === 'unsupported'
+          ? t('shell.desktopNotificationUnsupported')
+          : t('shell.desktopNotificationDenied'),
     });
-  }, [desktopNotifications, t]);
+  }
+
+  const reconcile = useEffectEvent(() => {
+    if (!owner || !preferences.getSnapshot().notifications.desktopNotifications) return;
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') return;
+    preferences.updateCategory('notifications', { desktopNotifications: false });
+    warn(typeof Notification === 'undefined' ? 'unsupported' : 'denied');
+  });
+  useEffect(() => {
+    if (!enabled || !owner) return;
+    reconcile();
+    const onFocus = () => reconcile();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [enabled, owner]);
+  useEffect(
+    () => () => {
+      operation.current = null;
+    },
+    [],
+  );
+
+  return {
+    pending: owner !== null && owner === pendingOwner,
+    setEnabled(next: boolean, save: (allowed: boolean) => void) {
+      if (!owner || owner !== auth?.getState().session?.user.id) return;
+      if (!next) {
+        operation.current = null;
+        setPendingOwner(null);
+        save(false);
+        return;
+      }
+      const current = Symbol();
+      operation.current = current;
+      setPendingOwner(owner);
+      void requestDesktopNotificationPermission().then((status) => {
+        if (operation.current !== current) return;
+        operation.current = null;
+        setPendingOwner(null);
+        if (auth.getState().session?.user.id !== owner) return;
+        save(status === 'granted');
+        if (status !== 'granted') warn(status);
+      });
+    },
+  };
 }

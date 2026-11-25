@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './preview-test';
 import type { FileApplicationView } from '../surfaces/src/files/file-applications';
 import { openReadingFixtureFolder, readPreviewAccess } from './reading-fixture';
 import { siteProfileAPI } from './site-profile-api';
@@ -28,10 +28,10 @@ async function filesAPI<T>(page: Page, path: string, method = 'GET', body?: unkn
   );
 }
 
-async function loginQA(page: Page) {
+async function loginQA(page: Page, origin = '') {
   const account = readPreviewAccess();
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto('/login?returnTo=%2Fhome');
+  await page.goto(origin + '/login?returnTo=%2Fhome');
   await page.getByLabel('邮箱', { exact: true }).fill(account.username);
   await page.getByLabel('密码', { exact: true }).fill(account.password);
   await page.getByRole('button', { name: '登录', exact: true }).click();
@@ -44,8 +44,10 @@ async function openApplications(page: Page) {
   await expect(page.getByRole('table', { name: '应用列表', exact: true })).toBeVisible();
 }
 
-async function preparePublicationFixture(page: Page) {
-  const configured = process.env.CLOUDDRIVE_TEST_PUBLICATION_ORIGIN;
+async function preparePublicationFixture(
+  page: Page,
+  configured = readPreviewAccess().publicationOrigin,
+) {
   const original = configured ? await siteProfileAPI(page) : undefined;
   return {
     origin: configured ?? new URL(page.url()).origin,
@@ -474,9 +476,22 @@ test('新建文件映射按配置创建真实文件并保留后缀', async ({ pa
 });
 
 test('网页应用配置和临时文件预览', async ({ page }, info) => {
-  await loginQA(page);
+  const httpsWeb = process.env.CLOUDDRIVE_TEST_WEB_HTTPS_ORIGIN;
+  const httpsReader = process.env.CLOUDDRIVE_TEST_WEB_PREVIEW_ORIGIN;
+  const verifyExpiry = process.env.CLOUDDRIVE_TEST_WEB_PREVIEW_EXPIRY === '1';
+  if (httpsReader && verifyExpiry) test.setTimeout(420_000);
+  for (const origin of [httpsWeb, httpsReader]) {
+    if (!origin) continue;
+    const url = new URL(origin);
+    expect(url.protocol === 'https:' && url.hostname === '127.0.0.1' && url.origin === origin).toBe(
+      true,
+    );
+  }
+  if (Boolean(httpsWeb) !== Boolean(httpsReader))
+    throw new Error('需要成对配置本机 HTTPS 预览站点。');
+  await loginQA(page, httpsWeb);
   const initial = await filesAPI<FileApplicationView>(page, '/applications');
-  const publication = await preparePublicationFixture(page);
+  const publication = await preparePublicationFixture(page, httpsWeb);
   await openReadingFixtureFolder(page, '网页验收-');
   const folder = new URL(page.url());
   const name = '外部阅读 中文.MD';
@@ -487,7 +502,7 @@ test('网页应用配置和临时文件预览', async ({ page }, info) => {
     key: randomUUID(),
   });
   const viewerName = '文档网页阅读器';
-  const origin = 'https://viewer.example.test';
+  const origin = httpsReader ?? 'https://viewer.example.test';
   const add = page.getByRole('button', { name: '添加网页应用', exact: true });
   const draft = page.getByRole('button', { name: '应用到草稿', exact: true });
   const edit = page.getByRole('button', { name: '编辑 ' + viewerName, exact: true });
@@ -497,25 +512,21 @@ test('网页应用配置和临时文件预览', async ({ page }, info) => {
   const allow = viewer.getByRole('button', { name: '允许并继续', exact: true });
   const currentFile = page.getByRole('button', { name, exact: true });
   let requests = 0;
-  page.on('request', (request) => {
+  const readerRequests: URL[] = [];
+  let lastGrantedSource: URL | undefined;
+  page.context().on('request', (request) => {
     if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/web-preview'))
       requests++;
+    const url = new URL(request.url());
+    if (url.origin === origin && url.pathname === '/read') readerRequests.push(url);
   });
-  await page.context().route(origin + '/read?*', async (route) => {
-    const url = new URL(route.request().url());
+  function sourceAddress(url: URL) {
     const source = new URL(url.searchParams.get('file')!);
     expect(source.origin).toBe(publication.origin);
     expect(source.pathname).toMatch(/^\/api\/v1\/file-web-previews\/[A-Za-z0-9_-]+$/);
     expect(url.searchParams.get('name')).toBe(name);
-    const response = await page.request.get(source.href, { headers: { Origin: origin } });
-    expect(response.ok()).toBe(true);
-    expect(response.headers()['access-control-allow-origin']).toBe(origin);
-    expect(await response.text()).toBe('web-preview-fixture');
-    await route.fulfill({
-      contentType: 'text/html; charset=utf-8',
-      body: '<h1>阅读器收到文件正文</h1>',
-    });
-  });
+    return source;
+  }
   async function savePolicy() {
     await save.click();
     await expect(page.getByRole('status').filter({ hasText: '文件应用设置已保存' })).toBeVisible();
@@ -564,13 +575,36 @@ test('网页应用配置和临时文件预览', async ({ page }, info) => {
     expect(requests).toBe(0);
     await currentFile.click();
     await allow.click();
-    await expect(
-      page
-        .frameLocator('iframe[title="' + viewerName + '"]')
-        .getByRole('heading', { name: '阅读器收到文件正文' }),
-    ).toBeVisible();
+    if (httpsReader) {
+      await expect(
+        page.frameLocator('iframe[title="' + viewerName + '"]').getByRole('status'),
+      ).toHaveText('web-preview-fixture');
+      expect(requests).toBe(1);
+      expect(readerRequests).toHaveLength(1);
+      sourceAddress(readerRequests[0]!);
+    } else {
+      await expect(viewer.getByRole('alert')).toContainText('白名单');
+      await expect(page.locator('iframe[title="' + viewerName + '"]')).toHaveCount(0);
+      expect(requests).toBe(0);
+      expect(readerRequests).toHaveLength(0);
+      await viewer.getByRole('button', { name: '改用内置阅读器', exact: true }).click();
+      await expect(viewer.getByText('web-preview-fixture', { exact: true })).toBeVisible();
+    }
     await page.screenshot({ path: info.outputPath('web-app-preview.png'), animations: 'disabled' });
-    expect(requests).toBe(1);
+    if (httpsReader && verifyExpiry) {
+      const source = sourceAddress(readerRequests[0]!);
+      await expect
+        .poll(
+          async () => {
+            const response = await page.request.get(source.href, { headers: { Origin: origin } });
+            const status = response.status();
+            await response.dispose();
+            return status;
+          },
+          { timeout: 330_000, intervals: [20_000] },
+        )
+        .toBe(404);
+    }
     await page.setViewportSize({ width: 390, height: 760 });
     await goFile();
     const choices = page.getByRole('dialog', { name: '打开方式', exact: true });
@@ -587,17 +621,39 @@ test('网页应用配置和临时文件预览', async ({ page }, info) => {
     await goFile();
     await allow.click();
     const link = viewer.getByRole('link', { name: '在新标签页打开', exact: true });
-    await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     await expect(page.locator('iframe[title="' + viewerName + '"]')).toHaveCount(0);
-    const popupPromise = page.waitForEvent('popup');
-    await link.click();
-    const popup = await popupPromise;
-    await expect(popup.getByRole('heading', { name: '阅读器收到文件正文' })).toBeVisible();
-    await popup.close();
+    if (httpsReader) {
+      await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      const popupPromise = page.waitForEvent('popup');
+      await link.click();
+      const popup = await popupPromise;
+      await expect(popup.getByRole('status')).toHaveText('web-preview-fixture');
+      expect(requests).toBe(2);
+      expect(readerRequests).toHaveLength(2);
+      const source = sourceAddress(readerRequests[1]!);
+      lastGrantedSource = source;
+      const denied = await page.request.get(source.href, {
+        headers: { Origin: 'https://unapproved.example.test' },
+      });
+      expect(denied.status()).toBe(403);
+      expect(denied.headers()['access-control-allow-origin']).toBeUndefined();
+      await popup.close();
+    } else {
+      await expect(viewer.getByRole('alert')).toContainText('白名单');
+      await expect(link).toHaveCount(0);
+      expect(requests).toBe(0);
+      expect(readerRequests).toHaveLength(0);
+    }
 
     await openApplications(page);
     await page.getByRole('checkbox', { name: '启用 ' + viewerName, exact: true }).press('Space');
     await savePolicy();
+    if (lastGrantedSource) {
+      const revoked = await page.request.get(lastGrantedSource.href, {
+        headers: { Origin: origin },
+      });
+      expect(revoked.status()).toBe(404);
+    }
     await goFile();
     await expect(choices.getByRole('button', { name: viewerName, exact: true })).toHaveCount(0);
     await openApplications(page);

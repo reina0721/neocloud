@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
-import { expect, test, type Locator, type Page } from '@playwright/test';
-import { openReadingFixtureFolder } from './reading-fixture';
+import { expect, test, type Locator, type Page } from './preview-test';
+import { assertPreviewOrigin, openReadingFixtureFolder } from './reading-fixture';
 
 async function selectText(field: Locator, value: string) {
   await field.evaluate((node, selected) => {
@@ -36,7 +36,7 @@ test('Markdown 格式、撤销与同目录图片发布', async ({ page }, info) 
     password: string;
     url: string;
   };
-  expect(new URL(account.url).origin).toBe('http://127.0.0.1:4194');
+  assertPreviewOrigin(account.url);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/login?returnTo=%2Fhome');

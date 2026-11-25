@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 import { readPreviewAccess } from './reading-fixture';
 
 test('令牌编辑显示现有权限，冲突保留输入且更新不修改权限', async ({ page }, info) => {

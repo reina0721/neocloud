@@ -40,6 +40,8 @@
 
 使用“添加网页应用”设置 HTTPS 模板、扩展名、平台、图标及大小上限。最大文件大小填写字节数，0 表示不限。兼容同一后缀的网页应用可参与默认打开方式。文件所有者看到接收站点并确认后，站点可用五分钟有效的地址读取当前版本。阅读器可在页面内显示，拒绝嵌入的服务可改用新标签。远端阅读器需要能够访问 clouddrive 的网页地址。当前支持模板查询值中的文件地址、名称及主题。
 
+普通网页阅读器的精确 HTTPS Origin 必须加入 Web Host 的 `CLOUDDRIVE_ALLOWED_ORIGINS` JSON 数组。Compose 使用 `ALLOWED_ORIGINS`。应用表会提示已启用阅读器的部署状态。文件打开时先检查该状态，未获准的站点不会收到临时地址。可以在同一文件使用已启用且兼容格式的内置阅读器。WOPI 通过其协议独立校验。
+
 使用“添加 WOPI 应用”检查自托管文档服务的 HTTPS 发现地址。确认可用格式后应用到草稿，再统一保存。发现结果包含与发现地址同源的查看动作及对应的可用编辑动作。应用可改名、限制格式与平台、设为兼容格式默认项或停用。服务端按既有来源网络策略访问发现地址，文档服务需能回调 clouddrive 的 `/wopi/files`。部署代理的访问日志应排除回调查询中的访问令牌。
 
 发现结果可同时列出编辑格式。旧应用可通过“重新发现”更新动作。管理员启用“允许在线编辑”后，持有文件写权限的所有者可在打开时选择“允许编辑”。会话有效期两小时，锁有效期最长三十分钟并可续期，单次保存最多 8 MiB。保存沿用名称、配额及历史保留策略。写锁清单会标明 WOPI，所有者可从清单释放。
@@ -213,13 +215,15 @@ Storage 通过租约内的可寻址流读写内容，local/S3-compatible 都有�
 
 `files.connections` 默认每账号最多20个未撤销连接、有效期720h/最大8760h、元数据树10000项、目录查询500项、XML64KiB、响应1MiB、相对路径4096字节/64层。预算可调小，不允许超出默认硬上界。超出元数据扫描预算会拒绝文件访问，仍允许停用/撤销。`publicOrigin` 默认空：地址采用当前API请求看到的scheme/Host；HTTPS反向代理应显式配置可达的HTTP(S) origin，不含路径、凭据或query。不会信任任意Forwarded头推测公网地址。
 
-请使用凭据弹窗提供的实际服务器地址。Next开发代理保留32MiB克隆预算，只转发小JSON管理请求；WebDAV客户端直接连接展示的Go API端点，分端口开发时该地址与网页不同。生产应提供HTTPS和支持流式传输的网关，不通过提高整文件内存预算模拟流式传输。
+请使用凭据弹窗提供的实际服务器地址。Docker 和原生 Web Host 在公开端口将 `/dav` 及其子路径的请求体流式转发到固定 Go 上游。Go 对 DAV 请求执行认证、锁、限额和大小检查。分端口开发时，凭据弹窗显示 Go API 端点。正式部署使用 HTTPS，外部反向代理也应支持流式传输。
 
 ## 本地预览与验证
 
 从根目录执行 `node scripts/dev.mjs --preview` 启动独立 SQLite、文件与传输环境，默认 WebUI 为 `http://127.0.0.1:4180/home`，API 8120，management 9120。数据与账号位于忽略的 `.data/preview/`；Ctrl+C 停止拥有的进程，重启保留数据。完整参数与环境隔离规则见[本地开发](../getting-started/local-development.md)。
 
 既有 Windows `Start-FilePreview.ps1` 仍使用 `.data/file-preview/` 与 `.data/preview-access.json`。浏览器配置优先读取新预览资料，缺少时兼容既有资料；可用 `CLOUDDRIVE_FILE_TEST_ACCESS` 明确指定文件。配置和阅读器用例共用一个入口，校验回环 HTTP 地址，不再绑定某次测试使用的端口。凭据、Cookie、截图与 trace 留在忽略目录；trace 可能包含会话信息，不提交或公开分享。
+
+完整浏览器验收为每批准备独立数据库和存储，接受预览资料中的 `publicationOrigin` 和 `offlineSourceAllowed` 声明。需要对照账户的用例只在本例共享或切换明确的夹具账户。网页阅读器验收需要两个回环 HTTPS Origin，使用 `CLOUDDRIVE_TEST_WEB_HTTPS_ORIGIN` 指定 Web 发布入口，使用 `CLOUDDRIVE_TEST_WEB_PREVIEW_ORIGIN` 指定能通过浏览器跨域请求读取回调正文的阅读器。将阅读器 Origin 加入 Web Host 白名单后执行 `file-applications.spec.ts`。设置 `CLOUDDRIVE_TEST_WEB_PREVIEW_EXPIRY=1` 可等待实际五分钟票据到期。
 
 按改动选择真实链路；模拟和拦截式失败场景不能代替真实服务：
 

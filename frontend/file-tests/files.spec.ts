@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { openReadingFixtureFolder } from './reading-fixture';
@@ -78,9 +78,9 @@ test('真实文件闭环：目录、队列、预览、下载、移动、多选�
 
   const sortMenu = page.getByRole('button', { name: '排序方式', exact: true });
   await sortMenu.click();
-  await page.getByRole('menuitem', { name: /^修改时间/ }).click();
+  await page.getByRole('menuitemradio', { name: /^修改时间/ }).click();
   await sortMenu.click();
-  await page.getByRole('menuitem', { name: /^降序/ }).click();
+  await page.getByRole('menuitemradio', { name: /^降序/ }).click();
   await newAction(page, '创建文件夹');
   await page.getByRole('dialog').getByLabel('名称', { exact: true }).fill(folder);
   await page.getByRole('dialog').getByRole('button', { name: '确认', exact: true }).click();
@@ -128,14 +128,17 @@ test('真实文件闭环：目录、队列、预览、下载、移动、多选�
   await expect(page.getByRole('button', { name: imageName, exact: true })).toBeVisible();
   await page.getByRole('link', { name: '我的文件', exact: true }).first().click();
   await page.getByRole('searchbox', { name: '搜索文件' }).fill(renamed);
-  await page.getByRole('button', { name: '搜索文件', exact: true }).click();
+  await page.getByRole('searchbox', { name: '搜索文件', exact: true }).press('Enter');
   await expect(page.getByRole('button', { name: renamed, exact: true })).toBeVisible();
   await page.goto('/home');
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '列表', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '列表', exact: true }).click();
   await page.reload();
   await sortMenu.click();
-  await expect(page.getByRole('menuitem', { name: /^降序/ })).toContainText('✓');
+  await expect(page.getByRole('menuitemradio', { name: /^降序/ })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
   await page.keyboard.press('Escape');
   await fileAction(page, folder, '移入回收站');
   await page.getByRole('dialog').getByRole('button', { name: '确认', exact: true }).click();

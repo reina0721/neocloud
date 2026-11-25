@@ -33,7 +33,7 @@ for (const width of [1440, 320]) {
       for (const card of cards) {
         expect(card.width).toBeGreaterThanOrEqual(44);
         expect(card.height).toBeGreaterThanOrEqual(44);
-        expect(card.flow).toBe(width === 320 ? 'row' : 'column');
+        expect(card.flow).toBe('column');
       }
       await group.getByRole('radio', { name: /^引导执行/ }).press('ArrowRight');
       await expect(group.getByRole('radio', { name: /^仅观察/ })).toBeChecked();

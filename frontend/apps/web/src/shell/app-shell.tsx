@@ -28,7 +28,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { NotificationAlerts } from '../host/notification-alerts';
-import { useDesktopNotificationGate } from '../host/use-desktop-notification';
 
 import { useCommandsPort } from '@clouddrive/plugin-framework/commands';
 import { DrawerSurface } from '@clouddrive/ui-adapter/overlays';
@@ -154,7 +153,6 @@ function NavigationContent({
 }
 
 export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
-  useDesktopNotificationGate();
   const shellRef = useRef<HTMLDivElement>(null);
   const chromeRef = useRef<HTMLDivElement>(null);
   const pageTabsPinned = useShellStore((state) => state.preferences.navigation.pageTabsPinned);

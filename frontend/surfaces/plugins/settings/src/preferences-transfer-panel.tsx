@@ -45,10 +45,9 @@ const ISSUE_CODE_LABEL_KEY: Readonly<Record<string, string>> = {
 const ISSUE_FALLBACK_LABEL_KEY = 'settings.transfer.issues.unknown';
 
 export function PreferencesTransferPanel({
-  onResult,
+  persist,
 }: Readonly<{
-  /** 导入写入结果上报给设置壳（统一失败横幅/重试呈现）。 */
-  onResult?: (result: PersistResult) => void;
+  persist: (apply: () => PersistResult) => PersistResult;
 }>) {
   const { t } = useFrontendTranslation();
   const { notify } = useFeedback();
@@ -108,18 +107,21 @@ export function PreferencesTransferPanel({
       return;
     }
 
-    const failures: PersistResult[] = [];
-    for (const category of changed) {
-      const result = port.updateCategory(category, parsed.value[category]);
-      if (!result.ok) failures.push(result);
-    }
+    let pending = changed;
+    persist(() => {
+      let firstFailure: PersistResult = { ok: true };
+      pending = pending.filter((category) => {
+        const result = port.updateCategory(category, parsed.value[category]);
+        if (!result.ok && firstFailure.ok) firstFailure = result;
+        return !result.ok;
+      });
+      return firstFailure;
+    });
 
-    if (failures.length > 0) {
-      const firstFailure = failures[0];
-      if (firstFailure) onResult?.(firstFailure);
+    if (pending.length > 0) {
       notify({
         title: t('settings.transfer.importPartial', {
-          count: failures.length,
+          count: pending.length,
           total: changed.length,
         }),
         tone: 'warning',

@@ -1,7 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
+import { request } from 'node:http';
 
 test('连接管理、一次性凭据、真实同源WebDAV与窄屏布局', async ({ page, context }) => {
   test.setTimeout(180_000);
@@ -66,7 +67,8 @@ test('连接管理、一次性凭据、真实同源WebDAV与窄屏布局', async
   await dialog.getByRole('button', { name: '复制独立密码', exact: true }).click();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(password);
   await dialog.getByRole('button', { name: '复制服务器地址', exact: true }).click();
-  // 使用管理响应给出的真实API端点，避开Next开发代理的整包克隆限制。
+  // 所有 DAV 请求使用凭据弹窗实际复制的对外地址。
+  expect(new URL(endpoint).origin).toBe(new URL(page.url()).origin);
   const headers = {
     Authorization: 'Basic ' + Buffer.from(username + ':' + password).toString('base64'),
   };
@@ -74,18 +76,94 @@ test('连接管理、一次性凭据、真实同源WebDAV与窄屏布局', async
   expect(
     (await page.request.fetch(endpoint + directory, { method: 'MKCOL', headers })).status(),
   ).toBe(201);
+  const smallBytes = Buffer.alloc(513, 37);
   const content = Buffer.alloc(33 * 1024 * 1024, 79);
-  const upload = await page.request.put(endpoint + directory + '/large.bin', {
-    headers,
-    data: content,
-  });
-  expect(upload.status()).toBe(201);
-  const download = await page.request.get(endpoint + directory + '/large.bin', { headers });
+  const put = (name: string, bytes: Buffer, fixed: boolean) =>
+    new Promise<number>((done, fail) => {
+      const outgoing = request(
+        endpoint + directory + '/' + name,
+        {
+          method: 'PUT',
+          headers: { ...headers, ...(fixed ? { 'Content-Length': bytes.length } : {}) },
+        },
+        (response) => {
+          response.resume();
+          response.on('end', () => done(response.statusCode!));
+        },
+      );
+      outgoing.on('error', fail);
+      outgoing.write(bytes.subarray(0, Math.ceil(bytes.length / 2)));
+      outgoing.end(bytes.subarray(Math.ceil(bytes.length / 2)));
+    });
+  const downloaded = async (name: string, expected: Buffer) => {
+    const response = await page.request.get(endpoint + directory + '/' + name, { headers });
+    expect(response.status()).toBe(200);
+    expect(
+      createHash('sha256')
+        .update(await response.body())
+        .digest('hex'),
+    ).toBe(createHash('sha256').update(expected).digest('hex'));
+    await response.dispose();
+  };
+  for (const [name, bytes] of [
+    ['small', smallBytes],
+    ['large', content],
+  ] as const) {
+    for (const fixed of [true, false]) {
+      const filename = `${name}${fixed ? '' : '-chunked'}.bin`;
+      expect(await put(filename, bytes, fixed)).toBe(201);
+      await downloaded(filename, bytes);
+    }
+  }
+  const directoryURL = endpoint + directory + '/';
   expect(
-    createHash('sha256')
-      .update(await download.body())
-      .digest('hex'),
-  ).toBe(createHash('sha256').update(content).digest('hex'));
+    (
+      await page.request.fetch(directoryURL + 'small.bin', {
+        method: 'COPY',
+        headers: { ...headers, Destination: directoryURL + 'copy%20name.bin' },
+      })
+    ).status(),
+  ).toBe(201);
+  expect(
+    (
+      await page.request.fetch(directoryURL + 'copy%20name.bin', {
+        method: 'MOVE',
+        headers: { ...headers, Destination: directoryURL + 'moved%20name.bin' },
+      })
+    ).status(),
+  ).toBe(201);
+  await downloaded('moved%20name.bin', smallBytes);
+  const tooLarge = await new Promise<number>((done, fail) => {
+    const outgoing = request(
+      directoryURL + 'large.bin',
+      {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Length': 1024 ** 3 },
+      },
+      (response) => {
+        response.resume();
+        response.on('end', () => done(response.statusCode!));
+      },
+    );
+    outgoing.setTimeout(10_000, () =>
+      outgoing.destroy(new Error('DAV size limit did not respond')),
+    );
+    outgoing.on('error', fail);
+    outgoing.flushHeaders();
+  });
+  expect(tooLarge).toBe(413);
+  await new Promise<void>((done, fail) => {
+    const outgoing = request(directoryURL + 'small.bin', {
+      method: 'PUT',
+      headers: { ...headers, 'Content-Length': content.length },
+    });
+    outgoing.once('close', done);
+    outgoing.once('error', (error: NodeJS.ErrnoException) => {
+      if (error.code !== 'ECONNRESET') fail(error);
+    });
+    outgoing.write(content.subarray(0, 1024 * 1024), () => outgoing.destroy());
+  });
+  await downloaded('small.bin', smallBytes);
   expect(
     (
       await page.request.fetch(endpoint + directory + '/', {
@@ -132,10 +210,13 @@ test('连接管理、一次性凭据、真实同源WebDAV与窄屏布局', async
   await renamed.getByRole('button', { name: '启用', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: '确认', exact: true }).click();
   await expect(renamed).toContainText('启用中');
-  await page.screenshot({ path: 'test-results/files/connections-desktop.png', fullPage: true });
+  await page.screenshot({
+    path: test.info().outputPath('connections-desktop.png'),
+    fullPage: true,
+  });
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: 'test-results/files/connections-mobile.png', fullPage: true });
+  await page.screenshot({ path: test.info().outputPath('connections-mobile.png'), fullPage: true });
   await renamed.getByRole('button', { name: '轮换密码', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: '确认', exact: true }).click();
   dialog = page.getByRole('dialog');
