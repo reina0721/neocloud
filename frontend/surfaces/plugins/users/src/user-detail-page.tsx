@@ -9,7 +9,7 @@ import { Action } from '@clouddrive/ui-adapter/action';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
 import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
 import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
+import { route, RouteLink, usePluginNavigation } from '@clouddrive/plugin-framework/plugin';
 import { useRegisterDirtySource } from '@clouddrive/plugin-framework/leave-confirm';
 import { useWorkbenchPort } from '@clouddrive/plugin-framework/workbench';
 import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
@@ -27,6 +27,8 @@ import {
   IdentityModeNotice,
   IdentityMutationError,
 } from '../../../src/identity/query-state';
+import { useAdministration } from '../../../src/administration/context';
+import { AccountAdministrationActions } from './account-administration-actions';
 
 function UserAccessActions({
   user,
@@ -60,7 +62,10 @@ function UserAccessActions({
     draft !== null &&
     JSON.stringify([...selected].sort()) !== JSON.stringify([...user.roleIds].sort());
   const self = user.id === port.currentUserId();
-  const canRoles = !self && access.permissions.includes('users.roles');
+  const canRoles =
+    !self &&
+    access.permissions.includes('users.roles') &&
+    access.permissions.includes('roles.read');
   const canStatus = !self && access.permissions.includes('users.status');
   useRegisterDirtySource({
     pageId: `users.detail.roles:${user.id}`,
@@ -219,6 +224,8 @@ function UserAccessActions({
 export function UserDetailPage({ id }: Readonly<{ id: string | null }>) {
   const { t, locale } = useFrontendTranslation();
   const port = useIdentityPort();
+  const administration = useAdministration();
+  const { navigate } = usePluginNavigation();
   const workbench = useWorkbenchPort();
   const preferences = usePreferencesPort<Preferences>().getSnapshot();
   const query = useIdentityQuery(`users.detail:${id ?? ''}`, async (service) => {
@@ -226,7 +233,10 @@ export function UserDetailPage({ id }: Readonly<{ id: string | null }>) {
     const access = await service.access();
     if (!access.permissions.includes('users.read')) throw new IdentityError('forbidden');
     if (!id || !identifierSchema.safeParse(id).success) throw new IdentityError('not-found');
-    const [user, roles] = await Promise.all([service.read(id), service.roles()]);
+    const [user, roles] = await Promise.all([
+      service.read(id),
+      access.permissions.includes('roles.read') ? service.roles() : [],
+    ]);
     return { user, access, roles };
   });
   const favoritePath = `/users/detail?id=${encodeURIComponent(id ?? '')}`;
@@ -328,6 +338,16 @@ export function UserDetailPage({ id }: Readonly<{ id: string | null }>) {
             refresh={query.reload}
             refreshing={query.loading}
           />
+          {administration && data.access.nativePermissions?.includes('iam:account:write') ? (
+            <AccountAdministrationActions
+              key={`${data.user.id}:${data.user.version}`}
+              user={data.user}
+              self={data.user.id === data.access.user.id}
+              refresh={query.reload}
+              onArchived={() => navigate(route('users'))}
+              refreshing={query.loading}
+            />
+          ) : null}
         </>
       )}
     </Page>

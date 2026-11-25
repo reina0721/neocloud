@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { generatedRouteCatalog } from '@clouddrive/surface/generated/catalog';
 import type { NavigationGroup, NavigationNode } from '@clouddrive/types';
 import { visibleProductNavigation } from '../shell/navigation-visibility';
+import type { NavigationOverrides } from '../state/use-navigation-admin-store';
 
 const ids = [
   'overview',
@@ -59,12 +61,64 @@ describe('管理导航只呈现当前允许的入口', () => {
       {
         id: 'development',
         labelKey: 'nav.group.development',
-        items: [entry('playground.root'), entry('api-workbench.root')],
+        items: [entry('playground.root')],
       },
     ];
     const prodGroupIds = visibleProductNavigation(withDev, {}, true, [], []).map((g) => g.id);
     const mockGroupIds = visibleProductNavigation(withDev, {}, false, [], []).map((g) => g.id);
     expect(prodGroupIds).not.toContain('development');
     expect(mockGroupIds).toContain('development');
+  });
+
+  it('API 工作台的正式入口仍由读取权限和菜单覆写控制', () => {
+    const assignment = generatedRouteCatalog.contributions.find(
+      ({ pluginId }) => pluginId === 'api-workbench',
+    )?.contribution.parents[0];
+    expect(assignment).toMatchObject({
+      groupId: 'administration',
+      navigationId: 'api-workbench.root',
+      order: 52,
+      routeId: 'api-workbench',
+    });
+    const groups: NavigationGroup[] = [
+      { id: 'administration', labelKey: 'administration', items: [entry('api-workbench.root')] },
+      { id: 'management', labelKey: 'management', items: [entry('users.root')] },
+    ];
+    const permission = 'console:workbench:read';
+    const visibleGroups = (native: string[], overrides: NavigationOverrides = {}) =>
+      visibleProductNavigation(groups, overrides, true, [], native);
+    expect(visibleGroups([])).toEqual([]);
+    expect(visibleGroups([permission])).toEqual([groups[0]]);
+    expect(
+      visibleGroups([permission], { 'api-workbench.root': { hidden: true, version: 1 } }),
+    ).toEqual([]);
+    expect(
+      visibleGroups([permission], {
+        'api-workbench.root': { parentId: 'group:management', version: 1 },
+      }),
+    ).toEqual([{ ...groups[1], items: [entry('api-workbench.root')] }]);
+  });
+
+  it('仅当用户目录可见时收起默认账户管理入口，保留显式策略', () => {
+    const groups: NavigationGroup[] = [
+      { id: 'management', labelKey: 'management', items: [entry('users.root')] },
+      { id: 'administration', labelKey: 'administration', items: [entry('users.administration')] },
+    ];
+    const visibleIds = (permissions: string[], overrides: NavigationOverrides = {}) =>
+      visibleProductNavigation(groups, overrides, true, permissions, ['iam:account:write']).flatMap(
+        (group) => group.items.map((item) => item.id),
+      );
+    const defaults = { 'users.administration': { version: 0, order: 45 } };
+    expect(visibleIds(['users.read'], defaults)).toEqual(['users.root']);
+    expect(visibleIds([], defaults)).toEqual(['users.administration']);
+    expect(visibleIds(['users.read'], { 'users.root': { hidden: true, version: 1 } })).toEqual([
+      'users.administration',
+    ]);
+    expect(
+      visibleIds(['users.read'], { 'users.administration': { label: '账户安全', version: 1 } }),
+    ).toEqual(['users.root', 'users.administration']);
+    expect(
+      visibleIds(['users.read'], { 'users.administration': { hidden: true, version: 1 } }),
+    ).toEqual(['users.root']);
   });
 });

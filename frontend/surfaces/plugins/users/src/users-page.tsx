@@ -78,7 +78,10 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
     if (!query) throw new IdentityError('validation');
     const access = await service.access();
     if (!access.permissions.includes('users.read')) throw new IdentityError('forbidden');
-    const [page, roles] = await Promise.all([service.list(query), service.roles()]);
+    const [page, roles] = await Promise.all([
+      service.list(query),
+      access.permissions.includes('roles.read') ? service.roles() : [],
+    ]);
     return { access, page, roles };
   });
   function apply(patch: Partial<UserQuery>) {

@@ -100,6 +100,11 @@ export function RolesPage() {
             >
               {t('roles.permissions')}
             </RouteLink>
+            {result.data?.access.nativePermissions?.includes('iam:permission:read') ? (
+              <RouteLink target={route('roles.catalog')} presentation="action" variant="secondary">
+                {t('roles.permissionCatalog')}
+              </RouteLink>
+            ) : null}
             {result.data?.access.permissions.includes('roles.create') ? (
               <RouteLink
                 target={route('roles.create')}

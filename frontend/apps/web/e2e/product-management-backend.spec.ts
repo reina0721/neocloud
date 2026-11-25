@@ -1,6 +1,24 @@
 import { test, expect } from '@playwright/test';
 import { installProductBackend } from './product-backend-fixture';
 
+test('Both user directory entries work without role directory permission', async ({
+  page,
+  context,
+}) => {
+  await installProductBackend(context, ['users.read', 'users.update']);
+  let roleDirectoryReads = 0;
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === '/api/roles' && url.searchParams.get('scope') !== 'self')
+      roleDirectoryReads++;
+  });
+  for (const path of ['/users', '/users/administration']) {
+    await page.goto(path);
+    await expect(page.getByRole('gridcell', { name: 'backend@example.test' })).toBeVisible();
+  }
+  expect(roleDirectoryReads).toBe(0);
+});
+
 test('Backend M2–M6 uses proposed REST/CSRF contracts, preserves conflict drafts and synchronizes notifications', async ({
   page,
   context,

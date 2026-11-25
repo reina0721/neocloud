@@ -10,9 +10,14 @@ import {
 } from '@clouddrive/surface/identity/runtime';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import { IdentityModeNotice, IdentityQueryState } from '../../../src/identity/query-state';
+import { useAdministration } from '../../../src/administration/context';
+import { canEditNativeRolePermissions } from './role-permission-access';
+import { RolePermissionsPanel } from './role-permissions-panel';
+
 export function RoleDetailPage({ id }: Readonly<{ id: string | null }>) {
   const { t } = useFrontendTranslation();
   const port = useIdentityPort();
+  const administration = useAdministration();
   const result = useIdentityQuery(`role:${id}`, async (service) => {
     const { identifierSchema } = await import('../../../src/identity/model');
     if (!identifierSchema.safeParse(id).success || !id) throw new IdentityError('not-found');
@@ -25,6 +30,10 @@ export function RoleDetailPage({ id }: Readonly<{ id: string | null }>) {
     return { access, role, members };
   });
   const data = result.data;
+  const native = administration && data?.access.nativePermissions?.includes('iam:role:read');
+  const nativeEditor = Boolean(
+    native && data && canEditNativeRolePermissions(data.access, data.role),
+  );
   return (
     <Page>
       <PageHeader
@@ -45,17 +54,30 @@ export function RoleDetailPage({ id }: Readonly<{ id: string | null }>) {
         <>
           <Section
             title={t('roles.permissions')}
-            description={t(data.role.protected ? 'roles.protected' : 'roles.impact')}
+            description={t(
+              data.role.protected
+                ? 'roles.protected'
+                : native
+                  ? 'roles.nativeImpact'
+                  : 'roles.impact',
+            )}
           >
             <div className="grid gap-4 p-5">
               {!data.role.protected &&
               !data.access.user.roleIds.includes(data.role.id) &&
               data.access.permissions.includes('roles.update') ? (
                 <RouteLink target={route('roles.edit', {}, { query: { id: data.role.id } })}>
-                  {t('roles.edit')}
+                  {t(nativeEditor ? 'roles.editName' : 'roles.edit')}
                 </RouteLink>
               ) : null}
-              {data.role.permissions.length === 0 ? (
+              {native ? (
+                <RolePermissionsPanel
+                  key={data.role.id}
+                  role={data.role}
+                  editable={nativeEditor}
+                  onSaved={result.reload}
+                />
+              ) : data.role.permissions.length === 0 ? (
                 <p className="text-sm text-ink-muted">{t('roles.noPermissions')}</p>
               ) : (
                 <ul data-reveal-items className="grid gap-3 sm:grid-cols-2">

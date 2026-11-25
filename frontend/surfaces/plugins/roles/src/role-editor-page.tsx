@@ -29,12 +29,22 @@ import {
   IdentityQueryState,
   IdentityMutationError,
 } from '../../../src/identity/query-state';
+import { useAdministration } from '../../../src/administration/context';
+import { canEditNativeRolePermissions } from './role-permission-access';
+
 function RoleForm({
   role,
   access,
   members,
-}: Readonly<{ role?: DirectoryRole; access: IdentityAccess; members: number | null }>) {
+  nameOnly,
+}: Readonly<{
+  role?: DirectoryRole;
+  access: IdentityAccess;
+  members: number | null;
+  nameOnly: boolean;
+}>) {
   const port = useIdentityPort();
+  const administration = useAdministration();
   const { t, locale } = useFrontendTranslation();
   const { navigate } = usePluginNavigation();
   const { notify } = useFeedback();
@@ -73,14 +83,22 @@ function RoleForm({
     setPending(true);
     setFailure(null);
     try {
-      const saved = baseline
-        ? await port.updateRole(baseline.id, { ...confirmation, version: baseline.version })
-        : await port.createRole(confirmation);
+      let roleId: string;
+      if (nameOnly) {
+        if (!baseline || !administration) throw new IdentityError('unavailable');
+        await administration.renameRole(baseline.id, baseline.version, confirmation.name);
+        roleId = baseline.id;
+      } else {
+        const saved = baseline
+          ? await port.updateRole(baseline.id, { ...confirmation, version: baseline.version })
+          : await port.createRole(confirmation);
+        setBaseline(saved);
+        form.reset({ name: saved.name, permissions: saved.permissions });
+        roleId = saved.id;
+      }
       committed.current = true;
-      setBaseline(saved);
-      form.reset({ name: saved.name, permissions: saved.permissions });
-      notify({ title: t('roles.saved'), tone: 'success' });
-      navigate(route('roles.detail', {}, { query: { id: saved.id } }));
+      notify({ title: t(nameOnly ? 'roles.renamed' : 'roles.saved'), tone: 'success' });
+      navigate(route('roles.detail', {}, { query: { id: roleId } }));
     } catch (error) {
       const failure = error instanceof IdentityError ? error : new IdentityError('unavailable');
       setFailure(failure);
@@ -104,7 +122,10 @@ function RoleForm({
     }
   }
   return (
-    <Section title={t(role ? 'roles.edit' : 'roles.create')} description={t('roles.impact')}>
+    <Section
+      title={t(nameOnly ? 'roles.editName' : role ? 'roles.edit' : 'roles.create')}
+      description={t(nameOnly ? 'roles.renameDescription' : 'roles.impact')}
+    >
       <FoundationForm
         form={form}
         onSubmit={(values) => {
@@ -141,44 +162,46 @@ function RoleForm({
             />
           )}
         </FoundationControlledField>
-        <FoundationControlledField form={form} name="permissions">
-          {(field) => (
-            <fieldset className="grid gap-4">
-              <legend className="mb-3 text-sm font-semibold">{t('roles.permissions')}</legend>
-              {['users', 'roles', 'account', 'audit', 'settings'].map((resource) => (
-                <div key={resource} className="grid gap-3">
-                  <p className="text-sm font-semibold text-ink-muted">
-                    {t(`management.resources.${resource}`)}
-                  </p>
-                  <div data-reveal-items className="grid gap-3 sm:grid-cols-2">
-                    {permissionCodes
-                      .filter((permission) => permission.startsWith(`${resource}.`))
-                      .map((permission) => (
-                        <CheckboxField
-                          key={permission}
-                          label={t(`management.permissions.${permission}`)}
-                          checked={field.value.includes(permission)}
-                          disabled={
-                            !allowed ||
-                            pending ||
-                            (!access.permissions.includes(permission) &&
-                              !field.value.includes(permission))
-                          }
-                          onCheckedChange={(checked) =>
-                            field.onChange(
-                              checked
-                                ? [...field.value, permission]
-                                : field.value.filter((value) => value !== permission),
-                            )
-                          }
-                        />
-                      ))}
+        {!nameOnly && (
+          <FoundationControlledField form={form} name="permissions">
+            {(field) => (
+              <fieldset className="grid gap-4">
+                <legend className="mb-3 text-sm font-semibold">{t('roles.permissions')}</legend>
+                {['users', 'roles', 'account', 'audit', 'settings'].map((resource) => (
+                  <div key={resource} className="grid gap-3">
+                    <p className="text-sm font-semibold text-ink-muted">
+                      {t(`management.resources.${resource}`)}
+                    </p>
+                    <div data-reveal-items className="grid gap-3 sm:grid-cols-2">
+                      {permissionCodes
+                        .filter((permission) => permission.startsWith(`${resource}.`))
+                        .map((permission) => (
+                          <CheckboxField
+                            key={permission}
+                            label={t(`management.permissions.${permission}`)}
+                            checked={field.value.includes(permission)}
+                            disabled={
+                              !allowed ||
+                              pending ||
+                              (!access.permissions.includes(permission) &&
+                                !field.value.includes(permission))
+                            }
+                            onCheckedChange={(checked) =>
+                              field.onChange(
+                                checked
+                                  ? [...field.value, permission]
+                                  : field.value.filter((value) => value !== permission),
+                              )
+                            }
+                          />
+                        ))}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </fieldset>
-          )}
-        </FoundationControlledField>
+                ))}
+              </fieldset>
+            )}
+          </FoundationControlledField>
+        )}
         <FormActions
           primary={
             <Action type="submit" disabled={!allowed || pending || !form.isDirty}>
@@ -201,38 +224,58 @@ function RoleForm({
       </FoundationForm>
       <ConfirmDialog
         triggerLabel={t('identityProduct.save')}
-        title={t('roles.confirm')}
-        description={t('roles.impact')}
+        title={t(nameOnly ? 'roles.editName' : 'roles.confirm')}
+        description={t(nameOnly ? 'roles.renameDescription' : 'roles.impact')}
         impact={
-          <div className="grid gap-3">
-            <p>
-              {confirmation?.name} ·{' '}
-              {t('roles.permissionCount', {
-                count: confirmation?.permissions.length ?? 0,
-                value: formatNumber(locale, confirmation?.permissions.length ?? 0),
-              })}
-            </p>
-            <p>
-              {members === null
-                ? t('roles.membersDenied')
-                : t('roles.affectedMembers', {
-                    count: members,
-                    value: formatNumber(locale, members),
-                  })}
-            </p>
-            <p>
-              {t('roles.addedPermissions')}:{' '}
-              {added.length
-                ? added.map((permission) => t(`management.permissions.${permission}`)).join(' / ')
-                : t('roles.noChanges')}
-            </p>
-            <p>
-              {t('roles.removedPermissions')}:{' '}
-              {removed.length
-                ? removed.map((permission) => t(`management.permissions.${permission}`)).join(' / ')
-                : t('roles.noChanges')}
-            </p>
-          </div>
+          nameOnly ? (
+            <div className="grid gap-3">
+              <p>{confirmation?.name}</p>
+              {failure?.code === 'conflict' ? (
+                <Action
+                  variant="secondary"
+                  size="sm"
+                  onPress={() => {
+                    setConfirmation(null);
+                    void reload();
+                  }}
+                >
+                  {t('identityProduct.refresh')}
+                </Action>
+              ) : null}
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              <p>
+                {confirmation?.name} ·{' '}
+                {t('roles.permissionCount', {
+                  count: confirmation?.permissions.length ?? 0,
+                  value: formatNumber(locale, confirmation?.permissions.length ?? 0),
+                })}
+              </p>
+              <p>
+                {members === null
+                  ? t('roles.membersDenied')
+                  : t('roles.affectedMembers', {
+                      count: members,
+                      value: formatNumber(locale, members),
+                    })}
+              </p>
+              <p>
+                {t('roles.addedPermissions')}:{' '}
+                {added.length
+                  ? added.map((permission) => t(`management.permissions.${permission}`)).join(' / ')
+                  : t('roles.noChanges')}
+              </p>
+              <p>
+                {t('roles.removedPermissions')}:{' '}
+                {removed.length
+                  ? removed
+                      .map((permission) => t(`management.permissions.${permission}`))
+                      .join(' / ')
+                  : t('roles.noChanges')}
+              </p>
+            </div>
+          )
         }
         cancelLabel={t('identityProduct.cancel')}
         confirmLabel={t('identityProduct.save')}
@@ -243,7 +286,7 @@ function RoleForm({
         onOpenChange={(open) => {
           if (!open) setConfirmation(null);
         }}
-        confirmDisabled={!allowed || pending}
+        confirmDisabled={!allowed || pending || (nameOnly && failure?.code === 'conflict')}
         onConfirm={save}
       />
     </Section>
@@ -252,6 +295,7 @@ function RoleForm({
 export function RoleEditorPage({ id }: Readonly<{ id?: string }>) {
   const { t } = useFrontendTranslation();
   const port = useIdentityPort();
+  const administration = useAdministration();
   const result = useIdentityQuery(`roles.editor:${id ?? 'create'}`, async (service) => {
     const { identifierSchema } = await import('../../../src/identity/model');
     const access = await service.access();
@@ -268,11 +312,16 @@ export function RoleEditorPage({ id }: Readonly<{ id?: string }>) {
           : 0;
     return { access, role, members };
   });
+  const nameOnly = Boolean(
+    administration &&
+    result.data?.role &&
+    canEditNativeRolePermissions(result.data.access, result.data.role),
+  );
   return (
     <Page>
       <PageHeader
-        title={t(id === undefined ? 'roles.create' : 'roles.edit')}
-        description={t('roles.impact')}
+        title={t(nameOnly ? 'roles.editName' : id === undefined ? 'roles.create' : 'roles.edit')}
+        description={t(nameOnly ? 'roles.renameDescription' : 'roles.impact')}
         actions={<RouteLink target={route('roles')}>{t('roles.back')}</RouteLink>}
       />
       <IdentityModeNotice mode={port.mode} />
@@ -283,6 +332,7 @@ export function RoleEditorPage({ id }: Readonly<{ id?: string }>) {
           key={id ?? 'create'}
           access={result.data.access}
           members={result.data.members}
+          nameOnly={nameOnly}
           {...(result.data.role ? { role: result.data.role } : {})}
         />
       )}

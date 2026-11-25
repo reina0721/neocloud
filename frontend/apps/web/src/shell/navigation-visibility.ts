@@ -1,3 +1,4 @@
+import { flattenNavigationLeaves } from '@clouddrive/core';
 import type { NavigationGroup, NavigationNode } from '@clouddrive/types';
 import type { NavigationOverrides } from '../state/use-navigation-admin-store';
 import { regroupNavigation } from './regroup-navigation';
@@ -121,5 +122,19 @@ export function visibleProductNavigation(
       if (firstItem) groups.push({ ...group, items: [firstItem, ...restItems] });
     }
   }
-  return groups;
+  const administration = overrides['users.administration'];
+  if (
+    !backend ||
+    (administration?.version ?? 0) > 0 ||
+    !flattenNavigationLeaves(groups.flatMap((group) => group.items)).some(
+      ({ leaf }) => leaf.id === 'users.root',
+    )
+  )
+    return groups;
+
+  // 默认账户管理入口与用户目录重复。保留独立入口的授权和用户保存的菜单策略。
+  return groups.flatMap((group): NavigationGroup[] => {
+    const [first, ...rest] = group.items.filter((item) => item.id !== 'users.administration');
+    return first ? [{ ...group, items: [first, ...rest] }] : [];
+  });
 }

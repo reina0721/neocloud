@@ -73,6 +73,13 @@ export const pluginI18nResources = {
         invalidQuery: '查询参数无效',
         invalidQueryDescription: '分页、排序或筛选参数不符合约定。清除筛选后重新读取。',
         manageStatus: '状态管理',
+        accountAdministration: '账户管理操作',
+        resetPassword: '重置密码',
+        resetPasswordWarning: '将退出 {{email}} 的全部会话。用户下次登录时需要更改密码。',
+        passwordReset: '账户密码已重置',
+        archive: '归档账户',
+        archiveWarning: '归档后 {{email}} 将无法登录，现有会话将被撤销。此操作不可恢复。',
+        archived: '账户已归档',
         disable: '停用用户',
         enable: '启用用户',
         statusDescription: '停用后无法登录；重新启用后可继续使用原登录凭据。',
@@ -178,6 +185,15 @@ export const pluginI18nResources = {
         invalidQueryDescription:
           'Pagination, sort or filter values do not meet the contract. Clear filters and retry.',
         manageStatus: 'Account status',
+        accountAdministration: 'Account administration',
+        resetPassword: 'Reset password',
+        resetPasswordWarning:
+          'All sessions for {{email}} will end. The user must change their password at the next sign-in.',
+        passwordReset: 'Account password reset',
+        archive: 'Archive account',
+        archiveWarning:
+          '{{email}} will be unable to sign in and all existing sessions will end. This action cannot be reversed.',
+        archived: 'Account archived',
         disable: 'Disable user',
         enable: 'Enable user',
         statusDescription:

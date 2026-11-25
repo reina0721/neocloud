@@ -219,13 +219,19 @@ describe('账号内文件待处理剪贴板', () => {
       off = r.port.subscribeShortcuts(listener);
     document.body.innerHTML =
       '<main id="main-content" tabindex="-1"><input/><div role="menu"></div></main>';
+    const menu = document.querySelector('[role="menu"]')!;
+    // jsdom 不执行布局，为打开的菜单提供与浏览器一致的可见矩形。
+    const menuRects = [new DOMRect(0, 0, 24, 24)];
+    vi.spyOn(menu, 'getClientRects').mockReturnValue(
+      Object.assign(menuRects, { item: (index: number) => menuRects[index] ?? null }),
+    );
     const key = (target: Element, key: string, options: KeyboardEventInit = {}) =>
       target.dispatchEvent(
         new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...options }),
       );
     key(document.body, 'c', { ctrlKey: true });
     expect(listener).not.toHaveBeenCalled();
-    document.querySelector('[role="menu"]')!.remove();
+    menu.remove();
     key(document.querySelector('input')!, 'v', { ctrlKey: true });
     expect(listener).not.toHaveBeenCalled();
     expect(key(document.body, 'v', { ctrlKey: true })).toBe(true);

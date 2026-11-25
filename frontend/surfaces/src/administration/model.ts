@@ -245,4 +245,5 @@ export interface AdministrationPort {
     roleVersion: number;
     permissionKeys: string[];
   }): Promise<void>;
+  renameRole(id: string, version: number, name: string): Promise<void>;
 }

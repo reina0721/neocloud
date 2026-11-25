@@ -69,5 +69,6 @@ export function createLazyAdministrationPort(
     },
     rolePermissions: async (id) => (await load()).rolePermissions(id),
     replaceRolePermissions: async (value) => (await load()).replaceRolePermissions(value),
+    renameRole: async (...args) => (await load()).renameRole(...args),
   };
 }

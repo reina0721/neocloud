@@ -4,6 +4,7 @@ test('empty SQLite setup, real business writes, protected native pages and logou
   browser,
   page,
 }) => {
+  test.setTimeout(120_000);
   const token = process.env.CLOUDDRIVE_TEST_SETUP_TOKEN;
   const password = process.env.CLOUDDRIVE_TEST_PASSWORD;
   const apiUrl = process.env.CLOUDDRIVE_TEST_API_URL ?? 'http://127.0.0.1:8088';
@@ -58,15 +59,86 @@ test('empty SQLite setup, real business writes, protected native pages and logou
   await minimum.fill('4');
   await page.getByRole('button', { name: '保存密码规则', exact: true }).click();
   await expect(page.getByText('当前使用在此保存的规则。')).toBeVisible();
-  expect(
-    (await (await page.request.get('/api/console/v1/auth/setup-policy')).json()).minLength,
-  ).toBe(4);
+  const effectivePolicy = (await (
+    await page.request.get('/api/console/v1/auth/setup-policy')
+  ).json()) as {
+    minLength: number;
+  };
+  expect(effectivePolicy.minLength).toBe(4);
   await page.getByRole('button', { name: '恢复配置中的规则', exact: true }).click();
   await expect(minimum).toHaveValue('8');
   await page.goto('/users');
   await expect(
     page.getByRole('gridcell', { name: 'acceptance@clouddrive.test', exact: true }),
   ).toBeVisible();
+  await page.goto('/users/administration');
+  await expect(
+    page.getByRole('gridcell', { name: 'acceptance@clouddrive.test', exact: true }),
+  ).toBeVisible();
+  await page.goto('/roles/catalog');
+  await expect(page.getByText('iam:permission:read', { exact: true })).toBeVisible();
+  await test.step('角色详情编辑原生授权，名称修改保留授权和描述', async () => {
+    const role = await page.evaluate(async () => {
+      const base = '/api/console/v1';
+      const { token } = (await fetch(base + '/auth/csrf').then((response) => response.json())) as {
+        token: string;
+      };
+      const created = await fetch(base + '/native/iam/roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+        body: JSON.stringify({ code: 'browser-role', name: '验收角色', description: '原始描述' }),
+      });
+      if (created.status !== 201)
+        throw new Error('Role fixture creation failed: ' + created.status);
+      return (await created.json()) as { id: string; version: number };
+    });
+    const detail = '/roles/detail?id=' + encodeURIComponent(role.id);
+    await page.goto(detail);
+    await page.getByRole('button', { name: '编辑角色权限', exact: true }).click();
+    const permissions = page.getByRole('dialog', { name: '编辑角色权限', exact: true });
+    await permissions.getByRole('checkbox', { name: 'files:read', exact: true }).check();
+    const grant = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'PUT' &&
+        new URL(response.url()).pathname ===
+          `/api/console/v1/native/iam/roles/${role.id}/permissions`,
+    );
+    await permissions.getByRole('button', { name: '保存', exact: true }).click();
+    const granted = await grant;
+    expect(granted.status()).toBe(200);
+    expect(granted.request().postDataJSON()).toEqual({
+      expectedRoleVersion: role.version,
+      permissionKeys: ['files:read'],
+    });
+    await expect(permissions).toBeHidden();
+    await expect(page.getByText('files:read', { exact: true })).toBeVisible();
+
+    await page.getByRole('link', { name: '修改角色名称', exact: true }).click();
+    await expect(page.getByRole('heading', { name: '修改角色名称', level: 1 })).toBeVisible();
+    await expect(page.getByRole('checkbox')).toHaveCount(0);
+    await page.getByRole('textbox', { name: '角色名称', exact: true }).fill('重命名验收角色');
+    await page.getByRole('button', { name: '保存', exact: true }).click();
+    const rename = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'PATCH' &&
+        new URL(response.url()).pathname === `/api/console/v1/native/iam/roles/${role.id}`,
+    );
+    await page
+      .getByRole('alertdialog', { name: '修改角色名称', exact: true })
+      .getByRole('button', { name: '保存', exact: true })
+      .click();
+    expect((await rename).status()).toBe(200);
+    await expect(page).toHaveURL(new RegExp(`/roles/detail\\?id=${role.id}$`));
+    const saved = await page.evaluate(async (id) => {
+      const response = await fetch('/api/console/v1/native/iam/roles/' + encodeURIComponent(id));
+      if (!response.ok) throw new Error('Role read-back failed: ' + response.status);
+      return (await response.json()) as unknown;
+    }, role.id);
+    expect(saved).toMatchObject({
+      role: { name: '重命名验收角色', description: '原始描述' },
+      permissions: [{ key: 'files:read' }],
+    });
+  });
   await page.goto('/workspace');
   await page.getByRole('button', { name: '添加待办', exact: true }).click();
   const todoDialog = page.getByRole('dialog', { name: '添加待办', exact: true });
@@ -127,7 +199,14 @@ test('empty SQLite setup, real business writes, protected native pages and logou
     });
     if (saved.status !== 204) throw new Error('Real workspace save failed: ' + saved.status);
   }, policyUrl);
-  await page.goto('/api-workbench');
+  await page
+    .getByRole('navigation', { name: '主导航', exact: true })
+    .getByRole('link', {
+      name: '接口调试',
+      exact: true,
+    })
+    .click();
+  await expect(page).toHaveURL(/\/api-workbench$/);
   await expect(page.getByRole('textbox', { name: '请求 URL', exact: true })).toHaveValue(policyUrl);
   await page.getByRole('button', { name: '发送', exact: true }).click();
   await expect(page.getByText('200 OK', { exact: true })).toBeVisible();
@@ -136,6 +215,43 @@ test('empty SQLite setup, real business writes, protected native pages and logou
   await page.reload();
   await page.getByRole('tab', { name: '历史', exact: true }).click();
   await expect(page.getByRole('button', { name: policyUrl, exact: false })).toBeVisible();
+  await test.step('账号主题同步，界面密度留在当前设备', async () => {
+    await page.goto('/settings');
+    await page
+      .getByRole('radiogroup', { name: '界面密度' })
+      .getByText('紧凑', { exact: true })
+      .click();
+    await expect(page.locator('html')).toHaveAttribute('data-density', 'compact');
+    const saved = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'PATCH' &&
+        new URL(response.url()).pathname === '/api/console/v1/native/iam/self/preferences',
+    );
+    await page
+      .getByRole('radiogroup', { name: '主题模式' })
+      .getByText('深色主题', { exact: true })
+      .click();
+    const response = await saved;
+    expect(response.status()).toBe(200);
+    const patch = response.request().postDataJSON() as { themeMode?: string; density?: string };
+    expect(patch.themeMode).toBe('dark');
+    expect(patch.density).toBeUndefined();
+
+    const secondDevice = await browser.newContext({
+      locale: 'zh-CN',
+      storageState: { cookies: await page.context().cookies(), origins: [] },
+    });
+    try {
+      const other = await secondDevice.newPage();
+      await other.goto(new URL('/settings', page.url()).href);
+      await expect(other.locator('html')).toHaveAttribute('data-theme', 'dark');
+      await expect(other.locator('html')).toHaveAttribute('data-density', 'standard');
+    } finally {
+      await secondDevice.close();
+    }
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-density', 'compact');
+  });
   for (const route of [
     '/system/menus',
     '/system/dictionaries',
@@ -154,40 +270,49 @@ test('empty SQLite setup, real business writes, protected native pages and logou
   }
   const temporaryPassword = 'tempword';
   const permanentPassword = 'newpassw';
-  const owned = await page.evaluate(async (temporaryPassword) => {
+  const owned = await page.evaluate(async () => {
     const base = '/api/console/v1';
     const csrf = (await fetch(base + '/auth/csrf').then((response) => response.json())) as {
       token: string;
     };
     const headers = { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf.token };
-    const session = await fetch(base + '/auth/session').then((response) => response.json());
-    const account = await fetch(base + '/users/' + session.user.id).then((response) =>
-      response.json(),
-    );
+    const session = (await fetch(base + '/auth/session').then((response) => response.json())) as {
+      user: { id: string };
+    };
     const folder = await fetch(base + '/native/files/folders', {
       method: 'POST',
       headers,
       body: JSON.stringify({ parentId: '', name: '恢复验收文件夹' }),
     });
     if (!folder.ok) throw new Error('Recovery fixture folder failed: ' + folder.status);
-    const entry = await folder.json();
-    const reset = await fetch(
-      base + '/native/iam/accounts/' + session.user.id + '/password-reset',
-      {
-        method: 'POST',
-        headers: { ...headers, 'If-Match': '"' + account.user.version + '"' },
-        body: JSON.stringify({ password: temporaryPassword }),
-      },
-    );
-    if (!reset.ok) throw new Error('Password reset failed: ' + reset.status);
-    const revoked = await fetch(base + '/auth/session');
+    const entry = (await folder.json()) as { id: string };
     return {
-      accountId: session.user.id as string,
-      fileId: entry.id as string,
-      revoked: revoked.status,
+      accountId: session.user.id,
+      fileId: entry.id,
     };
-  }, temporaryPassword);
-  expect(owned.revoked).toBe(401);
+  });
+  await page.goto('/users/detail?id=' + encodeURIComponent(owned.accountId));
+  const resetTrigger = page.getByRole('button', { name: '重置密码', exact: true });
+  await resetTrigger.click();
+  const resetDialog = page.getByRole('dialog', { name: '重置密码', exact: true });
+  await resetDialog.getByRole('button', { name: '取消', exact: true }).click();
+  await expect(resetTrigger).toBeFocused();
+  await resetTrigger.click();
+  await resetDialog.getByLabel('新密码', { exact: true }).fill(temporaryPassword);
+  const reset = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      new URL(response.url()).pathname ===
+        `/api/console/v1/native/iam/accounts/${owned.accountId}/password-reset`,
+  );
+  await resetDialog.getByRole('button', { name: '重置密码', exact: true }).click();
+  const resetResponse = await reset;
+  expect(resetResponse.status()).toBe(204);
+  expect(resetResponse.request().headers()['if-match']).toMatch(/^"\d+"$/);
+  await expect(page).toHaveURL(/\/login$/);
+  expect(
+    await page.evaluate(async () => (await fetch('/api/console/v1/auth/session')).status),
+  ).toBe(401);
   async function signIn(value: string) {
     await page.goto('/login');
     await page.getByLabel(/邮箱/).fill('acceptance@clouddrive.test');
@@ -210,7 +335,9 @@ test('empty SQLite setup, real business writes, protected native pages and logou
     ]);
     if (!session.ok || !detail.ok)
       throw new Error('Recovery verification failed: ' + session.status + '/' + detail.status);
-    return { accountId: (await session.json()).user.id, name: (await detail.json()).entry.name };
+    const identity = (await session.json()) as { user: { id: string } };
+    const file = (await detail.json()) as { entry: { name: string } };
+    return { accountId: identity.user.id, name: file.entry.name };
   }, owned.fileId);
   expect(afterReset).toEqual({ accountId: owned.accountId, name: '恢复验收文件夹' });
   const result = await page.evaluate(async () => {

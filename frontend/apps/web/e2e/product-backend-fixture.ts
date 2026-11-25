@@ -19,7 +19,10 @@ import {
 } from '@clouddrive/surface/identity';
 
 /** Controlled HTTP contract fixture. It proves adapter/UI requests, never a real backend deployment. */
-export async function installProductBackend(context: BrowserContext) {
+export async function installProductBackend(
+  context: BrowserContext,
+  permissions: readonly (typeof permissionCodes)[number][] = permissionCodes,
+) {
   const date = '2026-10-12T00:00:00.000Z';
   const admin: DirectoryUser = {
     id: 'backend-review',
@@ -36,7 +39,7 @@ export async function installProductBackend(context: BrowserContext) {
     {
       id: 'administrator',
       name: 'Administrator',
-      permissions: [...permissionCodes],
+      permissions: [...permissions],
       protected: true,
       version: 1,
       createdAt: date,
@@ -126,7 +129,7 @@ export async function installProductBackend(context: BrowserContext) {
         user: { id: admin.id, name: admin.name, email: admin.email },
         expiresAt: Date.now() + 3_600_000,
       });
-    if (path === '/auth/access') return reply({ user: admin, permissions: [...permissionCodes] });
+    if (path === '/auth/access') return reply({ user: admin, permissions });
     const body: unknown = method === 'GET' ? undefined : request.postDataJSON();
     if (path === '/auth/sessions' && method === 'GET') return reply({ items: sessions });
     if (path === '/auth/password' && method === 'POST') {
@@ -195,7 +198,9 @@ export async function installProductBackend(context: BrowserContext) {
       return reply({ settings: registrationSettings });
     }
     if (path === '/me' && method === 'GET') return reply({ user: admin });
-    if (path === '/roles' && method === 'GET')
+    if (path === '/roles' && method === 'GET') {
+      if (!permissions.includes('roles.read') && url.searchParams.get('scope') !== 'self')
+        return error(403, 'forbidden');
       return reply({
         items:
           url.searchParams.get('include') === 'memberCount'
@@ -205,6 +210,7 @@ export async function installProductBackend(context: BrowserContext) {
               }))
             : roles,
       });
+    }
     if (path === '/roles' && method === 'POST') {
       const parsed = roleInputSchema.safeParse(body);
       if (!parsed.success) return error(422, 'validation');

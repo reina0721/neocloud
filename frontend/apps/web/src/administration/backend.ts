@@ -309,20 +309,25 @@ export function createAdministrationPort(
         );
         return action === 'rotate' ? tokenSchema.parse(result) : null;
       }),
-    permissions: () => all(`${native}/iam/permissions`, permissionSchema),
-    archiveAccount: async (id, version) => {
-      await write(`${native}/iam/accounts/${encodeURIComponent(id)}/archive`, {}, 'POST', {
-        'If-Match': '"' + String(version) + '"',
-      });
-    },
-    resetPassword: async (id, password, version) => {
-      await write(
-        `${native}/iam/accounts/${encodeURIComponent(id)}/password-reset`,
-        { password },
-        'POST',
-        { 'If-Match': '"' + String(version) + '"' },
-      );
-    },
+    permissions: () =>
+      securityOperation(async () =>
+        z.array(permissionSchema).parse(await json(`${native}/iam/permissions`)),
+      ),
+    archiveAccount: (id, version) =>
+      securityOperation(async () => {
+        await write(`${native}/iam/accounts/${encodeURIComponent(id)}/archive`, {}, 'POST', {
+          'If-Match': '"' + String(version) + '"',
+        });
+      }),
+    resetPassword: (id, password, version) =>
+      securityOperation(async () => {
+        await write(
+          `${native}/iam/accounts/${encodeURIComponent(id)}/password-reset`,
+          { password },
+          'POST',
+          { 'If-Match': '"' + String(version) + '"' },
+        );
+      }),
     beginArchive: async () =>
       z.object({ confirmationId: z.string() }).parse(await write(`${native}/iam/self/archive`))
         .confirmationId,
@@ -330,21 +335,52 @@ export function createAdministrationPort(
       await write(`${native}/iam/self/archive/confirm`, { confirmationId });
     },
     endSession: () => window.location.replace('/login'),
-    rolePermissions: async (id) =>
-      z
-        .object({
-          roleId: z.string(),
-          roleVersion: z.number(),
-          permissionKeys: z.array(z.string()),
-        })
-        .parse(await json(native + '/iam/roles/' + encodeURIComponent(id) + '/permissions')),
-    replaceRolePermissions: async (value) => {
-      await write(
-        native + '/iam/roles/' + encodeURIComponent(value.roleId) + '/permissions',
-        { expectedRoleVersion: value.roleVersion, permissionKeys: value.permissionKeys },
-        'PUT',
-      );
-    },
+    rolePermissions: (id) =>
+      securityOperation(async () => {
+        const grants = z
+          .object({
+            roleId: z.string(),
+            roleVersion: z.number().int().positive(),
+            permissionKeys: z.array(z.string()),
+          })
+          .parse(await json(native + '/iam/roles/' + encodeURIComponent(id) + '/permissions'));
+        if (
+          grants.roleId !== id ||
+          new Set(grants.permissionKeys).size !== grants.permissionKeys.length
+        )
+          throw new IdentityError('protocol');
+        return grants;
+      }),
+    replaceRolePermissions: (value) =>
+      securityOperation(async () => {
+        await write(
+          native + '/iam/roles/' + encodeURIComponent(value.roleId) + '/permissions',
+          { expectedRoleVersion: value.roleVersion, permissionKeys: value.permissionKeys },
+          'PUT',
+        );
+      }),
+    renameRole: (id, version, name) =>
+      securityOperation(async () => {
+        const assertOwner = ownerGuard();
+        const path = native + '/iam/roles/' + encodeURIComponent(id);
+        const role = z
+          .object({
+            role: z.object({
+              id: z.string(),
+              version: z.number().int().positive(),
+              description: z.string(),
+            }),
+          })
+          .parse(await json(path)).role;
+        assertOwner();
+        if (role.id !== id) throw new IdentityError('protocol');
+        if (role.version !== version) throw new IdentityError('conflict', 'stale-version');
+        await write(
+          path,
+          { expectedRoleVersion: version, name, description: role.description },
+          'PATCH',
+        );
+      }),
     securityAudit: (cursor, signal) =>
       readRuntimeInformation(
         async () => {
