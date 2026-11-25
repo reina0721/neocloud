@@ -153,11 +153,11 @@ pnpm --dir frontend build
 pnpm --dir frontend standalone:check
 ```
 
-Go 二进制独立运行，数据库迁移在启动或升级前显式执行。前端默认 server 模式产出 `frontend/apps/web/dist/standalone/`，该目录已包含 Next 追踪的运行依赖、编译页面、静态资源和本地 PDF 组件。复制整个目录即可部署；目标机器只需 Node 24，不再安装 pnpm 或复制源码工作区。入口为目录内的 `apps/web/server.js`：
+Go 二进制独立运行，数据库迁移在启动或升级前显式执行。前端默认 server 模式产出 `frontend/apps/web/dist/standalone/`，包含编译页面、依赖、静态资源和本地 PDF 组件。将完整目录部署到带 Node 24 的目标机器，由 Web Host 入口接收公开请求。HTTPS 反向代理部署可为 Web Host 设置 `CLOUDDRIVE_PUBLIC_ORIGIN`，与 Go 的 `files.connections.publicOrigin` 一致，以解析使用绝对目标地址的 DAV 复制和移动请求。Compose 从 `PUBLIC_ORIGIN` 给两个服务传入同一个值。
 
 ```bash
 CLOUDDRIVE_BACKEND_URL=http://127.0.0.1:8080 HOSTNAME=127.0.0.1 PORT=4173 \
-  node frontend/apps/web/dist/standalone/apps/web/server.js
+  node frontend/apps/web/dist/standalone/apps/web/runtime/start-web.mjs
 ```
 
 PowerShell 对应设置 `$env:CLOUDDRIVE_BACKEND_URL`、`$env:HOSTNAME`、`$env:PORT` 后执行同一个入口。`PORT` / `HOSTNAME` 属于 standalone 进程，开发期的 `WEB_PORT` 不用于配置这个入口。

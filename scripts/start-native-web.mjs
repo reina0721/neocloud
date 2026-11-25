@@ -29,7 +29,8 @@ if (process.platform === 'win32') {
     }
   }
 }
-const server = join(root, 'apps', 'web', 'server.js');
+const server = join(root, 'apps', 'web', 'runtime', 'start-web.mjs');
 process.env.HOSTNAME ||= '127.0.0.1';
 process.env.PORT ||= '4173';
-await import(pathToFileURL(server).href);
+const { startWebHost } = await import(pathToFileURL(server).href);
+await startWebHost();

@@ -21,7 +21,7 @@ docker build -t clouddrive-api .
 docker build -f frontend/Dockerfile -t clouddrive-web .
 ```
 
-Next 的 server 构建输出为 `frontend/apps/web/dist/standalone/`；其中 `apps/web/server.js` 连同追踪依赖、页面静态资源及本地 PDF worker 可整体迁移。Web 镜像不复制完整源码工作区，运行时通过 `CLOUDDRIVE_BACKEND_URL` 配置 Go Origin。`pnpm --dir frontend standalone:check` 会把产物复制到仓库外验证依赖与资源闭包，并以两个不同上游检查真实代理传输。该检查同时进入 `pnpm check` 和 Web 镜像构建，Container CI 分别验证两种镜像。
+Next 的 server 构建输出为 `frontend/apps/web/dist/standalone/`。入口 `apps/web/runtime/start-web.mjs` 接收公开请求，按 `/dav` 路径边界将 WebDAV 请求流式交给 Go，其余请求交给回环监听的 Next。部署时复制完整目录，包含编译页面、依赖、静态资源和本地 PDF worker。Web 镜像运行时通过 `CLOUDDRIVE_BACKEND_URL` 配置 Go Origin。`pnpm --dir frontend standalone:check` 将产物移到仓库外，使用两个不同上游检查运行依赖、代理传输及 33 MiB 的固定长度和分块 DAV 请求。该检查同时进入 `pnpm check` 和 Web 镜像构建。
 
 Go 镜像同时携带默认配置引用的公共语言资源与 Todo 模块语言资源；默认数据目录归 nonroot 所有且权限为 `0700`。构建阶段预制包含 `.data` 的目录树，再将其内容复制到 `/app/`，保留子目录的私有权限，避免依赖不同 BuildKit 后端对空目标目录的 `COPY --chmod` 行为。
 

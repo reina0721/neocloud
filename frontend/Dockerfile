@@ -29,4 +29,4 @@ COPY --from=build --chown=node:node /app/frontend/apps/web/dist/standalone/licen
 WORKDIR /app/apps/web
 USER node
 EXPOSE 4173
-CMD ["node", "server.js"]
+CMD ["node", "runtime/start-web.mjs"]

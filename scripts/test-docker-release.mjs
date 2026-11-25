@@ -319,6 +319,31 @@ try {
     dav = await fetch(endpoint + "moved.txt", { headers: davHeaders });
     assert.equal(dav.status, 200);
     assert.equal(await dav.text(), "DAV persisted bytes");
+    if (!values["legacy-entrypoint"]) {
+      const bytes = Buffer.alloc(33 * 1024 * 1024, 79);
+      for (const fixed of [true, false]) {
+        const address = endpoint + (fixed ? "fixed.bin" : "chunked.bin");
+        const upload = await fetch(address, {
+          method: "PUT",
+          headers: davHeaders,
+          body: fixed ? bytes : (async function* () {
+            const block = 1024 * 1024;
+            for (let offset = 0; offset < bytes.length; offset += block)
+              yield bytes.subarray(offset, offset + block);
+          })(),
+          duplex: "half",
+          signal: AbortSignal.timeout(60_000),
+        });
+        assert.equal(upload.status, 201);
+        await upload.arrayBuffer();
+        const download = await fetch(address, {
+          headers: davHeaders,
+          signal: AbortSignal.timeout(30_000),
+        });
+        assert.equal(download.status, 200);
+        assert.equal(sha(Buffer.from(await download.arrayBuffer())), sha(bytes));
+      }
+    }
     const forged = await fetch(origin + "/api/console/v1/auth/logout", {
       method: "POST",
       headers: {

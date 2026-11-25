@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -13,7 +14,7 @@ const webRoot = resolve(import.meta.dirname, '../apps/web');
 const config = loadWebConfig({ cwd: webRoot });
 if (config.deploymentMode !== 'server') throw new Error('Standalone check requires server mode.');
 const source = resolve(webRoot, config.distDir ?? 'dist', 'standalone');
-await access(join(source, 'apps/web/server.js'));
+await access(join(source, 'apps/web/runtime/start-web.mjs'));
 const licenseInventory = JSON.parse(
   await readFile(join(source, 'licenses/node/inventory.json'), 'utf8'),
 );
@@ -39,6 +40,27 @@ async function listen(server) {
 
 async function backend(name) {
   const server = createServer(async (request, response) => {
+    if (request.url.startsWith('/dav/stream/')) {
+      const digest = createHash('sha256');
+      let size = 0;
+      for await (const chunk of request) {
+        size += chunk.length;
+        digest.update(chunk);
+      }
+      response.writeHead(201, { 'Content-Type': 'application/json' }).end(
+        JSON.stringify({
+          name,
+          method: request.method,
+          url: request.url,
+          size,
+          sha256: digest.digest('hex'),
+          length: request.headers['content-length'] ?? null,
+          transfer: request.headers['transfer-encoding'] ?? null,
+          authorization: request.headers.authorization,
+        }),
+      );
+      return;
+    }
     const chunks = [];
     for await (const chunk of request) chunks.push(chunk);
     const body = Buffer.concat(chunks).toString();
@@ -76,7 +98,7 @@ async function start(upstream) {
   const reservation = createServer();
   const origin = await listen(reservation);
   await new Promise((done) => reservation.close(done));
-  const child = spawn(process.execPath, ['apps/web/server.js'], {
+  const child = spawn(process.execPath, ['apps/web/runtime/start-web.mjs'], {
     cwd: runtime,
     env: {
       ...process.env,
@@ -166,6 +188,34 @@ try {
       bytes,
       Buffer.concat(Array.from({ length: 16 }, (_, index) => Buffer.alloc(8192, index))),
     );
+    const block = Buffer.alloc(1024 * 1024, 79);
+    const digest = createHash('sha256');
+    for (let index = 0; index < 33; index++) digest.update(block);
+    const sha256 = digest.digest('hex');
+    for (const fixed of [true, false]) {
+      const path = '/dav/stream/a%20b?source=standalone';
+      const response = await fetch(origin + path, {
+        method: 'PUT',
+        headers: { Authorization: 'Basic cHJvYmU6cHJvYmU=' },
+        body: fixed
+          ? Buffer.concat(Array(33).fill(block))
+          : (async function* () {
+              for (let index = 0; index < 33; index++) yield block;
+            })(),
+        duplex: 'half',
+      });
+      assert.equal(response.status, 201);
+      assert.deepEqual(await response.json(), {
+        name,
+        method: 'PUT',
+        url: path,
+        size: 33 * block.length,
+        sha256,
+        length: fixed ? String(33 * block.length) : null,
+        transfer: fixed ? null : 'chunked',
+        authorization: 'Basic cHJvYmU6cHJvYmU=',
+      });
+    }
   }
   const spoofed = await fetch(originA + '/api/echo', {
     method: 'POST',
@@ -199,7 +249,7 @@ try {
     await response.arrayBuffer();
   }
   console.log(
-    'Standalone passed: relocated runtime, two upstreams, cookies/CSRF, POST bodies, range bytes, page assets and local PDF worker.',
+    'Standalone passed: relocated runtime, two upstreams, 33 MiB fixed/chunked DAV, cookies/CSRF, POST bodies, range bytes, page assets and local PDF worker.',
   );
 } finally {
   for (const dispose of resources.reverse()) await dispose();
