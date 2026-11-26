@@ -100,7 +100,9 @@ func (s generationOpsSource) Snapshot(ctx context.Context) (opsmodel.RuntimeSnap
 	}
 	result.Scheduler = scheduler
 	result.SchedulerHealth = string(schedulerHealth.Status)
-	result.Ready = result.Ready && scheduler.Ready
+	if s.generation.factory.managed == nil || s.generation.factory.managed.published.Load() {
+		result.Ready = result.Ready && scheduler.Ready
+	}
 	if s.generation.messaging == nil {
 		return opsmodel.RuntimeSnapshot{}, fmt.Errorf("messaging diagnostics are unavailable")
 	}

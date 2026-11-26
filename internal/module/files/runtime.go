@@ -9,6 +9,7 @@ import (
 	"github.com/reina0721/clouddrive/internal/module/files/repo"
 	"github.com/reina0721/clouddrive/internal/module/files/service"
 	"github.com/reina0721/clouddrive/pkg/clock"
+	"github.com/reina0721/clouddrive/pkg/database"
 	"github.com/reina0721/clouddrive/pkg/idgen"
 	"github.com/reina0721/clouddrive/pkg/logger"
 	"github.com/reina0721/clouddrive/pkg/schedule"
@@ -47,6 +48,15 @@ type RuntimeDependencies struct {
 	Logger          logger.Logger
 	PublicOrigins   []string
 	TaskEnabled     func(schedule.TaskID) (bool, error)
+}
+
+// CheckManagedPaths 在候选发布前确认内容路径及暂存身份，不写入实例数据。
+func CheckManagedPaths(ctx context.Context, client database.Client, identity, stagingPath string) (bool, error) {
+	staging, err := stagingIdentity(stagingPath)
+	if err != nil {
+		return false, err
+	}
+	return repo.CheckManagedPaths(ctx, client, identity, staging)
 }
 
 // PrepareRuntime 读取本代文件设置并装配协议服务。启动时准备持久资源，

@@ -45,6 +45,8 @@
 
 固定版本、HTTPS 反代和手动备份见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。支持离线维护的新 Release 可在断网主机使用签名包完成[检查、升级、回退和恢复](docs/operations/clouddrive-deployment.md#离线检查与升级)。本地源码构建见[源码部署](docs/operations/clouddrive-deployment.md#从源码部署)。
 
+独立部署 Go 后端时，可使用 [Windows 和 Linux 原生托管包](docs/operations/backend-archive.md#使用原生托管版自动下载和换版)，在原业务和管理端口下载并切换已验签的 GitHub 正式版。
+
 ## 源码开发
 
 需要 Go **1.26.11** 或更新版本和带 npm 的 Node **24**。克隆仓库后运行：

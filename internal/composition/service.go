@@ -54,6 +54,10 @@ type serviceRuntime struct {
 }
 
 func (a *Application) newServiceRuntime() (*serviceRuntime, error) {
+	return a.newManagedServiceRuntime(nil)
+}
+
+func (a *Application) newManagedServiceRuntime(managed *managedService) (*serviceRuntime, error) {
 	loader, bindings, err := a.configurationSource()
 	if err != nil {
 		return nil, fmt.Errorf("compose service configuration bindings: %w", err)
@@ -63,6 +67,7 @@ func (a *Application) newServiceRuntime() (*serviceRuntime, error) {
 		return nil, fmt.Errorf("create application generation factory: %w", err)
 	}
 	factory.build = a.config.Build.opsModel()
+	factory.managed = managed
 	coordinator, err := kernel.NewGenerationCoordinator(loader, bindings, factory, kernel.Options{Logging: a.config.Logging})
 	if err != nil {
 		return nil, fmt.Errorf("create application generation coordinator: %w", err)
@@ -84,6 +89,15 @@ func (a *Application) newServiceRuntime() (*serviceRuntime, error) {
 	if err := process.AddRunner(supervisor.Task{
 		Name: "application-config-watch", Ready: watchReady,
 		Run: func(ctx context.Context) error {
+			if managed != nil {
+				close(watchReady)
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-managed.publishedSignal:
+				}
+				return coordinator.Watch(ctx, reloadErrorReporter(a.config.Logging.Logger()), nil)
+			}
 			return coordinator.Watch(ctx, reloadErrorReporter(a.config.Logging.Logger()), watchReady)
 		},
 	}); err != nil {

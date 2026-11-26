@@ -30,7 +30,7 @@ func (e migrationExecutor) MigrationStatus(ctx context.Context) (migration.Statu
 
 func (e migrationExecutor) MigrationUp(ctx context.Context) (migration.Status, error) {
 	return e.application.executeMigration(ctx, "db.migrate.up", func(ctx context.Context, service *migration.Service) (migration.Status, error) {
-		return service.Up(ctx)
+		return service.UpSerialized(ctx)
 	})
 }
 

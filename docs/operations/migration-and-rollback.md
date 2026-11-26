@@ -33,7 +33,17 @@ CLI 输出 `sets[]`，每项保留 `moduleId`、`setName`、current/target/dirty
 
 ## 回滚与 forward-fix
 
-当前生产接口只提供 `up/status/version`，不提供自动 `down`。应用回滚必须满足旧二进制仍兼容当前 schema；不满足时停止流量切换，优先发布 forward-fix。确需数据库恢复时，只能使用部署前验证过的备份恢复流程，并由数据库 owner 审批。不得把仓库中的 `.down.sql` 当作自动生产回滚授权。
+普通迁移 CLI 提供 `up/status/version`。应用回滚必须满足旧二进制仍兼容当前 schema。无法兼容时停止流量切换，优先发布 forward-fix。确需数据库恢复时，只能使用部署前验证过的备份恢复流程，并由数据库 owner 审批。不得把仓库中的 `.down.sql` 当作自动生产回滚授权。
+
+### 原生托管实例在线迁移
+
+原生 Go 升级只执行签名计划中的兼容扩展。候选在旧版继续服务时只读检查版本，由内嵌 SQL 和签名摘要共同锁定实际语句。允许新增独立表或添加单个可空列。旧版只接纳计划中明确列出的每个已提交前缀。普通 `db migrate up` 与托管在线迁移共用迁移互斥锁。
+
+- SQLite 要求已启用 WAL。升级前执行 `VACUUM INTO` 并验证快照，DDL 与版本记录在同一事务提交。
+- PostgreSQL 18 使用受限锁等待和事务。备份需要与服务端兼容的 `pg_dump`、`pg_restore`，实例连接使用单端点 PostgreSQL URI。
+- MySQL 8.4 使用 InnoDB 和 `ALGORITHM=INSTANT`。备份需要 `mysqldump`，实例连接使用 TCP 和标准 TLS 配置。DDL 和版本记录之间若发生中断，重试同一个签名任务时复用恢复点，核对实际结构后继续。存在未完成记录时，普通迁移入口拒绝推进版本。
+
+数据库恢复点用于明确恢复。在线升级取消或失败时，已提交的兼容扩展与并发业务写入均予保留。
 
 
 ### 安装器托管实例

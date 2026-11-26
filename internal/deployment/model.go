@@ -218,3 +218,6 @@ func newer(a, b string) bool {
 	}
 	return false
 }
+
+// NewerStableVersion compares two official release tags without accepting prereleases.
+func NewerStableVersion(candidate, current string) bool { return newer(candidate, current) }

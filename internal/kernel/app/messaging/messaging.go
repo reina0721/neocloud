@@ -28,6 +28,8 @@ const (
 
 // Dependencies 是 Messaging Component 的显式项目能力输入。
 type Dependencies struct {
+	// Admit fences business delivery during managed process handoff.
+	Admit           func() (release func(), admitted bool)
 	Generation      uint64
 	Logger          pkglogger.Logger
 	Clock           pkgclock.Clock
@@ -575,6 +577,13 @@ func (r *resource) publish(ctx context.Context, producerID pkgmessaging.Producer
 func (c *consumerRuntime) handle(ctx context.Context, incoming Incoming) Disposition {
 	if !c.active.Load() {
 		return DispositionDeferUncounted
+	}
+	if admit := c.owner.dependencies.Admit; admit != nil {
+		done, allowed := admit()
+		if !allowed {
+			return DispositionDeferUncounted
+		}
+		defer done()
 	}
 	c.inFlight.Add(1)
 	defer c.inFlight.Add(-1)

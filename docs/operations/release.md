@@ -52,6 +52,14 @@ Linux 使用 `scripts/install-tools.sh` 与 `scripts/release-local.sh`。工具�
 
 clouddrive 发布包含 Go 与独立 Next 服务。Go archive 不内置前端，构建、同源代理及迁移按 [部署说明](clouddrive-deployment.md) 执行。
 
+## 原生 Go 托管包
+
+正式版同时提供 Windows amd64、Linux amd64、Linux arm64 的托管 ZIP。每包包含稳定宿主、Go 业务进程、平台与源码清单。GitHub Workflow 发版时读取上一托管正式版的 tag 与 commit，并将它们写入本版的已签名兼容清单。第一个托管版可以没有前序版本。
+
+若本版包含在线迁移，在同一提交提供 `.github/managed-go-migrations.json`。其中 `fromVersion` 与 `fromCommit` 对应上一托管构建，`onlinePlans` 按 SQLite、PostgreSQL、MySQL 对应的驱动名声明迁移步骤。每一步必须绑定现有模块 SQL 的 SHA-256、连续版本和批准的增量操作。下一版应删除已发布的声明，或按新的前序版本提供新声明。更新器会核对实际内嵌 SQL、当前数据库版本及旧版兼容性。需要停机的迁移按单独的运维流程交付。[在线迁移与回滚](migration-and-rollback.md)
+
+发布门禁运行真实原生 Go 子进程，Windows 覆盖 SQLite，Linux 两种 CPU 架构覆盖三种数据库。附件与各自的 SPDX SBOM 纳入正式签名清单。正式发布后，流水线另从空缓存下载 GitHub 正式附件，并验证本地缓存可独立读回。[原生托管版使用说明](backend-archive.md#使用原生托管版自动下载和换版)
+
 ## Docker 下载产物
 
 正式工作流在 Go draft 创建后，分别使用 `ubuntu-24.04` 和 `ubuntu-24.04-arm` 原生 runner 构建、运行 Docker 包。两种镜像必须具有同一版本和 source commit；包内固定镜像 ID、架构和版本，不使用可漂移的 `latest` 镜像标签。ARM64 交叉构建本身不算运行验收。
@@ -84,7 +92,7 @@ CLOUDDRIVE_OFFLINE_TRUST_DIR=/path/to/trust node scripts/test-docker-release.mjs
 
 该脚本只创建和清理自己拥有的临时实例，验证管理员与角色、文件摘要、存储绑定、重启、备份和升级；损坏包、端口冲突及备份失败使用实际容器和文件权限验证。`--faults` 在独立数据库副本制造脏迁移，确认拒绝自动降级，再明确恢复该测试副本并核对文件内容。控制流程夹具的独立单元测试不冒充真实集成。`--keep` 可保留成功实例用于浏览器审查，失败现场始终保留；`--emulated-arch arm64` 仅用于已有 QEMU 的本地运行验收，并明确标注 daemon 架构选择夹具与模拟环境。
 
-Docker 工作流还生成两个镜像的 SPDX SBOM。最终附件任务合并 Go 与 Docker 的完整校验清单，包含六份 SPDX SBOM，以新版 Sigstore bundle 重新进行 OIDC 签名与验证，再仅向仍为 draft 的 Release 上传。随后两个原生架构分别在无外网路由的网络命名空间验证签名安装、维护和旧版切换。信任材料通过 Sigstore TUF 单独准备。[离线信任准备](clouddrive-deployment.md#自动化与离线安装)
+Docker 工作流还生成两个镜像的 SPDX SBOM。最终附件任务合并 Go 与 Docker 的校验清单，涵盖独立 Go 归档、托管 ZIP 和镜像的 SPDX SBOM。它使用新版 Sigstore bundle 进行 OIDC 签名与验证，再向 draft Release 上传。随后两个原生架构分别在无外网路由的网络命名空间验证签名安装、维护和旧版切换。信任材料通过 Sigstore TUF 单独准备。[离线信任准备](clouddrive-deployment.md#自动化与离线安装)
 
 签名可用既有固定版本 cosign 验证：
 

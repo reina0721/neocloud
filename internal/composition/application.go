@@ -5,17 +5,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/reina0721/clouddrive/internal/module/files"
 	"io"
 	"runtime"
 
 	kernelcli "github.com/reina0721/clouddrive/internal/kernel/cli"
 	kernelcomposition "github.com/reina0721/clouddrive/internal/kernel/composition"
 	"github.com/reina0721/clouddrive/internal/kernel/logging"
+	"github.com/reina0721/clouddrive/internal/module/files"
 	iamcli "github.com/reina0721/clouddrive/internal/module/iam/binding/cli"
 	migrationcli "github.com/reina0721/clouddrive/internal/module/migration/binding/cli"
 	opsmodel "github.com/reina0721/clouddrive/internal/module/ops/model"
 	todocli "github.com/reina0721/clouddrive/internal/module/todo/binding/cli"
+	"github.com/reina0721/clouddrive/internal/nativeupgrade"
+	"github.com/reina0721/clouddrive/internal/nativeupgrade/control"
 	"github.com/reina0721/clouddrive/pkg/cli"
 	pkglogger "github.com/reina0721/clouddrive/pkg/logger"
 )
@@ -28,6 +30,8 @@ const (
 	ExitInterrupted = cli.ExitInterrupted
 	// DefaultConfigPath 是应用入口和 config init 共用的默认配置文件路径。
 	DefaultConfigPath = kernelcli.DefaultConfigPath
+	// ManagedWorkerArgument 标识由宿主启动、通过标准输入输出交换控制消息的业务进程。
+	ManagedWorkerArgument = control.WorkerArgument
 )
 
 // Config 保存进程组合需要的固定输入，不包含运行期配置值。
@@ -143,6 +147,9 @@ func (a *Application) Run(ctx context.Context, args []string) error {
 	if ctx == nil {
 		return fmt.Errorf("application context is nil")
 	}
+	if len(args) == 1 && args[0] == control.WorkerArgument {
+		return a.runManagedWorker(ctx)
+	}
 	if len(args) == 0 {
 		if err := a.runService(ctx); err != nil {
 			return fmt.Errorf("run application service: %w", err)
@@ -170,7 +177,7 @@ func (a *Application) Run(ctx context.Context, args []string) error {
 		DisableInteractiveHome: true,
 	}, kernelcomposition.BootstrapOptions{
 		Configuration:     applicationOwnedConfigurationBindings(),
-		Commands:          []kernelcli.Contract{todoContract, migrationContract, iamContract},
+		Commands:          []kernelcli.Contract{todoContract, migrationContract, iamContract, kernelcli.ContractFunc(nativeupgrade.Commands)},
 		DefaultConfigPath: a.config.ConfigPath,
 	})
 	if err != nil {

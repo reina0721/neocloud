@@ -135,9 +135,68 @@ jobs:
           path: dist/docker/
           compression-level: 0
 
+  managed-go-bundles:
+    name: Managed Go release / ${{ matrix.os }}-${{ matrix.arch }}
+    needs: release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            arch: amd64
+          - os: linux
+            arch: amd64
+          - os: linux
+            arch: arm64
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.11.1
+      - name: Package managed Go and generate an SPDX SBOM
+        if: ${{ !contains(github.ref_name, '-') }}
+        env:
+          TARGET_OS: ${{ matrix.os }}
+          TARGET_ARCH: ${{ matrix.arch }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          test -z "$(git status --porcelain)"
+          export GOBIN="${RUNNER_TEMP}/managed-tools"
+          go install github.com/google/go-licenses/v2@v2.0.1
+          go install github.com/anchore/syft/cmd/syft@v1.50.0
+          export PATH="$GOBIN:$PATH"
+          baseline=$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)
+          [[ "$baseline" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          baseline_assets=$(gh release view "$baseline" --json assets --jq '.assets[].name')
+          source_args=()
+          if grep -q '_managed-go\.zip$' <<< "$baseline_assets"; then
+            grep -Fxq "clouddrive_${baseline}_${TARGET_OS}_${TARGET_ARCH}_managed-go.zip" <<< "$baseline_assets"
+            baseline_commit=$(git rev-parse "${baseline}^{commit}")
+            source_args=(--base-version "$baseline" --base-commit "$baseline_commit")
+          fi
+          node scripts/build-managed-go-release.mjs --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" \
+            --os "$TARGET_OS" --arch "$TARGET_ARCH" --out dist/managed-go "${source_args[@]}"
+          archive="dist/managed-go/clouddrive_${GITHUB_REF_NAME}_${TARGET_OS}_${TARGET_ARCH}_managed-go.zip"
+          syft "file:$archive" --output "spdx-json=$archive.spdx.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: ${{ !contains(github.ref_name, '-') }}
+        with:
+          name: managed-go-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/managed-go/
+          if-no-files-found: error
+          compression-level: 0
+
   attach-docker:
     name: Attach and sign complete draft asset set
-    needs: [release, docker-bundles]
+    needs: [release, docker-bundles, managed-go-bundles]
     runs-on: ubuntu-24.04
     environment: release
     steps:
@@ -150,6 +209,12 @@ jobs:
           pattern: docker-*
           merge-multiple: true
           path: dist/docker
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        if: ${{ !contains(github.ref_name, '-') }}
+        with:
+          pattern: managed-go-*
+          merge-multiple: true
+          path: dist/managed-go
       - name: Merge checksums and verify images' archives
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -161,6 +226,9 @@ jobs:
           sha256sum --check "checksums-amd64.txt"
           sha256sum --check "checksums-arm64.txt"
           sha256sum -- clouddrive_*_docker.tar.gz clouddrive-maintenance_* install.sh version.txt *.spdx.json >> ../complete/checksums.txt
+          if [[ "$GITHUB_REF_NAME" != *-* ]]; then
+            (cd ../managed-go && sha256sum -- *_managed-go.zip *_managed-go.zip.spdx.json) >> ../complete/checksums.txt
+          fi
           LC_ALL=C sort -u -k2 ../complete/checksums.txt -o ../complete/checksums.txt
       - name: Sign final checksum set
         run: |
@@ -177,6 +245,9 @@ jobs:
           test "$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq .isDraft)" = true
           gh release upload "${GITHUB_REF_NAME}" dist/docker/clouddrive_*_docker.tar.gz dist/docker/install.sh \
             dist/docker/version.txt dist/docker/*.spdx.json dist/docker/clouddrive-maintenance_* dist/complete/checksums.txt dist/complete/checksums.txt.sigstore.json --clobber
+          if [[ "$GITHUB_REF_NAME" != *-* ]]; then
+            gh release upload "${GITHUB_REF_NAME}" dist/managed-go/*_managed-go.zip dist/managed-go/*_managed-go.zip.spdx.json --clobber
+          fi
 
   docker-acceptance:
     name: Signed Docker and air-gap acceptance / ${{ matrix.arch }}
@@ -312,9 +383,131 @@ jobs:
             "$(command -v node)" scripts/test-docker-maintenance.mjs \
             --candidate "${RUNNER_TEMP}/candidate" --version "$GITHUB_REF_NAME"
 
+  managed-go-acceptance-linux:
+    name: Native Go process handoff / linux-${{ matrix.arch }}
+    needs: attach-docker
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: scaffold_test
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d scaffold_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: scaffold_test
+          MYSQL_ROOT_PASSWORD: mysql
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -pmysql"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - name: Exercise native processes and online migration on all supported databases
+        env:
+          MANAGED_PG_CONTAINER: ${{ job.services.postgres.id }}
+          MANAGED_MYSQL_CONTAINER: ${{ job.services.mysql.id }}
+          CLOUDDRIVE_TEST_POSTGRES_DSN: postgres://postgres:postgres@127.0.0.1:5432/scaffold_test?sslmode=disable
+          CLOUDDRIVE_TEST_MYSQL_DSN: root:mysql@tcp(127.0.0.1:3306)/scaffold_test?parseTime=true
+          TEST_MIGRATION_POSTGRES_DSN: postgres://postgres:postgres@127.0.0.1:5432/scaffold_test?sslmode=disable
+          TEST_MIGRATION_MYSQL_DSN: root:mysql@tcp(127.0.0.1:3306)/scaffold_test?parseTime=true
+        shell: bash
+        run: |
+          # 两个架构均使用与数据库服务同版本的备份客户端，避免宿主镜像中旧版工具。
+          docker exec "$MANAGED_PG_CONTAINER" pg_dump --version | grep -E '^pg_dump .* 18[.]'
+          docker exec "$MANAGED_PG_CONTAINER" pg_restore --version | grep -E '^pg_restore .* 18[.]'
+          docker exec "$MANAGED_MYSQL_CONTAINER" mysqldump --version | grep -E '^mysqldump .* 8[.]4[.]'
+          clients="$(mktemp -d "$RUNNER_TEMP/managed-db-clients.XXXXXXXX")"
+          cat > "$clients/pg_dump" <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          output=
+          args=()
+          for arg in "$@"; do
+            case "$arg" in
+              --file=/*) output="${arg#--file=}" ;;
+              *) args+=("$arg") ;;
+            esac
+          done
+          [[ -n "$output" ]]
+          exec docker exec -e PGHOST -e PGPORT -e PGUSER -e PGPASSWORD -e PGDATABASE -e PGSSLMODE \
+            "$MANAGED_PG_CONTAINER" pg_dump "${args[@]}" > "$output"
+          SH
+          cat > "$clients/pg_restore" <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          [[ $# == 2 && "$1" == --list ]]
+          exec docker exec -i "$MANAGED_PG_CONTAINER" pg_restore --list < "$2"
+          SH
+          cat > "$clients/mysqldump" <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          defaults=
+          output=
+          args=()
+          for arg in "$@"; do
+            case "$arg" in
+              --defaults-file=/*) defaults="${arg#--defaults-file=}" ;;
+              --result-file=/*) output="${arg#--result-file=}" ;;
+              *) args+=("$arg") ;;
+            esac
+          done
+          [[ -n "$defaults" && -n "$output" ]]
+          # 通过标准输入传入凭据文件，在容器内为客户端建立私有临时文件。
+          exec docker exec -i "$MANAGED_MYSQL_CONTAINER" sh -eu -c '
+            umask 077
+            config=$(mktemp)
+            trap "rm -f \"$config\"" EXIT
+            cat > "$config"
+            mysqldump --defaults-file="$config" "$@"
+          ' sh "${args[@]}" < "$defaults" > "$output"
+          SH
+          chmod 700 "$clients/pg_dump" "$clients/pg_restore" "$clients/mysqldump"
+          PATH="$clients:$PATH" go test -count=1 -p=1 ./internal/nativeupgrade ./internal/deployment ./internal/module/migration
+
+  managed-go-acceptance-windows:
+    name: Native Go process handoff / windows-amd64
+    needs: attach-docker
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: windows-2025
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - name: Exercise native processes and SQLite on Windows
+        run: go test -count=1 -p=1 ./internal/nativeupgrade ./internal/deployment ./internal/module/migration
+
   publish:
     name: Verify and publish stable release
-    needs: maintenance-acceptance
+    needs: [maintenance-acceptance, managed-go-acceptance-linux, managed-go-acceptance-windows]
     if: ${{ !contains(github.ref_name, '-') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -345,6 +538,13 @@ jobs:
           node scripts/verify-release.mjs draft "${RUNNER_TEMP}/release-pages.json" "${GITHUB_REF_NAME}" > "${RUNNER_TEMP}/release.json"
           gh release download "${GITHUB_REF_NAME}" --dir "${RUNNER_TEMP}/release-assets"
           node scripts/verify-release.mjs assets "${RUNNER_TEMP}/release.json" "${RUNNER_TEMP}/release-assets" "${GITHUB_SHA}"
+          for target in windows/amd64 linux/amd64 linux/arm64; do
+            os=${target%/*}
+            arch=${target#*/}
+            archive="${RUNNER_TEMP}/release-assets/clouddrive_${GITHUB_REF_NAME}_${os}_${arch}_managed-go.zip"
+            go run ./internal/tools/native-archive --verify-managed "$archive" \
+              --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" --os "$os" --arch "$arch"
+          done
           GOBIN="${RUNNER_TEMP}/release-tools" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
           "${RUNNER_TEMP}/release-tools/cosign" verify-blob \
             --bundle "${RUNNER_TEMP}/release-assets/checksums.txt.sigstore.json" \
@@ -356,6 +556,9 @@ jobs:
           export CLOUDDRIVE_COSIGN="${RUNNER_TEMP}/release-tools/cosign"
           export CLOUDDRIVE_OFFLINE_TRUST_DIR="${RUNNER_TEMP}/offline-trust"
           bash scripts/prepare-offline-trust.sh "$CLOUDDRIVE_OFFLINE_TRUST_DIR"
+          go run ./internal/tools/native-archive --stage-offline "${RUNNER_TEMP}/verified-native-draft" \
+            --release-dir "${RUNNER_TEMP}/release-assets" --trust-dir "$CLOUDDRIVE_OFFLINE_TRUST_DIR" \
+            --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA"
           node scripts/test-docker-release.mjs --release-dir "${RUNNER_TEMP}/release-assets" --version "${GITHUB_REF_NAME}"
           gh release edit "${GITHUB_REF_NAME}" --draft=false --prerelease=false --latest
           test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)" = "${GITHUB_REF_NAME}"
@@ -370,4 +573,15 @@ jobs:
             sleep 5
           done
           cmp -- "${RUNNER_TEMP}/release-assets/install.sh" "${RUNNER_TEMP}/public-install.sh"
+          native_verified=false
+          for attempt in {1..6}; do
+            # 每轮独立缓存，实际走宿主使用的 GitHub 下载、验签、解包和本地回读路径。
+            if go run ./internal/tools/native-archive --stage-online "${RUNNER_TEMP}/verified-native-${attempt}" \
+              --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA"; then
+              native_verified=true
+              break
+            fi
+            sleep 5
+          done
+          test "$native_verified" = true
           echo "正式版：https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}" >> "${GITHUB_STEP_SUMMARY}"

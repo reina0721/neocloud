@@ -105,5 +105,5 @@ release:
 
     支持启用同址网页运维，在 /maintenance 检查更新、完整备份、升级、回退和恢复。已有实例应先按部署手册升级，再启用网页运维。
 
-    Go 归档为独立后端，不包含 Web 服务。Docker 包配有版本清单、SHA-256 校验和、SPDX SBOM 与 GitHub OIDC Sigstore 签名。
+    Go 归档为独立后端。名称带 `managed-go` 的正式原生包另含能够换版的宿主程序，不包含 Web 服务。正式发布包均受 SHA-256 清单与 GitHub OIDC Sigstore 签名保护。
     [安装、升级与数据备份说明](https://github.com/reina0721/neocloud/blob/main/docs/operations/clouddrive-deployment.md#release-下载版安装与升级)

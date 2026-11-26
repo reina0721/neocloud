@@ -247,19 +247,16 @@ func offlineInputs(dir, trustDir string) (*os.Root, map[string][]byte, error) {
 	}
 	trust, err := openOfflineDir(trustDir)
 	if err != nil {
-		source.Close()
-		return nil, nil, fmt.Errorf("需要宿主机独立的离线信任目录: %w", err)
+		return nil, nil, errors.Join(fmt.Errorf("需要宿主机独立的离线信任目录: %w", err), source.Close())
 	}
 	defer trust.Close()
 	relative, err := filepath.Rel(source.Name(), trust.Name())
 	if err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-		source.Close()
-		return nil, nil, errors.New("离线信任目录必须独立于产物目录")
+		return nil, nil, errors.Join(errors.New("离线信任目录必须独立于产物目录"), source.Close())
 	}
 	materials, err := loadOfflineTrust(trust)
 	if err != nil {
-		source.Close()
-		return nil, nil, err
+		return nil, nil, errors.Join(err, source.Close())
 	}
 	return source, materials, nil
 }
@@ -296,8 +293,7 @@ func openOfflineFile(root *os.Root, name string, limit int64) (*os.File, error) 
 	}
 	opened, err := file.Stat()
 	if err != nil || !os.SameFile(info, opened) {
-		file.Close()
-		return nil, errors.Join(err, fmt.Errorf("离线产物读取时发生变化：%s", name))
+		return nil, errors.Join(err, fmt.Errorf("离线产物读取时发生变化：%s", name), file.Close())
 	}
 	return file, nil
 }
@@ -459,12 +455,10 @@ func (r signedOfflineRelease) openVerified(ctx context.Context, root *os.Root, n
 	hash := sha256.New()
 	read, err := io.Copy(hash, &contextReader{ctx: ctx, Reader: io.LimitReader(file, limit+1)})
 	if err != nil || read > limit || hex.EncodeToString(hash.Sum(nil)) != digest {
-		file.Close()
-		return nil, errors.Join(err, fmt.Errorf("正式产物摘要不匹配：%s", name))
+		return nil, errors.Join(err, fmt.Errorf("正式产物摘要不匹配：%s", name), file.Close())
 	}
 	if _, err = file.Seek(0, io.SeekStart); err != nil {
-		file.Close()
-		return nil, err
+		return nil, errors.Join(err, file.Close())
 	}
 	return file, nil
 }

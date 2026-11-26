@@ -27,7 +27,12 @@ var (
 )
 
 func main() {
-	os.Exit(runMain(os.Stdin, os.Stdout, os.Stderr, os.Args[1:]))
+	output := os.Stdout
+	if len(os.Args) == 2 && os.Args[1] == applicationcomposition.ManagedWorkerArgument {
+		// stdout is the parent's control pipe. Configured stdout log sinks use stderr here.
+		os.Stdout = os.Stderr
+	}
+	os.Exit(runMain(os.Stdin, output, os.Stderr, os.Args[1:]))
 }
 
 func runMain(stdin io.Reader, stdout, stderr io.Writer, args []string) int {

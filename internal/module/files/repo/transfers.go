@@ -50,6 +50,28 @@ type transferStagingBinding struct {
 
 func (transferStagingBinding) TableName() string { return "files_transfer_staging" }
 
+// CheckManagedPaths 只读核对候选进程将使用的现有持久化身份。
+func CheckManagedPaths(ctx context.Context, client database.Client, identity, staging string) (initialized bool, err error) {
+	err = database.UseGORM(ctx, client, func(db *gorm.DB) error {
+		var content storageBinding
+		var transfers transferStagingBinding
+		contentErr := db.First(&content, "id = ?", primaryStorageID).Error
+		transfersErr := db.First(&transfers, "id = ?", primaryStorageID).Error
+		if contentErr != nil && !errors.Is(contentErr, gorm.ErrRecordNotFound) {
+			return contentErr
+		}
+		if transfersErr != nil && !errors.Is(transfersErr, gorm.ErrRecordNotFound) {
+			return transfersErr
+		}
+		if (contentErr == nil && content.Identity != identity) || (transfersErr == nil && transfers.Identity != staging) {
+			return fmt.Errorf("managed file storage or transfer staging identity changed")
+		}
+		initialized = contentErr == nil && transfersErr == nil
+		return nil
+	})
+	return initialized, err
+}
+
 // ValidateStagingRoot 在候选准入时绑定暂存位置，有未清理会话时禁止无迁移换根。
 func (r *Repository) ValidateStagingRoot(ctx context.Context, identity string) error {
 	if identity == "" {

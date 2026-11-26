@@ -26,6 +26,8 @@ const scheduledWorkKind = "scheduled-task"
 
 // Dependencies 是 Scheduler Component 的显式项目能力输入。
 type Dependencies struct {
+	// Admit is composed by managed runtimes to pause new work and drain admitted tasks.
+	Admit           func() (release func(), admitted bool)
 	ApplicationName string
 	Generation      uint64
 	Logger          logger.Logger
@@ -573,6 +575,16 @@ func (t *taskRuntime) invoke(ctx context.Context) (runErr error) {
 		return nil
 	}
 	defer release()
+	if admit := t.owner.dependencies.Admit; admit != nil {
+		done, allowed := admit()
+		if !allowed {
+			t.mu.Lock()
+			t.snapshot.Skipped++
+			t.mu.Unlock()
+			return nil
+		}
+		defer done()
+	}
 	t.mu.Lock()
 	t.snapshot.Active++
 	t.snapshot.Runs++
