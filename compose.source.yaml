@@ -1,0 +1,39 @@
+# 与发布版共用运行配置。源码入口只覆盖构建、存储和就绪检查。
+x-source-data: &source-data
+  type: volume
+  source: source-data
+  target: /app/.data
+
+services:
+  migrate:
+    volumes:
+      - *source-data
+  backend:
+    build:
+      context: .
+      args:
+        COMMIT: ${CLOUDDRIVE_SOURCE_COMMIT:-unknown}
+    volumes:
+      - *source-data
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        COMMIT: ${CLOUDDRIVE_SOURCE_COMMIT:-unknown}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          const signal = AbortSignal.timeout(4000);
+          Promise.all([
+            fetch('http://backend:9090/readyz', {signal}),
+            fetch('http://127.0.0.1:4173/api/console/v1/auth/registration-policy', {signal}),
+          ]).then(responses => process.exit(responses.every(response => response.ok) ? 0 : 1),
+            () => process.exit(1));
+
+volumes:
+  source-data:
+    name: ${CLOUDDRIVE_SOURCE_PROJECT:?missing source project}-data

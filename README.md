@@ -15,7 +15,17 @@
 
 项目处于 **0.x 迭代阶段**，正式交付及版本变更以 [GitHub Releases](https://github.com/reina0721/neocloud/releases) 为准。BT 面向受信节点；无共享挂载的远程下载代理、脱离分享链接的跨账号挂载共享尚未实现；外部 Office 服务需要单独联调。部分 Reference 页面仅用于演示和确定性验证。完整边界见[项目范围](docs/repository-scope.md)。
 
-## 下载部署
+## Linux + Docker 部署
+
+在准备好 Docker Engine 和 Compose 插件（≥ 2.20）的 Linux 上，从要部署的源码目录执行：
+
+```bash
+bash scripts/deploy-docker.sh
+```
+
+打开 `http://服务器IP:4180/setup`，用 `bash scripts/deploy-docker.sh token` 查看初始化令牌并创建管理员。前后端构建、迁移和就绪检查由部署脚本完成，数据库和文件保存在 Docker 数据卷中。[源码部署与日常管理](docs/operations/clouddrive-deployment.md#从源码部署)
+
+### 下载正式版
 
 Release 提供 Linux amd64/arm64 配套 Docker 离线镜像包。目标机需要 Docker、Compose 插件与标准 Linux 工具，无需 Go、Node 或源码编译。安装器从 GitHub 下载产物后导入本地 Docker。
 

@@ -1,5 +1,26 @@
 # CloudDrive Docker 安装与管理
 
+## 从源码部署
+
+将要部署的源码放在 Linux 服务器上，进入仓库目录。需要 Docker Engine、Docker Compose ≥ 2.20 和系统 Bash、flock 等常用工具。Go 和 Node 在镜像中构建。
+
+```bash
+bash scripts/deploy-docker.sh
+```
+
+部署成功后打开 `http://服务器IP:4180/setup`，用下面的命令查看首次设置令牌，再创建自己的管理员。宿主机只开放 Web 的 4180，Go API 和运维接口通过容器网络访问。
+
+```bash
+bash scripts/deploy-docker.sh token
+bash scripts/deploy-docker.sh status
+bash scripts/deploy-docker.sh logs --tail 100
+bash scripts/deploy-docker.sh stop
+```
+
+更新源码后，运行同一条部署命令。镜像构建成功后，脚本会停止本实例，备份 SQLite，再执行迁移并等待 Web 和 Go 就绪。迁移失败时按 [迁移与回滚](migration-and-rollback.md) 处理。数据库备份位于 `.data/docker/backups/`，账号、文件和传输暂存位于本实例的 Docker 数据卷。整机备份还需保留数据卷及 `.data/docker/runtime.env`，其中包含实例标记、网络配置和首次设置令牌。
+
+公网访问可由宿主机 HTTPS 反代接入。在 `.data/docker/runtime.env` 设置 `WEB_BIND=127.0.0.1`、`PUBLIC_ORIGIN=https://drive.example.com` 和 `ALLOW_INSECURE_HTTP=false`，重新部署后将域名转发到本机 `4180`，保留原始 Host 并转发 HTTPS 协议。WebDAV 与网页使用同一个入口。
+
 ## Release 下载版安装与升级
 
 下载版支持 Linux amd64、arm64，使用 SQLite 和本地文件存储。目标机需预装本机 Docker Engine、Docker Compose >=2.20，以及 Bash、curl、GNU tar/coreutils、gzip、sha256sum、flock。当前账号应有 Docker 权限；脚本不安装系统软件、不自动提权，不需要源码、Git、Go、Node 或 pnpm。
