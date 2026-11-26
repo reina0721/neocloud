@@ -69,11 +69,26 @@ export const runtimeMetricsSchema = z.object({
   items: z.array(z.object({ key: z.string(), value: z.number(), unit: z.string() })),
   asOf: z.string().datetime(),
 });
+export const releaseCatalogSchema = z.object({
+  version: z.string().regex(/^v\d+\.\d+\.\d+$/),
+  publishedAt: z.iso.datetime(),
+  notes: z.string(),
+  releaseUrl: z.url(),
+  assets: z.array(
+    z.object({
+      name: z.string().min(1),
+      sizeBytes: count,
+      downloadUrl: z.url(),
+      kind: z.enum(['windows-backend', 'other']),
+    }),
+  ),
+});
 export type RuntimeProbe = z.infer<typeof runtimeProbeSchema>;
 export type RuntimeBuild = z.infer<typeof runtimeBuildSchema>;
 export type RuntimeMetadata = z.infer<typeof runtimeMetadataSchema>;
 export type RuntimeDiagnostics = z.infer<typeof runtimeDiagnosticsSchema>;
 export type RuntimeMetrics = z.infer<typeof runtimeMetricsSchema>;
+export type ReleaseCatalog = z.infer<typeof releaseCatalogSchema>;
 export type MaintenanceAccess = 'gateway-unavailable' | 'owner-required' | 'owner-verified';
 
 /** 运行信息分别读取，某项失败不抹去其余项；指标文本只在明确请求时读取。 */
@@ -81,6 +96,7 @@ export type RuntimePort = Readonly<{
   probe(kind: 'readiness' | 'liveness', signal?: AbortSignal): Promise<RuntimeProbe>;
   maintenanceAccess(signal?: AbortSignal): Promise<MaintenanceAccess>;
   build(signal?: AbortSignal): Promise<RuntimeBuild>;
+  latestRelease(signal?: AbortSignal): Promise<ReleaseCatalog>;
   metadata(signal?: AbortSignal): Promise<RuntimeMetadata>;
   diagnostics(signal?: AbortSignal): Promise<RuntimeDiagnostics>;
   metrics(signal?: AbortSignal): Promise<RuntimeMetrics>;
@@ -96,6 +112,8 @@ export class RuntimeReadError extends Error {
       | 'timeout'
       | 'protocol'
       | 'limit'
+      | 'rate-limited'
+      | 'no-release'
       | 'unavailable',
   ) {
     super(`Runtime: ${code}`);

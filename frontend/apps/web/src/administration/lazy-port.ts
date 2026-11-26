@@ -58,6 +58,7 @@ export function createLazyAdministrationPort(
       maintenanceAccess: async (signal) => (await load()).runtime.maintenanceAccess(signal),
       probe: async (...args) => (await load()).runtime.probe(...args),
       build: async (...args) => (await load()).runtime.build(...args),
+      latestRelease: async (signal) => (await load()).runtime.latestRelease(signal),
       metadata: async (...args) => (await load()).runtime.metadata(...args),
       diagnostics: async (...args) => (await load()).runtime.diagnostics(...args),
       metrics: async (...args) => (await load()).runtime.metrics(...args),

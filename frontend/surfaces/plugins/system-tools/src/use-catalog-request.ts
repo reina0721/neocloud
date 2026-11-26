@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-export function useCatalogRequest<T>(load: (signal: AbortSignal) => Promise<T>) {
+export function useCatalogRequest<T>(load: (signal: AbortSignal) => Promise<T>, enabled = true) {
   const [revision, setRevision] = useState(0);
   const [settled, setSettled] = useState<{
     load: typeof load;
@@ -9,6 +9,7 @@ export function useCatalogRequest<T>(load: (signal: AbortSignal) => Promise<T>) 
     result: { value: T } | { error: unknown };
   }>();
   useEffect(() => {
+    if (!enabled) return;
     const controller = new AbortController();
     void load(controller.signal).then(
       (value) => {
@@ -19,8 +20,8 @@ export function useCatalogRequest<T>(load: (signal: AbortSignal) => Promise<T>) 
       },
     );
     return () => controller.abort();
-  }, [load, revision]);
+  }, [enabled, load, revision]);
   const result =
-    settled?.load === load && settled.revision === revision ? settled.result : undefined;
+    enabled && settled?.load === load && settled.revision === revision ? settled.result : undefined;
   return { result, refresh: () => setRevision((value) => value + 1) };
 }

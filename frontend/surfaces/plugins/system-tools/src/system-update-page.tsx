@@ -12,6 +12,7 @@ import {
 } from '../../../src/administration/context';
 import { useProductAccess } from '../../../src/identity/use-access';
 import { NavigationIcon } from '../../../src/navigation-icon-presentation';
+import { GitHubReleaseSection } from './github-release-section';
 import { systemUpdateMessages } from './system-update-messages';
 import { useCatalogRequest } from './use-catalog-request';
 
@@ -42,6 +43,7 @@ function UpdateDetails() {
           </div>
         )}
       </Section>
+      <GitHubReleaseSection load={runtime.latestRelease} />
       <Section title={t('systemUpdate.operations')} density="compact" contentInset>
         <div className="space-y-2 text-sm">
           {access === 'owner-verified' ? (
@@ -62,7 +64,7 @@ function UpdateDetails() {
                     : t('administration.loading')}
               </p>
               <div className="flex flex-wrap gap-2">
-                {['check', 'upgrade', 'rollback', 'restore'].map((action) => (
+                {['upgrade', 'rollback', 'restore'].map((action) => (
                   <Action key={action} variant="secondary" size="sm" disabled>
                     {t(`systemUpdate.${action}`)}
                   </Action>

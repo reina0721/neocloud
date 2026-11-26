@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import {
   RuntimeReadError,
+  releaseCatalogSchema,
   runtimeBuildSchema,
   runtimeDiagnosticsSchema,
   runtimeMetadataSchema,
@@ -47,6 +48,7 @@ export function createRuntimePort(
   request: typeof fetch = fetch,
 ): RuntimePort {
   const transport = createJsonClient('/management', request);
+  const releaseTransport = createJsonClient('/api/host/v1/releases', request);
   const owned = <T>(operation: () => Promise<T>, signal?: AbortSignal) =>
     readRuntimeInformation(operation, currentUserId, signal);
   function parse<T>(schema: z.ZodType<T>, value: unknown): T {
@@ -110,6 +112,22 @@ export function createRuntimePort(
         }
       }, signal),
     build: (signal) => owned(() => json('/build', runtimeBuildSchema, signal), signal),
+    latestRelease: (signal) =>
+      owned(async () => {
+        try {
+          return parse(
+            releaseCatalogSchema,
+            await releaseTransport('/latest', signal ? { signal } : {}),
+          );
+        } catch (error) {
+          if (error instanceof ApiError && error.code === 'http') {
+            if (error.status === 429) throw new RuntimeReadError('rate-limited');
+            if (error.status === 404) throw new RuntimeReadError('no-release');
+            if (error.status === 504) throw new RuntimeReadError('timeout');
+          }
+          throw error;
+        }
+      }, signal),
     metadata: (signal) =>
       owned(async () => parse(runtimeMetadataSchema, await metadata(signal)), signal),
     diagnostics: (signal) =>
