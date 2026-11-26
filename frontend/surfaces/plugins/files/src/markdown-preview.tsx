@@ -130,7 +130,7 @@ export function MarkdownPreview({
   text,
   parentId,
   labels,
-  compact = false,
+  presentation = 'split',
   signal,
 }: {
   text: string;
@@ -142,7 +142,7 @@ export function MarkdownPreview({
     missingImage: string;
     failed: string;
   };
-  compact?: boolean;
+  presentation?: 'split' | 'reading' | 'embedded';
   signal?: AbortSignal;
 }) {
   const source = useDeferredValue(text);
@@ -245,7 +245,7 @@ export function MarkdownPreview({
   return (
     <article
       aria-label={labels.preview}
-      className={`min-w-0 wrap-anywhere p-4 text-ink ${compact ? '' : 'min-h-48 overflow-auto rounded-panel border border-border bg-surface'}`}
+      className={`min-w-0 wrap-anywhere p-4 text-ink ${presentation === 'embedded' ? '' : 'overflow-auto rounded-panel border border-border bg-surface'} ${presentation === 'split' ? 'min-h-48' : ''}`}
     >
       <PreviewBoundary source={source} message={labels.failed}>
         {rendered}

@@ -158,7 +158,7 @@ export function TextQuickPreview({
       ) : null}
       {reading.text === undefined ? null : renderMarkdown ? (
         <MarkdownPreview
-          compact
+          presentation="embedded"
           text={reading.text}
           parentId={entry.parentId}
           signal={signal}
