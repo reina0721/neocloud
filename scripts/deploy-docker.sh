@@ -6,7 +6,7 @@ fail() { printf '%s\n' "$*" >&2; exit 1; }
 
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 action=up
-state=
+requested_dir=
 input_config=
 if [[ ${1:-} != -* && $# -gt 0 ]]; then action=$1; shift; fi
 case $action in
@@ -15,7 +15,7 @@ case $action in
 esac
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --dir) [[ -n ${2:-} ]] || fail '--dir 需要安装目录'; state=$2; shift 2 ;;
+    --dir) [[ -n ${2:-} ]] || fail '--dir 需要安装目录'; requested_dir=$2; shift 2 ;;
     --config) [[ -n ${2:-} ]] || fail '--config 需要配置文件'; input_config=$2; shift 2 ;;
     -h|--help)
       printf '用法：bash scripts/deploy-docker.sh [up|plan|status|logs|stop|token] [--dir DIR] [--config FILE]\n'
@@ -24,15 +24,72 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+load_config() {
+  local line key value declared_project=
+  local assignment='^[[:blank:]]*([A-Z_]+)[[:blank:]]*=[[:blank:]]*(.*)$'
+  local single_quoted="^'(.*)'([[:blank:]]+#.*)?[[:blank:]]*$"
+  local double_quoted='^"(.*)"([[:blank:]]+#.*)?[[:blank:]]*$'
+  while IFS= read -r line || [[ -n $line ]]; do
+    line=${line%$'\r'}
+    [[ $line =~ ^[[:blank:]]*(#.*)?$ ]] && continue
+    [[ $line =~ $assignment ]] || fail "预期 KEY=value 配置行：$1"
+    key=${BASH_REMATCH[1]}; value=${BASH_REMATCH[2]}
+    if [[ $value =~ $single_quoted || $value =~ $double_quoted ]]; then
+      value=${BASH_REMATCH[1]}
+    else
+      value=${value%%[[:blank:]]#*}
+      value=${value%"${value##*[![:blank:]]}"}
+    fi
+    case $key in
+      COMPOSE_PROJECT_NAME|INSTANCE_NAME)
+        [[ -z $declared_project || $declared_project == "$value" ]] || fail "项目名称配置冲突：$1"
+        declared_project=$value
+        project=$value ;;
+      INSTALL_DIR|DATA_DIR|WEB_BIND|WEB_PORT|PUBLIC_ORIGIN|ALLOW_INSECURE_HTTP|ALLOWED_ORIGINS) printf -v "$key" '%s' "$value" ;;
+      SETUP_TOKEN|CLOUDDRIVE_SOURCE_PROJECT) [[ $legacy == true ]] || fail "配置不应包含 $key" ;;
+      *) fail "未知配置键：$key" ;;
+    esac
+  done < "$1"
+}
+
+load_defaults() {
+  unset ALLOWED_ORIGINS
+  load_config "$root/deploy-docker.env.example"
+  DATA_DIR=
+}
+
+# 文件中的相对安装目录以文件为基准，--dir 仍可直接从当前目录选择实例。
+resolve_path() {
+  local path=$1 base=$2
+  [[ $path != *$'\n'* && $path != *$'\r'* ]] || fail '路径不能包含换行'
+  if [[ $path == '~' || $path == '~/'* ]]; then path="${HOME:?}${path:1}"; fi
+  if [[ $path != /* ]]; then path="$base/$path"; fi
+  realpath -m -- "$path"
+}
+
 legacy=false
 legacy_state="$root/.data/docker"
-if [[ -z $state && -f $legacy_state/runtime.env ]]; then state=$legacy_state; fi
-state=$(realpath -m -- "${state:-${HOME:?}/clouddrive-deploy}")
-[[ $state != / && $state != *$'\n'* ]] || fail '安装目录无效'
+load_defaults
+if [[ -n $input_config ]]; then
+  [[ -f $input_config ]] || fail "未找到配置文件：$input_config"
+  input_config=$(realpath -e -- "$input_config")
+  load_config "$input_config"
+fi
+if [[ -n $requested_dir ]]; then
+  state=$(resolve_path "$requested_dir" "$PWD")
+elif [[ -n $INSTALL_DIR ]]; then
+  state=$(resolve_path "$INSTALL_DIR" "${input_config%/*}")
+elif [[ -f $legacy_state/runtime.env ]]; then
+  state=$legacy_state
+else
+  state=$(resolve_path "${HOME:?}/clouddrive-deploy" "$PWD")
+fi
+[[ $state != / ]] || fail '安装目录不能是 /'
 if [[ $state == "$legacy_state" && -f $state/runtime.env ]]; then legacy=true; fi
 if [[ $legacy == false && ( $state == "$root" || $state == "$root/"* ) ]]; then
   fail '请指定源码目录之外的安装目录，避免部署配置进入镜像构建上下文'
 fi
+
 control="$state/.control"
 config="$state/deploy.env"
 token_file="$control/setup-token"
@@ -41,49 +98,53 @@ if [[ $legacy == true ]]; then
   config="$state/runtime.env"
 elif [[ ! -f $control/instance ]]; then
   new=true
-  [[ ! -e $state || ( -d $state && -z $(ls -A -- "$state") ) ]] || fail "安装目录已存在且非空：$state"
+  if [[ -e $state ]]; then
+    [[ -d $state ]] || fail "安装目录不是目录：$state"
+    entries=$(ls -A -- "$state")
+    [[ -z $entries || ( $entries == deploy.env && -f $config ) ]] || fail "安装目录已包含其他文件：$state"
+  fi
 fi
-if [[ -n $input_config ]]; then
-  [[ $new == true && ( $action == up || $action == plan ) ]] || fail "已有实例请编辑 $config"
-  [[ -f $input_config ]] || fail "未找到配置文件：$input_config"
+if [[ -f $config || $new == false ]]; then
+  load_defaults
+  load_config "$config"
 fi
 
-load_config() {
-  local line key value
-  while IFS= read -r line || [[ -n $line ]]; do
-    line=${line%$'\r'}
-    [[ -z $line || $line == '#'* ]] && continue
-    [[ $line == *=* ]] || fail "配置行缺少等号：$1"
-    key=${line%%=*}; value=${line#*=}
-    case $key in
-      INSTANCE_NAME|WEB_BIND|WEB_PORT|PUBLIC_ORIGIN|ALLOW_INSECURE_HTTP) printf -v "$key" '%s' "$value" ;;
-      ALLOWED_ORIGINS) ALLOWED_ORIGINS=${value#\'}; ALLOWED_ORIGINS=${ALLOWED_ORIGINS%\'} ;;
-      SETUP_TOKEN|CLOUDDRIVE_SOURCE_PROJECT) [[ $legacy == true ]] || fail "配置不应包含 $key" ;;
-      *) fail "未知配置键：$key" ;;
-    esac
-  done < "$1"
-}
-
-unset ALLOWED_ORIGINS
-load_config "$root/deploy-docker.env.example"
-if [[ $new == false ]]; then load_config "$config"; fi
-if [[ -n $input_config ]]; then load_config "$input_config"; fi
-project=$INSTANCE_NAME
 owner=
+saved_data_dir=
 if [[ $legacy == true ]]; then
   project=$(sed -n 's/^CLOUDDRIVE_SOURCE_PROJECT=//p' "$config")
   [[ $project =~ ^clouddrive-source-[0-9a-f]{12}$ ]] || fail '旧实例项目标记无效'
   owner="legacy-$project"
 elif [[ $new == false ]]; then
-  read -r saved_project owner < "$control/instance" || fail '无法读取实例身份'
+  {
+    read -r saved_project owner || fail '无法读取实例身份'
+    IFS= read -r saved_data_dir || saved_data_dir=
+  } < "$control/instance"
   [[ $saved_project == "$project" && $owner =~ ^[a-f0-9]{32}$ ]] || fail '实例名称和现有身份不一致，请为新名称使用独立安装目录'
+fi
+
+if [[ $new == true ]]; then DATA_DIR=${DATA_DIR:-./data}; else DATA_DIR=${DATA_DIR:-$saved_data_dir}; fi
+data_dir=
+if [[ -n $DATA_DIR ]]; then
+  data_dir=$(resolve_path "$DATA_DIR" "$state")
+  [[ $data_dir != / && $data_dir != "$root" && $data_dir != "$root/"* && $root != "$data_dir/"* &&
+    $data_dir != "$state" && $state != "$data_dir/"* && $data_dir != "$control" && $data_dir != "$control/"* &&
+    $data_dir != "$state/backups" && $data_dir != "$state/backups/"* ]] || fail "数据目录与源码或安装文件重叠：$data_dir"
+fi
+if [[ $new == false ]]; then
+  [[ $saved_data_dir == "$data_dir" ]] || fail "不能直接更改已安装实例的数据目录。当前存储：${saved_data_dir:-$project-data}"
 fi
 [[ $project =~ ^[a-z0-9][a-z0-9_-]{0,39}$ ]] || fail '实例名须以小写字母或数字开头，最多 40 个字符，可包含 - 和 _'
 [[ $WEB_PORT =~ ^[0-9]{1,5}$ ]] && (( 10#$WEB_PORT >= 1024 && 10#$WEB_PORT <= 65535 )) || fail 'WEB_PORT 必须在 1024–65535 之间'
 WEB_PORT=$((10#$WEB_PORT))
 [[ $WEB_BIND =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ || $WEB_BIND =~ ^\[[0-9a-fA-F:]+\]$ ]] || fail 'WEB_BIND 必须是 IP 地址，IPv6 使用方括号'
-[[ $ALLOW_INSECURE_HTTP == true || $ALLOW_INSECURE_HTTP == false ]] || fail 'ALLOW_INSECURE_HTTP 只接受 true 或 false'
 [[ -z $PUBLIC_ORIGIN || $PUBLIC_ORIGIN =~ ^https?://([a-zA-Z0-9.-]+|\[[a-fA-F0-9:]+\])(:[0-9]+)?$ ]] || fail 'PUBLIC_ORIGIN 须为不带路径的 HTTP(S) Origin'
+http_setting=$ALLOW_INSECURE_HTTP
+if [[ -z $ALLOW_INSECURE_HTTP ]]; then
+  ALLOW_INSECURE_HTTP=true
+  if [[ $PUBLIC_ORIGIN == https://* ]]; then ALLOW_INSECURE_HTTP=false; fi
+fi
+[[ $ALLOW_INSECURE_HTTP == true || $ALLOW_INSECURE_HTTP == false ]] || fail 'ALLOW_INSECURE_HTTP 只接受空值、true 或 false'
 
 unset COMPOSE_COMPATIBILITY
 export SETUP_TOKEN=
@@ -105,8 +166,14 @@ show_plan() {
   printf '源码目录：%s\n安装目录：%s\n部署配置：%s\n数据库备份：%s/backups\n' "$root" "$state" "$config" "$state"
   if [[ $legacy == true ]]; then printf '首次设置令牌：%s\n' "$config"; else printf '首次设置令牌：%s\n' "$token_file"; fi
   printf 'Compose 项目：%s\n容器：%s-backend-1、%s-web-1；临时迁移容器 %s-migrate\n' "$project" "$project" "$project" "$project"
-  printf '镜像：%s、%s\n网络：%s_default\n数据卷：%s → /app/.data（app.db、storage/、transfers/）\n' "$API_IMAGE" "$WEB_IMAGE" "$project" "$volume"
-  printf '端口：%s:%s → Web 4173/tcp；Go 8080/9090 仅在容器网络\n访问地址：%s\n' "$WEB_BIND" "$WEB_PORT" "$access"
+  printf '镜像：%s、%s\n网络：%s_default\n' "$API_IMAGE" "$WEB_IMAGE" "$project"
+  if [[ -n $data_dir ]]; then
+    printf '数据目录：%s → %s → /app/.data（app.db、storage/、transfers/）\n' "$data_dir" "$volume"
+  else
+    printf '数据卷：%s → /app/.data（app.db、storage/、transfers/）\n' "$volume"
+  fi
+  printf '端口：%s:%s → Web 4173/tcp；Go 8080/9090 仅在容器网络\n访问地址：%s\n允许 HTTP Cookie：%s\n' \
+    "$WEB_BIND" "$WEB_PORT" "$access" "$ALLOW_INSECURE_HTTP"
 }
 if [[ $action == plan ]]; then show_plan; exit 0; fi
 
@@ -140,7 +207,14 @@ assert_owner() {
   actual=$(docker "$kind" inspect --format "{{with $labels}}{{index . \"io.clouddrive.source.instance\"}}|{{index . \"com.docker.compose.project\"}}{{end}}" "$name")
   if [[ ${actual%%|*} == "$owner" ]]; then return; fi
   if [[ $legacy == true && $actual == "|$project" ]]; then return; fi
-  fail "同名 Docker $kind 已被其他实例使用：$name。请使用独立目录并修改 INSTANCE_NAME。"
+  fail "同名 Docker $kind 已被其他实例使用：$name。请使用独立目录并修改 COMPOSE_PROJECT_NAME。"
+}
+
+check_data_volume() {
+  local device
+  device=$(docker volume inspect --format '{{with .Options}}{{index . "device"}}{{end}}' "$volume")
+  [[ $device == "$data_dir" ]] || fail "Docker 数据卷与实例记录的位置不一致：$volume"
+  if [[ -n $data_dir && ! -d $data_dir ]]; then fail "原数据目录缺失：$data_dir"; fi
 }
 
 check_names() {
@@ -161,9 +235,22 @@ check_names() {
   volume_exists=false
   if grep -Fxq "$volume" <<< "$names"; then
     assert_owner volume "$volume"
+    check_data_volume
     volume_exists=true
   elif [[ -f $control/data-ready || -n $project_containers ]]; then
     fail "原数据卷缺失：$volume。请恢复原卷后再部署。"
+  fi
+}
+
+check_new_data_dir() {
+  [[ -n $data_dir && $volume_exists == false ]] || return 0
+  local owners entries
+  owners=$(docker volume ls --quiet --filter "label=io.clouddrive.source.data-directory=$data_dir")
+  [[ -z $owners ]] || fail "数据目录已被其他卷使用：$data_dir（$owners）"
+  if [[ -e $data_dir ]]; then
+    [[ -d $data_dir ]] || fail "数据路径不是目录：$data_dir"
+    entries=$(ls -A -- "$data_dir") || fail "无法检查数据目录：$data_dir"
+    [[ -z $entries ]] || fail "首次部署需要空的数据目录：$data_dir"
   fi
 }
 
@@ -211,24 +298,67 @@ lock_instance() {
 
 prepare_instance() {
   if [[ $new == true ]]; then
-    [[ ! -f $control/instance && ! -e $config ]] || fail '实例已被另一部署创建，请重试'
-    printf 'INSTANCE_NAME=%s\nWEB_BIND=%s\nWEB_PORT=%s\nPUBLIC_ORIGIN=%s\nALLOW_INSECURE_HTTP=%s\n' \
-      "$project" "$WEB_BIND" "$WEB_PORT" "$PUBLIC_ORIGIN" "$ALLOW_INSECURE_HTTP" > "$config"
-    if [[ -n ${ALLOWED_ORIGINS:-} ]]; then printf 'ALLOWED_ORIGINS=%s\n' "$ALLOWED_ORIGINS" >> "$config"; fi
+    [[ ! -f $control/instance ]] || fail '实例已被另一部署创建，请重试'
+    if [[ ! -f $config ]]; then
+      printf "INSTALL_DIR='%s'\nCOMPOSE_PROJECT_NAME=%s\nDATA_DIR='%s'\nWEB_BIND=%s\nWEB_PORT=%s\nPUBLIC_ORIGIN=%s\nALLOW_INSECURE_HTTP=%s\n" \
+        "$state" "$project" "$data_dir" "$WEB_BIND" "$WEB_PORT" "$PUBLIC_ORIGIN" "$http_setting" > "$config"
+      if [[ -n ${ALLOWED_ORIGINS:-} ]]; then printf 'ALLOWED_ORIGINS=%s\n' "$ALLOWED_ORIGINS" >> "$config"; fi
+    fi
     od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > "$token_file"
     printf '\n' >> "$token_file"
-    printf '%s %s\n' "$project" "$owner" > "$control/instance"
+    printf '%s %s\n%s\n' "$project" "$owner" "$data_dir" > "$control/instance"
     new=false
   fi
   if [[ $volume_exists == false ]]; then
-    docker volume create --label "io.clouddrive.source.instance=$owner" "$volume" >/dev/null
+    local options=()
+    if [[ -n $data_dir ]]; then
+      mkdir -p -- "$data_dir"
+      options=(--driver local --opt type=none --opt o=bind --opt "device=$data_dir"
+        --label "io.clouddrive.source.data-directory=$data_dir")
+    fi
+    docker volume create --label "io.clouddrive.source.instance=$owner" "${options[@]}" "$volume" >/dev/null
     assert_owner volume "$volume"
+    check_data_volume
   fi
   touch -- "$control/data-ready"
 }
 
 show_data_path() {
+  if [[ -n $data_dir ]]; then
+    printf '数据文件所在宿主机目录：%s\n' "$data_dir"
+    return
+  fi
   printf '数据卷宿主机路径：%s\n' "$(docker volume inspect --format '{{.Mountpoint}}' "$volume")"
+}
+
+verify_data_directory() {
+  [[ -n $data_dir ]] || return 0
+  local mode=initialize
+  if [[ -f $control/data-initialized ]]; then mode=verify; fi
+  # 在同一个挂载内独占创建标记，防止不同实例同时认领同一个空目录。
+  docker run --rm --pull never --network none --user 0:0 \
+    --mount "type=volume,source=$volume,target=/data,volume-nocopy" "$WEB_IMAGE" node -e '
+      const fs = require("node:fs");
+      const [owner, mode] = process.argv.slice(1);
+      const entries = fs.readdirSync("/data");
+      const marker = ".clouddrive-source-owner";
+      const path = `/data/${marker}`;
+      if (entries.includes(marker)) {
+        if (!fs.lstatSync(path).isFile() || fs.readFileSync(path, "utf8") !== owner) {
+          throw new Error("数据目录归属与当前实例不一致");
+        }
+      } else {
+        if (mode !== "initialize" || entries.length !== 0) {
+          throw new Error("数据目录非空或缺少当前实例的标记");
+        }
+        fs.writeFileSync(path, owner, { flag: "wx", mode: 0o600 });
+      }
+      if (mode === "initialize") {
+        fs.chmodSync("/data", 0o700);
+        fs.chownSync("/data", 65532, 65532);
+      }
+    ' "$owner" "$mode" || fail "无法确认数据目录归属或权限：$data_dir"
+  touch -- "$control/data-initialized"
 }
 
 backup_database() {
@@ -271,15 +401,18 @@ case $action in
     show_plan
     check_names
     check_port
+    check_new_data_dir
     compose config --quiet
     lock_instance
     check_names
+    check_new_data_dir
     prepare_instance
     SETUP_TOKEN=$(read_token)
     [[ $SETUP_TOKEN =~ ^[a-f0-9]{64}$ ]] || fail '初始化令牌文件损坏'
     CLOUDDRIVE_SOURCE_COMMIT=$(git -C "$root" rev-parse HEAD 2>/dev/null || printf unknown)
     export SETUP_TOKEN CLOUDDRIVE_SOURCE_COMMIT
     compose build backend web
+    verify_data_directory
     check_port
     containers=$(compose ps --all --quiet backend web)
     if [[ -n $containers ]]; then compose stop web backend; fi

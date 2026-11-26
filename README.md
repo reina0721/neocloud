@@ -23,7 +23,9 @@
 bash scripts/deploy-docker.sh
 ```
 
-默认实例目录为 `~/clouddrive-deploy`，项目名为 `clouddrive`，服务地址为 `http://服务器IP:4180`。执行 `bash scripts/deploy-docker.sh plan` 可提前核对目录、镜像、容器、数据卷和端口映射。首次安装可用 `--dir` 指定实例目录，用 `--config` 载入自己的配置文件。[配置模板](deploy-docker.env.example)
+新实例默认安装在 `~/clouddrive-deploy`，数据库、文件和传输暂存放在其中的 `data/`，服务地址为 `http://服务器IP:4180`。执行 `bash scripts/deploy-docker.sh plan` 可提前核对目录、镜像、容器、网络和端口映射。
+
+需要指定安装位置、数据目录、实例名或访问地址时，复制[配置模板](deploy-docker.env.example)为 `deploy.env` 并编辑，再运行 `bash scripts/deploy-docker.sh --config ./deploy.env`。安装后编辑实例目录中的 `deploy.env` 应用网络设置。
 
 打开 `http://服务器IP:4180/setup`，用 `bash scripts/deploy-docker.sh token` 查看初始化令牌并创建管理员。[源码部署与日常管理](docs/operations/clouddrive-deployment.md#从源码部署)
 

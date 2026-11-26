@@ -13,33 +13,57 @@ bash scripts/deploy-docker.sh
 | 项目 | 默认值与用途 |
 | --- | --- |
 | 源码目录 | 当前源码所在的目录，也是构建输入 |
-| 实例目录 | `~/clouddrive-deploy`，保存运行配置和部署记录 |
-| 配置和令牌 | `deploy.env` 保存公开配置，`.control/instance` 记录实例身份，`.control/setup-token` 保存首次设置令牌 |
+| 安装目录 | `~/clouddrive-deploy`，保存部署配置和记录 |
+| 配置和令牌 | 安装目录下的 `deploy.env` 保存用户编辑的配置，`.control/` 存放实例记录与首次设置令牌 `setup-token` |
 | Compose 项目与网络 | `clouddrive`、`clouddrive_default` |
 | 容器 | `clouddrive-backend-1`、`clouddrive-web-1`、一次性迁移容器 `clouddrive-migrate` |
 | 镜像 | `clouddrive-api:local`、`clouddrive-web:local` |
-| 数据卷 | `clouddrive-data` 挂载为容器内 `/app/.data`，包含 `app.db`、`storage/`、`transfers/`。部署和 `status` 会显示 Docker 主机上的实际挂载路径 |
+| 数据 | 新实例通过本地 Docker 卷 `clouddrive-data`，将宿主机的 `~/clouddrive-deploy/data/` 挂载到 Go 与迁移容器的 `/app/.data`，包含 SQLite `app.db`、用户文件 `storage/`、传输暂存 `transfers/` |
 | 数据库备份 | 实例目录下的 `backups/` |
 | 端口和访问地址 | 宿主 `0.0.0.0:4180` 转发至 Web 容器 `4173/tcp`，浏览器打开 `http://服务器IP:4180`。Go API 的 `8080` 与运维的 `9090` 通过容器网络访问 |
 
 ### 配置实例
 
-首次安装可以复制[配置模板](../../deploy-docker.env.example)，编辑项目名、Web 监听地址、端口、外部访问地址和 HTTP 策略。默认外部地址留空，浏览器通过所选监听地址和端口访问。
+复制[配置模板](../../deploy-docker.env.example)后，可在同一份文件里指定安装位置、数据位置、资源名称及访问方式。
 
 ```bash
 cp deploy-docker.env.example deploy.env
-# 编辑 deploy.env 后，先检查计划，再执行部署。
-bash scripts/deploy-docker.sh plan --dir "$HOME/clouddrive-test" --config deploy.env
-bash scripts/deploy-docker.sh --dir "$HOME/clouddrive-test" --config deploy.env
+# 编辑 deploy.env 后，先核对计划，再执行部署。
+bash scripts/deploy-docker.sh plan --config ./deploy.env
+bash scripts/deploy-docker.sh --config ./deploy.env
 ```
 
-脚本将配置保存为实例目录下的 `deploy.env`。安装后直接改这份配置，再用相同的 `--dir` 部署以应用网络设置。`--config` 用于首次安装。`INSTANCE_NAME` 决定 Docker 资源的命名，创建第二个实例时使用独立目录、项目名和可用端口。安装目录已包含其他文件、Docker 资源被其他实例占用、端口已被占用时，脚本会指出冲突并停止。
+例如，要将安装文件和数据分别放到系统盘与数据盘，可以在 `deploy.env` 设置以下值。
 
-公网访问可由宿主机 HTTPS 反代接入。在实例的 `deploy.env` 设置 `WEB_BIND=127.0.0.1`、`PUBLIC_ORIGIN=https://drive.example.com` 和 `ALLOW_INSECURE_HTTP=false`。重新部署后，将该域名转发到配置的本机 Web 端口，保留原始 Host 并转发 HTTPS 协议。WebDAV 与网页使用同一个入口。
+```dotenv
+INSTALL_DIR=/opt/clouddrive
+DATA_DIR=/mnt/cloud-data/clouddrive
+COMPOSE_PROJECT_NAME=clouddrive
+WEB_PORT=4180
+```
+
+| 参数 | 新实例默认值 | 用途 |
+| --- | --- | --- |
+| `INSTALL_DIR` | 空，使用 `~/clouddrive-deploy` | 保存配置、备份和部署记录的宿主机目录。相对路径以提供的配置文件所在目录为基准。显式 `--dir` 优先 |
+| `DATA_DIR` | `./data` | 数据的宿主机目录。相对路径以安装目录为基准，可填绝对路径，例如 `/mnt/cloud-data/drive`。实例独占该目录 |
+| `COMPOSE_PROJECT_NAME` | `clouddrive` | 决定容器、镜像、网络等资源名称。已有配置可继续使用旧键 `INSTANCE_NAME` |
+| `WEB_BIND` | `0.0.0.0` | 宿主机监听 IP，IPv6 地址使用方括号 |
+| `WEB_PORT` | `4180` | 浏览器访问的宿主机端口，范围为 1024–65535 |
+| `PUBLIC_ORIGIN` | 空 | 可选的公开入口，例如 `https://drive.example.com`。填写完整 HTTP(S) Origin，无路径或尾斜杠 |
+| `ALLOW_INSECURE_HTTP` | 空，随公开入口推断 | `PUBLIC_ORIGIN` 为 HTTPS 时使用 HTTPS Cookie。公开入口为空或为 HTTP 时允许 HTTP Cookie。可显式填 `true` 或 `false` |
+| `ALLOWED_ORIGINS` | 空 | 可选的额外跨域访问白名单，填精确 Origin 的 JSON 数组，例如 `["https://reader.example.com"]` |
+
+路径支持 `~/`，含空格时可用引号包裹。首次部署需使用尚未创建或为空的数据目录，部署时会按 Go 容器的 `65532:65532` 设置该目录权限。
+
+也可提前将编辑好的 `deploy.env` 放入目标安装目录，再用 `--dir` 选择该目录。已有实例以安装目录中保存的 `deploy.env` 为准。重新运行同一部署命令即可应用这份文件中的网络设置。最初的配置文件仍可通过 `--config` 定位实例。
+
+新建第二个实例时，为它指定独立的安装目录、数据目录、项目名和空闲端口。安装计划会显示配置解析后的宿主机数据目录，部署和状态会显示实际数据位置。安装目录有无关文件、数据目录已被其他实例使用、Docker 资源重名或端口已占用时，脚本会报出冲突。调整配置后重试，端口始终以 `WEB_PORT` 为准。实例初始化后，项目名和数据位置随实例身份固定。
+
+公网可通过宿主机 HTTPS 反向代理接入。设置 `WEB_BIND=127.0.0.1` 和 `PUBLIC_ORIGIN=https://drive.example.com`，将反代目标指向宿主机的 Web 端口并保留原始 Host、转发 HTTPS 协议。WebDAV 与网页使用同一个入口。
 
 ### 首次设置和日常管理
 
-部署完成后打开部署输出中的 `/setup` 地址，用下列命令读取初始化令牌并创建管理员。自定义实例目录时，给管理命令也传入同一个 `--dir`。
+部署完成后打开部署输出中的 `/setup` 地址，用下列命令读取初始化令牌并创建管理员。自定义安装目录时，给管理命令传入同一个 `--config` 或 `--dir`。
 
 ```bash
 bash scripts/deploy-docker.sh token
@@ -48,9 +72,11 @@ bash scripts/deploy-docker.sh logs --tail 100
 bash scripts/deploy-docker.sh stop
 ```
 
-更新源码后运行同一条部署命令。镜像构建成功后，脚本会停止本实例，备份 SQLite，再执行迁移并等待 Web 和 Go 就绪。迁移失败时按 [迁移与回滚](migration-and-rollback.md) 处理。整机备份需同时保留实例目录和 Docker 数据卷。
+例如，用自定义配置查看日志时执行 `bash scripts/deploy-docker.sh logs --config ./deploy.env --tail 100`。
 
-早期源码部署的实例可在原源码目录继续部署。现有 `.data/docker/runtime.env` 和原数据卷会沿用，数据库备份仍写入 `.data/docker/backups/`。
+更新源码后运行同一条部署命令。镜像构建成功后，脚本会停止本实例，备份 SQLite，再执行迁移并等待 Web 和 Go 就绪。迁移失败时按[迁移与回滚](migration-and-rollback.md)处理。完整备份包括安装目录和实际数据路径。使用单独的数据目录时须单独备份该目录。
+
+已有实例继续使用原来的 Docker 数据卷。保留 `DATA_DIR` 空白或省略该键，部署及 `status` 会列出原卷名称和宿主机挂载路径，备份时需保留该卷。更早期的实例可在原源码目录继续部署，沿用 `.data/docker/runtime.env`，数据库备份仍写入 `.data/docker/backups/`。
 
 ## Release 下载版安装与升级
 
