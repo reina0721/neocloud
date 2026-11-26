@@ -1,5 +1,7 @@
 # CloudDrive Docker 安装与管理
 
+在 Linux 服务器上安装已发布版本，直接使用 [GitHub 一键部署](#release-下载版安装与升级)。下面的源码部署适用于需要构建当前工作区的场景。两种入口各自管理独立实例和数据。
+
 ## 从源码部署
 
 将源码放在 Linux 服务器上，进入仓库目录。需要 Docker Engine、Docker Compose ≥ 2.20、iproute2 的 `ss`，以及 Bash、flock 等常用工具。Go 和 Node 在镜像中使用。
@@ -84,15 +86,28 @@ bash scripts/deploy-docker.sh stop
 
 ### 安装当前正式版
 
-从公开 `latest` 下载脚本，再用显式子命令启动安装。下例只开放服务器本机访问。
+在服务器上执行以下命令，GitHub 上的安装器会下载配套镜像并导入本地 Docker。安装参数直接跟在 `install` 后面，脚本自动生成实例配置。
 
 ```bash
-curl -fL --proto '=https' --proto-redir '=https' \
-  https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
-bash install.sh install --dir "$HOME/clouddrive" --bind 127.0.0.1
+(set -o pipefail; curl -fsSL --proto '=https' --proto-redir '=https' \
+  https://github.com/reina0721/neocloud/releases/latest/download/install.sh | \
+  bash -s -- install --dir "$HOME/clouddrive" --bind 0.0.0.0 --port 4180)
 ```
 
-从 `http://127.0.0.1:4173/setup` 使用 `~/clouddrive/.control/setup-token` 创建管理员。旧版本的非回环访问需要显式指定外部 Origin 和 HTTP 策略。以下安装向导与新增命令取决于目标 Release 的安装器。
+打开 `http://服务器IP:4180/setup`，使用 `~/clouddrive/.control/setup-token` 创建管理员。示例显式指定 `4180`。现有正式安装器的默认端口为 `4173`。
+
+| 项目 | 上例的实际位置或名称 |
+| --- | --- |
+| 安装目录和管理入口 | `~/clouddrive/`，日常管理使用其中的 `install.sh` |
+| 数据与备份 | `~/clouddrive/data/` 保存 `app.db`、`storage/`、`transfers/`，挂载到容器内 `/app/.data`。备份写入 `~/clouddrive/backups/` |
+| Compose 项目 | `clouddrive-<安装目录 SHA-256 的前 12 位>`，以解析后的绝对路径派生 |
+| 容器和网络 | `<项目>-backend-1`、`<项目>-web-1`、`<项目>_default` |
+| 镜像 | `clouddrive-api:<版本>-<架构>`、`clouddrive-web:<版本>-<架构>` |
+| 端口 | 宿主机 `0.0.0.0:4180` 映射到 Web 容器 `4173/tcp`。Go 的 `8080` 和 `9090` 在容器网络内 |
+
+新版安装器发布后，把在线命令中的 `install` 替换为 `plan` 即可预览。同一组参数会解析正式版本并列出资源，无需连接 Docker 或写入安装目录。新版实际安装会在迁移前显示这些信息，并检查同名 Docker 项目是否已被占用。已发布的 `v0.2.2` 使用上面的在线安装命令。
+
+通过本机 HTTPS 反代公开时，在同一安装命令中使用 `--bind 127.0.0.1 --port 4180 --public-url https://drive.example.com`。让代理将该域名转发到 `127.0.0.1:4180`，保留原始 Host 并转发 HTTPS 协议。浏览器和 WebDAV 共用这个公开地址。
 
 ### 安装向导
 
@@ -109,14 +124,13 @@ curl -fL --proto '=https' --proto-redir '=https' \
 
 ### 自动化与离线安装
 
-```bash
-curl -fL https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
-bash install.sh install --dir "$HOME/clouddrive" --port 4173 --yes
-# 固定版本、监听地址或使用独立实例目录
-bash install.sh install --dir "$HOME/clouddrive-two" --bind 127.0.0.1 --port 44173 --version v0.2.2 --yes
-```
+显式 `install` 使用非交互模式。要复现同一次安装，可将脚本 URL 和 `--version` 固定到同一版本。需要并行运行第二个实例时，指定独立安装目录和空闲端口。
 
-显式 `install` 保持非交互行为；`--yes` 也支持省略 `install`。管道安装通过 `/dev/tty` 交互；没有终端且未明确使用命令或 `--yes` 时立即提示用法，不等待输入。
+```bash
+(set -o pipefail; curl -fsSL --proto '=https' --proto-redir '=https' \
+  https://github.com/reina0721/neocloud/releases/download/v0.2.2/install.sh | \
+  bash -s -- install --dir "$HOME/clouddrive-two" --bind 127.0.0.1 --port 44173 --version v0.2.2)
+```
 
 离线时，从同一 Release 拷贝对应架构的 `clouddrive_vX.Y.Z_linux_amd64_docker.tar.gz` 或 `clouddrive_vX.Y.Z_linux_arm64_docker.tar.gz`、`checksums.txt`、`version.txt`，添加 `--release-dir /path/to/assets`。可以用 `--version` 替代 `version.txt`。目标机不拉取镜像仓库，也不编译源码。
 

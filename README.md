@@ -17,36 +17,22 @@
 
 ## Linux + Docker 部署
 
-在准备好 Docker Engine、Compose 插件（≥ 2.20）和 iproute2 的 Linux 上，从源码目录执行一键部署。
+在安装了 Docker Engine 和 Compose 插件（≥ 2.20）的 Linux amd64 或 arm64 服务器上，执行一条命令安装 GitHub 正式版。安装位置、监听地址和端口直接通过参数指定。
 
 ```bash
-bash scripts/deploy-docker.sh
+(set -o pipefail; curl -fsSL --proto '=https' --proto-redir '=https' \
+  https://github.com/reina0721/neocloud/releases/latest/download/install.sh | \
+  bash -s -- install --dir "$HOME/clouddrive" --bind 0.0.0.0 --port 4180)
 ```
 
-新实例默认安装在 `~/clouddrive-deploy`，数据库、文件和传输暂存放在其中的 `data/`，服务地址为 `http://服务器IP:4180`。执行 `bash scripts/deploy-docker.sh plan` 可提前核对目录、镜像、容器、网络和端口映射。
-
-需要指定安装位置、数据目录、实例名或访问地址时，复制[配置模板](deploy-docker.env.example)为 `deploy.env` 并编辑，再运行 `bash scripts/deploy-docker.sh --config ./deploy.env`。安装后编辑实例目录中的 `deploy.env` 应用网络设置。
-
-打开 `http://服务器IP:4180/setup`，用 `bash scripts/deploy-docker.sh token` 查看初始化令牌并创建管理员。[源码部署与日常管理](docs/operations/clouddrive-deployment.md#从源码部署)
-
-### 下载正式版
-
-Release 提供 Linux amd64/arm64 配套 Docker 离线镜像包。目标机需要 Docker、Compose 插件与标准 Linux 工具，无需 Go、Node 或源码编译。安装器从 GitHub 下载产物后导入本地 Docker。
-
-```bash
-curl -fL --proto '=https' --proto-redir '=https' \
-  https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
-bash install.sh install --dir "$HOME/clouddrive" --bind 127.0.0.1
-```
-
-上例监听服务器的 `127.0.0.1:4173`。在服务器上打开 `http://127.0.0.1:4173/setup`，使用 `~/clouddrive/.control/setup-token` 的令牌创建管理员。SQLite、文件和传输暂存保存在 `~/clouddrive/data/`。外网访问、TLS 和反向代理由部署方配置。
+打开 `http://服务器IP:4180/setup`，使用 `~/clouddrive/.control/setup-token` 的令牌创建管理员。SQLite、文件和传输暂存保存在 `~/clouddrive/data/`。示例显式使用 `4180`，现有正式安装器省略端口时使用 `4173`。
 
 ```bash
 ~/clouddrive/install.sh check-update  # 检查正式版
 ~/clouddrive/install.sh upgrade       # 备份并升级
 ```
 
-升级前阅读目标版本说明并核验备份。Release 包含签名维护工具时，可启用同址网页运维，在 `/maintenance` 检查更新、备份、升级和恢复。具体条件见[网页运维说明](docs/operations/clouddrive-deployment.md#网页运维)。安装选项、签名与校验、数据位置、HTTP/TLS 和故障恢复见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。Release 中的 Windows/Linux amd64 Go 归档仅包含后端，完整网页需要独立 Web Host。
+固定版本、HTTPS 反代、离线安装和数据备份见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。使用工作区中的代码构建另一个实例时，见[源码部署](docs/operations/clouddrive-deployment.md#从源码部署)。
 
 ## 源码开发
 

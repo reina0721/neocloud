@@ -39,6 +39,7 @@ usage() {
 bash install.sh                         首次安装向导；已安装实例显示管理菜单
 bash install.sh install [--dir ~/clouddrive] [--bind 0.0.0.0] [--port 4173]
   [--version vX.Y.Z] [--yes]
+bash install.sh plan [与 install 相同的目录、网络和版本参数]   查看部署资源，无需 Docker
 ~/clouddrive/install.sh status | check-update | upgrade | update | backup | start | stop | restart
 ~/clouddrive/install.sh logs [-f|--follow] [--tail 100]
 ~/clouddrive/install.sh enable-web-management [--trusted-proxy IP]
@@ -115,27 +116,17 @@ if [[ -z $command_name ]]; then
 fi
 [[ $command_name != update ]] || command_name=upgrade
 case $command_name in
-  install|upgrade|check-update|status|backup|start|stop|restart|logs|rollback|restore|enable-web-management) ;;
+  install|plan|upgrade|check-update|status|backup|start|stop|restart|logs|rollback|restore|enable-web-management) ;;
   _prepare|_config|_probe|_compat|_migrate|_start|_stop|_idle|_capture|_extract)
     [[ ${CLOUDDRIVE_MAINTENANCE_ENGINE:-} == 1 ]] || fail '此命令由宿主维护进程调用' ;;
   *) fail "未知命令：$command_name" ;;
 esac
 if [[ $explicit_http == false && $public_origin == https://* ]]; then allow_http=false; fi
-[[ $network_options == false || $command_name == install ]] || fail '已有实例请编辑 runtime.env，再执行 stop/start；网络选项只用于首次 install'
+[[ $network_options == false || $command_name == install || $command_name == plan ]] || fail '已有实例请编辑 runtime.env，再执行 stop/start；网络选项只用于 install 和 plan'
 [[ $(uname -s) == Linux ]] || fail '当前安装包只支持 Linux'
-for dependency in docker curl tar gzip sha256sum flock realpath awk sed cmp od tr; do
-  command -v "$dependency" >/dev/null || fail "缺少 $dependency，请先安装；脚本不会自动修改系统软件"
+for dependency in curl realpath sha256sum; do
+  command -v "$dependency" >/dev/null || fail "缺少 $dependency，请先安装"
 done
-[[ $(tar --help) == *--no-same-permissions* ]] || fail '需要 GNU tar；请先安装 GNU tar/coreutils'
-docker info >/dev/null 2>&1 || fail '无法访问 Docker，请先启动 Docker 并配置当前用户权限'
-compose_version=$(docker compose version --short 2>/dev/null) || fail '请先安装 Docker Compose 插件（>=2.20）'
-compose_version=${compose_version#v}
-[[ $compose_version =~ ^([0-9]+)\.([0-9]+) ]] || fail '无法识别 Compose 版本'
-(( BASH_REMATCH[1] > 2 || (BASH_REMATCH[1] == 2 && BASH_REMATCH[2] >= 20) )) || fail '需要 Docker Compose >=2.20'
-endpoint=${DOCKER_HOST:-$(docker context inspect --format '{{.Endpoints.docker.Host}}' 2>/dev/null)}
-[[ $endpoint == unix://* ]] || fail '仅支持本机 Unix socket Docker，远程 daemon 无法使用本机持久目录'
-[[ $(docker info --format '{{.OSType}}') == linux ]] || fail 'Docker 必须使用 Linux 容器'
-case $(docker info --format '{{.Architecture}}') in x86_64|amd64) arch=amd64 ;; aarch64|arm64) arch=arm64 ;; *) fail '仅支持 amd64/arm64' ;; esac
 root=$(realpath -m -- "$root")
 [[ $root != *$'\n'* && $root != *,* && $root != / ]] || fail '安装路径不能为根目录或包含换行、逗号'
 [[ $port =~ ^[0-9]+$ && ${#port} -le 5 ]] || fail '端口必须为数字'
@@ -144,6 +135,45 @@ port=$((10#$port))
 [[ $wait_timeout =~ ^[1-9][0-9]{0,2}$ ]] || fail '等待时间不合法'
 ((wait_timeout >= 5 && wait_timeout <= 600)) || fail '等待时间范围为 5–600 秒'
 valid_version() { [[ $1 =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; }
+normalize_arch() {
+  case $1 in x86_64|amd64) printf amd64 ;; aarch64|arm64) printf arm64 ;; *) fail '仅支持 amd64/arm64' ;; esac
+}
+project_for_root() {
+  local digest
+  digest=$(printf '%s' "$root" | sha256sum)
+  printf 'clouddrive-%s\n' "${digest:0:12}"
+}
+access_origin() {
+  if [[ -n $public_origin ]]; then
+    printf '%s' "$public_origin"
+    return
+  fi
+  local host=$bind
+  case $host in
+    0.0.0.0|::|'[::]') host='<服务器地址>' ;;
+    \[*\]) ;;
+    *:*) host="[$host]" ;;
+  esac
+  printf 'http://%s:%s' "$host" "$port"
+}
+show_deployment() {
+  local listen=$bind
+  if [[ $listen == *:* && $listen != \[*\] ]]; then listen="[$listen]"; fi
+  printf '安装目录：%s\n数据目录：%s/data → /app/.data（app.db、storage/、transfers/）\n配置：%s/runtime.env\n数据库备份：%s/backups\n' "$root" "$root" "$root" "$root"
+  printf 'Compose 项目：%s\n容器：%s-backend-1、%s-web-1\n网络：%s_default\n镜像：clouddrive-api:%s-%s、clouddrive-web:%s-%s\n' \
+    "$project" "$project" "$project" "$project" "$version" "$arch" "$version" "$arch"
+  printf '端口：%s:%s → Web 4173/tcp；Go 8080/9090 留在容器网络\n访问地址：%s\n允许 HTTP Cookie：%s\n' \
+    "$listen" "$port" "$(access_origin)" "$allow_http"
+}
+check_fresh_project() {
+  local containers networks
+  containers=$(docker ps --all --filter "label=com.docker.compose.project=$project" --format '{{.Names}}')
+  [[ -z $containers ]] || fail "Docker 项目 $project 已有容器：$containers；请选择其他安装目录"
+  containers=$(docker ps --all --filter "name=^/${project}-backend-1$" --filter "name=^/${project}-web-1$" --format '{{.Names}}')
+  [[ -z $containers ]] || fail "Docker 容器名称已被占用：$containers；请选择其他安装目录"
+  networks=$(docker network ls --filter "name=^${project}_default$" --format '{{.Name}}')
+  [[ -z $networks ]] || fail "Docker 网络已被占用：$networks；请选择其他安装目录"
+}
 network_configuration() {
   # 使用已校验镜像中的 Node 标准库；目标机不需要安装 Node。
   docker run --rm --pull never "$web_image" node -e '
@@ -179,6 +209,30 @@ resolve_version() {
   valid_version "$version" || fail '版本必须为 v主版本.次版本.修订号，可带预发布后缀'
   progress "目标版本：$version（$arch）"
 }
+if [[ $command_name == plan ]]; then
+  [[ ! -e $root/.control/project ]] || fail '已有实例，请使用安装目录中的 install.sh status 查看实际配置'
+  origin_pattern='^https?://([a-zA-Z0-9.-]+|\[[a-fA-F0-9:]+\])(:[0-9]{1,5})?$'
+  [[ -z $public_origin || $public_origin =~ $origin_pattern ]] || fail '--public-url 须为不带路径或凭据的 HTTP(S) Origin'
+  [[ $bind =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ || ( $bind == *:* && $bind =~ ^(\[[0-9a-fA-F:.]+\]|[0-9a-fA-F:.]+)$ ) ]] || fail '--bind 须为 IP 地址'
+  arch=$(normalize_arch "$(uname -m)")
+  project=$(project_for_root)
+  resolve_version
+  show_deployment
+  exit 0
+fi
+for dependency in docker tar gzip flock awk sed cmp od tr; do
+  command -v "$dependency" >/dev/null || fail "缺少 $dependency，请先安装；脚本不会自动修改系统软件"
+done
+[[ $(tar --help) == *--no-same-permissions* ]] || fail '需要 GNU tar；请先安装 GNU tar/coreutils'
+docker info >/dev/null 2>&1 || fail '无法访问 Docker，请先启动 Docker 并配置当前用户权限'
+compose_version=$(docker compose version --short 2>/dev/null) || fail '请先安装 Docker Compose 插件（>=2.20）'
+compose_version=${compose_version#v}
+[[ $compose_version =~ ^([0-9]+)\.([0-9]+) ]] || fail '无法识别 Compose 版本'
+(( BASH_REMATCH[1] > 2 || (BASH_REMATCH[1] == 2 && BASH_REMATCH[2] >= 20) )) || fail '需要 Docker Compose >=2.20'
+endpoint=${DOCKER_HOST:-$(docker context inspect --format '{{.Endpoints.docker.Host}}' 2>/dev/null)}
+[[ $endpoint == unix://* ]] || fail '仅支持本机 Unix socket Docker，远程 daemon 无法使用本机持久目录'
+[[ $(docker info --format '{{.OSType}}') == linux ]] || fail 'Docker 必须使用 Linux 容器'
+arch=$(normalize_arch "$(docker info --format '{{.Architecture}}')")
 managed() { [[ -f $root/.control/project && -f $root/.control/current ]] || fail '此目录不是安装器管理的实例；不会接管既有数据'; }
 compose_at() {
   local release=$1; shift
@@ -368,17 +422,21 @@ if [[ $command_name == install ]]; then
     [[ $project =~ ^clouddrive-[a-f0-9]{12}$ ]] || fail '实例标记无效'
   else
     [[ ! -e $root || ( -d $root && -z $(ls -A -- "$root") ) ]] || fail '目标目录非空；不会覆盖既有文件或接管数据库'
+    project=$(project_for_root)
+    check_fresh_project
   fi
   resolve_version
   prepare_release
   network_configuration
   if [[ $resume == true ]]; then port=$(sed -n 's/^WEB_PORT=//p' "$root/runtime.env"); fi
+  show_deployment
   docker run --rm --pull never --network host "$web_image" node -e 'const s=require("node:net").createServer();s.once("error",()=>process.exit(1));s.listen(Number(process.argv[1]),process.argv[2].replace(/^\[|\]$/g,""),()=>s.close())' "$port" "$bind" || fail '监听 IP 不可用或端口已占用；尚未执行迁移'
   mkdir -p -- "$root/.control" "$root/releases" "$root/backups" "$root/data"
   exec 9>"$root/.control/lock"; flock -n 9 || fail '另一个安装/升级操作正在执行'
   if [[ -f $root/.control/current ]]; then printf '另一个安装操作已完成，此实例无需重复初始化。\n'; exit 0; fi
   if [[ $resume == false ]]; then
-  project="clouddrive-$(printf '%s' "$root" | sha256sum | cut -c1-12)"
+  [[ ! -f $root/.control/project ]] || fail '另一个安装已预留此目录，请使用原命令重试'
+  check_fresh_project
   printf '%s\n' "$project" > "$root/.control/project"
   token=$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')
   printf 'WEB_PORT=%s\nSETUP_TOKEN=%s\n' "$port" "$token" > "$root/runtime.env"
@@ -398,7 +456,8 @@ if [[ $command_name == install ]]; then
   probe "$version" || fail '安装后就绪/版本检查未通过'
   atomic_current "$version"; rm -f -- "$root/.control/candidate"; stop_recovery=false
   install_manager
-  local setup_origin=${public_origin:-"http://<服务器地址>:$port"}
+  local setup_origin
+  setup_origin=$(access_origin)
   printf '安装完成：%s\nWeb 端口：%s:%s；访问 %s/setup 创建管理员。\n设置令牌保存在 %s/.control/setup-token（不输出令牌）。\n管理入口：%s/install.sh\n' "$root" "$bind" "$port" "$setup_origin" "$root" "$root"
   exec 9>&-
   if [[ $enable_web == true ]]; then enable_maintenance; fi

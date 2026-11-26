@@ -1,11 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  access,
   mkdtemp,
   mkdir,
   writeFile,
   readFile,
   chmod,
+  realpath,
   rm,
   cp,
 } from "node:fs/promises";
@@ -20,6 +22,8 @@ const apiConfig =
   webConfig = '{"os":"linux","architecture":"amd64","config":{"Image":"web"}}';
 const apiID = "sha256:" + createHash("sha256").update(apiConfig).digest("hex"),
   webID = "sha256:" + createHash("sha256").update(webConfig).digest("hex");
+const projectFor = (path) =>
+  `clouddrive-${createHash("sha256").update(path).digest("hex").slice(0, 12)}`;
 async function fixture(t) {
   const base = await mkdtemp(join(tmpdir(), "clouddrive-installer-unit-"));
   t.after(() => rm(base, { recursive: true, force: true }));
@@ -44,6 +48,19 @@ printf '%s\\n' "$*" >> "$FAKE_LOG"
 case "$1" in
  info) case "\${*:2}" in *Architecture*) echo amd64 ;; *OSType*) echo linux ;; *) true ;; esac ;;
  context) echo unix:///fake/docker.sock ;;
+ ps)
+   for option; do
+     case "\${FAKE_NAME_CONFLICT:-}:$option" in
+       project-container:label=com.docker.compose.project=*) echo "\${option#label=com.docker.compose.project=}-other-1" ;;
+       exact-container:name=*'-web-1$') name=\${option#name=^/}; echo "\${name%\$}" ;;
+     esac
+   done ;;
+ network)
+   if [[ $2 == ls && \${FAKE_NAME_CONFLICT:-} == network ]]; then
+     for option; do
+       case $option in name=*) name=\${option#name=^}; echo "\${name%\$}" ;; esac
+     done
+   fi ;;
  image)
    case "$2" in
      load) true ;;
@@ -140,6 +157,66 @@ esac
   };
   return { base, root, log, env, run, bundle, install };
 }
+test("部署计划显示自定义入口和精确资源路径，且不调用 Docker 或创建目录", async (t) => {
+  const f = await fixture(t);
+  const root = join(await realpath(f.base), "CloudDrive instance");
+  const project = projectFor(root);
+  const arch = process.arch === "arm64" ? "arm64" : "amd64";
+  const result = f.run([
+    "plan",
+    "--dir",
+    root,
+    "--bind",
+    "127.0.0.1",
+    "--port",
+    "44217",
+    "--public-url",
+    "https://drive.example.test",
+    "--version",
+    "v1.0.0",
+    "--release-dir",
+    f.base,
+  ]);
+  assert.equal(result.status, 0, result.stderr);
+  const output = result.stdout.split("\n");
+  for (const [label, expected] of [
+    ["安装目录", root],
+    ["数据目录", join(root, "data")],
+    ["Compose 项目", project],
+    ["容器", `${project}-backend-1`],
+    ["容器", `${project}-web-1`],
+    ["镜像", `clouddrive-api:v1.0.0-${arch}`],
+    ["镜像", `clouddrive-web:v1.0.0-${arch}`],
+    ["网络", `${project}_default`],
+    ["端口", "127.0.0.1:44217"],
+    ["访问地址", "https://drive.example.test"],
+  ]) {
+    assert.ok(
+      output.some(
+        (line) => line.startsWith(`${label}：`) && line.includes(expected),
+      ),
+      `缺少${label} ${expected}\n${result.stdout}`,
+    );
+  }
+  await assert.rejects(access(root), { code: "ENOENT" });
+  await assert.rejects(access(f.log), { code: "ENOENT" });
+
+  const rejected = f.run([
+    "plan",
+    "--dir",
+    root,
+    "--public-url",
+    "https://user:fixture-password@drive.example.test",
+    "--version",
+    "v1.0.0",
+  ]);
+  assert.notEqual(rejected.status, 0);
+  assert.match(rejected.stderr, /--public-url/);
+  assert.doesNotMatch(rejected.stdout + rejected.stderr, /fixture-password/);
+  await assert.rejects(access(root), { code: "ENOENT" });
+  await assert.rejects(access(f.log), { code: "ENOENT" });
+});
+
 test("下载校验失败不会创建实例或执行迁移", async (t) => {
   const f = await fixture(t),
     source = await f.bundle("v1.0.0");
@@ -220,6 +297,27 @@ test("安装不接管非空目录，端口冲突发生在迁移前", async (t) =
     await readFile(f.log, "utf8"),
     /run --rm --no-deps migrate/,
   );
+});
+test("同名 Compose 容器或网络在首次安装前拒绝接管", async (t) => {
+  for (const [type, suffix] of [
+    ["project-container", "-other-1"],
+    ["exact-container", "-web-1"],
+    ["network", "_default"],
+  ]) {
+    const f = await fixture(t);
+    const root = join(await realpath(f.base), "instance");
+    const result = f.run(
+      ["install", "--dir", root, "--version", "v1.0.0", "--release-dir", f.base],
+      { FAKE_NAME_CONFLICT: type },
+    );
+    assert.notEqual(result.status, 0);
+    assert.ok(result.stderr.includes(projectFor(root) + suffix), result.stderr);
+    assert.doesNotMatch(
+      await readFile(f.log, "utf8"),
+      /image load|migrate| up | stop/,
+    );
+    await assert.rejects(access(root), { code: "ENOENT" });
+  }
 });
 test("重复安装幂等，升级先备份再迁移且保留私有配置", async (t) => {
   const f = await fixture(t);
@@ -306,7 +404,7 @@ test("status 的 compatible=false 即使退出码为零也禁止恢复旧镜像"
     /v1\.0\.0\/compose.yaml up --detach/,
   );
 });
-test("最新稳定版只解析一次，全部资产使用固定 tag", async (t) => {
+test("直接管道安装只解析一次最新稳定版，全部发布资产使用固定 tag", async (t) => {
   const f = await fixture(t);
   const source = await f.bundle("v1.0.0");
   const requests = join(f.base, "curl.log");
@@ -316,17 +414,38 @@ test("最新稳定版只解析一次，全部资产使用固定 tag", async (t) 
 const fs=require('node:fs'),path=require('node:path'),args=process.argv.slice(2);
 const url=args.find(x=>x.startsWith('https://'));
 fs.appendFileSync(process.env.FAKE_CURL_LOG,url+'\\n');
-if(url.endsWith('/releases/latest')) process.stdout.write('https://github.com/reina0721/neocloud/releases/tag/v1.0.0');
+if(url.endsWith('/download/install.sh')) process.stdout.write(fs.readFileSync(path.join(process.env.FAKE_ASSETS,'stage','install.sh')));
+else if(url.endsWith('/releases/latest')) process.stdout.write('https://github.com/reina0721/neocloud/releases/tag/v1.0.0');
 else fs.copyFileSync(path.join(process.env.FAKE_ASSETS,path.basename(url)),args[args.indexOf('--output')+1]);
 `,
     { mode: 0o700 },
   );
-  const result = f.run(["install", "--dir", f.root], {
-    FAKE_CURL_LOG: requests,
-    FAKE_ASSETS: source,
-  });
+  const bootstrap =
+    "https://github.com/reina0721/neocloud/releases/latest/download/install.sh";
+  const result = spawnSync(
+    "bash",
+    [
+      "-o",
+      "pipefail",
+      "-c",
+      'curl -fsSL "$1" | bash -s -- install --dir "$2" --bind 127.0.0.1 --port 4180',
+      "_",
+      bootstrap,
+      f.root,
+    ],
+    {
+      env: { ...f.env, FAKE_CURL_LOG: requests, FAKE_ASSETS: source },
+      encoding: "utf8",
+      timeout: 25000,
+    },
+  );
   assert.equal(result.status, 0, result.stderr);
+  const config = await readFile(join(f.root, "runtime.env"), "utf8");
+  assert.match(config, /^WEB_BIND=127\.0\.0\.1$/m);
+  assert.match(config, /^WEB_PORT=4180$/m);
+  assert.match(result.stdout, /http:\/\/127\.0\.0\.1:4180\/setup/);
   assert.deepEqual((await readFile(requests, "utf8")).trim().split("\n"), [
+    bootstrap,
     "https://github.com/reina0721/neocloud/releases/latest",
     "https://github.com/reina0721/neocloud/releases/download/v1.0.0/checksums.txt",
     "https://github.com/reina0721/neocloud/releases/download/v1.0.0/clouddrive_v1.0.0_linux_amd64_docker.tar.gz",
