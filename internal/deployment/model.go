@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/netip"
@@ -122,6 +123,20 @@ func readText(path string) (string, error) {
 	// #nosec G304 -- 只读取宿主机控制目录的固定标记或凭据文件。
 	b, err := os.ReadFile(path)
 	return strings.TrimSpace(string(b)), err
+}
+
+func maintenanceProject(root string) (string, error) {
+	name, err := readText(filepath.Join(root, ".control", "maintenance-project"))
+	if errors.Is(err, os.ErrNotExist) {
+		name, err = readText(filepath.Join(root, ".control", "project"))
+	}
+	if err != nil {
+		return "", fmt.Errorf("读取实例维护标记: %w", err)
+	}
+	if !projectPattern.MatchString(name) {
+		return "", errors.New("实例维护标记无效")
+	}
+	return name, nil
 }
 
 func ReadJSON(path string, value any) error {

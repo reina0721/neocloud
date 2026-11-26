@@ -44,9 +44,13 @@ func Enable(ctx context.Context, root, trustedProxy, cosign, dockerHost string) 
 	if err = exec.CommandContext(ctx, cosign, "version").Run(); err != nil {
 		return errors.New("无法执行 cosign")
 	}
-	project, err := readText(filepath.Join(root, ".control", "project"))
-	if err != nil || !projectPattern.MatchString(project) {
-		return errors.New("实例标记无效")
+	project, err := maintenanceProject(root)
+	if err != nil {
+		return err
+	}
+	dataDir, err := instanceDataDir(root)
+	if err != nil {
+		return err
 	}
 	lock := flock.New(filepath.Join(root, ".control", "lock"))
 	defer lock.Close()
@@ -55,7 +59,7 @@ func Enable(ctx context.Context, root, trustedProxy, cosign, dockerHost string) 
 		return errors.Join(err, ErrBusy)
 	}
 	cfg := Config{Project: project, TrustedProxy: trustedProxy}
-	e := engine{root: root, cfg: cfg}
+	e := engine{root: root, dataDir: dataDir, cfg: cfg}
 	configPath := filepath.Join(e.control(), "gateway.json")
 	if _, err := os.Stat(configPath); err == nil {
 		return errors.New("此实例已启用网页运维")

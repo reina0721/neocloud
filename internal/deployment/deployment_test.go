@@ -41,7 +41,10 @@ action=$1; root=$3; version=$5
 printf '%s %s\n' "$action" "$version" >> "$root/calls"
 if [[ -f "$root/fail" ]] && grep -Fqx "$action $version" "$root/fail"; then exit 7; fi
 case "$action" in
-_capture) tar -C "$root/data" -czf - . ;;
+_capture)
+  data="$root/data"
+  if [[ -f "$root/.control/data-dir" ]]; then data=$(cat "$root/.control/data-dir"); fi
+  tar -C "$data" -czf - . ;;
 _extract) tar -C "$CLOUDDRIVE_MAINTENANCE_STAGE" -xzf - ;;
 esac
 `,
@@ -108,6 +111,127 @@ func TestCompleteRestoreAndRollback(t *testing.T) {
 	got, _ := readText(filepath.Join(root, "data/storage/file"))
 	if got != "baseline" {
 		t.Fatal("rollback changed live data")
+	}
+}
+
+func customLayout(t *testing.T) (*Worker, string, string) {
+	t.Helper()
+	w, root := fixture(t)
+	data := filepath.Join(t.TempDir(), "CloudDrive data")
+	if err := os.Rename(filepath.Join(root, "data"), data); err != nil {
+		t.Fatal(err)
+	}
+	for name, value := range map[string]string{
+		"project": "team-documents", "maintenance-project": w.engine.cfg.Project, "data-dir": data,
+	} {
+		if err := os.WriteFile(filepath.Join(root, ".control", name), []byte(value+"\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	next, err := NewWorker(t.Context(), root, w.engine.cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return next, root, data
+}
+
+func TestCustomLayoutRestore(t *testing.T) {
+	w, root, data := customLayout(t)
+	backup := submitTest(t, w, "backup", "", "")
+	if backup.Phase != "succeeded" {
+		t.Fatalf("backup: %+v", backup)
+	}
+	const updated = "after snapshot"
+	if err := os.WriteFile(filepath.Join(data, "storage", "file"), []byte(updated), 0600); err != nil {
+		t.Fatal(err)
+	}
+	restore := submitTest(t, w, "restore", backup.Backup, backup.Backup)
+	if restore.Phase != "succeeded" {
+		t.Fatalf("restore: %+v", restore)
+	}
+	for name, want := range map[string]string{
+		filepath.Join(data, "storage", "file"): "baseline",
+		filepath.Join(filepath.Dir(data), ".clouddrive-restore-"+restore.ID, "original-data", "storage", "file"): updated,
+		filepath.Join(root, ".control", "maintenance", "restore-"+restore.ID, "original.env"):                    "WEB_PORT=4173",
+	} {
+		got, err := readText(name)
+		if err != nil || got != want {
+			t.Fatalf("%s: %q %v", name, got, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "data")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("restored to default data directory: %v", err)
+	}
+}
+
+func TestCustomLayoutRestoreRecovery(t *testing.T) {
+	for _, tc := range []string{"live directory absent", "replacement installed"} {
+		t.Run(tc, func(t *testing.T) {
+			w, root, data := customLayout(t)
+			backup := submitTest(t, w, "backup", "", "")
+			if backup.Phase != "succeeded" {
+				t.Fatalf("backup: %+v", backup)
+			}
+			const updated = "live data before restore"
+			if err := os.WriteFile(filepath.Join(data, "storage", "file"), []byte(updated), 0600); err != nil {
+				t.Fatal(err)
+			}
+			const changedConfig = "WEB_PORT=4180"
+			configPath := filepath.Join(root, "runtime.env")
+			if err := os.WriteFile(configPath, []byte(changedConfig), 0600); err != nil {
+				t.Fatal(err)
+			}
+			id := RandomID()
+			if err := w.change(func(s *State) {
+				s.Serving = false
+				s.Jobs = append(s.Jobs, Job{
+					Request:  Request{ID: id, Action: "restore", Target: backup.Backup},
+					Original: fromVersion, WasServing: true, Phase: "restore-switch",
+				})
+			}); err != nil {
+				t.Fatal(err)
+			}
+			stage := filepath.Join(filepath.Dir(data), "restore-stage")
+			meta := w.Status().Backups[0]
+			if tc == "replacement installed" {
+				if err := os.Mkdir(stage, 0700); err != nil {
+					t.Fatal(err)
+				}
+				if err := w.engine.prepareRestore(t.Context(), meta, stage); err != nil {
+					t.Fatal(err)
+				}
+			}
+			err := w.engine.beginSwap(id, meta, stage)
+			if tc == "replacement installed" && err != nil || tc == "live directory absent" && !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("swap: %v", err)
+			}
+			next, err := NewWorker(t.Context(), root, w.engine.cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			state := next.Status()
+			if !state.Serving || state.Recovery || findJob(&state, id).Phase != "interrupted" {
+				t.Fatalf("recovered state: %+v", state)
+			}
+			if err := next.engine.undoSwap(id); err != nil {
+				t.Fatalf("repeated recovery: %v", err)
+			}
+			for name, want := range map[string]string{
+				filepath.Join(data, "storage", "file"): updated,
+				configPath:                             changedConfig,
+			} {
+				got, err := readText(name)
+				if err != nil || got != want {
+					t.Fatalf("%s: %q %v", name, got, err)
+				}
+			}
+			if tc == "replacement installed" {
+				name := filepath.Join(filepath.Dir(data), ".clouddrive-restore-"+id, "failed-data", "storage", "file")
+				if got, err := readText(name); err != nil || got != "baseline" {
+					t.Fatalf("failed replacement was not retained: %q %v", got, err)
+				}
+			}
+		})
 	}
 }
 

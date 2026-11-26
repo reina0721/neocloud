@@ -11,6 +11,8 @@ import {
   chmod,
   rm,
   readdir,
+  lstat,
+  realpath,
 } from "node:fs/promises";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { tmpdir, networkInterfaces } from "node:os";
@@ -165,6 +167,197 @@ async function request(path, method = "GET", body) {
   return response.json();
 }
 const sha = (b) => createHash("sha256").update(b).digest("hex");
+async function exerciseInstanceLayout(version) {
+  const release = join(root, "releases", version);
+  const manifest = await readFile(join(release, "manifest.txt"), "utf8");
+  if (!manifest.split("\n").includes("INSTANCE_LAYOUT=1")) return;
+
+  const parent = await realpath(base);
+  const instance = join(parent, "named-instance");
+  const data = join(parent, "named-data");
+  const name = `clouddrive-test-${randomBytes(8).toString("hex")}`;
+  const volume = `${name}-instance`;
+  const owner = sha(Buffer.from([instance, name, data].join("\0")));
+  const instancePort = await freePort();
+  const dockerOutput = (...args) => run("docker", args).stdout.trim();
+  const args = (project, dir, storage, publishedPort) => [
+    "--name",
+    project,
+    "--dir",
+    dir,
+    "--data-dir",
+    storage,
+    "--bind",
+    "127.0.0.1",
+    "--port",
+    String(publishedPort),
+    "--version",
+    version,
+    "--release-dir",
+    source,
+  ];
+  const volumeExists = (target) =>
+    dockerOutput("volume", "ls", "-q", "--filter", `name=${target}`)
+      .split("\n")
+      .includes(target);
+  const assertAbsent = async (path) => {
+    await assert.rejects(lstat(path), { code: "ENOENT" });
+  };
+  const volumeOwner = () =>
+    dockerOutput(
+      "volume",
+      "inspect",
+      "--format",
+      '{{index .Labels "io.clouddrive.release.owner"}}',
+      volume,
+    );
+  let stopped = false;
+  let completed = false;
+  try {
+    const installArgs = args(name, instance, data, instancePort);
+    const planned = install("plan", "--check", ...installArgs);
+    for (const value of [instance, data, name, volume, String(instancePort)]) {
+      assert.ok(planned.stdout.includes(value), planned.stdout);
+    }
+    await assertAbsent(instance);
+    await assertAbsent(data);
+    assert.equal(volumeExists(volume), false);
+    assert.equal(
+      dockerOutput(
+        "ps",
+        "-aq",
+        "--filter",
+        `label=com.docker.compose.project=${name}`,
+      ),
+      "",
+    );
+    assert.equal(
+      dockerOutput("network", "ls", "-q", "--filter", `name=^${name}_default$`),
+      "",
+    );
+
+    install("install", ...installArgs);
+    assert.equal(
+      (await readFile(join(instance, ".control/project"), "utf8")).trim(),
+      name,
+    );
+    assert.equal(
+      (await readFile(join(instance, ".control/data-dir"), "utf8")).trim(),
+      data,
+    );
+    await assertAbsent(join(instance, "data"));
+
+    const [backend, web] = JSON.parse(
+      dockerOutput("container", "inspect", `${name}-backend-1`, `${name}-web-1`),
+    );
+    for (const container of [backend, web]) {
+      assert.equal(container.Config.Labels["com.docker.compose.project"], name);
+      assert.ok(container.NetworkSettings.Networks[`${name}_default`]);
+    }
+    const mount = backend.Mounts.find(
+      (item) => item.Destination === "/app/.data",
+    );
+    assert.equal(mount?.Type, "bind");
+    assert.equal(mount.Source, data);
+    assert.equal(mount.RW, true);
+    assert.equal(volumeOwner(), owner);
+    assert.equal(
+      (
+        await fetch(`http://127.0.0.1:${instancePort}/login`, {
+          signal: AbortSignal.timeout(15000),
+        })
+      ).status,
+      200,
+    );
+
+    const conflictRoot = join(parent, "layout-conflict");
+    const unusedData = join(parent, "layout-unused");
+    const unusedPort = await freePort();
+    const otherName = `${name}-two`;
+    const rejectConflict = async (conflictingArgs, details) => {
+      for (const command of [["plan", "--check"], ["install"]]) {
+        const failed = run(
+          "bash",
+          [bootstrap, ...command, ...conflictingArgs],
+          { failure: true },
+        );
+        for (const value of details)
+          assert.ok(failed.stderr.includes(value), failed.stderr);
+        assert.doesNotMatch(failed.stderr, /下载 checksums\.txt/);
+        await assertAbsent(conflictRoot);
+        await assertAbsent(unusedData);
+        assert.equal(volumeExists(`${otherName}-instance`), false);
+      }
+    };
+    await rejectConflict(args(name, conflictRoot, unusedData, unusedPort), [
+      name,
+      "--name",
+    ]);
+    await rejectConflict(args(otherName, conflictRoot, data, unusedPort), [
+      data,
+      "--data-dir",
+    ]);
+    await rejectConflict(
+      args(otherName, conflictRoot, unusedData, instancePort),
+      [`127.0.0.1:${instancePort}`, "--port"],
+    );
+
+    compose(instance, version, "down", "--remove-orphans");
+    stopped = true;
+    await rejectConflict(args(name, conflictRoot, unusedData, unusedPort), [
+      volume,
+      "--name",
+    ]);
+    console.log(
+      "真实 Docker 自定义实例验证通过：外部数据挂载、项目命名、同名与路径及端口预检。",
+    );
+    completed = true;
+  } finally {
+    try {
+      if (volumeExists(volume)) {
+        assert.equal(
+          volumeOwner(),
+          owner,
+          "拒绝清理不属于当前测试的实例归属卷",
+        );
+        const config = join(instance, "releases", version, "compose.yaml");
+        const installed = await lstat(config).then(
+          () => true,
+          (error) => {
+            if (error.code !== "ENOENT") throw error;
+            return false;
+          },
+        );
+        if (!stopped && installed)
+          compose(instance, version, "down", "--remove-orphans");
+        dockerOutput("volume", "rm", volume);
+
+        const webImage = (await readFile(join(release, "images.env"), "utf8"))
+          .split("\n")
+          .find((line) => line.startsWith("WEB_IMAGE="))
+          .slice(10);
+        run("docker", [
+          "run",
+          "--rm",
+          "--pull",
+          "never",
+          "--user",
+          "0:0",
+          "--mount",
+          `type=bind,source=${parent},target=/fixture`,
+          webImage,
+          "node",
+          "-e",
+          'require("node:fs").rmSync("/fixture/named-data",{recursive:true,force:true})',
+        ]);
+        await assertAbsent(data);
+      }
+    } catch (error) {
+      if (completed) throw error;
+      console.error("自定义实例验收清理失败：", error);
+    }
+  }
+}
 async function storageSnapshot() {
   const webImage = (
     await readFile(join(root, "releases", active, "images.env"), "utf8")
@@ -221,6 +414,7 @@ try {
     "--release-dir",
     source,
   );
+  await exerciseInstanceLayout(active);
   if (values["legacy-entrypoint"]) {
     // 后续成功升级真正由旧包自带安装器执行，验证已发布管理入口的兼容性。
     await cp(join(root, "install.sh"), bootstrap);

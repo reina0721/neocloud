@@ -19,12 +19,47 @@ import (
 
 type engine struct {
 	root     string
+	dataDir  string
 	cfg      Config
 	releases *Releases
 }
 
 func (e engine) control() string     { return filepath.Join(e.root, ".control", "maintenance") }
 func (e engine) currentPath() string { return filepath.Join(e.root, ".control", "current") }
+
+func instanceDataDir(root string) (string, error) {
+	// #nosec G304 -- 只读取安装目录下的固定实例标记。
+	value, err := os.ReadFile(filepath.Join(root, ".control", "data-dir"))
+	if errors.Is(err, os.ErrNotExist) {
+		return filepath.Join(root, "data"), nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("读取实例数据目录标记: %w", err)
+	}
+	// 恢复中断时数据目录可能尚未换回。这里只验证持久化路径。
+	dataDir := strings.TrimSuffix(string(value), "\n")
+	if !filepath.IsAbs(dataDir) || filepath.Clean(dataDir) != dataDir || dataDir == root || filepath.Dir(dataDir) == dataDir ||
+		strings.HasPrefix(root, dataDir+string(filepath.Separator)) || strings.ContainsAny(dataDir, "\x00\r\n,:") {
+		return "", errors.New("实例的数据目录标记无效")
+	}
+	if relative, ok := strings.CutPrefix(dataDir, root+string(filepath.Separator)); ok {
+		branch, _, _ := strings.Cut(relative, string(filepath.Separator))
+		switch branch {
+		case ".control", "releases", "backups", "runtime.env", "install.sh":
+			return "", errors.New("实例数据目录与安装文件重叠")
+		}
+	}
+	return dataDir, nil
+}
+
+func (e engine) restoreStash(journal string) string {
+	if e.dataDir == filepath.Join(e.root, "data") {
+		return journal
+	}
+	// 数据换入和换回的重命名都必须留在数据目录所在的文件系统。
+	return filepath.Join(filepath.Dir(e.dataDir), ".clouddrive-"+filepath.Base(journal))
+}
+
 func (e engine) tool(ctx context.Context, version, action string, params ...string) *exec.Cmd {
 	arguments := []string{filepath.Join(e.control(), "engine.sh"), action, "--dir", e.root, "--version", version}
 	// #nosec G204 -- engine.sh 来自已安装发布包，操作名由执行器选取，参数按 argv 传递。
@@ -258,6 +293,12 @@ func (e engine) beginSwap(jobID string, meta Snapshot, stage string) error {
 	if err := os.Mkdir(dir, 0700); err != nil {
 		return err
 	}
+	stash := e.restoreStash(dir)
+	if stash != dir {
+		if err := os.Mkdir(stash, 0700); err != nil {
+			return err
+		}
+	}
 	config := filepath.Join(e.root, "runtime.env")
 	// #nosec G304 -- runtime.env 固定在安装者指定的实例根下。
 	original, err := os.ReadFile(config)
@@ -271,14 +312,20 @@ func (e engine) beginSwap(jobID string, meta Snapshot, stage string) error {
 	if err = atomicWrite(filepath.Join(dir, "original.env"), original, 0600); err != nil {
 		return err
 	}
-	data := filepath.Join(e.root, "data")
-	if err = os.Rename(data, filepath.Join(dir, "original-data")); err != nil {
+	if err = syncDirectory(e.control()); err != nil {
 		return err
 	}
-	if err = os.Rename(stage, data); err != nil {
+	if err = os.Rename(e.dataDir, filepath.Join(stash, "original-data")); err != nil {
 		return err
 	}
-	if err = errors.Join(syncDirectory(dir), syncDirectory(e.root)); err != nil {
+	dataParent := filepath.Dir(e.dataDir)
+	if err = errors.Join(syncDirectory(stash), syncDirectory(dataParent)); err != nil {
+		return err
+	}
+	if err = os.Rename(stage, e.dataDir); err != nil {
+		return err
+	}
+	if err = syncDirectory(dataParent); err != nil {
 		return err
 	}
 	return atomicWrite(config, replacement, 0600)
@@ -286,7 +333,8 @@ func (e engine) beginSwap(jobID string, meta Snapshot, stage string) error {
 
 func (e engine) undoSwap(jobID string) error {
 	dir := filepath.Join(e.control(), "restore-"+jobID)
-	original := filepath.Join(dir, "original-data")
+	stash := e.restoreStash(dir)
+	original := filepath.Join(stash, "original-data")
 	if _, err := os.Lstat(original); errors.Is(err, os.ErrPermission) {
 		// The data directory is owned by the container UID; its parent owns renames.
 	} else if errors.Is(err, os.ErrNotExist) {
@@ -299,9 +347,14 @@ func (e engine) undoSwap(jobID string) error {
 	if err != nil {
 		return err
 	}
-	data := filepath.Join(e.root, "data")
-	if _, err := os.Lstat(data); err == nil {
-		if err = os.Rename(data, filepath.Join(dir, "failed-data")); err != nil {
+	if _, err := os.Lstat(e.dataDir); err == nil {
+		failed := filepath.Join(stash, "failed-data")
+		if _, err = os.Lstat(failed); err == nil {
+			return errors.New("恢复失败的数据和当前数据均存在，请检查宿主机目录")
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		if err = os.Rename(e.dataDir, failed); err != nil {
 			return err
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
@@ -310,8 +363,8 @@ func (e engine) undoSwap(jobID string) error {
 	if err = atomicWrite(filepath.Join(e.root, "runtime.env"), config, 0600); err != nil {
 		return err
 	}
-	if err = os.Rename(original, data); err != nil {
+	if err = os.Rename(original, e.dataDir); err != nil {
 		return err
 	}
-	return errors.Join(syncDirectory(dir), syncDirectory(e.root))
+	return errors.Join(syncDirectory(stash), syncDirectory(filepath.Dir(e.dataDir)))
 }

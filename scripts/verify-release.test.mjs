@@ -107,7 +107,7 @@ test("预发布标签不能自动提升为正式版本", () => {
   assert.throws(() => requiredAssets("v0.1.0-rc.1"), /仅正式版本/);
 });
 
-async function fixture(t, { armSha = sha } = {}) {
+async function fixture(t, { armSha = sha, layout = true } = {}) {
   const directory = await mkdtemp(join(tmpdir(), "release-assets-unit-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const installerPath = join(directory, "source-installer");
@@ -140,7 +140,7 @@ async function fixture(t, { armSha = sha } = {}) {
     );
     await writeFile(
       join(stage, "manifest.txt"),
-      `FORMAT=1\nVERSION=${tag}\nARCH=${arch}\nCOMMIT=${arch === "arm64" ? armSha : sha}\nAPI_ID=sha256:${"1".repeat(64)}\nWEB_ID=sha256:${"2".repeat(64)}\n`,
+      `FORMAT=1\n${layout ? "INSTANCE_LAYOUT=1\n" : ""}VERSION=${tag}\nARCH=${arch}\nCOMMIT=${arch === "arm64" ? armSha : sha}\nAPI_ID=sha256:${"1".repeat(64)}\nWEB_ID=sha256:${"2".repeat(64)}\n`,
     );
     execFileSync("tar", [
       "-czf",
@@ -176,6 +176,10 @@ async function fixture(t, { armSha = sha } = {}) {
 }
 test("完整双架构产物及其清单可通过验收", async (t) =>
   verifyAssets(await fixture(t)));
+
+test("缺少自定义布局能力的草稿产物不能发布", async (t) => {
+  await assert.rejects(verifyAssets(await fixture(t, { layout: false })), /INSTANCE_LAYOUT/);
+});
 for (const missing of [
   "checksums.txt.sigstore.json",
   `clouddrive_${tag}_linux_arm64_docker.tar.gz`,

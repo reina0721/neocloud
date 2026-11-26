@@ -27,6 +27,17 @@
 
 打开 `http://服务器IP:4180/setup`，使用 `~/clouddrive/.control/setup-token` 的令牌创建管理员。SQLite、文件和传输暂存保存在 `~/clouddrive/data/`。示例显式使用 `4180`，现有正式安装器省略端口时使用 `4173`。
 
+支持自定义布局的下一版发布后，可在同一条命令指定 Compose 项目和数据盘目录。上面的命令适用于已发布的 `v0.2.2`。
+
+```bash
+(set -o pipefail; curl -fsSL --proto '=https' --proto-redir '=https' \
+  https://github.com/reina0721/neocloud/releases/latest/download/install.sh | \
+  bash -s -- install --name cloud-main --dir /opt/clouddrive \
+    --data-dir /mnt/data/cloud-main --bind 0.0.0.0 --port 4180)
+```
+
+要在下载镜像前核对项目名、数据目录和端口，把 `install` 换成 `plan --check`。检查与安装需要本机 Docker 和 iproute2。见[自定义实例与安装检查](docs/operations/clouddrive-deployment.md#自定义实例与安装检查)。
+
 ```bash
 ~/clouddrive/install.sh check-update  # 检查正式版
 ~/clouddrive/install.sh upgrade       # 备份并升级

@@ -73,6 +73,8 @@ node scripts/test-docker-release.mjs --release-dir dist/docker-amd64 --version v
 
 安装包保留 `NETWORK=1`，新增 `ENTRYPOINT=1` 表示支持自动同源入口。原生发布任务分别通过回环地址和 `--network-host` 指定的 runner 非回环 IPv4 访问默认安装，不传外部地址或 HTTP 开关；实际核对默认监听、Cookie、初始化、文件、WebDAV 地址与读写、伪造 Origin/CSRF 拒绝、会话与重启。开发机可以给 `scripts/test-docker-release.mjs` 添加 `--network-host <当前机器IPv4>` 重现；不能以 localhost 的安全上下文代替普通 HTTP 浏览器验收。HTTP 的真实浏览器操作需要额外验证，不能由 Node HTTP 客户端通过推定。
 
+`manifest.txt` 中的 `INSTANCE_LAYOUT=1` 标记支持自定义 Compose 项目名和数据目录。该版本升级旧实例时沿用已有布局。使用自定义布局的实例须选择具有该标记的版本。[自定义实例与安装检查](clouddrive-deployment.md#自定义实例与安装检查)
+
 两个候选版本的真实升级验收使用：
 
 ```bash

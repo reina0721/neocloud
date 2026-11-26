@@ -105,9 +105,34 @@ bash scripts/deploy-docker.sh stop
 | 镜像 | `clouddrive-api:<版本>-<架构>`、`clouddrive-web:<版本>-<架构>` |
 | 端口 | 宿主机 `0.0.0.0:4180` 映射到 Web 容器 `4173/tcp`。Go 的 `8080` 和 `9090` 在容器网络内 |
 
-新版安装器发布后，把在线命令中的 `install` 替换为 `plan` 即可预览。同一组参数会解析正式版本并列出资源，无需连接 Docker 或写入安装目录。新版实际安装会在迁移前显示这些信息，并检查同名 Docker 项目是否已被占用。已发布的 `v0.2.2` 使用上面的在线安装命令。
-
 通过本机 HTTPS 反代公开时，在同一安装命令中使用 `--bind 127.0.0.1 --port 4180 --public-url https://drive.example.com`。让代理将该域名转发到 `127.0.0.1:4180`，保留原始 Host 并转发 HTTPS 协议。浏览器和 WebDAV 共用这个公开地址。
+
+### 自定义实例与安装检查
+
+带有 `INSTANCE_LAYOUT=1` 安装包的新版本发布后，可在同一条在线命令指定项目名、安装目录及数据目录。使用 `v0.2.2` 时，沿用上节的命令和目录规则。
+
+```bash
+(set -o pipefail; curl -fsSL --proto '=https' --proto-redir '=https' \
+  https://github.com/reina0721/neocloud/releases/latest/download/install.sh | \
+  bash -s -- install --name cloud-main --dir /opt/clouddrive \
+    --data-dir /mnt/data/cloud-main --bind 0.0.0.0 --port 4180)
+```
+
+| 参数 | 本例结果 |
+| --- | --- |
+| `--name cloud-main` | Compose 项目 `cloud-main`，容器 `cloud-main-backend-1`、`cloud-main-web-1`，网络 `cloud-main_default`，用于保留实例名称的 Docker 卷 `cloud-main-instance` |
+| `--dir /opt/clouddrive` | 管理脚本、配置、备份和部署记录保存在 `/opt/clouddrive`，首次设置令牌在 `/opt/clouddrive/.control/setup-token` |
+| `--data-dir /mnt/data/cloud-main` | 将这个专用目录挂载到容器内的 `/app/.data`，存放 SQLite、文件和传输暂存 |
+| `--bind 0.0.0.0 --port 4180` | 宿主机 `0.0.0.0:4180` 到 Web 容器 `4173/tcp`，通过 `http://服务器IP:4180/setup` 初始化 |
+
+项目名以小写字母或数字开头，最多 40 个字符，可含小写字母、数字、下划线和短横线。省略 `--name` 时，从安装目录派生项目名。相同版本和架构的实例共用镜像 `clouddrive-api:<版本>-<架构>` 和 `clouddrive-web:<版本>-<架构>`。
+
+自定义布局的实例通过 `<项目>-instance` 卷保留名称。即使停止或移除了容器，这个名称仍归原实例。新增另一个实例时显式指定新的 `--name`。
+
+省略 `--data-dir` 时，数据保存在安装目录的 `data/`。相对数据路径以安装目录为基准，可以指向其中的子目录或单独的宿主机目录。首次安装可创建专用目录，或使用预先创建的空目录，运行安装的账号需要有相应写入权限。使用独立数据盘时选挂载点下的子目录，例如 `/mnt/data/cloud-main`。数据目录不能是挂载点本身、安装目录或它的上级。项目名与解析后的数据位置在安装后固定。后续升级和运维始终使用实例记录中的真实路径，不能通过替换符号链接切换存储位置。
+
+- 把命令中的 `install` 换成 `plan`，可查看名称、路径和端口映射，无需连接 Docker 或写入安装目录。固定 `--version` 或指定 `--release-dir` 可离线预览，默认在线解析最新正式版本。
+- 换成 `plan --check` 会用本机 Docker 和 iproute2 的 `ss` 检查实际冲突，检查过程不写入实例状态。正式安装也会在下载镜像前检查项目名、数据目录和监听端口。报错会指出冲突资源和对应参数。按需调整 `--name`、`--dir`、`--data-dir`、`--bind` 或 `--port` 后重试，项目名和端口以命令中的值为准。
 
 ### 安装向导
 
@@ -183,15 +208,15 @@ clouddrive/
 
 Web Host 校验外部 Host/Origin，并向 Go 转发内部同源请求；额外跨域 Origin 仍由显式白名单约束。Go 继续独立执行会话、权限和 CSRF 校验。WOPI 保留协议自身的票据验证。Web Host 覆盖客户端转发头；用于连接 URL 展示的元数据不参与鉴权、Cookie 策略或 DAV 目标授权。
 
-安装包保持 `FORMAT=1`、`NETWORK=1` 和原五项文件集合；`ENTRYPOINT=1` 表示支持无固定外部地址的 Web 入口。旧安装器可以升级到新包；新安装器拒绝把自动入口实例更新到缺少该能力的包。签名、SBOM 与维护者发布验收见[发布说明](release.md)。
+安装包保持 `FORMAT=1`、`NETWORK=1` 和原五项文件集合。`ENTRYPOINT=1` 表示支持无固定外部地址的 Web 入口，`INSTANCE_LAYOUT=1` 表示支持自定义项目名或数据目录。升级沿用已有实例的布局，并在停服前校验目标版本是否支持已用能力。签名、SBOM 与维护者发布验收见[发布说明](release.md)。
 
 ### 数据与升级失败
 
-安装目录中的 `data/` 持久化数据库、文件和传输暂存；所有版本保持容器内 `/app/.data` 的挂载目标及工作目录不变。`runtime.env` 保留用户配置与设置令牌，`.control/` 记录当前版本和实例标记，`releases/` 保留已校验的 Compose 与镜像清单。
+宿主机数据目录持久化数据库、文件和传输暂存，默认是安装目录中的 `data/`。容器内统一挂载到 `/app/.data`。`runtime.env` 保留应用配置与设置令牌，`.control/` 记录实例身份和当前版本，`releases/` 保留已校验的 Compose 与镜像清单。
 
 升级先完成下载、摘要及配套镜像校验，再停止前后端，等待退出，备份 SQLite 主文件、存在的 WAL/SHM 及配置，然后执行目标镜像的迁移和严格兼容检查，最后启动并核对 `/readyz` 和 `/build` 版本。启动检查默认等待 120 秒，可通过 `--wait-timeout 180` 调整（5–600 秒）。
 
-备份位于 `backups/时间戳/`，包含 `database.tar`、`runtime.env`、原版本、实例标记和校验和。文件 Blob 留在原 `data/storage`，不在每次升级时重复复制全部大文件；外部灾难恢复仍需要独立的文件内容备份。
+备份位于安装目录的 `backups/时间戳/`，包含 `database.tar`、`runtime.env`、原版本、实例标记和校验和。文件 Blob 留在数据目录中的 `storage/`，整机恢复须同时备份安装目录和实际数据目录。
 
 下载或校验失败不会停止服务。备份失败不会执行目标迁移。后续失败会保留数据、候选版本和备份；只有旧镜像报告各迁移集精确兼容时才恢复旧服务。否则停止自动回退，按[迁移与回滚](migration-and-rollback.md)选择 forward-fix 或经所有者确认的备份恢复，不执行自动 `down`、删除版本记录或覆盖数据库。恢复前先停止实例、另存失败现场并校验备份，不在运行中的数据库上解包。
 
@@ -214,8 +239,8 @@ Web Host 校验外部 Host/Origin，并向 Go 转发内部同源请求；额外�
 - 检查正式版可查看目标版本、发布说明和更新历史。每个实例一次运行一个维护任务，刷新维护页可以重新查看任务。
 - 升级先从 GitHub 校验签名并导入配套镜像，再停服复制完整恢复点。移除旧镜像前，确认所需恢复点仍有对应的本地镜像。宿主机可将经签名的正式包与校验附件放在 `.control/maintenance/assets/<版本>/` 供离线校验和导入。
 - `backups/full-<编号>/` 保存 SQLite、文件、传输暂存、应用配置与版本清单。创建恢复点会停服，并需要足够空间写入压缩档案。旧 CLI 生成的 SQLite 备份继续适用于人工流程。
-- 兼容回退使用上一套程序及当前数据。恢复完整备份会重新启用当时的数据和应用配置。确认前核对备份时间和恢复点编号。恢复通过原子重命名切换目录，实例数据与恢复目录需要在同一个文件系统。原数据保留在 `.control/maintenance/restore-<任务编号>/`，宿主网关配置、恢复凭据和任务记录继续生效。
-- CLI 的 `check-update`、`upgrade`、`backup`、`rollback` 和 `restore --backup-id <编号> --confirm-restore <编号>` 使用相同执行路径。服务名按实例标记命名为 `<实例标记>-gateway.service` 和 `<实例标记>-maintenance.service`。任务失败的详细阶段可在后一个服务的宿主日志中查看。
+- 兼容回退使用上一套程序及当前数据。恢复完整备份会重新启用当时的数据和应用配置。确认前核对备份时间和恢复点编号。恢复通过同一文件系统上的重命名切换数据目录。使用默认数据目录时，原数据保留在安装目录的 `.control/maintenance/restore-<任务编号>/original-data`。使用自定义数据目录时，原数据保留在该目录旁的 `.clouddrive-restore-<任务编号>/original-data`。宿主网关配置、恢复凭据和任务记录仍在原处。
+- CLI 的 `check-update`、`upgrade`、`backup`、`rollback` 和 `restore --backup-id <编号> --confirm-restore <编号>` 使用相同执行路径。systemd 用安装目录派生的维护标记命名 `<维护标记>-gateway.service` 和 `<维护标记>-maintenance.service`。Compose 容器名使用 `--name`。任务失败的详细阶段可在维护服务的宿主日志中查看。
 
 ## 构建与进程
 

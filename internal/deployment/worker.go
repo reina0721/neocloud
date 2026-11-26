@@ -31,14 +31,21 @@ type Worker struct {
 }
 
 func NewWorker(ctx context.Context, root string, cfg Config) (*Worker, error) {
-	e := engine{root: root, cfg: cfg, releases: NewReleases()}
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-	project, err := readText(filepath.Join(root, ".control", "project"))
-	if err != nil || project != cfg.Project {
+	project, err := maintenanceProject(root)
+	if err != nil {
+		return nil, err
+	}
+	if project != cfg.Project {
 		return nil, errors.New("实例标记与维护配置不匹配")
 	}
+	dataDir, err := instanceDataDir(root)
+	if err != nil {
+		return nil, err
+	}
+	e := engine{root: root, dataDir: dataDir, cfg: cfg, releases: NewReleases()}
 	current, err := readText(e.currentPath())
 	if err != nil || !releasePattern.MatchString(current) {
 		return nil, errors.New("实例当前版本无效")
@@ -404,7 +411,7 @@ func (w *Worker) restore(ctx context.Context, job Job, target string, serving bo
 	if meta.Version != target || !idPattern.MatchString(meta.ID) {
 		return ErrInvalid
 	}
-	stage, err := os.MkdirTemp(e.root, ".restore-")
+	stage, err := os.MkdirTemp(filepath.Dir(e.dataDir), ".restore-")
 	if err != nil {
 		return err
 	}

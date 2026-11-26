@@ -4,6 +4,7 @@ import {
   access,
   mkdtemp,
   mkdir,
+  readdir,
   writeFile,
   readFile,
   chmod,
@@ -30,6 +31,7 @@ async function fixture(t) {
   const bin = join(base, "bin"),
     log = join(base, "docker.log");
   await mkdir(bin);
+  await mkdir(join(base, "volumes"));
   await writeFile(join(base, "app.db"), "fixture-database");
   await mkdir(join(base, "exported/blobs/sha256"), { recursive: true });
   await writeFile(
@@ -45,16 +47,55 @@ async function fixture(t) {
     `#!/usr/bin/env bash
 set -euo pipefail
 printf '%s\\n' "$*" >> "$FAKE_LOG"
+mounted_source() {
+  local option source
+  for option; do
+    case $option in
+      type=bind,source=*,target=*) source=\${option#type=bind,source=}; printf '%s\\n' "\${source%,target=*}"; return ;;
+    esac
+  done
+  return 1
+}
 case "$1" in
  info) case "\${*:2}" in *Architecture*) echo amd64 ;; *OSType*) echo linux ;; *) true ;; esac ;;
  context) echo unix:///fake/docker.sock ;;
  ps)
+   if [[ $* == *--quiet* && -n \${FAKE_MOUNT_SOURCE:-} ]]; then echo foreign-mount; fi
+   if [[ $* == *--quiet* && -n \${FAKE_CONTAINER_PORT:-} ]]; then echo foreign-port; fi
    for option; do
      case "\${FAKE_NAME_CONFLICT:-}:$option" in
        project-container:label=com.docker.compose.project=*) echo "\${option#label=com.docker.compose.project=}-other-1" ;;
        exact-container:name=*'-web-1$') name=\${option#name=^/}; echo "\${name%\$}" ;;
      esac
    done ;;
+ inspect|container)
+   case "$*" in
+     *.Mounts*) [[ -z \${FAKE_MOUNT_SOURCE:-} ]] || printf '/foreign-mount\\t%s\\ttrue\\n' "$FAKE_MOUNT_SOURCE" ;;
+     *.NetworkSettings.Ports*) [[ -z \${FAKE_CONTAINER_PORT:-} ]] || printf '/foreign-web\\t0.0.0.0\\t%s\\t4173/tcp\\n' "$FAKE_CONTAINER_PORT" ;;
+   esac ;;
+ volume)
+   case $2 in
+     ls)
+       for marker in "$FAKE_BASE/volumes/"*; do
+         [[ ! -f $marker ]] || basename -- "$marker"
+       done
+       if [[ -n \${FAKE_FOREIGN_VOLUME:-} ]]; then echo "$FAKE_FOREIGN_VOLUME"; fi ;;
+     inspect)
+       marker=\${!#}
+       if [[ $marker == "\${FAKE_FOREIGN_VOLUME:-}" ]]; then echo foreign-owner; else cat "$FAKE_BASE/volumes/$marker"; fi ;;
+     create)
+       marker=\${!#}
+       label=
+       for option; do
+         case $option in io.clouddrive.release.owner=*) label=\${option#*=} ;; esac
+       done
+       [[ -n $label ]]
+       if [[ ! -e $FAKE_BASE/volumes/$marker ]]; then
+         (set -o noclobber; printf '%s\\n' "$label" > "$FAKE_BASE/volumes/$marker")
+       fi
+       echo "$marker" ;;
+     rm) rm -- "$FAKE_BASE/volumes/\${!#}" ;;
+   esac ;;
  network)
    if [[ $2 == ls && \${FAKE_NAME_CONFLICT:-} == network ]]; then
      for option; do
@@ -68,6 +109,9 @@ case "$1" in
      save) if [[ \${3:-} == --help ]]; then echo '--platform'; else tar -cf - -C "$FAKE_BASE/exported" blobs; fi ;;
    esac ;;
  compose)
+   if [[ -n \${CLOUDDRIVE_RELEASE_DATA_DIR:-} ]]; then
+     printf 'compose data=%s\\n' "$CLOUDDRIVE_RELEASE_DATA_DIR" >> "$FAKE_LOG"
+   fi
    if [[ $* == *'version --short'* ]]; then echo 2.40.0
    elif [[ $* == *'db migrate status'* ]]; then
      compatible=true; [[ \${FAKE_INCOMPATIBLE:-0} != 1 ]] || compatible=false
@@ -75,12 +119,27 @@ case "$1" in
    elif [[ $* == *' exec '* && \${FAKE_HEALTH_FAILURE:-0} == 1 && $* == *'v1.0.1'* ]]; then exit 1
    fi ;;
  run)
-   if [[ $* == *'process.stdin'* || $* == *'net.isIP'* ]]; then
+   if [[ $* == *'.clouddrive-installation'* ]]; then
+     source=$(mounted_source "$@")
+     printf 'verify data mount=%s\\n' "$source" >> "$FAKE_LOG"
+     while [[ $1 != node ]]; do shift; done; shift
+     [[ $1 == -e ]]
+     if command -v cygpath >/dev/null; then source=$(cygpath -m "$source"); fi
+     # Rebase the container path and skip the root-only UID change in this fixture.
+     code=\${2//\\/data/$source}
+     code=\${code/'fs.chownSync('/'void ('}
+     exec '${process.execPath}' -e "$code" "\${@:3}"
+   elif [[ $* == *'process.stdin'* || $* == *'net.isIP'* ]]; then
      while [[ $1 != node ]]; do shift; done; shift
      exec '${process.execPath}' "$@"
    elif [[ $* == *'sh -ec'* ]]; then
      [[ \${FAKE_BACKUP_FAILURE:-0} != 1 ]] || exit 1
-     tar -cf - -C "$FAKE_BASE" app.db
+     if [[ \${FAKE_DATABASE_FROM_MOUNT:-0} == 1 ]]; then
+       source=$(mounted_source "$@")
+       tar -cf - -C "$source" app.db
+     else
+       tar -cf - -C "$FAKE_BASE" app.db
+     fi
    elif [[ $* == *'--network host'* && \${FAKE_PORT_FAILURE:-0} == 1 ]]; then exit 1
    fi ;;
  *) exit 1 ;;
@@ -92,6 +151,17 @@ esac
   await writeFile(
     join(bin, "sleep"),
     "#!/usr/bin/env bash\n/bin/sleep 0.05\n",
+    { mode: 0o700 },
+  );
+  await writeFile(
+    join(bin, "ss"),
+    `#!/usr/bin/env bash
+set -eu
+printf 'ss %s\\n' "$*" >> "$FAKE_LOG"
+if [[ -n \${FAKE_LISTEN_PORT:-} ]]; then
+  printf 'LISTEN 0 511 0.0.0.0:%s 0.0.0.0:*\\n' "$FAKE_LISTEN_PORT"
+fi
+`,
     { mode: 0o700 },
   );
   const env = {
@@ -108,7 +178,10 @@ esac
       encoding: "utf8",
       timeout: 25000,
     });
-  async function bundle(version, { network = true, entrypoint = true } = {}) {
+  async function bundle(
+    version,
+    { network = true, entrypoint = true, layout = true } = {},
+  ) {
     const source = join(base, version),
       stage = join(source, "stage");
     await mkdir(stage, { recursive: true });
@@ -121,7 +194,7 @@ esac
     );
     await writeFile(
       join(stage, "manifest.txt"),
-      `FORMAT=1\n${network ? "NETWORK=1\n" : ""}${entrypoint ? "ENTRYPOINT=1\n" : ""}VERSION=${version}\nARCH=amd64\nCOMMIT=${commit}\nAPI_ID=${apiID}\nWEB_ID=${webID}\n`,
+      `FORMAT=1\n${network ? "NETWORK=1\n" : ""}${entrypoint ? "ENTRYPOINT=1\n" : ""}${layout ? "INSTANCE_LAYOUT=1\n" : ""}VERSION=${version}\nARCH=amd64\nCOMMIT=${commit}\nAPI_ID=${apiID}\nWEB_ID=${webID}\n`,
     );
     const name = `clouddrive_${version}_linux_amd64_docker.tar.gz`;
     const packed = spawnSync("tar", [
@@ -160,12 +233,16 @@ esac
 test("部署计划显示自定义入口和精确资源路径，且不调用 Docker 或创建目录", async (t) => {
   const f = await fixture(t);
   const root = join(await realpath(f.base), "CloudDrive instance");
-  const project = projectFor(root);
+  const project = "drive-preview";
   const arch = process.arch === "arm64" ? "arm64" : "amd64";
   const result = f.run([
     "plan",
     "--dir",
     root,
+    "--name",
+    project,
+    "--data-dir",
+    "nested/data files",
     "--bind",
     "127.0.0.1",
     "--port",
@@ -181,7 +258,7 @@ test("部署计划显示自定义入口和精确资源路径，且不调用 Dock
   const output = result.stdout.split("\n");
   for (const [label, expected] of [
     ["安装目录", root],
-    ["数据目录", join(root, "data")],
+    ["数据目录", join(root, "nested", "data files")],
     ["Compose 项目", project],
     ["容器", `${project}-backend-1`],
     ["容器", `${project}-web-1`],
@@ -215,6 +292,144 @@ test("部署计划显示自定义入口和精确资源路径，且不调用 Dock
   assert.doesNotMatch(rejected.stdout + rejected.stderr, /fixture-password/);
   await assert.rejects(access(root), { code: "ENOENT" });
   await assert.rejects(access(f.log), { code: "ENOENT" });
+});
+
+test("部署检查只读取 Docker 和监听状态，安装计划与部署均在下载前拦截冲突", async (t) => {
+  const f = await fixture(t);
+  const root = join(await realpath(f.base), "instance");
+  const data = join(await realpath(f.base), "outside data");
+  const curlLog = join(f.base, "curl.log");
+  await writeFile(
+    join(f.base, "bin", "curl"),
+    `#!/usr/bin/env bash\nprintf 'unexpected request\\n' >> "$FAKE_CURL_LOG"\nexit 12\n`,
+    { mode: 0o700 },
+  );
+  const args = [
+    "--dir", root, "--name", "drive-check", "--data-dir", data,
+    "--port", "4180", "--version", "v1.0.0",
+  ];
+  const checked = f.run(["plan", "--check", ...args], { FAKE_CURL_LOG: curlLog });
+  assert.equal(checked.status, 0, checked.stderr);
+  assert.match(checked.stdout, /drive-check/);
+  const checkedLog = await readFile(f.log, "utf8");
+  assert.match(checkedLog, /volume ls/);
+  assert.match(checkedLog, /ss -H -ltn/);
+  assert.doesNotMatch(checkedLog, / volume create|^volume create|image load|migrate/m);
+  await assert.rejects(access(root), { code: "ENOENT" });
+  await assert.rejects(access(data), { code: "ENOENT" });
+  await assert.rejects(access(curlLog), { code: "ENOENT" });
+
+  for (const [conflict, message] of [
+    [{ FAKE_FOREIGN_VOLUME: "drive-check-instance" }, /drive-check-instance|同名/],
+    [{ FAKE_MOUNT_SOURCE: data }, /数据目录|挂载/],
+    [{ FAKE_LISTEN_PORT: "4180" }, /端口.*占[用有]|已监听/],
+    [{ FAKE_CONTAINER_PORT: "4180" }, /端口.*已被容器.*发布/],
+  ]) {
+    for (const command of [["plan", "--check"], ["install"]]) {
+      await writeFile(f.log, "");
+      const rejected = f.run([...command, ...args], {
+        ...conflict,
+        FAKE_CURL_LOG: curlLog,
+      });
+      assert.notEqual(rejected.status, 0);
+      assert.match(rejected.stderr, message);
+      assert.doesNotMatch(await readFile(f.log, "utf8"), /volume create|image load|migrate/);
+      await assert.rejects(access(root), { code: "ENOENT" });
+      await assert.rejects(access(data), { code: "ENOENT" });
+      await assert.rejects(access(curlLog), { code: "ENOENT" });
+    }
+  }
+
+  await mkdir(data);
+  const existing = join(data, "keep.txt");
+  await writeFile(existing, "do not modify");
+  await writeFile(f.log, "");
+  const nonempty = f.run(["install", ...args], { FAKE_CURL_LOG: curlLog });
+  assert.notEqual(nonempty.status, 0);
+  assert.match(nonempty.stderr, /数据目录.*非空|需要空的数据目录/);
+  assert.equal(await readFile(existing, "utf8"), "do not modify");
+  assert.doesNotMatch(await readFile(f.log, "utf8"), /volume create|image load|migrate/);
+  await assert.rejects(access(root), { code: "ENOENT" });
+  await assert.rejects(access(curlLog), { code: "ENOENT" });
+});
+
+test("自定义实例名和外部空目录用于启动、重启及数据库备份", async (t) => {
+  const f = await fixture(t);
+  const data = join(await realpath(f.base), "external data");
+  const root = join(await realpath(f.base), "instance");
+  await mkdir(data);
+  const source = await f.bundle("v1.0.0");
+  const result = f.run([
+    "install", "--dir", root, "--name", "drive-external", "--data-dir", data,
+    "--bind", "127.0.0.1", "--port", "4180", "--version", "v1.0.0",
+    "--release-dir", source,
+  ]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /drive-external-web-1/);
+  assert.equal(
+    await readFile(join(root, ".control/project"), "utf8"),
+    "drive-external\n",
+  );
+  assert.equal((await readFile(join(root, ".control/data-dir"), "utf8")).trim(), data);
+  assert.equal(
+    await readFile(join(root, ".control/maintenance-project"), "utf8"),
+    `${projectFor(root)}\n`,
+  );
+  const owner = (
+    await readFile(join(f.base, "volumes/drive-external-instance"), "utf8")
+  ).trim();
+  assert.match(owner, /^[a-f0-9]{64}$/);
+  const dataMarker = join(data, ".clouddrive-installation");
+  assert.equal(await readFile(dataMarker, "utf8"), owner);
+  await assert.rejects(access(join(root, "data")), { code: "ENOENT" });
+  let log = await readFile(f.log, "utf8");
+  assert.ok(log.includes(`verify data mount=${data}`), log);
+  assert.ok(log.includes(`compose data=${data}`), log);
+
+  await writeFile(join(data, "app.db"), "fixture-database-on-external-volume");
+  await writeFile(f.log, "");
+  for (const command of ["restart", "backup"]) {
+    const managed = spawnSync("bash", [join(root, "install.sh"), command], {
+      env: { ...f.env, FAKE_DATABASE_FROM_MOUNT: "1" },
+      encoding: "utf8",
+      timeout: 25000,
+    });
+    assert.equal(managed.status, 0, managed.stderr);
+  }
+  log = await readFile(f.log, "utf8");
+  assert.ok(log.includes(`compose data=${data}`), log);
+  assert.ok(log.includes(`type=bind,source=${data},target=/data,readonly`), log);
+  const archive = (await readdir(join(root, "backups")))[0];
+  const db = spawnSync("tar", ["-xOf", join(root, "backups", archive, "database.tar"), "app.db"], {
+    encoding: "utf8",
+  });
+  assert.equal(db.status, 0, db.stderr);
+  assert.equal(db.stdout, "fixture-database-on-external-volume");
+
+  await writeFile(dataMarker, "foreign-owner");
+  await writeFile(f.log, "");
+  const rejected = f.run(["restart", "--dir", root]);
+  assert.notEqual(rejected.status, 0);
+  assert.match(await readFile(f.log, "utf8"), /verify data mount=/);
+  assert.doesNotMatch(await readFile(f.log, "utf8"), /compose .* (up|stop|migrate)( |$)/m);
+  assert.equal(await readFile(dataMarker, "utf8"), "foreign-owner");
+});
+
+test("新布局仅安装带布局能力的发布包，旧包仍接受默认安装", async (t) => {
+  const f = await fixture(t);
+  const source = await f.bundle("v1.0.0", { layout: false });
+  const base = ["--version", "v1.0.0", "--release-dir", source];
+  const rejected = f.run([
+    "install", "--dir", f.root, "--name", "drive-old", "--data-dir", "nested/data", ...base,
+  ]);
+  assert.notEqual(rejected.status, 0);
+  assert.match(rejected.stderr, /INSTANCE_LAYOUT|不支持.*(?:布局|目录)/);
+  assert.doesNotMatch(await readFile(f.log, "utf8"), /volume create|migrate/);
+  await assert.rejects(access(f.root), { code: "ENOENT" });
+
+  const installed = f.run(["install", "--dir", f.root, ...base]);
+  assert.equal(installed.status, 0, installed.stderr);
+  assert.match(await readFile(join(f.root, "runtime.env"), "utf8"), /^WEB_PORT=4173$/m);
 });
 
 test("下载校验失败不会创建实例或执行迁移", async (t) => {
@@ -407,6 +622,7 @@ test("status 的 compatible=false 即使退出码为零也禁止恢复旧镜像"
 test("直接管道安装只解析一次最新稳定版，全部发布资产使用固定 tag", async (t) => {
   const f = await fixture(t);
   const source = await f.bundle("v1.0.0");
+  await mkdir(join(f.root, "nested", "storage files"), { recursive: true });
   const requests = join(f.base, "curl.log");
   await writeFile(
     join(f.base, "bin/curl"),
@@ -428,7 +644,7 @@ else fs.copyFileSync(path.join(process.env.FAKE_ASSETS,path.basename(url)),args[
       "-o",
       "pipefail",
       "-c",
-      'curl -fsSL "$1" | bash -s -- install --dir "$2" --bind 127.0.0.1 --port 4180',
+      'curl -fsSL "$1" | bash -s -- install --dir "$2" --name drive-pipe --data-dir "nested/storage files" --bind 127.0.0.1 --port 4180',
       "_",
       bootstrap,
       f.root,
@@ -444,6 +660,10 @@ else fs.copyFileSync(path.join(process.env.FAKE_ASSETS,path.basename(url)),args[
   assert.match(config, /^WEB_BIND=127\.0\.0\.1$/m);
   assert.match(config, /^WEB_PORT=4180$/m);
   assert.match(result.stdout, /http:\/\/127\.0\.0\.1:4180\/setup/);
+  assert.equal((await readFile(join(f.root, ".control/project"), "utf8")).trim(), "drive-pipe");
+  const data = join(await realpath(f.root), "nested", "storage files");
+  assert.equal((await readFile(join(f.root, ".control/data-dir"), "utf8")).trim(), data);
+  await access(data);
   assert.deepEqual((await readFile(requests, "utf8")).trim().split("\n"), [
     bootstrap,
     "https://github.com/reina0721/neocloud/releases/latest",
