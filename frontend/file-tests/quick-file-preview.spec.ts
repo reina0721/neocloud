@@ -52,6 +52,7 @@ test('真实文本预览保留目录、邻项历史及原行，编辑继续用�
   const listing = page.url();
   const file = page.getByRole('button', { name: first.name, exact: true });
   const preview = page.locator('[data-file-quick-preview]');
+  const backdrop = page.locator('.MuiDialog-root:has(.ui-dialog-preview) > .MuiBackdrop-root');
   const stage = preview.locator('[data-file-preview-body]');
   const close = page.getByRole('button', { name: '关闭', exact: true });
   const previous = page.getByRole('button', { name: '上一个文件', exact: true });
@@ -59,6 +60,7 @@ test('真实文本预览保留目录、邻项历史及原行，编辑继续用�
   await file.click();
   await expect(page).toHaveURL(listing + '&preview=' + first.id);
   await expect(stage).toContainText('alpha');
+  await expect(backdrop).toHaveCSS('backdrop-filter', /blur\(/);
   await expect(close).toBeFocused();
   await expect(previous).toBeDisabled();
   await expect(preview.locator('[contenteditable="true"],textarea')).toHaveCount(0);
@@ -97,6 +99,7 @@ test('真实文本预览保留目录、邻项历史及原行，编辑继续用�
   await expect(next).toBeDisabled();
   await page.goBack();
   await expect(page).toHaveURL(listing);
+  await expect(backdrop).toBeHidden();
   await expect(preview).toHaveCount(0);
   await expect(file).toBeFocused();
 

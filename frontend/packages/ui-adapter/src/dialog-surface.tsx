@@ -127,6 +127,7 @@ export function DialogSurface({
         fullScreen={size === 'fullscreen'}
         maxWidth={size === 'lg' ? 'md' : false}
         slotProps={{
+          ...(preview ? { backdrop: { className: 'backdrop-blur-md' } } : {}),
           transition: { onExited },
           paper: {
             className: `ui-overlay-surface ui-dialog-layout ${workspace ? 'ui-dialog-workspace' : ''} ${preview ? 'ui-dialog-preview' : ''} ${size === 'fullscreen' ? 'ui-dialog-fullscreen' : ''}`,

@@ -329,7 +329,6 @@
     @media (width < 768px), (height < 480px) {
       .ui-dialog-layout.ui-dialog-preview {
         pointer-events: auto;
-        background: var(--color-canvas);
       }
     }
     @media (width < 360px) {
