@@ -25,7 +25,7 @@ describe('文件工作区Host边界', () => {
     first.port.saveSidebarPreferences({ collapsed: true, autoExpandTree: false });
     const second = fixture(() => 'workspace-two');
     expect(second.port.loadSidebarPreferences()).toEqual({
-      collapsed: true,
+      collapsed: false,
       autoExpandTree: true,
     });
     expect(first.port.loadSidebarPreferences()).toEqual({ collapsed: true, autoExpandTree: false });

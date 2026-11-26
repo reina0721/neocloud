@@ -55,6 +55,9 @@ describe('PDF frame协议与生命周期', () => {
     expect(
       isPdfOpen({ ...message, view: { ...preview, initialPosition: { page: 2, scale: 1.25 } } }),
     ).toBe(true);
+    expect(isPdfOpen({ ...message, view: { ...preview, initialPosition: { page: 2 } } })).toBe(
+      true,
+    );
   });
   it('拒绝其他窗口/来源/旧nonce，关闭后拒绝迟到消息并移除frame内容', async () => {
     const frame = document.createElement('iframe');

@@ -76,7 +76,7 @@ test('真实文件闭环：目录、队列、预览、下载、移动、多选�
     'base64',
   );
 
-  const sortMenu = page.getByRole('button', { name: '排序方式', exact: true });
+  const sortMenu = page.getByRole('button', { name: '更多目录操作', exact: true });
   await sortMenu.click();
   await page.getByRole('menuitemradio', { name: /^修改时间/ }).click();
   await sortMenu.click();
@@ -124,7 +124,8 @@ test('真实文件闭环：目录、队列、预览、下载、移动、多选�
   await page.getByRole('button', { name: '移动', exact: true }).first().click();
   await page.getByRole('dialog').getByRole('button', { name: '确认', exact: true }).click();
   await expect(page.getByRole('button', { name: renamed, exact: true })).toHaveCount(0);
-  await page.getByRole('link', { name: '图片', exact: true }).click();
+  await page.getByRole('button', { name: '按文件类型浏览', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '图片', exact: true }).click();
   await expect(page.getByRole('button', { name: imageName, exact: true })).toBeVisible();
   await page.getByRole('link', { name: '我的文件', exact: true }).first().click();
   await page.getByRole('searchbox', { name: '搜索文件' }).fill(renamed);
@@ -151,7 +152,11 @@ test('真实文件闭环：目录、队列、预览、下载、移动、多选�
   await expect(page.getByRole('button', { name: folder, exact: true })).toBeVisible();
   await page.getByRole('checkbox', { name: `选择 ${folder}`, exact: true }).press('Space');
   await page.getByRole('checkbox', { name: `选择 ${renamed}`, exact: true }).press('Space');
-  await page.getByRole('button', { name: '移入回收站', exact: true }).first().click();
+  await page
+    .getByRole('region', { name: '选择操作', exact: true })
+    .getByRole('button', { name: '更多操作', exact: true })
+    .click();
+  await page.getByRole('menuitem', { name: '移入回收站', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: '确认', exact: true }).click();
   await expect(page.getByRole('button', { name: folder, exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: renamed, exact: true })).toHaveCount(0);

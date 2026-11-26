@@ -45,6 +45,53 @@ test.beforeEach(async ({ page }) => {
   await login(page);
   await openReadingFixtureFolder(page, 'PDF验收-');
 });
+test('PDF 宽屏的快速预览、标注与直接链接均默认完整呈现纸面', async ({ page }, info) => {
+  await page.setViewportSize({ width: 1920, height: 960 });
+  const preview = await upload(page, fixture('reader.pdf'));
+  const name = await preview.getByRole('heading').innerText();
+
+  async function readPaper(reader: ReturnType<Page['getByRole']>, pageNumber: number) {
+    const iframe = reader.locator('iframe');
+    const paper = reader
+      .frameLocator('iframe')
+      .locator('.page[data-page-number="' + pageNumber + '"]');
+    await expect(paper.locator('canvas').first()).toBeVisible();
+    await expect
+      .poll(async () => {
+        const frame = await iframe.boundingBox();
+        const sheet = await paper.boundingBox();
+        return Boolean(
+          frame &&
+          sheet &&
+          sheet.y >= frame.y - 2 &&
+          sheet.y + sheet.height <= frame.y + frame.height + 2 &&
+          sheet.x >= frame.x + 48 &&
+          sheet.x + sheet.width <= frame.x + frame.width - 48,
+        );
+      })
+      .toBe(true);
+  }
+
+  await readPaper(preview, 1);
+  await preview.getByRole('button', { name: '下一页', exact: true }).click();
+  await expect(preview.getByText('第 2 / 10 页', { exact: true })).toBeVisible();
+  const workspace = await annotate(page, name);
+  await expect(workspace.getByText('第 2 / 10 页', { exact: true })).toBeVisible();
+  await readPaper(workspace, 2);
+  await page.screenshot({ path: info.outputPath('pdf-workspace-wide.png') });
+
+  await page.reload();
+  await expect(workspace.getByText('第 1 / 10 页', { exact: true })).toBeVisible();
+  await readPaper(workspace, 1);
+  const deskScale = workspace.getByRole('button', { name: '缩放与显示', exact: true });
+  const start = await deskScale.innerText();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(deskScale).not.toHaveText(start);
+  await page.setViewportSize({ width: 1920, height: 960 });
+  await expect(deskScale).toHaveText(start);
+  await readPaper(workspace, 1);
+  await page.screenshot({ path: info.outputPath('pdf-direct-wide.png') });
+});
 test('F261–277：真实PDF分页显示文字查找导航与本地组件', async ({ page }, info) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));

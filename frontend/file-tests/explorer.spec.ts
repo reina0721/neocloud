@@ -2,6 +2,7 @@ import { test, expect, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { fileCollectionAction } from './reading-fixture';
 
 test.use({ actionTimeout: 15_000 });
 async function login(page: Page) {
@@ -73,11 +74,6 @@ async function open(page: Page, name: unknown) {
     'false',
   );
 }
-async function menu(page: Page, label: string, action: string) {
-  await page.getByRole('button', { name: label, exact: true }).click();
-  const role = label === '视图' || label === '排序方式' ? 'menuitemradio' : 'menuitem';
-  await page.getByRole(role, { name: action, exact: true }).click();
-}
 async function choose(page: Page, name: unknown) {
   await page
     .getByRole('button', { name: String(name), exact: true })
@@ -90,29 +86,35 @@ test('紧凑导航、路径、搜索及选择菜单真实可用', async ({ page,
   const f = await fixture(page);
   await page.goto('/home?parent=' + String(f.from.id));
   await expect(row(page, f.file.id)).toBeVisible();
-  await menu(page, '视图', '列表');
-  await expect(page.getByRole('table')).toBeVisible();
-  await menu(page, '排序方式', '大小');
-  await menu(page, '排序方式', '降序');
-  await expect(page.getByRole('columnheader', { name: '大小 ↓', exact: true })).toBeVisible();
-  await menu(page, '当前目录操作', '复制当前路径');
+  await page.getByRole('button', { name: '视图', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '列表', exact: true }).click();
+  const table = page.getByRole('table', { name: String(f.from.name), exact: true });
+  await expect(table).toBeVisible();
+  const size = table.getByRole('columnheader').filter({
+    has: page.getByRole('button', { name: '大小', exact: true }),
+  });
+  await size.getByRole('button', { name: '大小', exact: true }).click();
+  await fileCollectionAction(page, '降序', 'menuitemradio');
+  await expect(size).toHaveAttribute('aria-sort', 'descending');
+  await fileCollectionAction(page, '复制当前路径');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     '/' + String(f.root.name) + '/' + String(f.from.name),
   );
+  await page.getByRole('button', { name: '完整目录路径', exact: true }).click();
   await page
-    .getByRole('navigation', { name: '完整目录路径', exact: true })
-    .getByRole('link', { name: String(f.root.name), exact: true })
+    .getByRole('menu', { name: '完整目录路径', exact: true })
+    .getByRole('menuitem', { name: String(f.root.name), exact: true })
     .click();
   await expect(row(page, f.from.id)).toBeVisible();
-  await menu(page, '当前目录操作', '全选');
+  await fileCollectionAction(page, '全选');
   await expect(page.getByText('已选择 2 项', { exact: true })).toBeVisible();
-  await menu(page, '当前目录操作', '反选本页');
+  await fileCollectionAction(page, '反选本页');
   await expect(page.getByText('已选择 2 项', { exact: true })).toHaveCount(0);
   await choose(page, f.from.name);
-  await menu(page, '当前目录操作', '反选本页');
+  await fileCollectionAction(page, '反选本页');
   await expect(row(page, f.dest.id).getByRole('checkbox')).toBeChecked();
   await expect(row(page, f.from.id).getByRole('checkbox')).not.toBeChecked();
-  await menu(page, '当前目录操作', '取消选择');
+  await fileCollectionAction(page, '取消选择');
   await open(page, f.from.name);
   await choose(page, f.file.name);
   await expect(page.getByRole('region', { name: '选择操作' })).toContainText(
@@ -147,6 +149,7 @@ test('紧凑导航、路径、搜索及选择菜单真实可用', async ({ page,
     .locator('[data-file-workspace-header]')
     .evaluate((e) => e.getBoundingClientRect().bottom);
   await expect(page.getByRole('navigation', { name: '按文件类型浏览', exact: true })).toBeHidden();
+  await expect(page.getByRole('button', { name: '按文件类型浏览', exact: true })).toBeVisible();
   await expect(page.getByRole('navigation', { name: '主要目的地', exact: true })).toBeVisible();
   expect(mainTop).toBeGreaterThanOrEqual(headerBottom);
   expect(mainTop - headerBottom).toBeLessThanOrEqual(24);
@@ -248,8 +251,8 @@ test('批量剪切部分成功保留失败项，刷新清空与输入快捷键�
   await expect(page.getByRole('region', { name: /已剪切/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: String(f.file.name), exact: true })).toBeVisible();
   await choose(page, f.file.name);
-  await menu(page, '更多操作', '复制到剪贴板');
-  await page.getByRole('button', { name: '高级搜索', exact: true }).click();
+  await fileCollectionAction(page, '复制到剪贴板');
+  await fileCollectionAction(page, '高级搜索');
   await page.keyboard.press('Control+v');
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: '取消', exact: true }).click();

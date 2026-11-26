@@ -31,9 +31,9 @@ export function AccountPage() {
       ? t(`identityProduct.roleNames.${id}`)
       : (roles.data?.find((role) => role.id === id)?.name ?? id);
   return (
-    <Page>
+    <Page density="compact">
       <PageHeader
-        eyebrow={t('account.eyebrow')}
+        density="compact"
         title={t('account.title')}
         description={t('account.description')}
       />
@@ -41,9 +41,14 @@ export function AccountPage() {
       {query.error || !data ? (
         <IdentityQueryState error={query.error} retry={query.reload} />
       ) : (
-        <>
-          <Section appearance="outlined" title={t('account.profile')}>
-            <div className="grid gap-5 p-5">
+        <div className="divide-y divide-border overflow-hidden rounded-panel bg-surface">
+          <Section
+            appearance="embedded"
+            density="compact"
+            title={t('account.profile')}
+            contentInset
+          >
+            <div className="grid gap-4">
               <UserForm
                 key={data.user.id}
                 mode="profile"
@@ -54,7 +59,7 @@ export function AccountPage() {
                 access={data.access}
                 onSaved={query.reload}
               />
-              <div className="grid gap-4 border-t border-border pt-5">
+              <div className="grid gap-3 border-t border-border pt-4">
                 <p className="text-sm text-ink-muted">{t('account.roleDescription')}</p>
                 {roles.loading ? <p role="status">{t('identityProduct.loading')}</p> : null}
                 {roles.error ? (
@@ -93,7 +98,12 @@ export function AccountPage() {
                   onSaved={query.reload}
                 />
               ) : null}
-              <Section title={t('administration.preferences')} contentInset>
+              <Section
+                appearance="embedded"
+                density="compact"
+                title={t('administration.preferences')}
+                contentInset
+              >
                 <RouteLink target={route('settings')} presentation="action" variant="secondary">
                   {t('administration.openAppearanceSettings')}
                 </RouteLink>
@@ -106,7 +116,7 @@ export function AccountPage() {
               nativePermissions?.includes('iam:account:self:password:write') === true
             }
           />
-        </>
+        </div>
       )}
     </Page>
   );

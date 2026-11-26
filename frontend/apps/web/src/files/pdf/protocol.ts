@@ -1,5 +1,5 @@
 import type { PDFReaderLimits, PdfViewPosition } from '@clouddrive/surface/files';
-export const pdfProtocolVersion = 4;
+export const pdfProtocolVersion = 5;
 export const pdfWorkerReadyKind = 'clouddrive-pdf-worker-ready';
 export const pdfThumbnailPageSize = 8;
 export const pdfPasswordMaxLength = 1024;
@@ -32,6 +32,7 @@ export type PdfReaderState = Readonly<{
   page: number;
   pages: number;
   scale: number;
+  automaticFit: boolean;
   rotation: number;
   rendered: boolean;
   matchesCurrent: number;
@@ -51,6 +52,7 @@ export const emptyPdfState: PdfReaderState = {
   page: 1,
   pages: 0,
   scale: 1,
+  automaticFit: true,
   rotation: 0,
   rendered: false,
   matchesCurrent: 0,
@@ -208,7 +210,9 @@ export function isPdfOpen(value: unknown): value is PdfOpen {
   const position = value.view.initialPosition;
   if (
     position !== undefined &&
-    (!record(position) || !positive(position.page) || !manualScale(position.scale))
+    (!record(position) ||
+      !positive(position.page) ||
+      (position.scale !== undefined && !manualScale(position.scale)))
   )
     return false;
   const fields = [
@@ -243,6 +247,7 @@ export function isPdfReaderState(value: unknown): value is PdfReaderState {
     typeof value.rotation === 'number' &&
     value.rotation % 90 === 0 &&
     [
+      'automaticFit',
       'rendered',
       'searchPending',
       'modified',

@@ -150,6 +150,9 @@
     .surface-page-stack > :not(:last-child) {
       margin-block-end: var(--surface-section-gap);
     }
+    .surface-page-stack-compact > :not(:last-child) {
+      margin-block-end: calc(var(--spacing) * 3);
+    }
 
     /* Region enter displacement must not grow page width. Clip adds no scroll owner. */
     .surface-route-content {
@@ -530,6 +533,12 @@
     .surface-toolbar {
       box-shadow: var(--shadow-panel);
     }
+    .surface-toolbar-embedded .ui-action-toolbar {
+      gap: calc(var(--spacing) * 2);
+    }
+    .surface-toolbar-embedded .surface-toolbar-primary {
+      flex-basis: 0;
+    }
     .surface-management-sidebar,
     .surface-file-sidebar {
       border-right: 1px solid var(--ds-border);
@@ -553,14 +562,6 @@
       width: var(--surface-rail-accent-width);
       border-radius: var(--radius-action);
       background: var(--ds-brand);
-    }
-    .surface-category-tabs {
-      display: block;
-      min-width: 0;
-      flex: 0 0 auto;
-      padding-inline: calc(var(--spacing) * 6);
-      background: var(--ds-surface);
-      border-bottom: 1px solid var(--ds-border);
     }
     .surface-pdf-tools {
       display: flex;
@@ -627,10 +628,6 @@
         box-shadow var(--motion-duration-control) var(--ease-product),
         border-color var(--motion-duration-control) var(--ease-product);
     }
-    .surface-file-item:not([data-file-view='list']):hover {
-      box-shadow: var(--shadow-overlay);
-      border-color: color-mix(in srgb, var(--ds-brand) 25%, transparent);
-    }
     .surface-file-item[data-selected='true'] {
       border-color: var(--ds-brand);
     }
@@ -641,13 +638,6 @@
     .surface-file-glyph-large {
       width: 3rem;
       height: 3rem;
-    }
-    .surface-file-preview {
-      flex-direction: column;
-    }
-    .surface-file-preview > svg,
-    .surface-file-preview > img {
-      margin-block: var(--spacing);
     }
     .surface-auth-frame {
       background: var(--ds-canvas);
@@ -671,36 +661,6 @@
         min-height: var(--spacing-control);
         padding-inline: 0;
       }
-      .surface-file-collection > .surface-toolbar {
-        border-radius: 0;
-        box-shadow: none;
-      }
-      .surface-file-collection .surface-toolbar-primary {
-        width: 100%;
-        flex-wrap: nowrap;
-        justify-content: space-between;
-      }
-      .surface-file-item[data-file-kind='folder'][data-file-view='grid'] .surface-file-preview {
-        flex-direction: row;
-        align-items: center;
-        gap: calc(var(--spacing) * 2);
-      }
-      .surface-file-item[data-file-kind='folder'][data-file-view='grid'] .surface-file-preview-box {
-        width: 2.25rem;
-        height: 2.25rem;
-        flex-shrink: 0;
-        border: 0;
-        background: transparent;
-      }
-      .surface-file-item[data-file-kind='folder'][data-file-view='grid']
-        .surface-file-preview-box
-        > svg {
-        width: 1.75rem;
-        height: 1.75rem;
-      }
-      .surface-file-item[data-file-kind='folder'][data-file-view='grid'] .surface-file-metadata {
-        display: none;
-      }
       [data-shell-section='settings'] > [data-shell-chrome],
       [data-shell-section='settings'] > .ui-mobile-navigation,
       [data-shell-section='settings'] > .ui-mobile-navigation-spacer {
@@ -713,17 +673,12 @@
         border: 0;
       }
       [data-file-workspace] .surface-masthead,
-      [data-file-workspace] .surface-category-tabs,
       .surface-shell-grid > div > .surface-masthead {
         display: none;
       }
       .surface-masthead {
         --surface-masthead-height: 6rem;
         --surface-masthead-inset: 1.25rem;
-      }
-      .surface-category-tabs {
-        gap: calc(var(--spacing) * 2);
-        padding-inline: calc(var(--spacing) * 3);
       }
       .surface-masthead-stars {
         display: none;
@@ -753,6 +708,11 @@
     }
     .surface-file-navigation > nav:hover {
       scrollbar-color: var(--ds-border-strong) transparent;
+    }
+    @media (hover: hover) {
+      .surface-file-item:not(:hover, :focus-within, [data-selected]) .surface-file-row-selection {
+        opacity: 0;
+      }
     }
     .surface-route-content[data-route-enter='true'] [data-file-scroll-region] > * {
       animation: surface-screen-fade-up var(--motion-duration-page) var(--ease-product) both;

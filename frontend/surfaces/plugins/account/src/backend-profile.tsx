@@ -71,7 +71,12 @@ export function BackendProfile({
   const { t } = useFrontendTranslation();
   const state = useRemote(useCallback(() => port.profile(), [port]));
   return (
-    <Section title={t('administration.profile')} contentInset>
+    <Section
+      appearance="embedded"
+      density="compact"
+      title={t('administration.profile')}
+      contentInset
+    >
       <RemoteRegion {...state}>
         {state.value ? (
           <>

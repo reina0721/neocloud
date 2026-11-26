@@ -285,6 +285,7 @@ function publish() {
     page: viewer.currentPageNumber,
     pages: doc.numPages,
     scale: viewer.currentScale,
+    automaticFit: !scaleChosen,
     rotation: viewer.pagesRotation,
     rendered:
       (viewer.getPageView(viewer.currentPageNumber - 1) as { renderingState: number } | undefined)
@@ -360,7 +361,7 @@ async function open(message: PdfOpen) {
   const { presentation, fit, initialPosition } = message.view;
   const preview = presentation === 'preview';
   viewportFit = fit;
-  scaleChosen = Boolean(initialPosition);
+  scaleChosen = initialPosition?.scale !== undefined;
   document.documentElement.lang = message.locale;
   document.documentElement.style.colorScheme = message.theme;
   const container = document.getElementById('viewerContainer');
@@ -431,10 +432,11 @@ async function open(message: PdfOpen) {
   };
   bus.on('pagesinit', () => {
     if (viewer) {
+      if (initialPosition?.scale !== undefined) viewer.currentScale = initialPosition.scale;
+      else viewer.currentScaleValue = viewportFit;
       if (initialPosition) {
-        viewer.currentScale = initialPosition.scale;
         viewer.currentPageNumber = Math.min(initialPosition.page, viewer.pagesCount);
-      } else viewer.currentScaleValue = viewportFit;
+      }
       remember();
       publish();
     }
@@ -770,7 +772,7 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
     return;
   }
   if (candidate.kind === 'fit' && isPdfFit(candidate.value)) {
-    if (opening.view.presentation === 'preview' && !scaleChosen) {
+    if (!scaleChosen) {
       viewportFit = candidate.value;
       if (ready && viewer && viewer.currentScaleValue !== viewportFit)
         viewer.currentScaleValue = viewportFit;

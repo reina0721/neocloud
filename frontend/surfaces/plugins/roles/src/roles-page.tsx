@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useFrontendTranslation, formatNumber } from '@clouddrive/i18n';
 import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
 import { Collection, CollectionQuery } from '@clouddrive/surface-foundation/collection';
@@ -24,6 +24,7 @@ import {
 } from '../../../src/identity/query-state';
 
 export function RolesPage() {
+  const titleId = useId();
   const { t, locale } = useFrontendTranslation();
   const port = useIdentityPort();
   const [search, setSearch] = useState('');
@@ -86,9 +87,11 @@ export function RolesPage() {
   ];
 
   return (
-    <Page>
+    <Page density="compact">
       <PageHeader
+        density="compact"
         title={t('roles.nav')}
+        titleId={titleId}
         description={t('roles.description')}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -123,6 +126,8 @@ export function RolesPage() {
         <IdentityQueryState error={result.error} retry={result.reload} />
       ) : (
         <Collection
+          density="compact"
+          labelledBy={titleId}
           title={t('roles.list')}
           count={formatNumber(locale, roles.length)}
           tools={
@@ -137,6 +142,7 @@ export function RolesPage() {
           }
           query={
             <CollectionQuery
+              density="compact"
               search={
                 <SearchBox
                   label={t('roles.search')}

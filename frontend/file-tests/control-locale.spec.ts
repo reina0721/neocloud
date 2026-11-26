@@ -37,7 +37,9 @@ test('Application language and week preference reach real audit date controls', 
     /星期日/,
   );
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: '切换语言', exact: true }).click();
+  await page.getByRole('button', { name: '当前用户', exact: true }).click();
+  await page.getByRole('menuitem', { name: '语言 简体中文', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: 'English', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   expect(await facts()).toEqual(before);
   await expect(page).toHaveURL(url);

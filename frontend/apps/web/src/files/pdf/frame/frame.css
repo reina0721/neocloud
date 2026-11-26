@@ -11,7 +11,7 @@ body {
   inset: 0;
   overflow: auto;
   outline: none;
-  background: color-mix(in srgb, Canvas 92%, CanvasText);
+  background: color-mix(in srgb, Canvas 88%, CanvasText);
 }
 
 .pdfViewer .page {

@@ -70,7 +70,7 @@ test('文件布局以紧凑清单提供首屏结果并保留网格选择', async
   await expect(rows).toHaveCount(12);
   await page.reload();
   await expect(rows).toHaveCount(12);
-  await expect.poll(async () => (await rows.first().boundingBox())?.y).toBeLessThanOrEqual(200);
+  await expect.poll(async () => (await rows.first().boundingBox())?.y).toBeLessThanOrEqual(160);
   expect((await rows.first().boundingBox())?.height).toBe(44);
   await page.setViewportSize({ width: 1280, height: 800 });
   const eight = await rows.nth(7).boundingBox();
@@ -81,8 +81,17 @@ test('文件布局以紧凑清单提供首屏结果并保留网格选择', async
     animations: 'disabled',
   });
 
-  await rows.first().getByRole('checkbox').check();
+  const beforeSelection = (await rows.first().boundingBox())!.y;
+  const currentDirectory = page.url();
+  await rows.first().getByRole('cell').nth(2).click();
+  await expect(page).toHaveURL(currentDirectory);
+  await expect(rows.first().getByRole('checkbox')).toBeChecked();
   await expect(toolbar.getByRole('region', { name: '选择操作' })).toBeVisible();
+  expect(Math.abs((await rows.first().boundingBox())!.y - beforeSelection)).toBeLessThanOrEqual(2);
+  await toolbar.getByRole('button', { name: '取消选择', exact: true }).click();
+  await expect(toolbar.getByRole('region', { name: '选择操作' })).toHaveCount(0);
+  expect(Math.abs((await rows.first().boundingBox())!.y - beforeSelection)).toBeLessThanOrEqual(2);
+  await rows.first().getByRole('checkbox').check();
   await selectView('网格');
   await expect(page.getByRole('checkbox', { name: '选择 报告-01.txt' })).toBeChecked();
   const items = page.locator('[data-file-item]');

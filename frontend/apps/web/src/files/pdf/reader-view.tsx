@@ -200,7 +200,7 @@ export function PDFReaderView(props: Props) {
     const controller = new AbortController();
     let active = true;
     const fit = (): PdfFit =>
-      preview && window.innerWidth >= 768 && window.innerHeight >= 480 ? 'page-fit' : 'page-width';
+      window.innerWidth >= 768 && window.innerHeight >= 480 ? 'page-fit' : 'page-width';
     let viewportFit = fit();
     const updateFit = () => {
       const next = fit();
@@ -219,7 +219,7 @@ export function PDFReaderView(props: Props) {
         if (active) {
           setPhase('ready');
           setPassword('');
-          if (preview) owned.fit(viewportFit);
+          owned.fit(viewportFit);
           readyCallback.current?.();
         }
       },
@@ -240,7 +240,7 @@ export function PDFReaderView(props: Props) {
       close: () => escapeCallback.current(),
     });
     session.current = owned;
-    if (preview) window.addEventListener('resize', updateFit);
+    window.addEventListener('resize', updateFit);
     void readContent({ ...props, limits }, controller.signal)
       .then(async (bytes) => {
         const saved = await draft?.read().catch(() => undefined);
@@ -271,7 +271,7 @@ export function PDFReaderView(props: Props) {
     return () => {
       active = false;
       controller.abort();
-      if (preview) window.removeEventListener('resize', updateFit);
+      window.removeEventListener('resize', updateFit);
       owned.forceClose();
       if (session.current === owned) session.current = null;
     };
@@ -289,7 +289,6 @@ export function PDFReaderView(props: Props) {
     draft,
     initialPosition,
     presentation,
-    preview,
   ]);
   useEffect(() => {
     const update = () => session.current?.theme(currentTheme());
@@ -511,7 +510,7 @@ export function PDFReaderView(props: Props) {
       }}
     >
       <div
-        className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-control bg-surface-muted p-2"
+        className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-control bg-surface-muted px-2 py-1"
         role="toolbar"
         aria-label={p('title')}
       >
@@ -637,7 +636,9 @@ export function PDFReaderView(props: Props) {
                 onPress={() =>
                   onAnnotate({
                     page: state.page,
-                    scale: Math.min(pdfMaxScale, Math.max(pdfMinScale, state.scale)),
+                    ...(state.automaticFit
+                      ? {}
+                      : { scale: Math.min(pdfMaxScale, Math.max(pdfMinScale, state.scale)) }),
                   })
                 }
               >

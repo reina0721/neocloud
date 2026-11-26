@@ -151,7 +151,7 @@ export function NotificationFeedback({
 
 export function ThemePreview({ theme }: Readonly<{ theme: 'light' | 'dark' | 'system' }>) {
   return (
-    <span className="surface-theme-preview" data-preview-theme={theme}>
+    <span className="surface-theme-preview min-h-10 sm:min-h-14" data-preview-theme={theme}>
       <span />
       <span className="surface-theme-preview-content">
         <span />
@@ -165,7 +165,10 @@ export function ThemePreview({ theme }: Readonly<{ theme: 'light' | 'dark' | 'sy
 
 export function PalettePreview({ accent, label }: Readonly<{ accent: string; label: string }>) {
   return (
-    <span className="surface-palette-preview" data-accent-preview={accent}>
+    <span
+      className="surface-palette-preview min-h-10 px-3 py-2 text-lg sm:min-h-12"
+      data-accent-preview={accent}
+    >
       <span aria-label={label}>✦</span>
       <span aria-hidden="true">✦</span>
     </span>

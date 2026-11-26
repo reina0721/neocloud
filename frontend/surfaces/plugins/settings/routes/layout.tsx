@@ -57,11 +57,10 @@ export default function SettingsShellLayout({ children }: Readonly<{ children: R
   };
 
   return (
-    <Page>
-      {/* 壳：PersonalShell 已提供单一左侧导航，此处仅保留标题与快速搜索，彻底消除双侧栏。 */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <Page density="compact">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
         <SettingsCategoryHeader meta={activeMeta} />
-        <div className="w-full sm:w-72">
+        <div className="w-full shrink-0 sm:w-64">
           <SettingsSearch />
         </div>
       </div>
@@ -74,10 +73,11 @@ export default function SettingsShellLayout({ children }: Readonly<{ children: R
             {t('administration.preferencesPending')}
           </p>
         ) : null}
-        {/* 路由内容容器（SET-012）：随分类路由替换的内容区，走主 Shell 同源进入编排。 */}
         <div data-route-content>
-          <Page>
-            <SettingsShellProvider ctx={ctx}>{children}</SettingsShellProvider>
+          <Page density="compact">
+            <div className="divide-y divide-border overflow-hidden rounded-panel bg-surface">
+              <SettingsShellProvider ctx={ctx}>{children}</SettingsShellProvider>
+            </div>
           </Page>
         </div>
         <SettingsRestoreActions meta={activeMeta} persist={persist} />

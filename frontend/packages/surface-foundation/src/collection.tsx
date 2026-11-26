@@ -15,6 +15,8 @@ export function Collection({
   content,
   narrowContent,
   pagination,
+  density,
+  labelledBy,
 }: Readonly<{
   title: string;
   description?: string;
@@ -27,7 +29,44 @@ export function Collection({
   content: ReactNode;
   narrowContent?: ReactNode;
   pagination?: ReactNode;
+  density?: 'compact';
+  labelledBy?: string;
 }>) {
+  const results = (
+    <>
+      <div className={narrowContent ? 'hidden min-w-0 md:block' : 'min-w-0'}>{content}</div>
+      {narrowContent ? <div className="min-w-0 md:hidden">{narrowContent}</div> : null}
+    </>
+  );
+
+  if (density === 'compact') {
+    const actions = bulk ?? toolbar;
+    return (
+      <section
+        aria-label={labelledBy ? undefined : title}
+        aria-labelledby={labelledBy}
+        className="overflow-hidden rounded-panel border border-border bg-surface"
+      >
+        {labelledBy ? null : (
+          <h2 className="border-b border-border px-3 py-2 text-sm font-semibold text-ink">
+            {title}
+          </h2>
+        )}
+        {description ? <p className="px-3 pt-2 text-sm text-ink-muted">{description}</p> : null}
+        {query ? <div className="border-b border-border px-3 py-2">{query}</div> : null}
+        {actions || tools || count !== undefined ? (
+          <div className="flex min-w-0 flex-wrap items-center gap-2 border-b border-border px-3 py-1">
+            {count === undefined ? null : <span className="text-xs text-ink-muted">{count}</span>}
+            {tools}
+            {actions ? <div className="min-w-0 flex-1">{actions}</div> : null}
+          </div>
+        ) : null}
+        {filters ? <div className="border-b border-border px-3 py-1">{filters}</div> : null}
+        {results}
+        {pagination ? <div className="border-t border-border px-3 py-2">{pagination}</div> : null}
+      </section>
+    );
+  }
   const headerAction = tools ? <div className="flex items-center gap-2">{tools}</div> : undefined;
 
   const titleNode =
@@ -48,8 +87,7 @@ export function Collection({
       {bulk ? <div className="border-b border-border p-3">{bulk}</div> : null}
       {toolbar ? <div className="border-b border-border p-4">{toolbar}</div> : null}
       {filters ? <div className="border-b border-border p-4">{filters}</div> : null}
-      <div className={narrowContent ? 'hidden min-w-0 md:block' : 'min-w-0'}>{content}</div>
-      {narrowContent ? <div className="min-w-0 md:hidden">{narrowContent}</div> : null}
+      {results}
       {pagination ? <div className="border-t border-border p-4">{pagination}</div> : null}
     </Section>
   );
@@ -113,6 +151,7 @@ export function CollectionQuery({
   activeFiltersLabel,
   onResetFilters,
   resetFiltersLabel,
+  density,
 }: Readonly<{
   search?: ReactNode;
   filters?: ReactNode;
@@ -137,6 +176,7 @@ export function CollectionQuery({
   onResetFilters?: () => void;
   /** 重置按钮文本（与 onResetFilters 成对提供）。 */
   resetFiltersLabel?: string;
+  density?: 'compact';
 }>) {
   const regionId = useId();
   const [internalOpen, setInternalOpen] = useState((activeFilters?.length ?? 0) > 0);
@@ -148,10 +188,46 @@ export function CollectionQuery({
     onAdvancedOpenChange?.(next);
   };
   const hasActiveFilters = (activeFilters?.length ?? 0) > 0;
+  const compact = density === 'compact';
+  const advancedControls = collapsible ? (
+    <>
+      <button
+        aria-controls={regionId}
+        aria-expanded={open}
+        className="inline-flex items-center gap-1.5 rounded-control px-1.5 py-1 text-sm font-semibold text-ink outline-none transition-colors hover:text-brand focus-visible:ring-2 focus-visible:ring-focus"
+        onClick={toggle}
+        type="button"
+      >
+        <AdvancedChevron expanded={open} />
+        <span>{open ? (advancedOpenLabel ?? advancedLabel) : advancedLabel}</span>
+      </button>
+      {onResetFilters && resetFiltersLabel ? (
+        <Action size="sm" variant="quiet" onPress={onResetFilters}>
+          {resetFiltersLabel}
+        </Action>
+      ) : null}
+    </>
+  ) : null;
   return (
-    <div role="search" aria-label={label} className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-3">
-        {search ? <div className="min-w-64 flex-1">{search}</div> : null}
+    <div
+      role="search"
+      aria-label={label}
+      className={compact ? 'flex flex-col gap-2' : 'flex flex-col gap-3'}
+    >
+      <div
+        className={
+          compact ? 'flex flex-wrap items-center gap-2' : 'flex flex-wrap items-center gap-3'
+        }
+      >
+        {search ? (
+          <div
+            className={
+              compact ? 'min-w-0 basis-full md:min-w-48 md:basis-48 md:flex-1' : 'min-w-64 flex-1'
+            }
+          >
+            {search}
+          </div>
+        ) : null}
         {filters ? (
           <div className="flex flex-wrap items-center gap-2 border-border sm:border-l sm:pl-3">
             {filters}
@@ -163,6 +239,7 @@ export function CollectionQuery({
           </div>
         ) : null}
         {reset ? <div className="flex items-center">{reset}</div> : null}
+        {compact ? advancedControls : null}
       </div>
       {hasActiveFilters ? (
         <ul aria-label={activeFiltersLabel} className="flex flex-wrap items-center gap-1.5">
@@ -183,24 +260,15 @@ export function CollectionQuery({
       ) : null}
       {advanced ? (
         collapsible ? (
-          <div className="flex flex-col gap-3 border-t border-border pt-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <button
-                aria-controls={regionId}
-                aria-expanded={open}
-                className="inline-flex items-center gap-1.5 rounded-control px-1.5 py-1 text-sm font-semibold text-ink outline-none transition-colors hover:text-brand focus-visible:ring-2 focus-visible:ring-focus"
-                onClick={toggle}
-                type="button"
-              >
-                <AdvancedChevron expanded={open} />
-                <span>{open ? (advancedOpenLabel ?? advancedLabel) : advancedLabel}</span>
-              </button>
-              {onResetFilters && resetFiltersLabel ? (
-                <Action size="sm" variant="quiet" onPress={onResetFilters}>
-                  {resetFiltersLabel}
-                </Action>
-              ) : null}
-            </div>
+          <div
+            className={compact ? undefined : 'flex flex-col gap-3 border-t border-border pt-3'}
+            hidden={compact && !open}
+          >
+            {compact ? null : (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                {advancedControls}
+              </div>
+            )}
             <div hidden={!open} id={regionId}>
               {advanced}
             </div>

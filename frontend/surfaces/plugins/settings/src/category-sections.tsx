@@ -74,8 +74,8 @@ function transitionI18nKey(value: (typeof PAGE_TRANSITIONS)[number]): string {
 function SectionShell({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
   const { t } = useFrontendTranslation();
   const section = (
-    <Section title={title} appearance="outlined" contentInset>
-      <div data-reveal-items className="grid gap-4">
+    <Section title={title} appearance="embedded" density="compact" contentInset>
+      <div data-reveal-items className="grid gap-3">
         {Children.toArray(children).map((child) => {
           if (!isValidElement<{ label?: string }>(child)) return child;
           const entry = SETTINGS_INDEX.find(

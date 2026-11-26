@@ -222,7 +222,7 @@ function PersonalNav({
   return (
     <nav
       aria-label={zh ? '个人中心导航' : 'Personal navigation'}
-      className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-3 py-4"
+      className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3"
     >
       <div className="space-y-1">
         <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-ink-muted">
@@ -304,7 +304,7 @@ export function PersonalShell({ children }: Readonly<{ children: ReactNode }>) {
               <PersonalLink
                 href="/home"
                 label={zh ? '返回我的文件' : 'Back to files'}
-                className="inline-flex h-control-sm items-center gap-1 rounded-action border border-border bg-surface px-2 text-xs font-medium text-ink hover:bg-surface-muted hover:text-brand focus-visible:ring-2 focus-visible:ring-focus-ring"
+                className="inline-flex h-control-sm shrink-0 items-center gap-1 whitespace-nowrap rounded-action px-2 text-xs font-medium text-ink hover:bg-surface-muted hover:text-brand focus-visible:ring-2 focus-visible:ring-focus-ring"
               >
                 <ArrowLeft className="size-4 shrink-0" />
                 <span className="sm:hidden">{zh ? '返回' : 'Files'}</span>
@@ -381,7 +381,10 @@ export function PersonalShell({ children }: Readonly<{ children: ReactNode }>) {
           />
         </DrawerSurface>
 
-        <main id="main-content" className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:py-8">
+        <main
+          id="main-content"
+          className="w-full min-w-0 max-w-4xl flex-1 px-4 pb-6 pt-3 sm:px-6 sm:pt-4"
+        >
           <RouteTransition>
             <PluginLocaleProvider
               port={{

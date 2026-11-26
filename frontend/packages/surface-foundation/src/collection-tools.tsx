@@ -217,6 +217,7 @@ export type ColumnSettingsTriggerProps = Omit<
   Readonly<{ triggerLabel: string; icon?: ReactNode }>;
 
 export type CollectionToolbarProps = Readonly<{
+  inset?: 'standard' | 'compact';
   /** Toolbar 的可访问名称（如"表格工具栏"）。 */
   label: string;
   /** 页面自定义主区内容（搜索、说明等）。 */
@@ -236,12 +237,14 @@ export function CollectionToolbar({
   density,
   columnSettings,
   exportMenu,
+  inset,
 }: CollectionToolbarProps) {
   const [columnSettingsOpen, setColumnSettingsOpen] = useState(false);
   return (
     <>
       <Toolbar
         label={label}
+        embedded={inset === 'compact'}
         primary={children ?? null}
         secondary={
           <>

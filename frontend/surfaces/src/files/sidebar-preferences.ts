@@ -5,6 +5,6 @@ export const fileSidebarPreferencesSchema = z
   .strict();
 export type FileSidebarPreferences = z.infer<typeof fileSidebarPreferencesSchema>;
 export const defaultFileSidebarPreferences: FileSidebarPreferences = {
-  collapsed: true,
+  collapsed: false,
   autoExpandTree: true,
 };

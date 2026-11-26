@@ -108,6 +108,16 @@ export async function editReadingFixtureText(page: Page, name: string) {
   return dialog;
 }
 
+export async function fileCollectionAction(
+  page: Page,
+  name: string,
+  role: 'menuitem' | 'menuitemradio' = 'menuitem',
+) {
+  const label = /^更多(?:目录)?操作$/;
+  await page.locator('[data-file-collection-actions]').getByRole('button', { name: label }).click();
+  await page.getByRole('menu', { name: label }).getByRole(role, { name, exact: true }).click();
+}
+
 export async function openReadingFixtureFolder(page: Page, prefix: string) {
   const name = prefix + randomUUID().slice(0, 8);
   const id = await page.evaluate(async (name) => {

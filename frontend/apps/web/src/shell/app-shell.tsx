@@ -97,7 +97,7 @@ function NavigationContent({
   return (
     <nav
       ref={navigationRef}
-      className={`surface-shell-navigation-viewport min-h-0 flex-1 py-6 ${compact ? 'surface-shell-compact-rail flex flex-col items-center px-0' : 'space-y-7 px-3'}`}
+      className={`surface-shell-navigation-viewport min-h-0 flex-1 py-4 ${compact ? 'surface-shell-compact-rail flex flex-col items-center px-0' : 'space-y-5 px-3'}`}
       aria-label={t('shell.primaryNav')}
     >
       <Suspense
@@ -476,7 +476,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
           </div>
         ) : null}
         <main
-          className={`surface-mobile-content mx-auto max-w-screen-2xl ${pathname.startsWith('/settings') ? 'p-0 md:p-6' : 'p-3 sm:p-6'} xl:px-10 xl:py-8`}
+          className={`surface-mobile-content mx-auto max-w-screen-2xl ${pathname.startsWith('/settings') ? 'p-0 md:p-6 xl:px-10 xl:py-8' : 'p-3 sm:px-6 xl:px-8'}`}
           id="main-content"
         >
           <RouteTransition>
