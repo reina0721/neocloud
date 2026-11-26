@@ -29,6 +29,12 @@ it('管理任务只投影可见导航，不补造地址或重新排列已应用�
             { kind: 'leaf', id: 'roles.catalog', labelKey: 'catalog', href: '/roles/catalog' },
           ],
         },
+        {
+          kind: 'leaf',
+          id: 'system-tools.update',
+          labelKey: 'systemTools.nav.update',
+          href: '/system-tools/update',
+        },
       ],
     },
   ];
@@ -50,6 +56,16 @@ it('管理任务只投影可见导航，不补造地址或重新排列已应用�
       links: [
         { id: 'roles.root', labelKey: 'roles', href: '/roles' },
         { id: 'roles.catalog', labelKey: 'catalog', href: '/roles/catalog' },
+      ],
+    },
+    {
+      id: 'operations',
+      links: [
+        {
+          id: 'system-tools.update',
+          labelKey: 'systemTools.nav.update',
+          href: '/system-tools/update',
+        },
       ],
     },
   ]);

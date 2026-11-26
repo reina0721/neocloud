@@ -30,6 +30,7 @@ const tasks = [
       ['system-tools.tasks', 'tasks'],
       ['system-tools.nodes', 'nodes'],
       ['system-tools.runtime', 'runtime'],
+      ['system-tools.update', 'update'],
       ['system-tools.blobs', 'blobs'],
     ],
   },

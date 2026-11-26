@@ -19,6 +19,43 @@ function response(value: unknown, status = 200) {
 }
 
 describe('独立运行信息读取', () => {
+  it('只有同源维护网关和所有者响应均通过才返回维护入口', async () => {
+    for (const status of [404, 200]) {
+      const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status }));
+      const port = createRuntimePort(metadata, () => 'account', request);
+      await expect(port.maintenanceAccess()).resolves.toBe('gateway-unavailable');
+      expect(request).toHaveBeenCalledTimes(1);
+    }
+    const failedGateway = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(null, { status: 503 }));
+    await expect(
+      createRuntimePort(metadata, () => 'account', failedGateway).maintenanceAccess(),
+    ).rejects.toMatchObject({ code: 'unavailable' });
+    expect(failedGateway).toHaveBeenCalledTimes(1);
+    for (const [status, outcome] of [
+      [200, 'owner-verified'],
+      [403, 'owner-required'],
+      [401, 'unauthenticated'],
+      [503, 'unavailable'],
+    ] as const) {
+      const request = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(new Response(null, { headers: { 'X-CloudDrive-Maintenance': '1' } }))
+        .mockResolvedValueOnce(new Response(null, { status }));
+      const port = createRuntimePort(metadata, () => 'account', request);
+      if (status === 200 || status === 403)
+        await expect(port.maintenanceAccess()).resolves.toBe(outcome);
+      else await expect(port.maintenanceAccess()).rejects.toMatchObject({ code: outcome });
+      expect(request).toHaveBeenNthCalledWith(1, '/maintenance', {
+        method: 'HEAD',
+        cache: 'no-store',
+      });
+      expect(request).toHaveBeenNthCalledWith(2, '/api/console/v1/deployment/owner', {
+        cache: 'no-store',
+      });
+    }
+  });
   it('503 的合法 fail 是探针结果，其他 HTTP 错误、无效协议与矛盾结果保留失败语义', async () => {
     for (const [status, body, expected] of [
       [200, { status: 'pass' }, 'pass'],

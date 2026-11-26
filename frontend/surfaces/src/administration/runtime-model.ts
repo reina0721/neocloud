@@ -74,11 +74,12 @@ export type RuntimeBuild = z.infer<typeof runtimeBuildSchema>;
 export type RuntimeMetadata = z.infer<typeof runtimeMetadataSchema>;
 export type RuntimeDiagnostics = z.infer<typeof runtimeDiagnosticsSchema>;
 export type RuntimeMetrics = z.infer<typeof runtimeMetricsSchema>;
+export type MaintenanceAccess = 'gateway-unavailable' | 'owner-required' | 'owner-verified';
 
 /** 运行信息分别读取，某项失败不抹去其余项；指标文本只在明确请求时读取。 */
 export type RuntimePort = Readonly<{
   probe(kind: 'readiness' | 'liveness', signal?: AbortSignal): Promise<RuntimeProbe>;
-  maintenanceAvailable(signal?: AbortSignal): Promise<boolean>;
+  maintenanceAccess(signal?: AbortSignal): Promise<MaintenanceAccess>;
   build(signal?: AbortSignal): Promise<RuntimeBuild>;
   metadata(signal?: AbortSignal): Promise<RuntimeMetadata>;
   diagnostics(signal?: AbortSignal): Promise<RuntimeDiagnostics>;

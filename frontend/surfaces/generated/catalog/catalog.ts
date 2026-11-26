@@ -574,6 +574,14 @@ export const generatedRouteCatalog: RouteCatalog = {
       paramNames: [],
     },
     {
+      routeId: 'system-tools.update',
+      pluginId: 'system-tools',
+      path: 'update',
+      segments: ['update'],
+      pattern: '/system-tools/update',
+      paramNames: [],
+    },
+    {
       routeId: 'ui-elements',
       pluginId: 'ui-elements',
       path: '',
@@ -1160,6 +1168,14 @@ export const generatedRouteCatalog: RouteCatalog = {
             order: 45,
             iconId: 'analytics',
             routeId: 'system-tools.runtime',
+          },
+          {
+            navigationId: 'system-tools.update',
+            labelKey: 'systemTools.nav.update',
+            groupId: 'administration',
+            order: 45,
+            iconId: 'settings',
+            routeId: 'system-tools.update',
           },
           {
             navigationId: 'system-tools.root',

@@ -284,7 +284,7 @@ Web Host 校验外部 Host/Origin，并向 Go 转发内部同源请求；额外�
 # 新实例可在向导选择启用，或给 install 子命令加 --enable-web-management。
 ```
 
-启用会短暂停服。宿主网关接管原 Web 地址和端口，Web Host 改在独立的宿主机回环端口监听。系统工具的运行状态页通过当前 IAM 系统所有者会话打开 `/maintenance`。停服期间也可直接打开同一个地址。API、DAV 和 WOPI 在业务暂不可用时返回 503 和重试提示。
+启用会短暂停服。宿主网关接管原 Web 地址和端口，Web Host 改在独立的宿主机回环端口监听。具有 `management:read` 权限的账号可从「系统管理 → 系统更新」或管理概览的「任务与运行」查看当前服务版本。启用网关后，IAM 系统所有者可从该页打开 `/maintenance`。Windows 本地开发环境也显示该入口，页面说明宿主维护服务要求并禁用检查更新、升级、回退和恢复。停服期间可直接打开同地址的 `/maintenance`。API、DAV 和 WOPI 在业务暂不可用时返回 503 和重试提示。
 
 远程维护写操作走 HTTPS。已有 TLS 反向代理时，先让 `runtime.env` 的 `PUBLIC_ORIGIN` 等于外部 HTTPS Origin，再给启用命令加 `--trusted-proxy <代理直接连接网关的IP>`。代理应保留 Host 并覆盖 `X-Forwarded-Proto` 为 `https`。直连回环 HTTP 可用于本机运维。工作区不可用时，从宿主机读取 `.control/maintenance/recovery-token`，在同址维护页建立短期恢复会话。妥善保护这个恢复凭据。
 

@@ -467,9 +467,11 @@ function RuntimeContent() {
   const access = useProductAccess();
   const [revision, setRevision] = useState(0);
   const [security, setSecurity] = useState(false);
-  const maintenance = useCatalogRequest(port.runtime.maintenanceAvailable);
+  const maintenance = useCatalogRequest(port.runtime.maintenanceAccess);
   const showMaintenance =
-    maintenance.result && 'value' in maintenance.result && maintenance.result.value;
+    maintenance.result &&
+    'value' in maintenance.result &&
+    maintenance.result.value === 'owner-verified';
   return (
     <Page>
       <PageHeader
