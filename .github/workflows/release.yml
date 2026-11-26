@@ -82,7 +82,7 @@ jobs:
         run: |
           checksum="${GORELEASER_DIST}/checksums.txt"
           bundle="${GORELEASER_DIST}/checksums.txt.sigstore.json"
-          cosign sign-blob --yes --bundle "${bundle}" "${checksum}"
+          cosign sign-blob --yes --new-bundle-format --bundle "${bundle}" "${checksum}"
           cosign verify-blob \
             --bundle "${bundle}" \
             --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/release.yml@${{ github.ref }}" \
@@ -122,10 +122,6 @@ jobs:
           binary="dist/docker/clouddrive-maintenance_${GITHUB_REF_NAME}_linux_${{ matrix.arch }}"
           CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build -trimpath -buildvcs=false -ldflags="-s -w" -o "${binary}" ./cmd/clouddrive-maintenance
           node scripts/verify-elf-platform.mjs "${binary}" "${{ matrix.arch }}"
-      - name: Exercise installation and persistence on native architecture
-        run: node scripts/test-docker-release.mjs --release-dir dist/docker --version "${GITHUB_REF_NAME}"
-      - name: Exercise default HTTP installation on a non-loopback IP
-        run: node scripts/test-docker-release.mjs --release-dir dist/docker --version "${GITHUB_REF_NAME}" --network-host "$(hostname -I | awk '{print $1}')"
       - name: Produce image SBOMs
         run: |
           GOBIN="${RUNNER_TEMP}/release-tools" go install github.com/anchore/syft/cmd/syft@v1.50.0
@@ -170,7 +166,7 @@ jobs:
         run: |
           GOBIN="${RUNNER_TEMP}/release-tools" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
           cosign="${RUNNER_TEMP}/release-tools/cosign"
-          "${cosign}" sign-blob --yes --bundle dist/complete/checksums.txt.sigstore.json dist/complete/checksums.txt
+          "${cosign}" sign-blob --yes --new-bundle-format --bundle dist/complete/checksums.txt.sigstore.json dist/complete/checksums.txt
           "${cosign}" verify-blob --bundle dist/complete/checksums.txt.sigstore.json \
             --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/release.yml@${{ github.ref }}" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com dist/complete/checksums.txt
@@ -182,9 +178,70 @@ jobs:
           gh release upload "${GITHUB_REF_NAME}" dist/docker/clouddrive_*_docker.tar.gz dist/docker/install.sh \
             dist/docker/version.txt dist/docker/*.spdx.json dist/docker/clouddrive-maintenance_* dist/complete/checksums.txt dist/complete/checksums.txt.sigstore.json --clobber
 
+  docker-acceptance:
+    name: Signed Docker and air-gap acceptance / ${{ matrix.arch }}
+    needs: attach-docker
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 55
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.11.1
+      - name: Load the signed native package and independent TUF trust
+        env:
+          ARCH: ${{ matrix.arch }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "$GITHUB_REF_NAME" --dir "${RUNNER_TEMP}/candidate" \
+            --pattern install.sh --pattern version.txt --pattern checksums.txt --pattern checksums.txt.sigstore.json \
+            --pattern "clouddrive_${GITHUB_REF_NAME}_linux_${ARCH}_docker.tar.gz" \
+            --pattern "clouddrive-maintenance_${GITHUB_REF_NAME}_linux_${ARCH}"
+          GOBIN="${RUNNER_TEMP}/release-tools" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
+          export CLOUDDRIVE_COSIGN="${RUNNER_TEMP}/release-tools/cosign"
+          export CLOUDDRIVE_OFFLINE_TRUST_DIR="${RUNNER_TEMP}/offline-trust"
+          bash scripts/prepare-offline-trust.sh "$CLOUDDRIVE_OFFLINE_TRUST_DIR" --legacy
+          printf 'CLOUDDRIVE_COSIGN=%s\nCLOUDDRIVE_OFFLINE_TRUST_DIR=%s\n' \
+            "$CLOUDDRIVE_COSIGN" "$CLOUDDRIVE_OFFLINE_TRUST_DIR" >> "$GITHUB_ENV"
+      - name: Exercise the genuine air-gap install and legacy bundle verification
+        if: ${{ !contains(github.ref_name, '-') }}
+        env:
+          ARCH: ${{ matrix.arch }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          candidate="${RUNNER_TEMP}/candidate"
+          bash scripts/test-offline-release.sh "$candidate" "$CLOUDDRIVE_OFFLINE_TRUST_DIR" "$GITHUB_REF_NAME" "$ARCH"
+          legacy=v0.2.2
+          gh release download "$legacy" --dir "${RUNNER_TEMP}/legacy" \
+            --pattern install.sh --pattern version.txt --pattern checksums.txt --pattern checksums.txt.sigstore.json \
+            --pattern "clouddrive_${legacy}_linux_${ARCH}_docker.tar.gz"
+          tool="$candidate/clouddrive-maintenance_${GITHUB_REF_NAME}_linux_${ARCH}"
+          chmod 700 "$tool"
+          sudo unshare --net -- "$tool" verify-release --cosign "$CLOUDDRIVE_COSIGN" \
+            --release-dir "${RUNNER_TEMP}/legacy" --trust-dir "$CLOUDDRIVE_OFFLINE_TRUST_DIR" \
+            --version "$legacy" --arch "$ARCH"
+          bash scripts/test-offline-transition.sh "${RUNNER_TEMP}/legacy" "$candidate" "$CLOUDDRIVE_OFFLINE_TRUST_DIR"
+      - name: Exercise installation and persistence on native architecture
+        run: node scripts/test-docker-release.mjs --release-dir "${RUNNER_TEMP}/candidate" --version "$GITHUB_REF_NAME"
+      - name: Exercise default HTTP installation on a non-loopback IP
+        run: node scripts/test-docker-release.mjs --release-dir "${RUNNER_TEMP}/candidate" --version "$GITHUB_REF_NAME" --network-host "$(hostname -I | awk '{print $1}')"
+
   maintenance-acceptance:
     name: Native browser maintenance / ${{ matrix.arch }}
-    needs: attach-docker
+    needs: docker-acceptance
     if: ${{ !contains(github.ref_name, '-') }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 55
@@ -217,15 +274,20 @@ jobs:
           [[ "$old" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
           test "$old" != "$GITHUB_REF_NAME"
           gh release download "$old" --dir "${RUNNER_TEMP}/baseline" \
-            --pattern install.sh --pattern checksums.txt --pattern "clouddrive_${old}_linux_${ARCH}_docker.tar.gz"
+            --pattern install.sh --pattern version.txt --pattern checksums.txt --pattern checksums.txt.sigstore.json \
+            --pattern "clouddrive_${old}_linux_${ARCH}_docker.tar.gz"
           gh release download "$GITHUB_REF_NAME" --dir "${RUNNER_TEMP}/candidate" \
-            --pattern install.sh --pattern checksums.txt --pattern checksums.txt.sigstore.json \
+            --pattern install.sh --pattern version.txt --pattern checksums.txt --pattern checksums.txt.sigstore.json \
             --pattern "clouddrive_${GITHUB_REF_NAME}_linux_${ARCH}_docker.tar.gz" \
             --pattern "clouddrive-maintenance_${GITHUB_REF_NAME}_linux_${ARCH}"
           echo "BASELINE_VERSION=$old" >> "${GITHUB_ENV}"
       - name: Prepare browser and release verifier
         run: |
           GOBIN="${RUNNER_TEMP}/tools" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
+          export CLOUDDRIVE_COSIGN="${RUNNER_TEMP}/tools/cosign"
+          export CLOUDDRIVE_OFFLINE_TRUST_DIR="${RUNNER_TEMP}/offline-trust"
+          bash scripts/prepare-offline-trust.sh "$CLOUDDRIVE_OFFLINE_TRUST_DIR" --legacy
+          echo "CLOUDDRIVE_OFFLINE_TRUST_DIR=$CLOUDDRIVE_OFFLINE_TRUST_DIR" >> "$GITHUB_ENV"
           export PLAYWRIGHT_BROWSERS_PATH="${RUNNER_TEMP}/maintenance-browsers"
           echo "PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH" >> "${GITHUB_ENV}"
           npx --yes pnpm@10.22.0 --dir frontend install --frozen-lockfile
@@ -242,11 +304,11 @@ jobs:
           awk -v asset="$tool" '$2 == asset {print}' checksums.txt | sha256sum -c -
           chmod 700 "$tool"
           cd "${GITHUB_WORKSPACE}"
-          sudo env CLOUDDRIVE_COSIGN="${RUNNER_TEMP}/tools/cosign" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_PATH" \
+          sudo env CLOUDDRIVE_COSIGN="${RUNNER_TEMP}/tools/cosign" CLOUDDRIVE_OFFLINE_TRUST_DIR="$CLOUDDRIVE_OFFLINE_TRUST_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_PATH" \
             "$(command -v node)" scripts/test-docker-maintenance.mjs \
             --candidate "${RUNNER_TEMP}/candidate" --version "$GITHUB_REF_NAME" \
             --baseline "${RUNNER_TEMP}/baseline" --baseline-version "$BASELINE_VERSION"
-          sudo env CLOUDDRIVE_COSIGN="${RUNNER_TEMP}/tools/cosign" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_PATH" \
+          sudo env CLOUDDRIVE_COSIGN="${RUNNER_TEMP}/tools/cosign" CLOUDDRIVE_OFFLINE_TRUST_DIR="$CLOUDDRIVE_OFFLINE_TRUST_DIR" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_PATH" \
             "$(command -v node)" scripts/test-docker-maintenance.mjs \
             --candidate "${RUNNER_TEMP}/candidate" --version "$GITHUB_REF_NAME"
 
@@ -291,7 +353,21 @@ jobs:
             "${RUNNER_TEMP}/release-assets/checksums.txt"
       - name: Publish verified release as latest stable
         run: |
+          export CLOUDDRIVE_COSIGN="${RUNNER_TEMP}/release-tools/cosign"
+          export CLOUDDRIVE_OFFLINE_TRUST_DIR="${RUNNER_TEMP}/offline-trust"
+          bash scripts/prepare-offline-trust.sh "$CLOUDDRIVE_OFFLINE_TRUST_DIR"
           node scripts/test-docker-release.mjs --release-dir "${RUNNER_TEMP}/release-assets" --version "${GITHUB_REF_NAME}"
           gh release edit "${GITHUB_REF_NAME}" --draft=false --prerelease=false --latest
           test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)" = "${GITHUB_REF_NAME}"
+          for attempt in {1..6}; do
+            if curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' \
+              --connect-timeout 10 --max-time 20 \
+              "https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/install.sh" \
+              --output "${RUNNER_TEMP}/public-install.sh" &&
+              cmp --silent "${RUNNER_TEMP}/release-assets/install.sh" "${RUNNER_TEMP}/public-install.sh"; then
+              break
+            fi
+            sleep 5
+          done
+          cmp -- "${RUNNER_TEMP}/release-assets/install.sh" "${RUNNER_TEMP}/public-install.sh"
           echo "正式版：https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}" >> "${GITHUB_STEP_SUMMARY}"

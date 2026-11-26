@@ -140,7 +140,7 @@ async function fixture(t, { armSha = sha, layout = true } = {}) {
     );
     await writeFile(
       join(stage, "manifest.txt"),
-      `FORMAT=1\n${layout ? "INSTANCE_LAYOUT=1\n" : ""}VERSION=${tag}\nARCH=${arch}\nCOMMIT=${arch === "arm64" ? armSha : sha}\nAPI_ID=sha256:${"1".repeat(64)}\nWEB_ID=sha256:${"2".repeat(64)}\n`,
+      `FORMAT=1\n${layout ? "INSTANCE_LAYOUT=1\n" : ""}OFFLINE_MAINTENANCE=1\nVERSION=${tag}\nARCH=${arch}\nCOMMIT=${arch === "arm64" ? armSha : sha}\nAPI_ID=sha256:${"1".repeat(64)}\nWEB_ID=sha256:${"2".repeat(64)}\n`,
     );
     execFileSync("tar", [
       "-czf",

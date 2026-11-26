@@ -78,6 +78,7 @@ type Request struct {
 	Target   string `json:"target,omitempty"`
 	Expected string `json:"expected,omitempty"`
 	Confirm  string `json:"confirm,omitempty"`
+	Offline  bool   `json:"offline,omitempty"`
 	Actor    string `json:"-"`
 }
 
@@ -92,6 +93,7 @@ type Job struct {
 	Actor       string     `json:"actor"`
 	WasServing  bool       `json:"wasServing,omitempty"`
 	WasRecovery bool       `json:"wasRecovery,omitempty"`
+	UsesReceipt bool       `json:"usesReceipt,omitempty"`
 }
 
 type Snapshot struct {
@@ -104,13 +106,24 @@ type Snapshot struct {
 }
 
 type State struct {
-	Current  string     `json:"current"`
-	Previous string     `json:"previous,omitempty"`
-	Serving  bool       `json:"serving"`
-	Recovery bool       `json:"recoveryRequired"`
-	Jobs     []Job      `json:"jobs"`
-	Backups  []Snapshot `json:"backups"`
-	Update   *Release   `json:"update,omitempty"`
+	Current       string     `json:"current"`
+	Previous      string     `json:"previous,omitempty"`
+	Serving       bool       `json:"serving"`
+	Recovery      bool       `json:"recoveryRequired"`
+	Jobs          []Job      `json:"jobs"`
+	Backups       []Snapshot `json:"backups"`
+	Update        *Release   `json:"update,omitempty"`
+	LocalReleases []Release  `json:"localReleases,omitempty"`
+}
+
+func (s State) LatestLocalUpgrade() (Release, bool) {
+	latest := Release{Version: s.Current}
+	for _, candidate := range s.LocalReleases {
+		if newer(candidate.Version, latest.Version) {
+			latest = candidate
+		}
+	}
+	return latest, latest.Version != s.Current
 }
 
 func RandomID() string {

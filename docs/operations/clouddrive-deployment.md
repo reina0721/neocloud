@@ -157,7 +157,28 @@ curl -fL --proto '=https' --proto-redir '=https' \
   bash -s -- install --dir "$HOME/clouddrive-two" --bind 127.0.0.1 --port 44173 --version v0.2.2)
 ```
 
-离线时，从同一 Release 拷贝对应架构的 `clouddrive_vX.Y.Z_linux_amd64_docker.tar.gz` 或 `clouddrive_vX.Y.Z_linux_arm64_docker.tar.gz`、`checksums.txt`、`version.txt`，添加 `--release-dir /path/to/assets`。可以用 `--version` 替代 `version.txt`。目标机不拉取镜像仓库，也不编译源码。
+使用带 `OFFLINE_MAINTENANCE=1` 的正式 Release 时，可以从本地资产安装并在断网环境维护。从同一正式标签下载下列文件，放在同一目录。
+
+- `install.sh`、`version.txt`、`checksums.txt` 和 `checksums.txt.sigstore.json`。
+- 主机架构对应的 Docker 归档 `clouddrive_<版本>_linux_<架构>_docker.tar.gz` 与维护工具 `clouddrive-maintenance_<版本>_linux_<架构>`。架构为 `amd64` 或 `arm64`。
+
+在可信的联网工作站安装 Cosign 2.6.5 或更新的兼容版本，用[信任准备脚本](../../scripts/prepare-offline-trust.sh)从 Sigstore TUF 仓库导出材料。可从对应 GitHub tag 单独下载该脚本。`--legacy` 还会导出旧格式所需的 `fulcio.pem`、`rekor.pub` 和 `ctfe.pub`，此模式需要 Node.js。仅使用新版签名包时，可省略 `--legacy`。[Cosign 离线验证说明](https://github.com/sigstore/cosign#air-gapped-verification)
+
+```bash
+bash scripts/prepare-offline-trust.sh ./clouddrive-trust --legacy
+```
+
+通过可信渠道核验 `install.sh`，将发布资产与信任材料分别转移到目标机。目标机也需要 Cosign。首次安装会保存本实例的信任材料。
+
+```bash
+assets=/mnt/cloud-install/release
+trust=/mnt/cloud-install/sigstore-trust
+bash "$assets/install.sh" install --dir /opt/clouddrive --name cloud-main \
+  --data-dir /mnt/data/cloud-main --bind 0.0.0.0 --port 4180 \
+  --release-dir "$assets" --trust-dir "$trust"
+```
+
+`--release-dir` 使用该目录自己的 `version.txt` 确定版本，也可以增加 `--version <正式标签>`。安装器核对签名身份、单项摘要、架构和归档内版本，在同一命令中导入配套镜像并启动。离线验证和安装使用本地附件与信任材料。
 
 ### 管理和更新
 
@@ -177,7 +198,29 @@ curl -fL --proto '=https' --proto-redir '=https' \
 ~/clouddrive/install.sh restart
 ```
 
-`restart` 会应用修改后的配置并检查就绪状态。常规 CLI 升级成功后同时更新实例管理脚本。启用网页运维的实例使用独立安装的宿主维护工具。相同版本不会重复迁移。重复安装不重建已有实例，目标目录非空且无实例标记时拒绝接管。不同实例使用独立 Compose project、配置和数据目录。
+`restart` 会应用修改后的配置并检查就绪状态。启用新版维护工具后，应用升级和宿主维护工具更新分别执行。相同版本不会重复迁移。重复安装不重建已有实例，目标目录非空且无实例标记时拒绝接管。不同实例使用独立 Compose project、配置和数据目录。
+
+#### 离线检查与升级
+
+每个正式版本单独存放一个资产目录。已有旧安装器的实例先用新版签名资产刷新宿主维护工具。使用实际安装目录，并核对新版资产与信任目录。
+
+```bash
+bash "$assets/install.sh" update-maintenance --dir /opt/clouddrive \
+  --release-dir "$assets" --trust-dir "$trust"
+```
+
+之后可以直接检查、导入和升级。`check-update --release-dir` 检查指定目录的签名与归档，报告目标版本能否用于升级。导入会把验证过的发布包保存到实例，便于重复使用。
+
+```bash
+manager=/opt/clouddrive/install.sh
+next=/mnt/cloud-install/next-release
+"$manager" check-update --release-dir "$next"
+"$manager" import-release --release-dir "$next"
+"$manager" check-update --offline
+"$manager" upgrade --offline --version "$(cat "$next/version.txt")"
+```
+
+`check-update --offline` 列出已验证的本地正式版本。省略升级版本时，`upgrade --offline` 选择高于当前版本的最新本地正式包。没有较新的本地包时，命令检查当前版本镜像，必要时从已导入的同版本包恢复镜像，无须迁移。保留当前版本和上一版本的已校验附件。回退或恢复需要对应版本的本地镜像或已导入的签名发布包。
 
 主目录结构：
 
@@ -208,15 +251,24 @@ clouddrive/
 
 Web Host 校验外部 Host/Origin，并向 Go 转发内部同源请求；额外跨域 Origin 仍由显式白名单约束。Go 继续独立执行会话、权限和 CSRF 校验。WOPI 保留协议自身的票据验证。Web Host 覆盖客户端转发头；用于连接 URL 展示的元数据不参与鉴权、Cookie 策略或 DAV 目标授权。
 
-安装包保持 `FORMAT=1`、`NETWORK=1` 和原五项文件集合。`ENTRYPOINT=1` 表示支持无固定外部地址的 Web 入口，`INSTANCE_LAYOUT=1` 表示支持自定义项目名或数据目录。升级沿用已有实例的布局，并在停服前校验目标版本是否支持已用能力。签名、SBOM 与维护者发布验收见[发布说明](release.md)。
+安装包保持 `FORMAT=1`、`NETWORK=1` 和原五项文件集合。`ENTRYPOINT=1` 表示支持无固定外部地址的 Web 入口，`INSTANCE_LAYOUT=1` 表示支持自定义项目名或数据目录，`OFFLINE_MAINTENANCE=1` 表示有配套的离线维护工具。升级沿用已有实例的布局，并在停服前校验目标版本是否支持已用能力。签名、SBOM 与维护者发布验收见[发布说明](release.md)。
 
 ### 数据与升级失败
 
 宿主机数据目录持久化数据库、文件和传输暂存，默认是安装目录中的 `data/`。容器内统一挂载到 `/app/.data`。`runtime.env` 保留应用配置与设置令牌，`.control/` 记录实例身份和当前版本，`releases/` 保留已校验的 Compose 与镜像清单。
 
-升级先完成下载、摘要及配套镜像校验，再停止前后端，等待退出，备份 SQLite 主文件、存在的 WAL/SHM 及配置，然后执行目标镜像的迁移和严格兼容检查，最后启动并核对 `/readyz` 和 `/build` 版本。启动检查默认等待 120 秒，可通过 `--wait-timeout 180` 调整（5–600 秒）。
+升级先核对产物和配套镜像，再停服备份、执行迁移和兼容检查，最后启动并核对 `/readyz` 与 `/build` 版本。旧安装器执行 SQLite 备份。新版宿主维护工具在升级前创建完整恢复点。启动检查默认等待 120 秒；直接使用安装器的升级可用 `--wait-timeout 180` 调整（5–600 秒）。
 
 备份位于安装目录的 `backups/时间戳/`，包含 `database.tar`、`runtime.env`、原版本、实例标记和校验和。文件 Blob 留在数据目录中的 `storage/`，整机恢复须同时备份安装目录和实际数据目录。
+
+新版宿主维护工具支持不启用网页运维的完整备份、兼容回退与恢复。`backup --full` 把数据库、文件、传输暂存和应用配置写入 `backups/full-<编号>/`。查看命令返回的恢复点编号或从状态输出中选取恢复点。
+
+```bash
+/opt/clouddrive/install.sh backup --full
+/opt/clouddrive/install.sh rollback --offline
+# 将 ID 替换为要恢复的完整恢复点编号。
+/opt/clouddrive/install.sh restore --offline --backup-id ID --confirm-restore ID
+```
 
 下载或校验失败不会停止服务。备份失败不会执行目标迁移。后续失败会保留数据、候选版本和备份；只有旧镜像报告各迁移集精确兼容时才恢复旧服务。否则停止自动回退，按[迁移与回滚](migration-and-rollback.md)选择 forward-fix 或经所有者确认的备份恢复，不执行自动 `down`、删除版本记录或覆盖数据库。恢复前先停止实例、另存失败现场并校验备份，不在运行中的数据库上解包。
 
@@ -236,8 +288,8 @@ Web Host 校验外部 Host/Origin，并向 Go 转发内部同源请求；额外�
 
 远程维护写操作走 HTTPS。已有 TLS 反向代理时，先让 `runtime.env` 的 `PUBLIC_ORIGIN` 等于外部 HTTPS Origin，再给启用命令加 `--trusted-proxy <代理直接连接网关的IP>`。代理应保留 Host 并覆盖 `X-Forwarded-Proto` 为 `https`。直连回环 HTTP 可用于本机运维。工作区不可用时，从宿主机读取 `.control/maintenance/recovery-token`，在同址维护页建立短期恢复会话。妥善保护这个恢复凭据。
 
-- 检查正式版可查看目标版本、发布说明和更新历史。每个实例一次运行一个维护任务，刷新维护页可以重新查看任务。
-- 升级先从 GitHub 校验签名并导入配套镜像，再停服复制完整恢复点。移除旧镜像前，确认所需恢复点仍有对应的本地镜像。宿主机可将经签名的正式包与校验附件放在 `.control/maintenance/assets/<版本>/` 供离线校验和导入。
+- 「检查正式版（GitHub）」显示在线候选和发布说明。「检查本地包」重新验证宿主机已导入的包，并显示可升级的确切版本。导入在宿主机使用 `install.sh import-release --release-dir <目录>`。每个实例一次只运行一个维护任务，刷新维护页可以重新查看进度。
+- 选中本地候选后用「从本地包升级到」提交。安装器在停服前检查目标及当前版本的镜像，必要时从已导入的签名包补齐。兼容回退与恢复也使用本地来源。
 - `backups/full-<编号>/` 保存 SQLite、文件、传输暂存、应用配置与版本清单。创建恢复点会停服，并需要足够空间写入压缩档案。旧 CLI 生成的 SQLite 备份继续适用于人工流程。
 - 兼容回退使用上一套程序及当前数据。恢复完整备份会重新启用当时的数据和应用配置。确认前核对备份时间和恢复点编号。恢复通过同一文件系统上的重命名切换数据目录。使用默认数据目录时，原数据保留在安装目录的 `.control/maintenance/restore-<任务编号>/original-data`。使用自定义数据目录时，原数据保留在该目录旁的 `.clouddrive-restore-<任务编号>/original-data`。宿主网关配置、恢复凭据和任务记录仍在原处。
 - CLI 的 `check-update`、`upgrade`、`backup`、`rollback` 和 `restore --backup-id <编号> --confirm-restore <编号>` 使用相同执行路径。systemd 用安装目录派生的维护标记命名 `<维护标记>-gateway.service` 和 `<维护标记>-maintenance.service`。Compose 容器名使用 `--name`。任务失败的详细阶段可在维护服务的宿主日志中查看。

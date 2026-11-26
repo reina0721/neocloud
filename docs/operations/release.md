@@ -64,28 +64,27 @@ clouddrive 发布包含 Go 与独立 Next 服务。Go archive 不内置前端，
 bash scripts/build-docker-release.sh --version v1.0.0-rc.1 --arch amd64 --out dist/docker-amd64
 bash scripts/build-docker-release.sh --version v1.0.0-rc.1 --arch arm64 --out dist/docker-arm64
 node --test scripts/install.test.mjs scripts/verify-release.test.mjs scripts/release-config.test.mjs scripts/verify-elf-platform.test.mjs scripts/docker-image-config-id.test.mjs
-node scripts/test-docker-release.mjs --release-dir dist/docker-amd64 --version v1.0.0-rc.1
 ```
 
-需要免密 sudo Docker 的开发机，可显式设置 `CLOUDDRIVE_DOCKER_SUDO=1`；目标安装脚本本身不会自动调用 sudo。已有配套镜像可用 `--api-image` 与 `--web-image` 重新打包，但版本、架构、源码及镜像配置摘要必须通过校验，不能仅重打标签冒充另一版本。
+需要免密 sudo Docker 的开发机，可显式设置 `CLOUDDRIVE_DOCKER_SUDO=1`。常规安装使用当前账户的 Docker 权限，注册或更新网页运维服务需要宿主机管理权限。已有配套镜像可用 `--api-image` 与 `--web-image` 重新打包，版本、架构、源码及镜像配置摘要必须通过校验。
 
 包内 `API_ID`、`WEB_ID` 固定记录原始镜像配置 JSON 的 SHA-256；配置还引用各层的 `rootfs.diff_ids`。Docker 传统存储与 containerd 存储的显示 ID 定义不同，安装器在显示 ID 不匹配时仅从本地导出已载入的对应平台镜像，核对原始配置内容摘要，再继续检查架构、版本和源码。该步骤不访问镜像仓库、不增加目标机 Node 依赖，也不把版本 label 当成内容身份校验。
 
 安装包保留 `NETWORK=1`，新增 `ENTRYPOINT=1` 表示支持自动同源入口。原生发布任务分别通过回环地址和 `--network-host` 指定的 runner 非回环 IPv4 访问默认安装，不传外部地址或 HTTP 开关；实际核对默认监听、Cookie、初始化、文件、WebDAV 地址与读写、伪造 Origin/CSRF 拒绝、会话与重启。开发机可以给 `scripts/test-docker-release.mjs` 添加 `--network-host <当前机器IPv4>` 重现；不能以 localhost 的安全上下文代替普通 HTTP 浏览器验收。HTTP 的真实浏览器操作需要额外验证，不能由 Node HTTP 客户端通过推定。
 
-`manifest.txt` 中的 `INSTANCE_LAYOUT=1` 标记支持自定义 Compose 项目名和数据目录。该版本升级旧实例时沿用已有布局。使用自定义布局的实例须选择具有该标记的版本。[自定义实例与安装检查](clouddrive-deployment.md#自定义实例与安装检查)
+`manifest.txt` 中的 `INSTANCE_LAYOUT=1` 标记支持自定义 Compose 项目名和数据目录，`OFFLINE_MAINTENANCE=1` 标记有配套的离线维护工具。该版本升级旧实例时沿用已有布局。使用自定义布局的实例须选择具有该标记的版本。[自定义实例与安装检查](clouddrive-deployment.md#自定义实例与安装检查)
 
-两个候选版本的真实升级验收使用：
+在已准备好独立信任目录的 Linux 主机上，用两个完整签名附件目录执行真实升级验收。`build-docker-release.sh` 生成的本地构建产物由发布流程签名后进入这一验收。
 
 ```bash
-node scripts/test-docker-release.mjs \
-  --release-dir dist/docker-v1 --version v1.0.0-rc.1 \
-  --upgrade-dir dist/docker-v2 --upgrade-version v1.0.0-rc.2 --faults
+CLOUDDRIVE_OFFLINE_TRUST_DIR=/path/to/trust node scripts/test-docker-release.mjs \
+  --release-dir /path/to/signed-v1 --version v1.0.0 \
+  --upgrade-dir /path/to/signed-v2 --upgrade-version v1.1.0 --faults
 ```
 
 该脚本只创建和清理自己拥有的临时实例，验证管理员与角色、文件摘要、存储绑定、重启、备份和升级；损坏包、端口冲突及备份失败使用实际容器和文件权限验证。`--faults` 在独立数据库副本制造脏迁移，确认拒绝自动降级，再明确恢复该测试副本并核对文件内容。控制流程夹具的独立单元测试不冒充真实集成。`--keep` 可保留成功实例用于浏览器审查，失败现场始终保留；`--emulated-arch arm64` 仅用于已有 QEMU 的本地运行验收，并明确标注 daemon 架构选择夹具与模拟环境。
 
-Docker 工作流还生成两个镜像的 SPDX SBOM。最终附件任务合并 Go 与 Docker 的完整校验清单，包含六份 SPDX SBOM，重新进行 OIDC 签名与验证，再仅向仍为 draft 的 Release 上传。之后才进入自动发布阶段，不能提前发布只有 Go 附件的中间 draft。
+Docker 工作流还生成两个镜像的 SPDX SBOM。最终附件任务合并 Go 与 Docker 的完整校验清单，包含六份 SPDX SBOM，以新版 Sigstore bundle 重新进行 OIDC 签名与验证，再仅向仍为 draft 的 Release 上传。随后两个原生架构分别在无外网路由的网络命名空间验证签名安装、维护和旧版切换。信任材料通过 Sigstore TUF 单独准备。[离线信任准备](clouddrive-deployment.md#自动化与离线安装)
 
 签名可用既有固定版本 cosign 验证：
 
@@ -104,4 +103,4 @@ cosign verify-blob --bundle checksums.txt.sigstore.json \
 
 每个平台同时构建 `clouddrive-maintenance_<tag>_linux_<arch>`。最终签名清单覆盖维护工具，发布门禁检查真实 ELF 架构。维护工具具有独立进程和版本周期，普通应用升级期间由原工具继续持有实例锁和网关端口。
 
-正式发布前的原生验收从上一正式版初始化文件和分享，下载签名候选，启动 systemd 网关并通过 Chromium 提交升级。停服期间检查同址维护页与 WebDAV 503，升级后核对原文件，验证系统所有者授权、备份和恢复。若旧版未包含所有者校验接口，首次跨版验收使用宿主恢复凭据发起任务。验收实例只使用独立临时目录。
+正式发布前的原生验收从上一正式版初始化文件和分享，下载签名候选，启动 systemd 网关并通过 Chromium 检查和选择本地包。停服期间检查同址维护页与 WebDAV 503，升级后核对原文件，验证系统所有者授权、兼容回退、备份和恢复。若旧版未包含所有者校验接口，首次跨版验收使用宿主恢复凭据发起任务。验收实例只使用独立临时目录。

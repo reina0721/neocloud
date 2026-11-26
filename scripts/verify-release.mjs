@@ -181,6 +181,7 @@ export async function verifyAssets({
     for (const [key, value] of Object.entries({
       FORMAT: "1",
       INSTANCE_LAYOUT: "1",
+      OFFLINE_MAINTENANCE: "1",
       VERSION: tag,
       ARCH: arch,
       COMMIT: sha,

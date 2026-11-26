@@ -15,7 +15,7 @@ import (
 
 var (
 	ErrBusy     = errors.New("该实例已有维护任务")
-	ErrStale    = errors.New("实例版本已变化，请刷新后重试")
+	ErrStale    = errors.New("实例状态已变化，请刷新后重试")
 	ErrRecovery = errors.New("实例需要恢复，请先恢复完整备份")
 	ErrInvalid  = errors.New("无效的维护操作或确认")
 )
@@ -41,23 +41,19 @@ func NewWorker(ctx context.Context, root string, cfg Config) (*Worker, error) {
 	if project != cfg.Project {
 		return nil, errors.New("实例标记与维护配置不匹配")
 	}
-	dataDir, err := instanceDataDir(root)
-	if err != nil {
+	return newWorker(ctx, engine{root: root, cfg: cfg, releases: NewReleases()})
+}
+
+func NewLocalWorker(ctx context.Context, root string) (*Worker, error) {
+	if _, err := maintenanceProject(root); err != nil {
 		return nil, err
 	}
-	e := engine{root: root, dataDir: dataDir, cfg: cfg, releases: NewReleases()}
-	current, err := readText(e.currentPath())
-	if err != nil || !releasePattern.MatchString(current) {
-		return nil, errors.New("实例当前版本无效")
-	}
-	w := &Worker{engine: e, ctx: ctx, state: State{Current: current, Serving: true}}
-	if err := ReadJSON(filepath.Join(e.control(), "state.json"), &w.state); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, err
-	}
-	if !releasePattern.MatchString(w.state.Current) {
-		return nil, errors.New("持久化维护状态无效")
-	}
-	lock := flock.New(filepath.Join(root, ".control", "lock"))
+	return newWorker(ctx, engine{root: root, local: true, releases: NewReleases()})
+}
+
+func newWorker(ctx context.Context, e engine) (*Worker, error) {
+	lock := flock.New(filepath.Join(e.root, ".control", "lock"))
+	defer lock.Close()
 	locked, err := lock.TryLock()
 	if err != nil {
 		return nil, err
@@ -65,11 +61,35 @@ func NewWorker(ctx context.Context, root string, cfg Config) (*Worker, error) {
 	if !locked {
 		return nil, ErrBusy
 	}
-	defer lock.Close()
-	if err = w.reconcile(current); err != nil {
+	e.dataDir, err = instanceDataDir(e.root)
+	if err != nil {
+		return nil, err
+	}
+	if err = os.MkdirAll(e.control(), 0700); err != nil {
+		return nil, err
+	}
+	w := &Worker{engine: e, ctx: ctx}
+	if err = w.load(); err != nil {
 		return nil, err
 	}
 	return w, nil
+}
+
+// load is called while the host instance lock is held.
+func (w *Worker) load() error {
+	current, err := readText(w.engine.currentPath())
+	if err != nil || !releasePattern.MatchString(current) {
+		return errors.Join(errors.New("实例当前版本无效"), err)
+	}
+	state := State{Current: current, Serving: true}
+	if err := ReadJSON(filepath.Join(w.engine.control(), "state.json"), &state); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if !releasePattern.MatchString(state.Current) {
+		return errors.New("持久化维护状态无效")
+	}
+	w.state = state
+	return w.reconcile(current)
 }
 
 func (w *Worker) Wait() { w.wg.Wait() }
@@ -80,6 +100,15 @@ func (w *Worker) Status() State {
 	state := w.state.clone()
 	if w.faulted {
 		state.Serving, state.Recovery = false, true
+		for i := range state.Jobs {
+			job := &state.Jobs[i]
+			if job.Finished == nil {
+				observed := time.Now().UTC()
+				job.Finished = &observed
+				job.Phase = "interrupted"
+				job.Result = "维护记录未能保存，请修复宿主机存储并重新启动维护程序以核对结果"
+			}
+		}
 	}
 	return state
 }
@@ -87,6 +116,7 @@ func (w *Worker) Status() State {
 func (s State) clone() State {
 	s.Jobs = slices.Clone(s.Jobs)
 	s.Backups = slices.Clone(s.Backups)
+	s.LocalReleases = slices.Clone(s.LocalReleases)
 	return s
 }
 
@@ -121,13 +151,25 @@ func (w *Worker) reconcile(current string) error {
 		case "queued", "checking", "preparing", "validating-restore":
 			job.Result = "已中断，可重试"
 		case "committing":
-			if current == target {
-				if current != job.Original {
-					next.Previous = job.Original
+			committed := current == target
+			if job.UsesReceipt {
+				var err error
+				committed, err = w.engine.hasCommitReceipt(job.ID, target)
+				if err != nil {
+					return err
 				}
-				next.Serving, next.Recovery = true, false
-				job.Phase, job.Result = "succeeded", "版本已提交"
-				break
+			}
+			if committed {
+				if job.UsesReceipt {
+					if err := syncDirectory(w.engine.control()); err != nil {
+						return err
+					}
+				}
+				if err := w.engine.setCurrent(*job, target); err != nil {
+					return err
+				}
+				completeCommit(&next, job, target)
+				continue
 			}
 			fallthrough
 		default:
@@ -142,6 +184,15 @@ func (w *Worker) reconcile(current string) error {
 		if job.Phase != "succeeded" {
 			job.Phase = "interrupted"
 		}
+	}
+	if w.engine.local && !next.Recovery {
+		ctx, cancel := context.WithTimeout(w.ctx, 30*time.Second)
+		defer cancel()
+		serving, err := w.engine.serving(ctx, next.Current)
+		if err != nil {
+			return err
+		}
+		next.Serving = serving
 	}
 	return w.persist(next)
 }
@@ -160,6 +211,19 @@ func (j Job) TargetVersion(state State) string {
 	return j.Original
 }
 
+func (w *Worker) replay(req Request) (Job, error) {
+	for _, job := range w.state.Jobs {
+		if job.ID == req.ID {
+			if job.Action != req.Action || job.Actor != req.Actor || job.Target != req.Target || job.Expected != req.Expected ||
+				job.Confirm != req.Confirm || job.Offline != req.Offline {
+				return Job{}, ErrInvalid
+			}
+			return job, nil
+		}
+	}
+	return Job{}, nil
+}
+
 func (w *Worker) Submit(req Request) (Job, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -169,13 +233,9 @@ func (w *Worker) Submit(req Request) (Job, error) {
 	if !idPattern.MatchString(req.ID) || req.Actor == "" || len(req.Actor) > 128 {
 		return Job{}, ErrInvalid
 	}
-	for _, job := range w.state.Jobs {
-		if job.ID == req.ID {
-			if job.Action != req.Action || job.Actor != req.Actor || job.Target != req.Target || job.Expected != req.Expected ||
-				job.Confirm != req.Confirm {
-				return Job{}, ErrInvalid
-			}
-			return job, nil
+	if !w.engine.local || w.running != nil || w.faulted {
+		if job, err := w.replay(req); job.ID != "" || err != nil {
+			return job, err
 		}
 	}
 	if w.faulted {
@@ -184,11 +244,37 @@ func (w *Worker) Submit(req Request) (Job, error) {
 	if w.running != nil {
 		return Job{}, ErrBusy
 	}
+	lock := flock.New(filepath.Join(w.engine.root, ".control", "lock"))
+	defer func() {
+		if w.running != lock {
+			if err := lock.Close(); err != nil {
+				slog.Error("释放实例锁失败", "error", err)
+			}
+		}
+	}()
+	locked, err := lock.TryLock()
+	if err != nil {
+		return Job{}, err
+	}
+	if !locked {
+		return Job{}, ErrBusy
+	}
+	if w.engine.local {
+		if err = w.load(); err != nil {
+			return Job{}, err
+		}
+		if job, err := w.replay(req); job.ID != "" || err != nil {
+			return job, err
+		}
+	}
 	if req.Expected != w.state.Current {
 		return Job{}, ErrStale
 	}
 	if w.state.Recovery && req.Action != "restore" && req.Action != "check" {
 		return Job{}, ErrRecovery
+	}
+	if req.Offline && req.Action != "check" && req.Action != "upgrade" && req.Action != "rollback" && req.Action != "restore" {
+		return Job{}, ErrInvalid
 	}
 	switch req.Action {
 	case "check", "start", "stop", "restart", "backup":
@@ -196,7 +282,7 @@ func (w *Worker) Submit(req Request) (Job, error) {
 			return Job{}, ErrInvalid
 		}
 	case "upgrade":
-		if !newer(req.Target, w.state.Current) || req.Confirm != "" {
+		if (req.Target != w.state.Current && !newer(req.Target, w.state.Current)) || !versionPattern.MatchString(req.Target) || req.Confirm != "" {
 			return Job{}, ErrInvalid
 		}
 	case "rollback":
@@ -213,23 +299,15 @@ func (w *Worker) Submit(req Request) (Job, error) {
 	default:
 		return Job{}, ErrInvalid
 	}
-	lock := flock.New(filepath.Join(w.engine.root, ".control", "lock"))
-	locked, err := lock.TryLock()
-	if err != nil {
-		return Job{}, err
-	}
-	if !locked {
-		return Job{}, ErrBusy
-	}
 	current, err := readText(w.engine.currentPath())
 	if err != nil || current != req.Expected {
-		return Job{}, errors.Join(ErrStale, err, lock.Close())
+		return Job{}, errors.Join(ErrStale, err)
 	}
-	job := Job{Request: req, Actor: req.Actor, Submitted: time.Now().UTC(), Phase: "queued", Original: current, WasServing: w.state.Serving, WasRecovery: w.state.Recovery}
+	job := Job{Request: req, Actor: req.Actor, Submitted: time.Now().UTC(), Phase: "queued", Original: current, WasServing: w.state.Serving, WasRecovery: w.state.Recovery, UsesReceipt: true}
 	next := w.state.clone()
 	next.Jobs = append(next.Jobs, job)
 	if err = w.persist(next); err != nil {
-		return Job{}, errors.Join(err, lock.Close())
+		return Job{}, err
 	}
 	w.running = lock
 	w.wg.Go(func() {
@@ -268,11 +346,26 @@ func (w *Worker) perform(job Job) {
 	if w.ctx.Err() != nil {
 		return
 	}
-	serving, recovery := w.Status().Serving, initial.Recovery
+	state := w.Status()
+	current := findJob(&state, job.ID)
+	if current.Finished != nil {
+		return
+	}
+	serving, recovery := state.Serving, initial.Recovery
 	if err != nil {
 		slog.Warn("维护任务失败", "id", job.ID, "action", job.Action, "error", err)
-		state := w.Status()
-		current := findJob(&state, job.ID)
+		if current.Phase == "committing" {
+			committed, receiptErr := w.engine.hasCommitReceipt(job.ID, target)
+			if committed {
+				receiptErr = w.finishCommit(job, target)
+			}
+			if receiptErr != nil {
+				w.failJournal(receiptErr)
+			}
+			if committed || receiptErr != nil {
+				return
+			}
+		}
 		switch current.Phase {
 		case "queued", "checking", "preparing", "validating-restore":
 		default:
@@ -291,26 +384,39 @@ func (w *Worker) perform(job Job) {
 			if recovery {
 				j.Result = "维护失败，待恢复"
 			} else {
-				j.Result = failureMessage(j.Phase)
+				j.Result = failureMessage(*j)
 			}
 			j.Phase = "failed"
 		} else {
 			j.Phase, j.Result = "succeeded", "操作完成"
+			if job.Action == "upgrade" && target == job.Original {
+				j.Result = "已校验当前版本，未执行迁移"
+			}
 		}
 		s.Serving, s.Recovery = serving, recovery
 	}); err != nil {
-		w.mu.Lock()
-		w.faulted = true
-		w.mu.Unlock()
-		slog.Error("保存维护任务终态失败", "error", err)
+		w.failJournal(err)
 	}
 }
 
-func failureMessage(phase string) string {
-	switch phase {
+func (w *Worker) failJournal(err error) {
+	w.mu.Lock()
+	w.faulted = true
+	w.mu.Unlock()
+	slog.Error("保存维护任务终态失败", "error", err)
+}
+
+func failureMessage(job Job) string {
+	switch job.Phase {
 	case "checking":
+		if job.Offline {
+			return "本地发布包检查失败，请核对离线验签材料和已导入的包"
+		}
 		return "无法检查正式版，请稍后重试"
 	case "preparing":
+		if job.Offline || job.Action == "start" || job.Action == "restart" {
+			return "缺少可用镜像或已签名发布包，请核对目标和当前版本的本地资产。业务未停服"
+		}
 		return "正式产物下载、校验或导入失败，业务未停服"
 	case "validating-restore":
 		return "恢复点验证失败，数据未切换"
@@ -331,20 +437,42 @@ func (w *Worker) execute(ctx context.Context, job Job, target string, serving bo
 		if err := w.checkpoint(job.ID, "checking", serving); err != nil {
 			return err
 		}
+		if job.Offline {
+			local, err := OfflineVersions(ctx, e.assetRoot(), e.trustRoot())
+			if err != nil {
+				return err
+			}
+			return w.change(func(s *State) { s.LocalReleases = local })
+		}
 		release, err := e.releases.Latest(ctx)
 		if err != nil {
 			return err
 		}
-		return w.change(func(s *State) { s.Update = &release })
-	case "upgrade":
+		return w.change(func(s *State) {
+			s.Update = nil
+			if newer(release.Version, s.Current) {
+				s.Update = &release
+			}
+		})
+	case "upgrade", "rollback", "restore", "start", "restart":
 		if err := w.checkpoint(job.ID, "preparing", serving); err != nil {
 			return err
 		}
-		if err := e.prepare(ctx, target); err != nil {
+		localRepair := job.Offline || job.Action == "start" || job.Action == "restart"
+		if err := e.ensureImages(ctx, target, localRepair); err != nil {
 			return err
 		}
-	case "restore":
-		return w.restore(ctx, job, target, serving)
+		if target != old {
+			if err := e.ensureImages(ctx, old, job.Offline); err != nil {
+				return err
+			}
+		}
+		if job.Action == "restore" {
+			return w.restore(ctx, job, target, serving)
+		}
+		if job.Action == "upgrade" && target == old {
+			return nil
+		}
 	}
 	if err := w.checkpoint(job.ID, "stopping", false); err != nil {
 		return err
@@ -443,15 +571,30 @@ func (w *Worker) commit(job Job, target string) error {
 	if err := w.checkpoint(job.ID, "committing", false); err != nil {
 		return err
 	}
-	if err := atomicWrite(w.engine.currentPath(), []byte(target+"\n"), 0600); err != nil {
+	if err := atomicWrite(w.engine.commitReceiptPath(), []byte(job.ID+" "+target+"\n"), 0600); err != nil {
 		return err
 	}
-	return w.change(func(s *State) {
-		if s.Current != target {
-			s.Previous, s.Current = s.Current, target
-		}
-		s.Serving, s.Recovery = true, false
-	})
+	return w.finishCommit(job, target)
+}
+
+func (w *Worker) finishCommit(job Job, target string) error {
+	if err := syncDirectory(w.engine.control()); err != nil {
+		return err
+	}
+	if err := w.engine.setCurrent(job, target); err != nil {
+		return err
+	}
+	return w.change(func(s *State) { completeCommit(s, findJob(s, job.ID), target) })
+}
+
+func completeCommit(state *State, job *Job, target string) {
+	if job.Original != target {
+		state.Previous = job.Original
+	}
+	state.Current, state.Serving, state.Recovery = target, true, false
+	finished := time.Now().UTC()
+	job.Finished = &finished
+	job.Phase, job.Result = "succeeded", "操作完成"
 }
 
 func (w *Worker) recover(ctx context.Context, job Job, target string, original State) (serving, recovery bool) {

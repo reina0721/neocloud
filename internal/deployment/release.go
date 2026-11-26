@@ -2,6 +2,7 @@ package deployment
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,7 +14,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -93,16 +93,42 @@ func VerifyRelease(ctx context.Context, dir, version string) error {
 	if !versionPattern.MatchString(version) {
 		return errors.New("维护只接受正式版本")
 	}
+	source, err := openOfflineDir(dir)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+	bundle, err := readOfflineFile(source, offlineBundle)
+	if err != nil {
+		return err
+	}
+	if _, err = verifyBundleFormat(bundle); err != nil {
+		return err
+	}
+	checksums, err := readOfflineFile(source, offlineChecksums)
+	if err != nil {
+		return err
+	}
+	staged, err := os.CreateTemp("", "clouddrive-release-*.sigstore.json")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(staged.Name())
+	_, err = staged.Write(bundle)
+	if err = errors.Join(err, staged.Close()); err != nil {
+		return err
+	}
 	cosign := os.Getenv("CLOUDDRIVE_COSIGN")
 	if cosign == "" {
 		cosign = "cosign"
 	}
 	// #nosec G204 G702 -- cosign 由安装者配置，证书身份的 tag 已限定格式，参数独立传递。
 	command := exec.CommandContext(ctx, cosign, "verify-blob",
-		"--bundle", filepath.Join(dir, "checksums.txt.sigstore.json"),
+		"--bundle", staged.Name(),
 		"--certificate-identity", releaseOrigin+"/.github/workflows/release.yml@refs/tags/"+version,
 		"--certificate-oidc-issuer", "https://token.actions.githubusercontent.com",
-		filepath.Join(dir, "checksums.txt"))
+		"-")
+	command.Stdin = bytes.NewReader(checksums)
 	if err := command.Run(); err != nil {
 		return fmt.Errorf("正式发布签名验证失败: %w", err)
 	}

@@ -25,12 +25,27 @@ const apiID = "sha256:" + createHash("sha256").update(apiConfig).digest("hex"),
   webID = "sha256:" + createHash("sha256").update(webConfig).digest("hex");
 const projectFor = (path) =>
   `clouddrive-${createHash("sha256").update(path).digest("hex").slice(0, 12)}`;
+const offlineBundle = '{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}\n';
+const checksum = (name, body) =>
+  `${createHash("sha256").update(body).digest("hex")}  ${name}\n`;
 async function fixture(t) {
   const base = await mkdtemp(join(tmpdir(), "clouddrive-installer-unit-"));
   t.after(() => rm(base, { recursive: true, force: true }));
   const bin = join(base, "bin"),
     log = join(base, "docker.log");
   await mkdir(bin);
+  const trust = join(base, "trust");
+  await mkdir(trust);
+  await writeFile(join(trust, "trusted_root.json"), "{}\n");
+  await writeFile(
+    join(bin, "cosign"),
+    `#!/usr/bin/env bash
+set -euo pipefail
+[[ $1 == verify-blob && $* == *'--offline --new-bundle-format --trusted-root '* ]]
+[[ -f \${!#} && \${FAKE_SIGNATURE_FAILURE:-0} != 1 ]]
+`,
+    { mode: 0o700 },
+  );
   await mkdir(join(base, "volumes"));
   await writeFile(join(base, "app.db"), "fixture-database");
   await mkdir(join(base, "exported/blobs/sha256"), { recursive: true });
@@ -170,6 +185,7 @@ fi
     DOCKER_HOST: "unix:///fake/docker.sock",
     FAKE_LOG: log,
     FAKE_BASE: base,
+    CLOUDDRIVE_OFFLINE_TRUST_DIR: trust,
   };
   const root = join(base, "instance");
   const run = (args, extra = {}) =>
@@ -180,7 +196,7 @@ fi
     });
   async function bundle(
     version,
-    { network = true, entrypoint = true, layout = true } = {},
+    { network = true, entrypoint = true, layout = true, tooling = false } = {},
   ) {
     const source = join(base, version),
       stage = join(source, "stage");
@@ -194,7 +210,7 @@ fi
     );
     await writeFile(
       join(stage, "manifest.txt"),
-      `FORMAT=1\n${network ? "NETWORK=1\n" : ""}${entrypoint ? "ENTRYPOINT=1\n" : ""}${layout ? "INSTANCE_LAYOUT=1\n" : ""}VERSION=${version}\nARCH=amd64\nCOMMIT=${commit}\nAPI_ID=${apiID}\nWEB_ID=${webID}\n`,
+      `FORMAT=1\n${network ? "NETWORK=1\n" : ""}${entrypoint ? "ENTRYPOINT=1\n" : ""}${layout ? "INSTANCE_LAYOUT=1\n" : ""}${tooling ? "OFFLINE_MAINTENANCE=1\n" : ""}VERSION=${version}\nARCH=amd64\nCOMMIT=${commit}\nAPI_ID=${apiID}\nWEB_ID=${webID}\n`,
     );
     const name = `clouddrive_${version}_linux_amd64_docker.tar.gz`;
     const packed = spawnSync("tar", [
@@ -209,10 +225,18 @@ fi
       "manifest.txt",
     ]);
     assert.equal(packed.status, 0);
-    const hash = createHash("sha256")
-      .update(await readFile(join(source, name)))
-      .digest("hex");
-    await writeFile(join(source, "checksums.txt"), hash + "  " + name + "\n");
+    await cp(installer, join(source, "install.sh"));
+    await writeFile(join(source, "version.txt"), `${version}\n`);
+    const files = [name, "install.sh", "version.txt"];
+    if (tooling) {
+      const binary = `clouddrive-maintenance_${version}_linux_amd64`;
+      await writeFile(join(source, binary), `#!/usr/bin/env bash\nset -eu\nprintf '%s\\n' "$*"\n`);
+      files.push(binary);
+    }
+    let checksums = "";
+    for (const file of files) checksums += checksum(file, await readFile(join(source, file)));
+    await writeFile(join(source, "checksums.txt"), checksums);
+    await writeFile(join(source, "checksums.txt.sigstore.json"), offlineBundle);
     return source;
   }
   const install = async () => {
@@ -437,7 +461,7 @@ test("下载校验失败不会创建实例或执行迁移", async (t) => {
     source = await f.bundle("v1.0.0");
   await writeFile(
     join(source, "checksums.txt"),
-    "0".repeat(64) + "  clouddrive_v1.0.0_linux_amd64_docker.tar.gz\n",
+    (await readFile(join(source, "checksums.txt"), "utf8")).replace(/^[a-f0-9]{64}/, "0".repeat(64)),
   );
   const r = f.run([
     "install",
@@ -1003,14 +1027,14 @@ test("启用网页运维使用正式版签名校验，并执行摘要匹配的�
     manifest,
     (await readFile(manifest, "utf8")) + digest + "  " + binary + "\n",
   );
-  await writeFile(join(source, "checksums.txt.sigstore.json"), "{}\n");
   await writeFile(
     join(f.base, "bin", "cosign"),
     `#!/usr/bin/env bash
 set -euo pipefail
-[[ $# == 8 && $1 == verify-blob && $2 == --bundle && -f $3 ]]
+[[ $# == 12 && $1 == verify-blob && $2 == --bundle && -f $3 ]]
 [[ $4 == --certificate-identity && $5 == https://github.com/reina0721/neocloud/.github/workflows/release.yml@refs/tags/v1.0.0 ]]
-[[ $6 == --certificate-oidc-issuer && $7 == https://token.actions.githubusercontent.com && -f $8 ]]
+[[ $6 == --certificate-oidc-issuer && $7 == https://token.actions.githubusercontent.com ]]
+[[ $8 == --offline && $9 == --new-bundle-format && \${10} == --trusted-root && -f \${11} && -f \${12} ]]
 `,
     { mode: 0o700 },
   );
@@ -1039,6 +1063,55 @@ set -euo pipefail
     source,
   ]);
   assert.notEqual(altered.status, 0);
-  assert.match(altered.stderr, /维护工具摘要不匹配/);
+  assert.match(altered.stderr, /维护.*摘要不匹配|maintenance_.*摘要不匹配/);
   assert.doesNotMatch(altered.stdout, /maintenance fixture/);
+});
+
+test("离线检查验证完整包，坏签名和旧目标在停服前拒绝", async (t) => {
+  const f = await fixture(t);
+  await f.install();
+  const next = await f.bundle("v1.0.1");
+  const old = await f.bundle("v0.9.0");
+  await writeFile(f.log, "");
+  const checked = f.run(["check-update", "--dir", f.root, "--release-dir", next]);
+  assert.equal(checked.status, 0, checked.stderr);
+  assert.match(checked.stdout, /v1\.0\.1（可升级）/);
+  const invalid = f.run(["upgrade", "--dir", f.root, "--release-dir", next], { FAKE_SIGNATURE_FAILURE: "1" });
+  assert.notEqual(invalid.status, 0);
+  assert.match(invalid.stderr, /离线签名验证失败/);
+  const downgrade = f.run(["upgrade", "--dir", f.root, "--release-dir", old]);
+  assert.notEqual(downgrade.status, 0);
+  assert.match(downgrade.stderr, /只接受更新版本/);
+  assert.doesNotMatch(await readFile(f.log, "utf8"), /image load| stop|run --rm --no-deps migrate/);
+  assert.equal(await readFile(join(f.root, ".control/current"), "utf8"), "v1.0.0\n");
+});
+
+test("离线升级从签名包安装共用维护入口并传入明确的离线版本", async (t) => {
+  const f = await fixture(t);
+  await f.install();
+  const next = await f.bundle("v1.0.1", { tooling: true });
+  await writeFile(f.log, "");
+  const result = f.run(["upgrade", "--dir", f.root, "--release-dir", next]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /local --root .* --action upgrade --target v1\.0\.1 --confirm\s+--offline/);
+  assert.equal(await readFile(join(f.root, ".control/maintenance/offline-tool"), "utf8"), "v1.0.1\n");
+  assert.doesNotMatch(await readFile(f.log, "utf8"), /image load| stop|run --rm --no-deps migrate/);
+});
+
+test("首次安装中断后以原候选回读，拒绝把不同离线包当作重试", async (t) => {
+  const f = await fixture(t);
+  const original = await f.bundle("v1.0.0");
+  const other = await f.bundle("v1.0.1");
+  const args = ["install", "--dir", f.root, "--release-dir"];
+  const failed = f.run([...args, original], { FAKE_INCOMPATIBLE: "1" });
+  assert.notEqual(failed.status, 0);
+  assert.equal(await readFile(join(f.root, ".control/candidate"), "utf8"), "v1.0.0\n");
+  await writeFile(f.log, "");
+  const rejected = f.run([...args, other]);
+  assert.notEqual(rejected.status, 0);
+  assert.match(rejected.stderr, /与离线目录 version\.txt 不一致/);
+  assert.doesNotMatch(await readFile(f.log, "utf8"), /image load|run --rm --no-deps migrate/);
+  const retried = f.run([...args, original]);
+  assert.equal(retried.status, 0, retried.stderr);
+  assert.equal(await readFile(join(f.root, ".control/current"), "utf8"), "v1.0.0\n");
 });

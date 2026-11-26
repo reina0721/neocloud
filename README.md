@@ -43,7 +43,7 @@
 ~/clouddrive/install.sh upgrade       # 备份并升级
 ```
 
-固定版本、HTTPS 反代、离线安装和数据备份见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。使用工作区中的代码构建另一个实例时，见[源码部署](docs/operations/clouddrive-deployment.md#从源码部署)。
+固定版本、HTTPS 反代和手动备份见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。支持离线维护的新 Release 可在断网主机使用签名包完成[检查、升级、回退和恢复](docs/operations/clouddrive-deployment.md#离线检查与升级)。本地源码构建见[源码部署](docs/operations/clouddrive-deployment.md#从源码部署)。
 
 ## 源码开发
 

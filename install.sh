@@ -12,6 +12,9 @@ root=${HOME:?}/clouddrive
 if [[ -n $script_directory && -f $script_directory/.control/project ]]; then root=$script_directory; fi
 version=latest
 release_source=
+offline=false
+trust_dir=${CLOUDDRIVE_OFFLINE_TRUST_DIR:-}
+full_backup=false
 port=4173
 bind=0.0.0.0
 public_origin=
@@ -49,7 +52,9 @@ bash install.sh plan [--check] [与 install 相同的参数]   --check 检查本
 ~/clouddrive/install.sh status | check-update | upgrade | update | backup | start | stop | restart
 ~/clouddrive/install.sh logs [-f|--follow] [--tail 100]
 ~/clouddrive/install.sh enable-web-management [--trusted-proxy IP]
-启用后支持 rollback、restore --backup-id ID --confirm-restore ID。
+import-release、update-maintenance 支持 --release-dir DIR [--trust-dir DIR]。
+check-update、upgrade、rollback 和 restore 支持 --offline；backup --full 可生成完整恢复点。
+restore --backup-id ID --confirm-restore ID 用于完整恢复。
 首次安装可用 --enable-web-management 启用同址网页运维。
 upgrade 支持 --version；install/upgrade/check-update 支持 --release-dir 离线产物目录。
 高级选项：--public-url HTTP(S)根地址、--allow-origin 精确Origin（可重复）、--allow-http。
@@ -102,7 +107,10 @@ while [[ $# -gt 0 ]]; do
     --tail) [[ $# -ge 2 && $2 =~ ^[0-9]+$ && ${#2} -le 5 ]] || fail '--tail 需要 0–10000'; tail_lines=$((10#$2)); ((tail_lines <= 10000)) || fail '--tail 需要 0–10000'; shift 2 ;;
     --wait-timeout) [[ $# -ge 2 ]] || fail '--wait-timeout 缺少秒数'; wait_timeout=$2; shift 2 ;;
     --version) [[ $# -ge 2 ]] || fail '--version 缺少版本'; version=$2; shift 2 ;;
-    --release-dir) [[ $# -ge 2 ]] || fail '--release-dir 缺少路径'; release_source=$(realpath -e -- "$2"); shift 2 ;;
+    --release-dir) [[ $# -ge 2 ]] || fail '--release-dir 缺少路径'; release_source=$(realpath -e -- "$2"); offline=true; shift 2 ;;
+    --trust-dir) [[ $# -ge 2 ]] || fail '--trust-dir 缺少路径'; trust_dir=$(realpath -e -- "$2"); shift 2 ;;
+    --offline) offline=true; shift ;;
+    --full) full_backup=true; shift ;;
     *) fail "未知参数：$1" ;;
   esac
 done
@@ -125,8 +133,8 @@ if [[ -z $command_name ]]; then
 fi
 [[ $command_name != update ]] || command_name=upgrade
 case $command_name in
-  install|plan|upgrade|check-update|status|backup|start|stop|restart|logs|rollback|restore|enable-web-management) ;;
-  _prepare|_config|_probe|_compat|_migrate|_start|_stop|_idle|_capture|_extract)
+  install|plan|upgrade|check-update|status|backup|start|stop|restart|logs|rollback|restore|enable-web-management|import-release|update-maintenance) ;;
+  _prepare|_images|_serving|_config|_probe|_compat|_migrate|_start|_stop|_idle|_capture|_extract)
     [[ ${CLOUDDRIVE_MAINTENANCE_ENGINE:-} == 1 ]] || fail '此命令由宿主维护进程调用' ;;
   *) fail "未知命令：$command_name" ;;
 esac
@@ -134,6 +142,7 @@ if [[ $explicit_http == false && $public_origin == https://* ]]; then allow_http
 [[ $network_options == false || $command_name == install || $command_name == plan ]] || fail '已有实例请编辑 runtime.env，再执行 stop/start；网络选项只用于 install 和 plan'
 [[ ( -z $requested_name && -z $requested_data ) || $command_name == install || $command_name == plan ]] || fail '--name 和 --data-dir 只用于首次 install 和 plan'
 [[ $check_plan == false || $command_name == plan ]] || fail '--check 只用于 plan'
+[[ $full_backup == false || $command_name == backup ]] || fail '--full 只用于 backup'
 [[ $(uname -s) == Linux ]] || fail '当前安装包只支持 Linux'
 for dependency in curl realpath sha256sum; do
   command -v "$dependency" >/dev/null || fail "缺少 $dependency，请先安装"
@@ -362,16 +371,18 @@ network_configuration() {
 }
 resolve_version() {
   progress '解析目标版本'
+  if [[ -n $release_source && -f $release_source/version.txt ]]; then
+    local declared
+    declared=$(cat -- "$release_source/version.txt")
+    [[ $version == latest || $version == "$declared" ]] || fail '指定版本与离线目录 version.txt 不一致'
+    version=$declared
+  fi
   if [[ $version == latest ]]; then
-    if [[ -n $release_source ]]; then
-      [[ -f $release_source/version.txt ]] || fail '离线目录缺少 version.txt，或显式指定 --version'
-      version=$(cat "$release_source/version.txt")
-    else
-      local location
-      location=$(curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' --connect-timeout 15 --max-time 120 --output /dev/null --write-out '%{url_effective}' "https://github.com/$REPOSITORY/releases/latest") || fail '无法取得最新正式 Release；请确认项目已发布稳定版，或指定 --version'
-      [[ $location == "https://github.com/$REPOSITORY/releases/tag/"* ]] || fail 'Release 重定向地址不符合预期'
-      version=${location##*/}
-    fi
+    if [[ $offline == true ]]; then fail '离线模式需要含 version.txt 的 --release-dir，或显式指定已导入的 --version'; fi
+    local location
+    location=$(curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' --connect-timeout 15 --max-time 120 --output /dev/null --write-out '%{url_effective}' "https://github.com/$REPOSITORY/releases/latest") || fail '无法取得最新正式 Release；请确认项目已发布稳定版，或指定 --version'
+    [[ $location == "https://github.com/$REPOSITORY/releases/tag/"* ]] || fail 'Release 重定向地址不符合预期'
+    version=${location##*/}
   fi
   valid_version "$version" || fail '版本必须为 v主版本.次版本.修订号，可带预发布后缀'
   progress "目标版本：$version（$arch）"
@@ -499,11 +510,64 @@ fetch_asset() {
   local name=$1 destination=$2
   local -a display=(--silent)
   [[ ! -t 2 ]] || display=(--progress-bar)
-  progress "下载 $name"
-  if [[ -n $release_source ]]; then cp -- "$release_source/$name" "$destination" || fail "离线目录缺少 $name";
-  else curl --fail --location "${display[@]}" --show-error --proto '=https' --proto-redir '=https' --retry 2 --connect-timeout 15 --speed-limit 1024 --speed-time 30 --max-time 1800 "https://github.com/$REPOSITORY/releases/download/$version/$name" --output "$destination" || fail "下载 $name 失败"; fi
+  if [[ -n $release_source ]]; then
+    progress "读取本地包 $name"
+    [[ -f $release_source/$name && ! -L $release_source/$name ]] || fail "离线目录缺少普通文件 $name"
+    cp -- "$release_source/$name" "$destination"
+  else
+    [[ $offline == false ]] || fail "缺少 $version 的本地资产 $name；请先导入离线包"
+    progress "下载 $name"
+    curl --fail --location "${display[@]}" --show-error --proto '=https' --proto-redir '=https' --retry 2 --connect-timeout 15 --speed-limit 1024 --speed-time 30 --max-time 1800 "https://github.com/$REPOSITORY/releases/download/$version/$name" --output "$destination" || fail "下载 $name 失败"
+  fi
 }
-read_manifest() { sed -n "s/^$1=//p" "$work/bundle/manifest.txt"; }
+asset_digest() {
+  local name=$1 digest
+  digest=$(awk -v asset="$name" '$2 == asset || $2 == "*" asset {print $1}' "$work/checksums.txt")
+  [[ $digest =~ ^[a-f0-9]{64}$ ]] || fail "校验清单缺少唯一有效的 $name 摘要"
+  printf '%s\n' "$digest"
+}
+verify_asset_file() {
+  local digest actual
+  digest=$(asset_digest "$1")
+  actual=$(sha256sum < "$2")
+  [[ ${actual%% *} == "$digest" ]] || fail "$1 摘要不匹配；现有服务保持不动"
+}
+verify_release_signature() {
+  local cosign=${CLOUDDRIVE_COSIGN:-cosign} identity modern=false
+  local -a verification
+  command -v "$cosign" >/dev/null || fail '离线安装与维护需要 Cosign 2.6.5 或兼容的已修补版本'
+  fetch_asset checksums.txt.sigstore.json "$work/checksums.txt.sigstore.json"
+  identity="https://github.com/$REPOSITORY/.github/workflows/release.yml@refs/tags/$version"
+  verification=(verify-blob --bundle "$work/checksums.txt.sigstore.json" --certificate-identity "$identity"
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com)
+  if grep -Eq '"mediaType"[[:space:]]*:[[:space:]]*"application/vnd\.dev\.sigstore\.bundle' "$work/checksums.txt.sigstore.json"; then
+    modern=true
+  else
+    local build major minor patch
+    build=$("$cosign" version)
+    [[ $build =~ GitVersion:[[:space:]]+v([0-9]+)\.([0-9]+)\.([0-9]+)([[:space:]]|$) ]] || fail '无法识别验证旧版签名所用的 Cosign 版本'
+    major=${BASH_REMATCH[1]}; minor=${BASH_REMATCH[2]}; patch=${BASH_REMATCH[3]}
+    (( major > 3 || major == 3 && ( minor > 1 || minor == 1 && patch >= 3 ) ||
+       major == 2 && ( minor > 6 || minor == 6 && patch >= 5 ) )) || fail '旧版签名验证需要 Cosign 2.6.5、3.1.3 或更新的已修复版本'
+  fi
+  if [[ $offline == false ]]; then
+    if [[ $modern == true ]]; then verification+=(--new-bundle-format); fi
+    "$cosign" "${verification[@]}" "$work/checksums.txt" || fail '正式发布签名验证失败'
+    return
+  fi
+  trust_dir=$(realpath -m -- "${trust_dir:-$root/.control/maintenance/trust}")
+  [[ -d $trust_dir && $trust_dir != "$release_source" && $trust_dir != "$release_source/"* ]] || fail '离线验签需要独立提供的 --trust-dir'
+  if [[ $modern == true ]]; then
+    [[ -f $trust_dir/trusted_root.json ]] || fail '离线信任目录缺少 trusted_root.json'
+    "$cosign" "${verification[@]}" --offline --new-bundle-format --trusted-root "$trust_dir/trusted_root.json" "$work/checksums.txt" || fail '正式发布离线签名验证失败'
+  else
+    [[ -f $trust_dir/fulcio.pem && -f $trust_dir/rekor.pub && -f $trust_dir/ctfe.pub ]] || fail '旧版签名包需要本地 fulcio.pem、rekor.pub 和 ctfe.pub'
+    SIGSTORE_ROOT_FILE="$trust_dir/fulcio.pem" SIGSTORE_REKOR_PUBLIC_KEY="$trust_dir/rekor.pub" SIGSTORE_CT_LOG_PUBLIC_KEY_FILE="$trust_dir/ctfe.pub" \
+      "$cosign" "${verification[@]}" --offline "$work/checksums.txt" || fail '正式发布离线签名验证失败'
+  fi
+  if [[ -f $release_source/version.txt ]]; then verify_asset_file version.txt "$release_source/version.txt"; fi
+}
+read_manifest() { sed -n "s/^$1=//p" "${2:-$work/bundle/manifest.txt}"; }
 verify_config_identity() {
   local ref=$1 expected=$2 saved="$work/$3-runtime.tar" digest
   local -a platform_args=()
@@ -517,40 +581,59 @@ verify_config_identity() {
   rm -- "$saved"
 }
 prepare_release() {
-  local name="clouddrive_${version}_linux_${arch}_docker.tar.gz" digest listing
+  local mode=${1:-load} name="clouddrive_${version}_linux_${arch}_docker.tar.gz" listing
+  if [[ -n $work ]]; then rm -rf -- "$work"; fi
   work=$(mktemp -d)
+  if [[ $offline == true && -z $release_source ]]; then
+    release_source="$root/.control/maintenance/assets/$version"
+  fi
   fetch_asset checksums.txt "$work/checksums.txt"
+  if [[ $offline == true && $command_name != _prepare ]]; then verify_release_signature; fi
   fetch_asset "$name" "$work/$name"
-  digest=$(awk -v asset="$name" '$2 == asset {print $1}' "$work/checksums.txt")
   progress '校验安装包与版本清单'
-  [[ $digest =~ ^[a-f0-9]{64}$ ]] || fail '校验清单缺少唯一有效的目标产物摘要'
-  printf '%s  %s\n' "$digest" "$work/$name" | sha256sum --check --status || fail '安装包摘要不匹配；现有服务保持不动'
+  verify_asset_file "$name" "$work/$name"
   listing=$(tar -tzf "$work/$name" | LC_ALL=C sort)
   [[ $listing == $'compose.yaml\nimages.env\nimages.tar\ninstall.sh\nmanifest.txt' ]] || fail '安装包文件列表不符合规范'
   tar -tvzf "$work/$name" | awk 'substr($1,1,1) != "-" {exit 1}' || fail '安装包只能包含普通文件'
   mkdir "$work/bundle"
-  tar --extract --gzip --file "$work/$name" --directory "$work/bundle" --no-same-owner --no-same-permissions
-  [[ $(read_manifest FORMAT) == 1 && $(read_manifest VERSION) == "$version" && $(read_manifest ARCH) == "$arch" ]] || fail '安装包版本或架构不匹配'
+  local -a members=()
+  if [[ $mode == verify ]]; then members=(manifest.txt compose.yaml images.env install.sh); fi
+  tar --extract --gzip --file "$work/$name" --directory "$work/bundle" --no-same-owner --no-same-permissions "${members[@]}"
+  if [[ $offline == true && $command_name != _prepare ]]; then verify_asset_file install.sh "$work/bundle/install.sh"; fi
+  validate_release_metadata "$work/bundle"
+  [[ $mode == load ]] || return 0
+  progress '导入配套 Docker 镜像'
+  docker image load --input "$work/bundle/images.tar" >/dev/null
+  verify_release_images "$work/bundle"
+}
+validate_release_metadata() {
+  local directory=$1 manifest=$1/manifest.txt kind
+  [[ $(read_manifest FORMAT "$manifest") == 1 && $(read_manifest VERSION "$manifest") == "$version" && $(read_manifest ARCH "$manifest") == "$arch" ]] || fail '安装包版本或架构不匹配'
   local needs_network=$network_options
   if [[ -f $root/runtime.env && -n $(sed -n 's/^WEB_BIND=//p' "$root/runtime.env") ]]; then needs_network=true; fi
-  [[ $needs_network == false || $(read_manifest NETWORK) == 1 ]] || fail '目标 Release 不支持网络配置，请使用包含此功能的新版本；v0.1.2 仅支持本机入口'
+  [[ $needs_network == false || $(read_manifest NETWORK "$manifest") == 1 ]] || fail '目标 Release 不支持网络配置，请使用包含此功能的新版本；v0.1.2 仅支持本机入口'
   local needs_entrypoint=false
   if [[ $command_name == install && -z $public_origin ]]; then needs_entrypoint=true; fi
   if [[ -f $root/runtime.env && -n $(sed -n 's/^WEB_BIND=//p' "$root/runtime.env") && -z $(sed -n 's/^PUBLIC_ORIGIN=//p' "$root/runtime.env") ]]; then needs_entrypoint=true; fi
-  [[ $needs_entrypoint == false || $(read_manifest ENTRYPOINT) == 1 ]] || fail '目标 Release 不支持自动同源入口；已有配置未修改，请选择支持此入口的新版本'
-  [[ $layout == false || $(read_manifest INSTANCE_LAYOUT) == 1 ]] || fail "目标 Release $version 不支持自定义实例名或数据目录（需要 INSTANCE_LAYOUT=1），请选择支持的版本"
-  [[ $(read_manifest COMMIT) =~ ^[a-f0-9]{40}$ ]] || fail '源码版本标识无效'
+  [[ $needs_entrypoint == false || $(read_manifest ENTRYPOINT "$manifest") == 1 ]] || fail '目标 Release 不支持自动同源入口；已有配置未修改，请选择支持此入口的新版本'
+  [[ $layout == false || $(read_manifest INSTANCE_LAYOUT "$manifest") == 1 ]] || fail "目标 Release $version 不支持自定义实例名或数据目录（需要 INSTANCE_LAYOUT=1），请选择支持的版本"
+  [[ $(read_manifest COMMIT "$manifest") =~ ^[a-f0-9]{40}$ ]] || fail '源码版本标识无效'
+  for kind in API WEB; do
+    [[ $(read_manifest "${kind}_ID" "$manifest") =~ ^sha256:[a-f0-9]{64}$ ]] || fail "$kind 镜像 ID 无效"
+  done
   api_image="clouddrive-api:$version-$arch"; web_image="clouddrive-web:$version-$arch"
-  [[ $(cat "$work/bundle/images.env") == "API_IMAGE=$api_image"$'\n'"WEB_IMAGE=$web_image" ]] || fail '镜像引用不符合配套版本'
-  progress '导入配套 Docker 镜像'
-  docker image load --input "$work/bundle/images.tar" >/dev/null
+  [[ $(cat "$directory/images.env") == "API_IMAGE=$api_image"$'\n'"WEB_IMAGE=$web_image" ]] || fail '镜像引用不符合配套版本'
+}
+verify_release_images() {
+  local manifest=$1/manifest.txt commit
+  commit=$(read_manifest COMMIT "$manifest")
   for kind in API WEB; do
     local ref expected actual
     if [[ $kind == API ]]; then ref=$api_image; else ref=$web_image; fi
-    expected=$(read_manifest "${kind}_ID")
+    expected=$(read_manifest "${kind}_ID" "$manifest")
     [[ $expected =~ ^sha256:[a-f0-9]{64}$ ]] || fail '镜像 ID 无效'
     actual=$(docker image inspect --format '{{.Id}}|{{.Os}}|{{.Architecture}}|{{index .Config.Labels "org.opencontainers.image.version"}}|{{index .Config.Labels "org.opencontainers.image.revision"}}' "$ref")
-    [[ ${actual#*|} == "linux|$arch|$version|$(read_manifest COMMIT)" ]] || fail '镜像架构或源码版本不匹配'
+    [[ ${actual#*|} == "linux|$arch|$version|$commit" ]] || fail '镜像架构或源码版本不匹配'
     if [[ ${actual%%|*} != "$expected" ]]; then verify_config_identity "$ref" "$expected" "$kind"; fi
   done
 }
@@ -586,36 +669,155 @@ backup_data() {
   printf '数据库与配置备份：%s（文件内容仍保存在 %s/storage）\n' "$directory" "$data_dir"
 }
 install_manager() {
+  if [[ -f $root/.control/maintenance/offline-tool ]]; then return; fi
   cp -- "$work/bundle/install.sh" "$root/install.sh.new"
   chmod 700 "$root/install.sh.new"
   mv -- "$root/install.sh.new" "$root/install.sh"
 }
+stage_maintenance_tool() {
+  local binary="clouddrive-maintenance_${version}_linux_${arch}"
+  fetch_asset "$binary" "$work/client"
+  fetch_asset install.sh "$work/installer"
+  verify_asset_file "$binary" "$work/client"
+  verify_asset_file install.sh "$work/installer"
+  chmod 700 -- "$work/client" "$work/installer"
+}
+import_assets() {
+  local tool=$1
+  local -a args=(import-release --root "$root" --release-dir "$release_source" --version "$version")
+  if [[ -n $trust_dir ]]; then args+=(--trust-dir "$trust_dir"); fi
+  "$tool" "${args[@]}"
+}
+replace_file() {
+  install -m "$3" -- "$1" "$2.new" && mv -Tf -- "$2.new" "$2"
+}
+mark_offline_tool() {
+  local directory="$root/.control/maintenance"
+  printf '%s\n' "$version" > "$directory/offline-tool.new" &&
+    mv -Tf -- "$directory/offline-tool.new" "$directory/offline-tool"
+}
+activate_local_tool() {
+  local directory="$root/.control/maintenance"
+  mkdir -p -- "$directory" && replace_file "$work/client" "$directory/client" 0700 &&
+    replace_file "$work/installer" "$root/install.sh" 0700 && mark_offline_tool
+}
+host_privileged() {
+  if [[ $EUID == 0 ]]; then "$@"; else sudo -- "$@"; fi
+}
+activate_web_tool() (
+  local directory="$root/.control/maintenance" host_project installed gateway worker attempt
+  local saved="$work/before-update"
+  host_project=$(cat -- "$root/.control/maintenance-project" 2>/dev/null || cat -- "$root/.control/project")
+  [[ $host_project =~ ^clouddrive-[a-f0-9]{12}$ ]] || fail '宿主机维护标记不合法'
+  installed="/usr/local/lib/clouddrive/$host_project/clouddrive-maintenance"
+  gateway="$host_project-gateway.service"
+  worker="$host_project-maintenance.service"
+  mkdir -- "$saved"
+  exec 8>"$root/.control/lock"; flock -n 8 || fail '已有维护任务，等待结束后再更新维护程序'
+  cp -- "$installed" "$directory/client" "$directory/engine.sh" "$saved/"
+  cp -- "$root/install.sh" "$saved/installer"
+  if [[ -f $directory/offline-tool ]]; then cp -- "$directory/offline-tool" "$saved/"; fi
+  if ! host_privileged systemctl stop "$gateway" "$worker"; then
+    flock -u 8
+    host_privileged systemctl start "$worker" "$gateway" || true
+    fail '无法停止维护服务，未更换维护程序'
+  fi
+  if activate_local_tool && replace_file "$work/installer" "$directory/engine.sh" 0700 &&
+    host_privileged install -m 0755 -- "$work/client" "$installed.new" && host_privileged mv -Tf -- "$installed.new" "$installed"; then
+    flock -u 8
+    if host_privileged systemctl start "$worker" "$gateway"; then
+      for attempt in {1..20}; do
+        if "$directory/client" client --root "$root" --action status >/dev/null 2>&1 &&
+          host_privileged systemctl is-active --quiet "$gateway"; then return; fi
+        sleep 1
+      done
+    fi
+    host_privileged systemctl stop "$gateway" "$worker" || true
+    flock -n 8 || fail '无法锁定维护工具以恢复旧版；请检查宿主机服务'
+  fi
+  replace_file "$saved/client" "$directory/client" 0700
+  replace_file "$saved/engine.sh" "$directory/engine.sh" 0700
+  replace_file "$saved/installer" "$root/install.sh" 0700
+  host_privileged install -m 0755 -- "$saved/clouddrive-maintenance" "$installed.new"
+  host_privileged mv -Tf -- "$installed.new" "$installed"
+  if [[ -f $saved/offline-tool ]]; then replace_file "$saved/offline-tool" "$directory/offline-tool" 0600
+  else rm -f -- "$directory/offline-tool"; fi
+  flock -u 8
+  host_privileged systemctl start "$worker" "$gateway"
+  fail '新维护程序未通过就绪检查，已恢复旧维护程序'
+)
+refresh_local_tool() (
+  local directory="$root/.control/maintenance" saved="$work/before-update" item destination
+  exec 8>"$root/.control/lock"; flock -n 8 || fail '已有维护任务，等待结束后再更新维护程序'
+  mkdir -- "$saved"
+  cp -- "$root/install.sh" "$saved/installer"
+  for item in client offline-tool; do
+    if [[ -f $directory/$item ]]; then cp -- "$directory/$item" "$saved/"; fi
+  done
+  if activate_local_tool; then return; fi
+  replace_file "$saved/installer" "$root/install.sh" 0700
+  for item in client offline-tool; do
+    destination="$directory/$item"
+    if [[ -f $saved/$item ]]; then replace_file "$saved/$item" "$destination" 0700
+    else rm -f -- "$destination"; fi
+  done
+  fail '维护程序切换失败，已恢复旧维护入口'
+)
+update_maintenance() {
+  [[ -n $release_source ]] || fail '更新维护程序需要 --release-dir 指向已签名的正式发布包'
+  if [[ -n $work ]]; then rm -rf -- "$work"; fi
+  work=$(mktemp -d)
+  resolve_version
+  fetch_asset checksums.txt "$work/checksums.txt"
+  verify_release_signature
+  stage_maintenance_tool
+  mkdir -p -- "$root/.control/maintenance"
+  (
+    exec 7>"$root/.control/maintenance/tool.lock"
+    flock -n 7 || fail '另一维护程序更新正在进行'
+    local marker="$root/.control/maintenance/offline-tool" installed
+    if [[ -f $marker ]]; then
+      installed=$(cat -- "$marker")
+      if is_newer_version "$installed" "$version"; then fail "维护程序当前为 $installed，更新包版本 $version 较旧"; fi
+    fi
+    import_assets "$work/client"
+    if [[ -f $root/.control/maintenance/gateway.json ]]; then activate_web_tool
+    else refresh_local_tool; fi
+  )
+  printf '维护程序当前版本：%s\n' "$version"
+}
 enable_maintenance() {
-  local name identity
+  local name supports_offline
   version=$(current)
   [[ $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail '网页运维要求正式版本'
   name="clouddrive-maintenance_${version}_linux_${arch}"
-  command -v cosign >/dev/null || fail '启用网页运维前请按部署手册安装 cosign'
+  local cosign=${CLOUDDRIVE_COSIGN:-cosign}
+  command -v "$cosign" >/dev/null || fail '启用网页运维前请按部署手册安装 cosign'
   command -v systemctl >/dev/null || fail '网页运维要求 systemd'
   [[ $EUID == 0 ]] || command -v sudo >/dev/null || fail '启用网页运维需要 sudo'
+  if [[ -f $root/.control/maintenance/offline-tool ]]; then
+    "$root/.control/maintenance/client" enable --root "$root" --trusted-proxy "$trusted_proxy" --cosign "$(command -v "$cosign")" --docker-host "$endpoint"
+    return
+  fi
   [[ -z $work ]] || rm -rf -- "$work"
   work=$(mktemp -d)
   fetch_asset checksums.txt "$work/checksums.txt"
-  fetch_asset checksums.txt.sigstore.json "$work/checksums.txt.sigstore.json"
-  identity="https://github.com/$REPOSITORY/.github/workflows/release.yml@refs/tags/$version"
-  local -a verification=(
-    --bundle "$work/checksums.txt.sigstore.json"
-    --certificate-identity "$identity"
-    --certificate-oidc-issuer https://token.actions.githubusercontent.com
-  )
-  cosign verify-blob "${verification[@]}" "$work/checksums.txt"
+  verify_release_signature
   fetch_asset "$name" "$work/$name"
-  local digest
-  digest=$(awk -v asset="$name" '$2 == asset {print $1}' "$work/checksums.txt")
-  [[ $digest =~ ^[a-f0-9]{64}$ ]] || fail '清单缺少唯一维护工具条目'
-  printf '%s  %s\n' "$digest" "$work/$name" | sha256sum --check --status || fail '维护工具摘要不匹配'
+  verify_asset_file "$name" "$work/$name"
   chmod 700 "$work/$name"
-  "$work/$name" enable --root "$root" --trusted-proxy "$trusted_proxy" --cosign "$(command -v cosign)" --docker-host "$endpoint"
+  supports_offline=$(read_manifest OFFLINE_MAINTENANCE "$root/releases/$version/manifest.txt")
+  if [[ $supports_offline == 1 && $offline == true ]]; then import_assets "$work/$name"; fi
+  "$work/$name" enable --root "$root" --trusted-proxy "$trusted_proxy" --cosign "$(command -v "$cosign")" --docker-host "$endpoint"
+  if [[ $supports_offline == 1 ]]; then mark_offline_tool; fi
+}
+is_newer_version() {
+  local candidate=${1%%-*} installed=${2%%-*}
+  if [[ $candidate == "$installed" && ( $candidate == "$1" || $installed == "$2" ) ]]; then
+    [[ $candidate == "$1" && $installed != "$2" ]]
+    return
+  fi
+  [[ $1 != "$2" && $(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -n 1) == "$1" ]]
 }
 if [[ $command_name == install ]]; then
   if [[ -f $root/.control/current ]]; then
@@ -639,6 +841,10 @@ if [[ $command_name == install ]]; then
     bind=$(sed -n 's/^WEB_BIND=//p' "$root/runtime.env"); bind=${bind:-127.0.0.1}
     public_origin=$(sed -n 's/^PUBLIC_ORIGIN=//p' "$root/runtime.env")
     allow_http=$(sed -n 's/^ALLOW_INSECURE_HTTP=//p' "$root/runtime.env"); allow_http=${allow_http:-false}
+    recorded_candidate=$(cat -- "$root/.control/candidate")
+    valid_version "$recorded_candidate" || fail '上次安装的候选版本记录无效'
+    [[ $version == latest || $version == "$recorded_candidate" ]] || fail "首次安装尚未完成；请重试已记录版本 $recorded_candidate"
+    version=$recorded_candidate
   else
     preflight
   fi
@@ -675,6 +881,11 @@ if [[ $command_name == install ]]; then
   claim_created=false
   install_manager
   store_release
+  if [[ $offline == true && $(read_manifest OFFLINE_MAINTENANCE) == 1 && $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    stage_maintenance_tool
+    import_assets "$work/client"
+    activate_local_tool
+  fi
   if [[ $layout == true && ! -f $root/.control/data-initialized ]]; then
     verify_instance_storage "$version" initialize
     touch -- "$root/.control/data-initialized"
@@ -702,11 +913,22 @@ read_install_layout
 require_layout_owner
 old_version=$(current); valid_version "$old_version" || fail '当前版本标记无效'
 maintenance_config="$root/.control/maintenance/gateway.json"
+maintenance_tool="$root/.control/maintenance/client"
+shared_tool="$root/.control/maintenance/offline-tool"
 if [[ $command_name == enable-web-management ]]; then enable_maintenance; exit 0; fi
+if [[ $command_name == update-maintenance ]]; then update_maintenance; exit 0; fi
 if [[ $command_name == _* ]]; then
   valid_version "$version" || fail '宿主执行器需要明确版本'
   case $command_name in
     _prepare) prepare_release; store_release ;;
+    _images)
+      work=$(mktemp -d)
+      validate_release_metadata "$root/releases/$version"
+      verify_release_images "$root/releases/$version"
+      compose_at "$version" config --quiet ;;
+    _serving)
+      services=$(docker ps --filter "label=com.docker.compose.project=$project" --format '{{index .Labels "com.docker.compose.service"}}')
+      if grep -Fxq backend <<< "$services" && grep -Fxq web <<< "$services"; then printf 'true\n'; else printf 'false\n'; fi ;;
     _config) compose_at "$version" config --quiet ;;
     _probe) probe "$version" ;;
     _compat) migration_status "$version" ;;
@@ -729,12 +951,55 @@ if [[ $command_name == _* ]]; then
   esac
   exit 0
 fi
+if [[ $command_name == check-update && -n $release_source ]]; then
+  resolve_version
+  prepare_release verify
+  if [[ $(read_manifest OFFLINE_MAINTENANCE) == 1 && ! -f $shared_tool ]]; then stage_maintenance_tool; fi
+  if is_newer_version "$version" "$old_version"; then result='可升级'
+  elif [[ $version == "$old_version" ]]; then result='当前版本'
+  else result='旧版本，仅用于回退或恢复'; fi
+  printf '当前版本：%s\n已验证的离线包：%s（%s）\n' "$old_version" "$version" "$result"
+  exit 0
+fi
+if [[ $command_name == import-release ]]; then
+  [[ -n $release_source ]] || fail 'import-release 需要 --release-dir'
+  [[ -x $maintenance_tool && -f $shared_tool ]] || fail '请先用新版签名发布包执行 update-maintenance'
+  resolve_version
+  import_assets "$maintenance_tool"
+  exit 0
+fi
+imported_during_bootstrap=false
+verified_legacy_bundle=false
+if [[ $command_name == upgrade && -n $release_source && ! -f $shared_tool && ! -f $maintenance_config ]]; then
+  resolve_version
+  if [[ $version != "$old_version" ]] && ! is_newer_version "$version" "$old_version"; then fail 'upgrade 只接受更新版本；旧版本请使用 rollback 或完整恢复'; fi
+  prepare_release verify
+  if [[ $(read_manifest OFFLINE_MAINTENANCE) == 1 ]]; then update_maintenance; imported_during_bootstrap=true
+  else verified_legacy_bundle=true; fi
+fi
+if [[ -f $shared_tool && $command_name != logs && ( $command_name != backup || $full_backup == true || -f $maintenance_config ) ]]; then
+  [[ -x $maintenance_tool ]] || fail '维护程序缺失，请从签名发布包执行 update-maintenance'
+  if [[ -n $release_source ]]; then
+    case $command_name in upgrade|rollback|restore) ;; *) fail '此命令无需指定 --release-dir' ;; esac
+    resolve_version
+    if [[ $imported_during_bootstrap == false ]]; then import_assets "$maintenance_tool"; fi
+  fi
+  tool_mode=local
+  if [[ -f $maintenance_config ]]; then tool_mode=client; fi
+  target=$version
+  if [[ $command_name == restore ]]; then target=$backup_id; fi
+  options=("$tool_mode" --root "$root" --action "$command_name" --target "$target" --confirm "$restore_confirmation")
+  if [[ $offline == true ]]; then options+=(--offline); fi
+  if [[ -n $work ]]; then "$maintenance_tool" "${options[@]}"; exit 0; fi
+  exec "$maintenance_tool" "${options[@]}"
+fi
 if [[ -f $maintenance_config && $command_name != logs ]]; then
-  [[ -z $release_source ]] || fail '网页运维模式仅使用已验证的官方在线产物'
+  [[ $offline == false ]] || fail '请先用新版签名发布包执行 update-maintenance，以启用离线维护'
   if [[ $command_name == restore ]]; then version=$backup_id; fi
   exec "$root/.control/maintenance/client" client --root "$root" --action "$command_name" --target "$version" --confirm "$restore_confirmation"
 fi
-[[ $command_name != rollback && $command_name != restore ]] || fail '请先启用网页运维'
+[[ $command_name != rollback && $command_name != restore && $full_backup == false ]] || fail '请先用新版签名发布包执行 update-maintenance'
+[[ $offline == false || -n $release_source ]] || fail '请先执行 update-maintenance 并导入离线包'
 case $command_name in
   status) printf '当前版本：%s\n实例名：%s\n安装目录：%s\n数据目录：%s\n' "$old_version" "$project" "$root" "$data_dir"; compose_at "$old_version" ps; exit 0 ;;
   logs) log_args=(logs --tail "$tail_lines"); [[ $follow == false ]] || log_args+=(--follow); compose_at "$old_version" "${log_args[@]}" backend web; exit 0 ;;
@@ -753,10 +1018,25 @@ case $command_name in
     probe "$old_version" || fail '备份后服务恢复未通过'
     stop_recovery=false; exit 0 ;;
   upgrade)
+    old_version=$(current)
     resolve_version
-    [[ $version != "$old_version" ]] || { printf '已是目标版本 %s，无需重复迁移。\n' "$version"; exit 0; }
-    prepare_release
+    if [[ $version == "$old_version" && $verified_legacy_bundle == false ]]; then
+      printf '已是目标版本 %s，无需重复迁移。\n' "$version"; exit 0
+    fi
+    if [[ $version != "$old_version" ]]; then
+      is_newer_version "$version" "$old_version" || fail 'upgrade 只接受更新版本；旧版本请使用 rollback 或完整恢复'
+    fi
+    if [[ $verified_legacy_bundle == true ]]; then
+      tar --extract --gzip --file "$work/clouddrive_${version}_linux_${arch}_docker.tar.gz" --directory "$work/bundle" \
+        --no-same-owner --no-same-permissions images.tar
+      progress '导入配套 Docker 镜像'
+      docker image load --input "$work/bundle/images.tar" >/dev/null
+      verify_release_images "$work/bundle"
+    else prepare_release; fi
     store_release
+    if [[ $version == "$old_version" ]]; then
+      printf '已校验并补齐当前版本 %s 的本地镜像。\n' "$version"; exit 0
+    fi
     # 所有下载、校验和 Compose 检查成功后才停止服务。
     stop_recovery=true
     compose_at "$old_version" stop
