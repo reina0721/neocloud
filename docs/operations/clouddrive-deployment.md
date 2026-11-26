@@ -2,13 +2,44 @@
 
 ## 从源码部署
 
-将要部署的源码放在 Linux 服务器上，进入仓库目录。需要 Docker Engine、Docker Compose ≥ 2.20 和系统 Bash、flock 等常用工具。Go 和 Node 在镜像中构建。
+将源码放在 Linux 服务器上，进入仓库目录。需要 Docker Engine、Docker Compose ≥ 2.20、iproute2 的 `ss`，以及 Bash、flock 等常用工具。Go 和 Node 在镜像中使用。
 
 ```bash
 bash scripts/deploy-docker.sh
 ```
 
-部署成功后打开 `http://服务器IP:4180/setup`，用下面的命令查看首次设置令牌，再创建自己的管理员。宿主机只开放 Web 的 4180，Go API 和运维接口通过容器网络访问。
+执行 `bash scripts/deploy-docker.sh plan` 可在部署前核对资源。使用默认配置时，资源如下。
+
+| 项目 | 默认值与用途 |
+| --- | --- |
+| 源码目录 | 当前源码所在的目录，也是构建输入 |
+| 实例目录 | `~/clouddrive-deploy`，保存运行配置和部署记录 |
+| 配置和令牌 | `deploy.env` 保存公开配置，`.control/instance` 记录实例身份，`.control/setup-token` 保存首次设置令牌 |
+| Compose 项目与网络 | `clouddrive`、`clouddrive_default` |
+| 容器 | `clouddrive-backend-1`、`clouddrive-web-1`、一次性迁移容器 `clouddrive-migrate` |
+| 镜像 | `clouddrive-api:local`、`clouddrive-web:local` |
+| 数据卷 | `clouddrive-data` 挂载为容器内 `/app/.data`，包含 `app.db`、`storage/`、`transfers/`。部署和 `status` 会显示 Docker 主机上的实际挂载路径 |
+| 数据库备份 | 实例目录下的 `backups/` |
+| 端口和访问地址 | 宿主 `0.0.0.0:4180` 转发至 Web 容器 `4173/tcp`，浏览器打开 `http://服务器IP:4180`。Go API 的 `8080` 与运维的 `9090` 通过容器网络访问 |
+
+### 配置实例
+
+首次安装可以复制[配置模板](../../deploy-docker.env.example)，编辑项目名、Web 监听地址、端口、外部访问地址和 HTTP 策略。默认外部地址留空，浏览器通过所选监听地址和端口访问。
+
+```bash
+cp deploy-docker.env.example deploy.env
+# 编辑 deploy.env 后，先检查计划，再执行部署。
+bash scripts/deploy-docker.sh plan --dir "$HOME/clouddrive-test" --config deploy.env
+bash scripts/deploy-docker.sh --dir "$HOME/clouddrive-test" --config deploy.env
+```
+
+脚本将配置保存为实例目录下的 `deploy.env`。安装后直接改这份配置，再用相同的 `--dir` 部署以应用网络设置。`--config` 用于首次安装。`INSTANCE_NAME` 决定 Docker 资源的命名，创建第二个实例时使用独立目录、项目名和可用端口。安装目录已包含其他文件、Docker 资源被其他实例占用、端口已被占用时，脚本会指出冲突并停止。
+
+公网访问可由宿主机 HTTPS 反代接入。在实例的 `deploy.env` 设置 `WEB_BIND=127.0.0.1`、`PUBLIC_ORIGIN=https://drive.example.com` 和 `ALLOW_INSECURE_HTTP=false`。重新部署后，将该域名转发到配置的本机 Web 端口，保留原始 Host 并转发 HTTPS 协议。WebDAV 与网页使用同一个入口。
+
+### 首次设置和日常管理
+
+部署完成后打开部署输出中的 `/setup` 地址，用下列命令读取初始化令牌并创建管理员。自定义实例目录时，给管理命令也传入同一个 `--dir`。
 
 ```bash
 bash scripts/deploy-docker.sh token
@@ -17,9 +48,9 @@ bash scripts/deploy-docker.sh logs --tail 100
 bash scripts/deploy-docker.sh stop
 ```
 
-更新源码后，运行同一条部署命令。镜像构建成功后，脚本会停止本实例，备份 SQLite，再执行迁移并等待 Web 和 Go 就绪。迁移失败时按 [迁移与回滚](migration-and-rollback.md) 处理。数据库备份位于 `.data/docker/backups/`，账号、文件和传输暂存位于本实例的 Docker 数据卷。整机备份还需保留数据卷及 `.data/docker/runtime.env`，其中包含实例标记、网络配置和首次设置令牌。
+更新源码后运行同一条部署命令。镜像构建成功后，脚本会停止本实例，备份 SQLite，再执行迁移并等待 Web 和 Go 就绪。迁移失败时按 [迁移与回滚](migration-and-rollback.md) 处理。整机备份需同时保留实例目录和 Docker 数据卷。
 
-公网访问可由宿主机 HTTPS 反代接入。在 `.data/docker/runtime.env` 设置 `WEB_BIND=127.0.0.1`、`PUBLIC_ORIGIN=https://drive.example.com` 和 `ALLOW_INSECURE_HTTP=false`，重新部署后将域名转发到本机 `4180`，保留原始 Host 并转发 HTTPS 协议。WebDAV 与网页使用同一个入口。
+早期源码部署的实例可在原源码目录继续部署。现有 `.data/docker/runtime.env` 和原数据卷会沿用，数据库备份仍写入 `.data/docker/backups/`。
 
 ## Release 下载版安装与升级
 

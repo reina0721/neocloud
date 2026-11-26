@@ -4,23 +4,31 @@ x-source-data: &source-data
   source: source-data
   target: /app/.data
 
+x-source-owner: &source-owner
+  io.clouddrive.source.instance: ${CLOUDDRIVE_SOURCE_OWNER:?missing source owner}
+
 services:
   migrate:
+    labels: *source-owner
     volumes:
       - *source-data
   backend:
+    labels: *source-owner
     build:
       context: .
       args:
         COMMIT: ${CLOUDDRIVE_SOURCE_COMMIT:-unknown}
+      labels: *source-owner
     volumes:
       - *source-data
   web:
+    labels: *source-owner
     build:
       context: .
       dockerfile: frontend/Dockerfile
       args:
         COMMIT: ${CLOUDDRIVE_SOURCE_COMMIT:-unknown}
+      labels: *source-owner
     healthcheck:
       test:
         - CMD
@@ -36,4 +44,9 @@ services:
 
 volumes:
   source-data:
+    external: true
     name: ${CLOUDDRIVE_SOURCE_PROJECT:?missing source project}-data
+
+networks:
+  default:
+    labels: *source-owner

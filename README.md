@@ -17,13 +17,15 @@
 
 ## Linux + Docker 部署
 
-在准备好 Docker Engine 和 Compose 插件（≥ 2.20）的 Linux 上，从要部署的源码目录执行：
+在准备好 Docker Engine、Compose 插件（≥ 2.20）和 iproute2 的 Linux 上，从源码目录执行一键部署。
 
 ```bash
 bash scripts/deploy-docker.sh
 ```
 
-打开 `http://服务器IP:4180/setup`，用 `bash scripts/deploy-docker.sh token` 查看初始化令牌并创建管理员。前后端构建、迁移和就绪检查由部署脚本完成，数据库和文件保存在 Docker 数据卷中。[源码部署与日常管理](docs/operations/clouddrive-deployment.md#从源码部署)
+默认实例目录为 `~/clouddrive-deploy`，项目名为 `clouddrive`，服务地址为 `http://服务器IP:4180`。执行 `bash scripts/deploy-docker.sh plan` 可提前核对目录、镜像、容器、数据卷和端口映射。首次安装可用 `--dir` 指定实例目录，用 `--config` 载入自己的配置文件。[配置模板](deploy-docker.env.example)
+
+打开 `http://服务器IP:4180/setup`，用 `bash scripts/deploy-docker.sh token` 查看初始化令牌并创建管理员。[源码部署与日常管理](docs/operations/clouddrive-deployment.md#从源码部署)
 
 ### 下载正式版
 
