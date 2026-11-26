@@ -78,6 +78,10 @@ test('F221–225：六页共用导航、分类、回收站和原生链接', asyn
     await expect(page.getByRole('button', { name: '新建', exact: true })).toBeEnabled();
     await expect(page.getByRole('button', { name: '刷新存储空间', exact: true })).toBeVisible();
   }
+  await page
+    .getByRole('navigation', { name: '我的文件', exact: true })
+    .getByRole('link', { name: '我的文件', exact: true })
+    .click();
   for (const [label, category] of [
     ['图片', 'image'],
     ['视频', 'video'],

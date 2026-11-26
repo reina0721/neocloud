@@ -17,7 +17,7 @@ import { useRequiredAdministration } from '../../../src/administration/context';
 import { useRemote, RemoteRegion } from '../../../src/administration/resource-state';
 import type { Todo } from '../../../src/administration/model';
 import Link from 'next/link';
-import { managementTaskGroups, visibleNavigationEntries } from './management-tasks';
+import { managementTaskGroups } from './management-tasks';
 
 function TodoAction({ todo, onSaved }: Readonly<{ todo?: Todo; onSaved: () => void }>) {
   const port = useRequiredAdministration();
@@ -118,7 +118,6 @@ export function BackendWorkspacePage() {
   const [revision, setRevision] = useState(0);
   const dashboard = useRemote(useCallback(() => port.dashboard(), [port]));
   const groups = managementTaskGroups(view.groups);
-  const files = visibleNavigationEntries(view.groups).find((entry) => entry.id === 'files.root');
   const native = access.data?.nativePermissions ?? [];
   const canReadTodos = native.includes('todos:read');
   const canWriteTodos = native.includes('todos:write');
@@ -133,27 +132,17 @@ export function BackendWorkspacePage() {
         title={t('workspace.management.title')}
         description={t('workspace.management.description')}
         actions={
-          <>
-            {files ? (
-              <Link
-                href={files.href}
-                className="ui-navigation-focus inline-flex min-h-control items-center rounded-action px-4 text-sm font-medium text-brand hover:bg-brand-soft"
-              >
-                {t('workspace.management.backToFiles')}
-              </Link>
-            ) : null}
-            <Action
-              variant="quiet"
-              onPress={() => {
-                dashboard.reload();
-                view.onReload();
-                access.reload();
-                setRevision((value) => value + 1);
-              }}
-            >
-              {t('administration.refresh')}
-            </Action>
-          </>
+          <Action
+            variant="quiet"
+            onPress={() => {
+              dashboard.reload();
+              view.onReload();
+              access.reload();
+              setRevision((value) => value + 1);
+            }}
+          >
+            {t('administration.refresh')}
+          </Action>
         }
       />
       {view.status === 'loading' ? (

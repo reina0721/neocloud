@@ -38,12 +38,12 @@ var (
 	ErrInvalidCredentials = errors.New("iam credentials are invalid")
 	// 确认现有凭据校验成功执行后，单独区分口令内容不匹配。
 	ErrCurrentPasswordMismatch = fmt.Errorf("iam current password does not match: %w", ErrInvalidCredentials)
-	ErrAccountLocked      = errors.New("iam account is locked")
-	ErrAccountDisabled    = errors.New("iam account is disabled")
-	ErrSessionInvalid     = errors.New("iam session is invalid")
-	ErrUnknownPermission  = errors.New("iam permission is not in catalog")
-	ErrImmutableOwner     = errors.New("iam owner role is immutable")
-	ErrIncompatibleState  = errors.New("iam persistent state is incompatible with permission catalog")
+	ErrAccountLocked           = errors.New("iam account is locked")
+	ErrAccountDisabled         = errors.New("iam account is disabled")
+	ErrSessionInvalid          = errors.New("iam session is invalid")
+	ErrUnknownPermission       = errors.New("iam permission is not in catalog")
+	ErrImmutableOwner          = errors.New("iam owner role is immutable")
+	ErrIncompatibleState       = errors.New("iam persistent state is incompatible with permission catalog")
 	// ErrInvalidQuery 表示列表查询参数非法（排序字段/方向、不支持的过滤或
 	// 过大分页）；090 BE-090-001 统一语义：非法查询返回可识别错误，不静默忽略。
 	ErrInvalidQuery = errors.New("iam list query is invalid")

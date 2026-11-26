@@ -109,6 +109,9 @@ test('F301–308：桌面独立滚动、稳定工具、可见存储与完整品�
   await page.screenshot({ path: info.outputPath('desktop-scroll.png') });
 });
 test('F316–319：紧凑网格、长名称、列表和键盘焦点', async ({ page }, info) => {
+  await page.getByRole('button', { name: '视图', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '网格', exact: true }).click();
+  await expect(page.locator('[data-file-view="grid"]').first()).toBeVisible();
   const cards = page.locator('[data-file-item]');
   const first = await cards.nth(0).boundingBox();
   const sixth = await cards.nth(5).boundingBox();

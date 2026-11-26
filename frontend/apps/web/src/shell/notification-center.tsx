@@ -1,4 +1,5 @@
 'use client';
+import './install-translations';
 
 import { Bell } from 'lucide-react';
 import { lazy, Suspense, useState } from 'react';

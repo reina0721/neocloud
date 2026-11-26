@@ -77,7 +77,7 @@ test('V-01 窄屏路径、工具命中和更多菜单保持可用', async ({ pag
   );
   const entry = await createEntry(page, 'text', '示例.txt', leaf.id);
   const toolbar = page.getByRole('toolbar', { name: leaf.name, exact: true });
-  const more = toolbar.getByRole('button', { name: '更多操作', exact: true });
+  const more = toolbar.getByRole('button', { name: '更多目录操作', exact: true });
   await page.goto('/home?parent=' + leaf.id);
   await expect(page.locator('[data-file-item="' + entry.id + '"]')).toBeVisible();
 
@@ -172,7 +172,7 @@ test('V-02 详情抽屉与侧栏保持选择、内容和关闭焦点', async ({ 
   await page.goto('/home?parent=' + folder.id);
   await expect(selected(first.id)).toBeVisible();
   const toolbar = page.getByRole('toolbar', { name: folder.name, exact: true });
-  const more = toolbar.getByRole('button', { name: '更多操作', exact: true });
+  const more = toolbar.getByRole('button', { name: '更多目录操作', exact: true });
   const details = toolbar.getByRole('button', { name: '详情面板', exact: true });
   const drawer = page.getByRole('dialog', { name: '详情面板', exact: true });
   const dock = page.getByRole('complementary', { name: '详情面板', exact: true });

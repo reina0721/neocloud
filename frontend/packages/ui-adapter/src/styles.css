@@ -91,6 +91,13 @@
       padding: calc(var(--spacing) * 3);
       gap: calc(var(--spacing) * 2);
     }
+    .ui-navigation-tabs[data-compact='true'],
+    .ui-navigation-tabs[data-compact='true'] .MuiTab-root {
+      min-height: var(--spacing-control);
+    }
+    .ui-navigation-tabs[data-compact='true'] .MuiTab-root {
+      padding-block: calc(var(--spacing) * 2);
+    }
     .ui-navigation-tab-icon {
       display: grid;
       place-items: center;

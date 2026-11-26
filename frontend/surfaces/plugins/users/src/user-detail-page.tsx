@@ -21,6 +21,7 @@ import {
   type DirectoryRole,
   type IdentityAccess,
 } from '@clouddrive/surface/identity/runtime';
+import { readUserListContext } from './user-list-context';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import {
   IdentityQueryState,
@@ -221,7 +222,10 @@ function UserAccessActions({
   );
 }
 
-export function UserDetailPage({ id }: Readonly<{ id: string | null }>) {
+export function UserDetailPage({
+  id,
+  listContext = null,
+}: Readonly<{ id: string | null; listContext?: string | null }>) {
   const { t, locale } = useFrontendTranslation();
   const port = useIdentityPort();
   const administration = useAdministration();
@@ -270,9 +274,17 @@ export function UserDetailPage({ id }: Readonly<{ id: string | null }>) {
         description={t('users.detailDescription')}
         actions={
           <>
-            <RouteLink target={route('users')}>{t('users.back')}</RouteLink>
+            <RouteLink target={route('users', {}, { query: readUserListContext(listContext) })}>
+              {t('users.back')}
+            </RouteLink>
             {data?.access.permissions.includes('users.update') ? (
-              <RouteLink target={route('users.edit', {}, { query: { id: data.user.id } })}>
+              <RouteLink
+                target={route(
+                  'users.edit',
+                  {},
+                  { query: { id: data.user.id, ...(listContext ? { list: listContext } : {}) } },
+                )}
+              >
                 {t('users.edit')}
               </RouteLink>
             ) : null}

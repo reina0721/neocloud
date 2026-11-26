@@ -74,9 +74,11 @@ export function NavigationTabs({
   label,
   items,
   value,
+  compact = false,
   onNavigate,
 }: Readonly<{
   label: string;
+  compact?: boolean;
   items: readonly NavigationTab[];
   value?: string | undefined;
   onNavigate: (id: string) => void;
@@ -89,6 +91,7 @@ export function NavigationTabs({
       variant="scrollable"
       scrollButtons="auto"
       className="ui-navigation-tabs"
+      data-compact={compact}
       slotProps={{ root: { 'aria-label': label }, list: { role: 'presentation' } }}
     >
       {items.map((item) => (

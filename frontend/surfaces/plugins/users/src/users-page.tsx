@@ -46,6 +46,7 @@ import {
   IdentityMutationError,
 } from '../../../src/identity/query-state';
 import { useUsersColumnLayoutStore } from '../stores/column-layout';
+import { userListContext, userListParameters } from './user-list-context';
 import { browserCsvExport } from './csv-export';
 
 export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
@@ -96,15 +97,7 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
           'users',
           {},
           {
-            query: {
-              q: next.q,
-              status: next.status,
-              roleId: next.roleId,
-              sort: next.sort,
-              direction: next.direction,
-              page: String(next.page),
-              pageSize: String(next.pageSize),
-            },
+            query: userListParameters(next),
           },
         ),
       );
@@ -146,8 +139,20 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
       {t(`identityProduct.${user.status}`)}
     </StatusPill>
   );
+  const listContext = userListContext(query);
   const detailLink = (user: DirectoryUser) => (
-    <RouteLink target={route('users.detail', {}, { query: { id: user.id } })}>
+    <RouteLink
+      target={route(
+        'users.detail',
+        {},
+        {
+          query: {
+            id: user.id,
+            ...(listContext ? { list: listContext } : {}),
+          },
+        },
+      )}
+    >
       {user.name}
     </RouteLink>
   );
@@ -501,12 +506,9 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
                     },
                   }
                 : {})}
-            />
-          }
-          bulk={
-            data.access.permissions.includes('users.status') ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-surface-muted/30 px-4 py-2">
-                <div className="flex items-center gap-3">
+            >
+              {data.access.permissions.includes('users.status') && data.page.items.length ? (
+                <>
                   <CheckboxField
                     label={t('users.selectPage')}
                     checked={
@@ -519,38 +521,40 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
                     }
                   />
                   {selectedUsers.length ? (
-                    <span aria-live="polite" className="text-xs font-medium text-ink-muted">
-                      {t('users.selected', { count: selectedUsers.length })}
-                    </span>
+                    <>
+                      <span aria-live="polite" className="text-xs font-medium text-ink-muted">
+                        {t('users.selected', { count: selectedUsers.length })}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {selectedUsers.length ? (
+                          <Action size="sm" variant="quiet" onPress={() => setSelected([])}>
+                            {t('identityProduct.clear')}
+                          </Action>
+                        ) : null}
+                        <Action
+                          size="sm"
+                          variant="secondary"
+                          disabled={!selectedUsers.length || batchPending}
+                          leadingIcon={<UserCheck className="size-3.5" />}
+                          onPress={() => setBatchTarget('active')}
+                        >
+                          {t('users.batchEnable')}
+                        </Action>
+                        <Action
+                          size="sm"
+                          variant="secondary"
+                          disabled={!selectedUsers.length || batchPending}
+                          leadingIcon={<UserX className="size-3.5" />}
+                          onPress={() => setBatchTarget('disabled')}
+                        >
+                          {t('users.batchDisable')}
+                        </Action>
+                      </div>
+                    </>
                   ) : null}
-                </div>
-                <div className="flex items-center gap-2">
-                  {selectedUsers.length ? (
-                    <Action size="sm" variant="quiet" onPress={() => setSelected([])}>
-                      {t('identityProduct.clear')}
-                    </Action>
-                  ) : null}
-                  <Action
-                    size="sm"
-                    variant="secondary"
-                    disabled={!selectedUsers.length || batchPending}
-                    leadingIcon={<UserCheck className="size-3.5" />}
-                    onPress={() => setBatchTarget('active')}
-                  >
-                    {t('users.batchEnable')}
-                  </Action>
-                  <Action
-                    size="sm"
-                    variant="secondary"
-                    disabled={!selectedUsers.length || batchPending}
-                    leadingIcon={<UserX className="size-3.5" />}
-                    onPress={() => setBatchTarget('disabled')}
-                  >
-                    {t('users.batchDisable')}
-                  </Action>
-                </div>
-              </div>
-            ) : null
+                </>
+              ) : null}
+            </CollectionToolbar>
           }
           content={
             <div aria-busy={result.loading || undefined}>

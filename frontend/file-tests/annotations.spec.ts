@@ -444,21 +444,19 @@ test('副本与回收保留整理信息，画廊按本屏加载且可批量整�
       body: '{"title":"temporary annotation outage"}',
     }),
   );
-  await page
-    .getByRole('toolbar', { name: value.name, exact: true })
-    .getByRole('button', { name: '刷新', exact: true })
-    .click();
+  const folderTools = page.getByRole('toolbar', { name: value.name, exact: true });
+  await folderTools.getByRole('button', { name: '更多目录操作', exact: true }).click();
+  await page.getByRole('menuitem', { name: '刷新', exact: true }).click();
   await expect(page.getByText('服务暂时不可用，请重试。', { exact: true })).toBeVisible();
   await page
     .getByRole('button', { name: image.name, exact: true })
     .click({ modifiers: ['Control'] });
   await page.getByRole('button', { name: '更多操作', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: '批量添加标签', exact: true })).toBeDisabled();
+  await page.keyboard.press('Escape');
   await page.unroute('**/native/files/annotations/summaries**');
-  await page
-    .getByRole('toolbar', { name: value.name, exact: true })
-    .getByRole('button', { name: '刷新', exact: true })
-    .click();
+  await folderTools.getByRole('button', { name: '更多目录操作', exact: true }).click();
+  await page.getByRole('menuitem', { name: '刷新', exact: true }).click();
   await expect(
     row(page, image.id).getByRole('button', {
       name: '按标签 画廊-' + value.suffix + ' 查看全部自有文件',

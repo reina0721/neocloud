@@ -115,7 +115,9 @@ test('紧凑导航、路径、搜索及选择菜单真实可用', async ({ page,
   await menu(page, '当前目录操作', '取消选择');
   await open(page, f.from.name);
   await choose(page, f.file.name);
-  await expect(page.getByText('所选文件共 5 B（不含目录内容）', { exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: '选择操作' })).toContainText(
+    /已选择 1 项\s*·\s*5 B/,
+  );
   const search = page.getByRole('searchbox', { name: '搜索文件', exact: true });
   await search.fill('未提交草稿');
   await search.press('Escape');
@@ -125,7 +127,10 @@ test('紧凑导航、路径、搜索及选择菜单真实可用', async ({ page,
   await search.press('Enter');
   await expect(page).toHaveURL(/search=/);
   await expect(page.getByText(/全部自有文件 · 共 1 项/)).toBeVisible();
-  await page.getByRole('button', { name: '清空搜索', exact: true }).click();
+  await page
+    .locator('[data-file-workspace-search]')
+    .getByRole('button', { name: '清空', exact: true })
+    .click();
   await expect(page).not.toHaveURL(/search=/);
   await page.locator('#main-content').focus();
   await expect(page.getByRole('button', { name: '上级目录', exact: true })).toBeEnabled();
@@ -168,7 +173,7 @@ test('复制待处理跨目录使用新名称，冲突不覆盖且可取消', as
   await expect(row(page, f.file.id)).toBeVisible();
   await row(page, f.file.id).click({ button: 'right' });
   await page.getByRole('menuitem', { name: '复制到剪贴板', exact: true }).click();
-  await expect(page.getByRole('region', { name: '待复制 1 项', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: '已复制 1 项', exact: true })).toBeVisible();
   await api(page, '/' + String(f.file.id), 'PATCH', { name: 'renamed-' + f.suffix + '.txt' });
   await up(page);
   await open(page, f.dest.name);
@@ -198,8 +203,8 @@ test('复制待处理跨目录使用新名称，冲突不覆盖且可取消', as
   );
   expect((await api(page, '?parent=' + String(f.dest.id))).items as unknown[]).toHaveLength(1);
   await page.screenshot({ path: info.outputPath('clipboard-conflict.png'), fullPage: false });
-  await page.getByRole('button', { name: '取消待处理操作', exact: true }).click();
-  await expect(page.getByRole('region', { name: '待复制 1 项', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '清空剪贴板', exact: true }).click();
+  await expect(page.getByRole('region', { name: '已复制 1 项', exact: true })).toHaveCount(0);
 });
 
 test('批量剪切部分成功保留失败项，刷新清空与输入快捷键隔离', async ({ page }, info) => {
@@ -224,23 +229,23 @@ test('批量剪切部分成功保留失败项，刷新清空与输入快捷键�
   await page.locator('#main-content').focus();
   await page.keyboard.press('Control+x');
   await expect(row(page, f.file.id)).toHaveAttribute('data-file-cut', 'true');
-  await expect(page.getByRole('region', { name: '待移动 2 项', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: '已剪切 2 项', exact: true })).toBeVisible();
   await up(page);
   await open(page, f.dest.name);
   await page.getByRole('button', { name: '粘贴到当前目录', exact: true }).click();
   await expect(page.locator('#main-content').getByRole('alert')).toContainText(String(second.name));
   await expect(page.getByText('已完成 1 项', { exact: true })).toBeVisible();
-  await expect(page.getByRole('region', { name: '待移动 1 项', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: '已剪切 1 项', exact: true })).toBeVisible();
   expect((await api(page, '/' + String(f.file.id))).entry).toMatchObject({ parentId: f.dest.id });
   expect((await api(page, '/' + String(second.id))).entry).toMatchObject({ parentId: f.from.id });
   await page.screenshot({ path: info.outputPath('clipboard-partial.png'), fullPage: false });
   const search = page.getByRole('searchbox', { name: '搜索文件', exact: true });
   await search.fill('草稿');
   await search.press('Control+x');
-  await expect(page.getByRole('region', { name: '待移动 1 项', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: '已剪切 1 项', exact: true })).toBeVisible();
   await search.press('Escape');
   await page.reload();
-  await expect(page.getByRole('region', { name: /待移动/ })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: /已剪切/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: String(f.file.name), exact: true })).toBeVisible();
   await choose(page, f.file.name);
   await menu(page, '更多操作', '复制到剪贴板');
@@ -248,11 +253,11 @@ test('批量剪切部分成功保留失败项，刷新清空与输入快捷键�
   await page.keyboard.press('Control+v');
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: '取消', exact: true }).click();
-  await expect(page.getByRole('region', { name: '待复制 1 项', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: '已复制 1 项', exact: true })).toBeVisible();
   await api(page, '/' + String(f.file.id) + '/trash', 'POST');
   await page.getByRole('button', { name: '粘贴到当前目录', exact: true }).click();
   await expect(page.getByText('文件或目录不存在，或已移入回收站。', { exact: true })).toBeVisible();
-  await expect(page.getByRole('region', { name: '待复制 1 项', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: '已复制 1 项', exact: true })).toBeVisible();
 });
 
 test('空目录直接上传复用真实队列，筛选空结果不伪装为空目录', async ({ page, context }) => {

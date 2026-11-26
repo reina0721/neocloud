@@ -76,9 +76,17 @@ export function Toolbar({
   label,
   primary,
   secondary,
-}: Readonly<{ label: string; primary: ReactNode; secondary?: ReactNode }>) {
+  inset = 'standard',
+}: Readonly<{
+  label: string;
+  primary: ReactNode;
+  secondary?: ReactNode;
+  inset?: 'standard' | 'compact';
+}>) {
   return (
-    <div className="surface-toolbar rounded-panel bg-surface p-3">
+    <div
+      className={`surface-toolbar rounded-panel bg-surface ${inset === 'compact' ? 'p-1' : 'p-3'}`}
+    >
       <ActionToolbar label={label}>
         <div className="surface-toolbar-primary flex min-w-0 flex-wrap items-center gap-2">
           {primary}
@@ -173,6 +181,72 @@ export function StickyActions({ children }: Readonly<{ children: ReactNode }>) {
     <footer className="sticky bottom-3 z-shell flex flex-wrap items-center justify-end gap-3 rounded-panel border border-border bg-surface/95 px-4 py-3 shadow-overlay backdrop-blur-xl">
       {children}
     </footer>
+  );
+}
+
+/** 已登录工作区共享顶栏。路由、搜索和身份操作由各工作区提供。 */
+export function WorkspaceHeader({
+  brand,
+  navigation,
+  search,
+  searchMode = 'inline',
+  tools,
+  account,
+}: Readonly<{
+  brand: ReactNode;
+  navigation?: ReactNode;
+  search?: ReactNode;
+  searchMode?: 'inline' | 'below' | 'desktop';
+  tools?: ReactNode;
+  account: ReactNode;
+}>) {
+  return (
+    <header
+      data-workspace-header
+      className="flex min-h-14 shrink-0 flex-wrap items-center gap-x-2 border-b border-border bg-surface px-3 md:flex-nowrap md:gap-3 md:px-6"
+    >
+      <div className="flex surface-workspace-mainline min-w-0 flex-1 items-center gap-2 md:flex-none">
+        {navigation ? <div className="flex shrink-0 items-center gap-1">{navigation}</div> : null}
+        {brand}
+      </div>
+      {search ? (
+        <div
+          className={
+            searchMode === 'below'
+              ? 'order-last flex h-14 min-w-0 basis-full items-center md:order-none md:h-auto md:basis-auto md:flex-1'
+              : searchMode === 'desktop'
+                ? 'hidden min-w-0 flex-1 md:block'
+                : 'min-w-0 flex-1'
+          }
+        >
+          {search}
+        </div>
+      ) : null}
+      <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        {tools}
+        {account}
+      </div>
+    </header>
+  );
+}
+
+export function WorkspaceBrand({
+  name,
+  scope,
+  mark,
+}: Readonly<{ name: string; scope: string; mark: ReactNode }>) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <span className="grid size-6 shrink-0 place-items-center rounded-control bg-brand-soft text-brand">
+        {mark}
+      </span>
+      <span className="max-w-40 truncate text-sm font-bold text-ink" title={name}>
+        {name}
+      </span>
+      <span className="hidden shrink-0 rounded-action bg-surface-muted px-2 py-0.5 text-xs font-medium text-ink-muted lg:inline">
+        {scope}
+      </span>
+    </div>
   );
 }
 

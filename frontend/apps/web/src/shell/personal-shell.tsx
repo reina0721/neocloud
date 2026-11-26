@@ -7,6 +7,8 @@ import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
 import type { Preferences } from '@clouddrive/surface/preferences-model';
 import { CurrentSiteLogo, useSiteProfile } from '@clouddrive/surface/administration/runtime';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
+import { NavigationItem } from '@clouddrive/ui-adapter/destination-navigation';
+import { WorkspaceBrand, WorkspaceHeader } from '@clouddrive/surface-foundation/layout';
 import { DrawerSurface } from '@clouddrive/ui-adapter/overlays';
 import {
   ArrowLeft,
@@ -140,40 +142,46 @@ const advancedPreferenceLinks: readonly NavLinkItem[] = [
   },
 ];
 
+function usePersonalNavigate() {
+  const router = useRouter();
+  return (href: string, onAccepted?: () => void) => {
+    void proceedAfterLeaveConfirm(href).then((proceed) => {
+      if (!proceed) {
+        if (href === location.pathname + location.search + location.hash) onAccepted?.();
+        return;
+      }
+      onAccepted?.();
+      markForwardRouteIntent();
+      void router.push(href, {
+        transitionTypes: [pageTransitionTypes.forward],
+        ...resolveScrollOption(),
+      });
+    });
+  };
+}
+
 function PersonalLink({
   href,
   className,
-  current = false,
+  label,
   onAccepted,
   children,
 }: Readonly<{
   href: string;
   className: string;
-  current?: boolean;
+  label?: string;
   onAccepted?: (() => void) | undefined;
   children: ReactNode;
 }>) {
-  const router = useRouter();
+  const navigate = usePersonalNavigate();
   return (
     <Link
       href={href}
       className={className}
-      aria-current={current ? 'page' : undefined}
+      aria-label={label}
       onNavigate={(event) => {
         event.preventDefault();
-        void proceedAfterLeaveConfirm(href).then((proceed) => {
-          if (!proceed) {
-            if (current && href === location.pathname + location.search + location.hash)
-              onAccepted?.();
-            return;
-          }
-          onAccepted?.();
-          markForwardRouteIntent();
-          void router.push(href, {
-            transitionTypes: [pageTransitionTypes.forward],
-            ...resolveScrollOption(),
-          });
-        });
+        navigate(href, onAccepted);
       }}
     >
       {children}
@@ -192,6 +200,7 @@ function PersonalNav({
   canAdmin: boolean;
   onNavigate?: () => void;
 }>) {
+  const navigate = usePersonalNavigate();
   const isAdvancedActive = advancedPreferenceLinks.some((item) => pathname === item.href);
   const [advancedOpen, setAdvancedOpen] = useState(isAdvancedActive);
   const renderLink = (item: NavLinkItem) => {
@@ -199,20 +208,14 @@ function PersonalNav({
       ? pathname === item.href
       : pathname === item.href || pathname.startsWith(`${item.href}/`);
     return (
-      <PersonalLink
+      <NavigationItem
         key={item.href}
         href={item.href}
-        current={active}
-        onAccepted={onNavigate}
-        className={`flex items-center gap-2.5 rounded-control px-3 py-2 text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${
-          active
-            ? 'bg-brand-soft font-semibold text-brand'
-            : 'text-ink-muted hover:bg-surface-muted hover:text-ink'
-        }`}
-      >
-        {item.icon}
-        <span className="truncate">{zh ? item.labelZh : item.labelEn}</span>
-      </PersonalLink>
+        label={zh ? item.labelZh : item.labelEn}
+        icon={item.icon}
+        selected={active}
+        onNavigate={() => navigate(item.href, onNavigate)}
+      />
     );
   };
 
@@ -285,67 +288,73 @@ export function PersonalShell({ children }: Readonly<{ children: ReactNode }>) {
     <div className="flex min-h-dvh flex-col bg-canvas font-sans text-ink">
       <NotificationAlerts />
       <TopProgress />
-      <header className="sticky top-0 z-sticky flex h-14 shrink-0 items-center justify-between gap-1 border-b border-border bg-surface/95 px-2 backdrop-blur-xl sm:gap-3 sm:px-6">
-        <div className="flex min-w-0 items-center gap-1.5 sm:gap-3">
-          <div className="lg:hidden">
-            <IconAction
-              label={zh ? '打开个人菜单' : 'Open personal menu'}
-              onPress={() => setMobileOpen(true)}
+      <div className="sticky top-0 z-sticky">
+        <WorkspaceHeader
+          navigation={
+            <>
+              <div className="lg:hidden">
+                <IconAction
+                  size="sm"
+                  label={zh ? '打开个人菜单' : 'Open personal menu'}
+                  onPress={() => setMobileOpen(true)}
+                >
+                  <Menu className="size-5" />
+                </IconAction>
+              </div>
+              <PersonalLink
+                href="/home"
+                label={zh ? '返回我的文件' : 'Back to files'}
+                className="inline-flex h-control-sm items-center gap-1 rounded-action border border-border bg-surface px-2 text-xs font-medium text-ink hover:bg-surface-muted hover:text-brand focus-visible:ring-2 focus-visible:ring-focus-ring"
+              >
+                <ArrowLeft className="size-4 shrink-0" />
+                <span className="sm:hidden">{zh ? '返回' : 'Files'}</span>
+                <span className="hidden sm:inline">{zh ? '返回我的文件' : 'Back to files'}</span>
+              </PersonalLink>
+            </>
+          }
+          brand={
+            <PersonalLink
+              href="/home"
+              label={siteName + ' ' + (zh ? '个人中心' : 'Personal')}
+              className="min-w-0"
             >
-              <Menu className="size-5" />
-            </IconAction>
-          </div>
-          <PersonalLink
-            href="/home"
-            className="inline-flex h-9 min-w-0 items-center gap-1.5 rounded-action border border-border bg-surface px-2 text-sm font-medium text-ink transition-colors hover:bg-surface-muted hover:text-brand focus-visible:ring-2 focus-visible:ring-focus-ring sm:px-3"
-          >
-            <ArrowLeft className="size-4 shrink-0" />
-            <span className="truncate">{zh ? '返回我的文件' : 'Back to files'}</span>
-          </PersonalLink>
-          <span className="hidden h-5 w-px bg-border sm:block" aria-hidden="true" />
-          <PersonalLink
-            href="/home"
-            className="hidden min-w-0 items-center gap-2 text-sm font-bold text-ink sm:flex"
-          >
-            <CurrentSiteLogo
-              className="size-6 shrink-0"
-              fallback={
-                <span className="grid size-6 shrink-0 place-items-center rounded-md bg-brand-soft text-brand">
-                  <Cloud className="size-4" />
-                </span>
-              }
-            />
-            <span className="truncate">{siteName}</span>
-            <span className="rounded-action bg-surface-muted px-2 py-0.5 text-xs font-medium text-ink-muted">
-              {zh ? '个人中心' : 'Personal'}
-            </span>
-          </PersonalLink>
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <NotificationCenter />
-          <AccountMenu
-            compact={false}
-            onNavigate={(destination) => {
-              if (destination === 'lock-screen') {
-                window.dispatchEvent(new Event('clouddrive:lock'));
-                return;
-              }
-              const href = routeTargetResolver.resolveHref({
-                routeId: destination,
-                params: {},
-              });
-              void proceedAfterLeaveConfirm(href, t('shell.account')).then((proceed) => {
-                if (!proceed) return;
-                markForwardRouteIntent();
-                void router.push(href, {
-                  transitionTypes: [pageTransitionTypes.forward],
-                  ...resolveScrollOption(),
-                });
-              });
-            }}
-          />
-        </div>
-      </header>
+              <WorkspaceBrand
+                name={siteName}
+                scope={zh ? '个人中心' : 'Personal'}
+                mark={
+                  <CurrentSiteLogo className="size-5" fallback={<Cloud className="size-4" />} />
+                }
+              />
+            </PersonalLink>
+          }
+          account={
+            <>
+              <NotificationCenter />
+              <AccountMenu
+                compact={false}
+                onNavigate={(destination) => {
+                  if (destination === 'lock-screen') {
+                    window.dispatchEvent(new Event('clouddrive:lock'));
+                    return;
+                  }
+                  const href = routeTargetResolver.resolveHref({
+                    routeId: destination,
+                    params: {},
+                  });
+                  void proceedAfterLeaveConfirm(href, t('shell.account')).then((proceed) => {
+                    if (!proceed) return;
+                    markForwardRouteIntent();
+                    void router.push(href, {
+                      transitionTypes: [pageTransitionTypes.forward],
+                      ...resolveScrollOption(),
+                    });
+                  });
+                }}
+              />
+            </>
+          }
+        />
+      </div>
 
       <div className="mx-auto flex w-full max-w-screen-xl flex-1 min-h-0">
         <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface/60 lg:flex">

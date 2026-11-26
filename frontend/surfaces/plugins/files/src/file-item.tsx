@@ -37,7 +37,7 @@ export function FileListHeader({
   return (
     <div
       role="row"
-      className="flex min-w-0 items-center gap-3 border-b border-border py-2 text-xs text-ink-muted"
+      className="flex min-w-0 items-center gap-3 border-b border-border text-xs surface-file-list-heading text-ink-muted"
     >
       <div role="columnheader" className="w-5 shrink-0">
         <span className="sr-only">{t('files.discovery.selectPage')}</span>
@@ -174,7 +174,7 @@ export function FileItem({
       data-selected={selected || undefined}
       data-file-view={view}
       data-file-kind={entry.kind}
-      className={`group surface-file-item ${isList ? 'flex min-w-0 items-center gap-2 border-b border-border py-2' : 'flex min-w-0 flex-col rounded-panel border border-border/70 p-2.5 shadow-panel'} ${selected ? 'bg-brand-soft' : isList ? 'hover:bg-surface-muted' : 'bg-surface hover:bg-surface-muted/70'} ${cut ? 'opacity-50' : ''}`}
+      className={`group surface-file-item ${isList ? 'flex min-w-0 items-center gap-2 border-b border-border' : 'flex min-w-0 flex-col rounded-panel border border-border/70 p-2.5 shadow-panel'} ${selected ? 'bg-brand-soft' : isList ? 'hover:bg-surface-muted' : 'bg-surface hover:bg-surface-muted/70'} ${cut ? 'opacity-50' : ''}`}
     >
       {isList ? (
         <>
@@ -227,7 +227,9 @@ export function FileItem({
             {actions}
           </div>
           <div className="surface-file-preview flex min-w-0 flex-1 flex-col gap-2">
-            <div className="surface-file-preview-box flex h-28 w-full items-center justify-center overflow-hidden rounded-control border border-border/50 bg-surface-muted/60 [&_img]:max-h-full [&_img]:max-w-full [&_img]:rounded-control [&_img]:object-contain [&_img]:p-1">
+            <div
+              className={`surface-file-preview-box flex w-full items-center justify-center overflow-hidden rounded-control border border-border/50 bg-surface-muted/60 [&_img]:max-h-full [&_img]:max-w-full [&_img]:rounded-control [&_img]:object-contain [&_img]:p-1 ${view === 'grid' ? 'h-20' : 'h-28'}`}
+            >
               {icon}
             </div>
             <div className="min-w-0 w-full">

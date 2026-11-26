@@ -1,6 +1,8 @@
 'use client';
+import { WorkspaceBrand, WorkspaceHeader } from '@clouddrive/surface-foundation/layout';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { CurrentSiteLogo, useSiteProfile } from '@clouddrive/surface/administration/runtime';
+import { useFileActionFeedback } from './use-file-action-feedback';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
 import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
@@ -100,6 +102,7 @@ export function FileWorkspace({
   const { profile } = useSiteProfile();
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const siteName = profile?.name || t('files.brand');
+  const reportAction = useFileActionFeedback(pathname);
   const [revision, setRevision] = useWorkspaceRevision();
   const [emptyTrash, setEmptyTrash] = useState(false);
   const [trashRetention, setTrashRetention] = useState(false);
@@ -550,7 +553,7 @@ export function FileWorkspace({
             if (action === 'downloads') port.navigate('downloads');
             else if (action === 'clipboard') {
               port.focusFiles();
-              setNotice(t('files.workspace.clipboard'));
+              reportAction(t('files.workspace.clipboard'));
             } else if (action === 'folder' || action === 'upload' || action === 'directory')
               setCreate({ action });
             else {
@@ -578,103 +581,107 @@ export function FileWorkspace({
           {(close, mobile) => renderNavigation(close, collapsed && !mobile, mobile)}
         </ExplorerNavigation>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <header
-            data-file-workspace-header
-            className="surface-file-workspace-toolbar flex shrink-0 flex-wrap items-center gap-x-2 gap-y-0 border-b border-border bg-surface px-3 md:h-14 md:flex-nowrap md:gap-3 md:px-6"
-          >
-            <div className="surface-file-mobile-header order-0 flex h-14 min-w-0 flex-1 items-center gap-1.5 md:hidden">
-              <IconAction
-                label={t('files.explorer.navigation')}
-                onPress={() => setMobileNavigationOpen(true)}
-              >
-                <Menu />
-              </IconAction>
-              <CurrentSiteLogo
-                className="size-5 shrink-0"
-                fallback={<Cloud className="size-5 text-brand" />}
-              />
-              <span className="min-w-0 flex-1 truncate text-sm font-bold text-brand">
-                {siteName}
-              </span>
-            </div>
-            <div className="order-1 shrink-0 md:order-0">{creationControl}</div>
-            <div className="surface-file-account-actions order-2 flex shrink-0 items-center gap-0.5 md:order-3 md:gap-1">
-              {music?.active ? (
-                <span data-file-dock-trigger>
-                  <IconAction
-                    label={t('files.viewer.music')}
-                    expanded={reader.dockOpen}
-                    onPress={reader.toggleDock}
-                  >
-                    <Music />
-                  </IconAction>
-                </span>
-              ) : null}
-              <FileAccountTools />
-            </div>
-            <div
-              aria-hidden="true"
-              className={isFiles ? 'order-3 basis-full md:hidden' : 'hidden'}
-            />
-            <div
-              className={`${isFiles ? 'flex' : 'hidden md:flex'} order-4 h-12 min-w-0 flex-1 items-center md:order-1 md:h-auto`}
-            >
-              <form
-                data-file-workspace-search
-                className="flex min-w-0 flex-1 items-center gap-1.5 md:max-w-lg"
-                onKeyDownCapture={(event) => {
-                  if (event.key === 'Escape') {
-                    event.preventDefault();
-                    setSearch(isFiles ? (query.search ?? '') : '');
-                    port.focusFiles();
+          <div data-file-workspace-header className="surface-file-workspace-toolbar shrink-0">
+            <WorkspaceHeader
+              brand={
+                <WorkspaceBrand
+                  name={siteName}
+                  scope={t('files.workspace.allFiles')}
+                  mark={
+                    <CurrentSiteLogo
+                      className="size-5 shrink-0"
+                      fallback={<Cloud className="size-4" />}
+                    />
                   }
-                }}
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  port.navigate('files', searchQuery(search));
-                }}
-              >
-                <SearchBox
-                  label={t('files.search')}
-                  placeholder={t('files.searchPlaceholder')}
-                  value={search}
-                  onValueChange={(nextValue) => {
-                    setSearch(nextValue);
-                    if (!nextValue && isFiles && query.search) {
-                      port.navigate('files', searchQuery(''));
-                    }
-                  }}
                 />
-              </form>
-            </div>
-            <div
-              className={`${isFiles ? 'flex' : 'hidden md:flex'} order-5 h-12 shrink-0 items-center gap-1 md:order-2 md:h-auto`}
-            >
-              <div className="relative">
-                <IconAction
-                  label={`${t('files.workspace.queue')} ${t('files.workspace.queueCount', { count: activeCount })}`}
-                  tooltip
-                  onPress={() => {
-                    if (isTransfers) port.focusFiles();
-                    else setTray(pathname);
-                  }}
-                >
-                  <Upload className="size-5" />
-                </IconAction>
-                {activeCount > 0 ? (
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-xs font-semibold leading-4 text-on-brand"
+              }
+              navigation={
+                <div className="md:hidden">
+                  <IconAction
+                    size="sm"
+                    label={t('files.explorer.navigation')}
+                    onPress={() => setMobileNavigationOpen(true)}
                   >
-                    {activeCount}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </header>
+                    <Menu />
+                  </IconAction>
+                </div>
+              }
+              searchMode={isFiles ? 'below' : 'desktop'}
+              search={
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <form
+                    data-file-workspace-search
+                    className="flex min-w-0 flex-1 items-center gap-1.5 md:max-w-lg"
+                    onKeyDownCapture={(event) => {
+                      if (event.key === 'Escape') {
+                        event.preventDefault();
+                        setSearch(isFiles ? (query.search ?? '') : '');
+                        port.focusFiles();
+                      }
+                    }}
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      port.navigate('files', searchQuery(search));
+                    }}
+                  >
+                    <SearchBox
+                      label={t('files.search')}
+                      placeholder={t('files.searchPlaceholder')}
+                      value={search}
+                      onValueChange={(nextValue) => {
+                        setSearch(nextValue);
+                        if (!nextValue && isFiles && query.search) {
+                          port.navigate('files', searchQuery(''));
+                        }
+                      }}
+                    />
+                  </form>
+                  <div className="relative">
+                    <IconAction
+                      label={`${t('files.workspace.queue')} ${t('files.workspace.queueCount', { count: activeCount })}`}
+                      tooltip
+                      onPress={() => {
+                        if (isTransfers) port.focusFiles();
+                        else setTray(pathname);
+                      }}
+                    >
+                      <Upload className="size-5" />
+                    </IconAction>
+                    {activeCount > 0 ? (
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-xs font-semibold leading-4 text-on-brand"
+                      >
+                        {activeCount}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              }
+              tools={
+                <>
+                  {creationControl}
+                  {music?.active ? (
+                    <span data-file-dock-trigger>
+                      <IconAction
+                        size="sm"
+                        label={t('files.viewer.music')}
+                        expanded={reader.dockOpen}
+                        onPress={reader.toggleDock}
+                      >
+                        <Music />
+                      </IconAction>
+                    </span>
+                  ) : null}
+                </>
+              }
+              account={<FileAccountTools />}
+            />
+          </div>
           {isFiles && !isTrash ? (
             <div className="surface-category-tabs">
               <NavigationTabs
+                compact
                 label={t('files.workspace.categories')}
                 value={query.category || 'all'}
                 items={categoryItems.map((item) => ({
@@ -696,7 +703,7 @@ export function FileWorkspace({
             id="main-content"
             tabIndex={-1}
             data-file-scroll-region
-            className="surface-file-content min-h-0 min-w-0 flex-1 overflow-auto bg-canvas px-4 pb-14 pt-3 md:px-6"
+            className="surface-file-content min-h-0 min-w-0 flex-1 overflow-auto bg-canvas px-4 pb-14 pt-1 md:px-6"
           >
             <WorkspaceCreateContext value={(action) => setCreate({ action })}>
               {children}
@@ -733,7 +740,7 @@ export function FileWorkspace({
             selection={allTrash}
             onClose={() => setEmptyTrash(false)}
             onPurged={(receipt) => {
-              setNotice(
+              reportAction(
                 t('files.trashPurge.done', {
                   entries: receipt.entryCount,
                   bytes: formatFileBytes(receipt.bytes),
@@ -762,7 +769,7 @@ export function FileWorkspace({
             onChanged={(queued) => {
               setCreate(undefined);
               refresh();
-              setNotice(t(queued ? 'files.workspace.queued' : 'files.operationDone'));
+              reportAction(t(queued ? 'files.workspace.queued' : 'files.operationDone'));
               if (queued && !isTransfers) setTray(pathname);
             }}
           />

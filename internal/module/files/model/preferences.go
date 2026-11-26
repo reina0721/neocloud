@@ -61,7 +61,7 @@ type FilePreferences struct {
 
 func DefaultFilePreferences() FilePreferences {
 	return FilePreferences{FolderClick: FolderClickOpen, Defaults: FileViewPreferences{
-		View: FileViewGrid, Sort: FileSortName, Thumbnails: true, PageSize: FilePageSmall, Columns: []FileColumn{FileColumnSize, FileColumnUpdated},
+		View: FileViewList, Sort: FileSortName, Thumbnails: true, PageSize: FilePageSmall, Columns: []FileColumn{FileColumnSize, FileColumnUpdated},
 	}, Folders: []FolderViewPreferences{}}
 }
 

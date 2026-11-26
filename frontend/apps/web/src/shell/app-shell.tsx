@@ -7,6 +7,7 @@ import { useFrontendTranslation } from '@clouddrive/i18n';
 import { PluginLocaleProvider } from '@clouddrive/plugin-framework/plugin';
 import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
 import type { Preferences } from '@clouddrive/surface/preferences-model';
+import { WorkspaceBrand, WorkspaceHeader } from '@clouddrive/surface-foundation/layout';
 import { ShellRoot } from '@clouddrive/surface-foundation/shell-navigation';
 import type { NavigationGroup, NavigationNode } from '@clouddrive/types';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
@@ -91,64 +92,39 @@ function NavigationContent({
   labelOverrides?: Readonly<Record<string, string>>;
 }) {
   const { t } = useFrontendTranslation();
-  const { profile } = useSiteProfile();
   const navigationRef = useActiveNavigation(usePathname(), compact, navigationGroups);
 
   return (
-    <>
-      <div
-        className={`flex h-14 shrink-0 items-center border-b border-border ${compact ? 'justify-center px-3' : 'gap-2.5 px-4'}`}
-      >
-        <CurrentSiteLogo
-          className="size-8 shrink-0"
-          fallback={
-            <span className="grid size-8 shrink-0 place-items-center rounded-action bg-brand-soft text-brand">
-              <Cloud className="size-4.5" />
-            </span>
-          }
-        />
-        {compact ? null : (
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold tracking-tight text-ink">
-              {profile?.name || t('brand.name')}
-            </p>
-            <p className="truncate text-xs text-ink-muted">{t('brand.edition')}</p>
+    <nav
+      ref={navigationRef}
+      className={`surface-shell-navigation-viewport min-h-0 flex-1 py-6 ${compact ? 'surface-shell-compact-rail flex flex-col items-center px-0' : 'space-y-7 px-3'}`}
+      aria-label={t('shell.primaryNav')}
+    >
+      <Suspense
+        fallback={navigationGroups.map((group) => (
+          <div
+            key={group.id}
+            className={compact ? 'surface-shell-compact-group w-control-lg space-y-1' : 'space-y-1'}
+            aria-busy="true"
+          >
+            {compact ? null : <Skeleton className="mb-2 h-4 w-24" />}
+            {group.items.map((item) => (
+              <Skeleton
+                key={item.id}
+                className={compact ? 'mx-auto h-control-lg w-control-lg' : 'h-10 w-full'}
+              />
+            ))}
           </div>
-        )}
-      </div>
-      <nav
-        ref={navigationRef}
-        className={`surface-shell-navigation-viewport min-h-0 flex-1 py-6 ${compact ? 'surface-shell-compact-rail flex flex-col items-center px-0' : 'space-y-7 px-3'}`}
-        aria-label={t('shell.primaryNav')}
+        ))}
       >
-        <Suspense
-          fallback={navigationGroups.map((group) => (
-            <div
-              key={group.id}
-              className={
-                compact ? 'surface-shell-compact-group w-control-lg space-y-1' : 'space-y-1'
-              }
-              aria-busy="true"
-            >
-              {compact ? null : <Skeleton className="mb-2 h-4 w-24" />}
-              {group.items.map((item) => (
-                <Skeleton
-                  key={item.id}
-                  className={compact ? 'mx-auto h-control-lg w-control-lg' : 'h-10 w-full'}
-                />
-              ))}
-            </div>
-          ))}
-        >
-          <NavigationTree
-            compact={compact}
-            groups={navigationGroups}
-            {...(labelOverrides ? { labelOverrides } : {})}
-            {...(onNavigate ? { onNavigate } : {})}
-          />
-        </Suspense>
-      </nav>
-    </>
+        <NavigationTree
+          compact={compact}
+          groups={navigationGroups}
+          {...(labelOverrides ? { labelOverrides } : {})}
+          {...(onNavigate ? { onNavigate } : {})}
+        />
+      </Suspense>
+    </nav>
   );
 }
 
@@ -161,6 +137,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   const watermarkEnabled = useShellStore((state) => state.preferences.security.watermark);
   const watermarkText = useShellStore((state) => state.preferences.security.watermarkText);
   const auth = useAuth();
+  const { profile } = useSiteProfile();
   const pathname = usePathname();
   const [quickPreferencesOpen, setQuickPreferencesOpen] = useState(false);
   useEffect(() => {
@@ -352,47 +329,75 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
         data-shell-section={pathname.startsWith('/settings') ? 'settings' : 'workspace'}
       >
         <div className="sticky top-0 z-sticky" ref={chromeRef} data-shell-chrome>
-          <header className="flex h-14 items-center gap-2 border-b border-border bg-surface/95 px-3 backdrop-blur-xl sm:px-6">
-            <div className="lg:hidden">
-              <IconAction label={t('shell.menu')} onPress={() => setMobileNavigationOpen(true)}>
-                <Menu className="size-5" />
-              </IconAction>
-            </div>
-            {layoutMode === 'vertical' ? (
-              <div className="hidden lg:block" data-navigation-control>
-                <IconAction
-                  label={sidebarCollapsed ? t('shell.expandSidebar') : t('shell.collapseSidebar')}
-                  onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
+          <WorkspaceHeader
+            navigation={
+              <>
+                <div className="lg:hidden">
+                  <IconAction label={t('shell.menu')} onPress={() => setMobileNavigationOpen(true)}>
+                    <Menu className="size-5" />
+                  </IconAction>
+                </div>
+                {layoutMode === 'vertical' ? (
+                  <div className="hidden lg:block" data-navigation-control>
+                    <IconAction
+                      label={
+                        sidebarCollapsed ? t('shell.expandSidebar') : t('shell.collapseSidebar')
+                      }
+                      onPress={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    >
+                      {sidebarCollapsed ? (
+                        <PanelLeftOpen className="size-4.5" />
+                      ) : (
+                        <PanelLeftClose className="size-4.5" />
+                      )}
+                    </IconAction>
+                  </div>
+                ) : null}
+                {layoutMode !== 'vertical' ? (
+                  <div className="hidden min-w-0 lg:block">
+                    <HeaderNavigation
+                      activeGroupId={mixedGroupId}
+                      groups={navigationGroups}
+                      mode={layoutMode}
+                      onGroupSelect={(groupId) => setGroupChoice({ pathname, groupId })}
+                    />
+                  </div>
+                ) : null}
+                <Link
+                  href="/home"
+                  aria-label={locale.startsWith('zh') ? '返回我的文件' : 'Back to files'}
+                  className="inline-flex h-control-sm shrink-0 items-center gap-1 rounded-action border border-border bg-surface px-2 text-xs font-medium text-ink hover:bg-surface-muted hover:text-brand focus-visible:ring-2 focus-visible:ring-focus-ring"
+                  onNavigate={(event) => {
+                    event.preventDefault();
+                    void proceedAfterLeaveConfirm('/home').then((proceed) => {
+                      if (!proceed) return;
+                      markForwardRouteIntent();
+                      void router.push('/home', {
+                        transitionTypes: [pageTransitionTypes.forward],
+                        ...resolveScrollOption(),
+                      });
+                    });
+                  }}
                 >
-                  {sidebarCollapsed ? (
-                    <PanelLeftOpen className="size-4.5" />
-                  ) : (
-                    <PanelLeftClose className="size-4.5" />
-                  )}
-                </IconAction>
-              </div>
-            ) : null}
-            {layoutMode !== 'vertical' ? (
-              <div className="hidden min-w-0 lg:block">
-                <HeaderNavigation
-                  activeGroupId={mixedGroupId}
-                  groups={navigationGroups}
-                  mode={layoutMode}
-                  onGroupSelect={(groupId) => setGroupChoice({ pathname, groupId })}
-                />
-              </div>
-            ) : null}
-            <Link
-              href="/home"
-              className="hidden h-9 shrink-0 items-center gap-1.5 rounded-action border border-border bg-surface px-3 text-xs font-medium text-ink transition-colors hover:bg-surface-muted hover:text-brand focus-visible:ring-2 focus-visible:ring-focus-ring sm:inline-flex"
-            >
-              <ArrowLeft className="size-3.5 shrink-0" />
-              <span>{locale.startsWith('zh') ? '返回我的文件' : 'Back to files'}</span>
-            </Link>
-            <span className="min-w-0 flex-1 truncate text-base font-bold text-brand md:hidden">
-              {t('brand.name')}
-            </span>
-            <div className="min-w-0 md:flex-1">
+                  <ArrowLeft className="size-4 shrink-0" />
+                  <span className="sm:hidden">{locale.startsWith('zh') ? '返回' : 'Files'}</span>
+                  <span className="hidden sm:inline">
+                    {locale.startsWith('zh') ? '返回我的文件' : 'Back to files'}
+                  </span>
+                </Link>
+              </>
+            }
+            brand={
+              <WorkspaceBrand
+                name={profile?.name || t('brand.name')}
+                scope={t('brand.edition')}
+                mark={
+                  <CurrentSiteLogo className="size-5" fallback={<Cloud className="size-4" />} />
+                }
+              />
+            }
+            searchMode="desktop"
+            search={
               <CommandMenu
                 hideTrigger={!desktopTools}
                 defaultOpen={false}
@@ -421,8 +426,8 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                 }}
                 onOpenChange={setCommandOpen}
               />
-            </div>
-            <div className="ml-auto flex items-center gap-1.5">
+            }
+            tools={
               <div className="hidden items-center gap-1 md:flex">
                 <IconAction
                   label={t('shell.quickPreferences.open')}
@@ -431,30 +436,34 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                   <Settings2 className="size-4.5" />
                 </IconAction>
               </div>
-              <NotificationCenter />
-              <AccountMenu
-                compact={!desktopTools}
-                onNavigate={(destination) => {
-                  if (destination === 'lock-screen') {
-                    window.dispatchEvent(new Event('clouddrive:lock'));
-                    return;
-                  }
-                  const href = routeTargetResolver.resolveHref({
-                    routeId: destination,
-                    params: {},
-                  });
-                  void proceedAfterLeaveConfirm(href, t('shell.account')).then((proceed) => {
-                    if (!proceed) return;
-                    markForwardRouteIntent();
-                    void router.push(href, {
-                      transitionTypes: [pageTransitionTypes.forward],
-                      ...resolveScrollOption(),
+            }
+            account={
+              <>
+                <NotificationCenter />
+                <AccountMenu
+                  compact={!desktopTools}
+                  onNavigate={(destination) => {
+                    if (destination === 'lock-screen') {
+                      window.dispatchEvent(new Event('clouddrive:lock'));
+                      return;
+                    }
+                    const href = routeTargetResolver.resolveHref({
+                      routeId: destination,
+                      params: {},
                     });
-                  });
-                }}
-              />
-            </div>
-          </header>
+                    void proceedAfterLeaveConfirm(href, t('shell.account')).then((proceed) => {
+                      if (!proceed) return;
+                      markForwardRouteIntent();
+                      void router.push(href, {
+                        transitionTypes: [pageTransitionTypes.forward],
+                        ...resolveScrollOption(),
+                      });
+                    });
+                  }}
+                />
+              </>
+            }
+          />
           {pageTabsEnabled && pageTabsPinned ? (
             <div className="hidden md:block">
               <PageTabs />

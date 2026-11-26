@@ -1,5 +1,6 @@
 'use client';
 import { useFrontendTranslation } from '@clouddrive/i18n';
+import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
 import { Toolbar } from '@clouddrive/surface-foundation/layout';
 import { BreadcrumbTrail } from '@clouddrive/ui-adapter/navigation';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
@@ -93,6 +94,8 @@ import { SaveShortcutDialog, ShortcutActionDialog } from './shortcut-dialogs';
 import { TagsBatchDialog } from './tags-batch-dialog';
 import { TagBadges } from './tag-badges';
 import { useFileTime } from './use-file-time';
+import { useFileActionFeedback } from './use-file-action-feedback';
+import type { Preferences } from '../../../src/preferences-model';
 import { VersionsPanel } from './versions-panel';
 import { ViewOptionsDialog } from './view-options-dialog';
 import { useCursorFileFeed } from './use-cursor-file-feed';
@@ -145,6 +148,15 @@ export function FilesPage({
   navigate: routeNavigate,
 }: Props) {
   const filterKey = encodeFileFilters(filters);
+  const reportAction = useFileActionFeedback(
+    JSON.stringify([parent, category, trash, search, filterKey, page, cursor]),
+  );
+  const preferencesPort = usePreferencesPort<Preferences>();
+  const tableDensity = useSyncExternalStore(
+    preferencesPort.subscribe,
+    preferencesPort.getSnapshot,
+    preferencesPort.getSnapshot,
+  ).dataDisplay.tableDensity;
   const port = useFiles();
   const transfers = useTransfers();
   const transferState = useTransferSnapshot();
@@ -237,6 +249,7 @@ export function FilesPage({
     navigate({ parent, category, trash: trash ? 'true' : '', search, filter: filterKey });
   const preferenceReady = !!preferenceSnapshot || !!preferenceFailure;
   const cursorWaitingForPreferences = !!cursor && !preferenceReady;
+  const gallery = preferences.view === 'gallery';
   const listQuery = useMemo<FileQuery>(
     () => ({
       parent,
@@ -247,9 +260,9 @@ export function FilesPage({
       desc: preferences.desc,
       filters: decodeFileFilters(filterKey),
       foldersFirst: preferences.foldersFirst,
-      page: preferences.view === 'gallery' ? 1 : page,
-      pageSize: preferences.view === 'gallery' ? 0 : preferences.pageSize,
-      ...(preferences.view !== 'gallery'
+      page: gallery ? 1 : page,
+      pageSize: gallery ? 0 : preferences.pageSize,
+      ...(!gallery
         ? { pagination: numbered ? ('numbered' as const) : ('auto' as const), cursor }
         : {}),
     }),
@@ -262,7 +275,7 @@ export function FilesPage({
       preferences.desc,
       filterKey,
       preferences.foldersFirst,
-      preferences.view,
+      gallery,
       preferences.pageSize,
       page,
       numbered,
@@ -522,7 +535,7 @@ export function FilesPage({
       next.desc !== preferences.desc ||
       next.foldersFirst !== preferences.foldersFirst ||
       next.pageSize !== preferences.pageSize ||
-      next.view !== preferences.view;
+      (next.view === 'gallery') !== gallery;
     setPreferences(fileViewPreferencesSchema.parse(next));
     if (affectsQuery && (page !== 1 || cursor)) firstPage();
   }
@@ -581,7 +594,7 @@ export function FilesPage({
           throw lastError;
         }
       }
-      setNotice(t('files.operationDone'));
+      reportAction(t('files.operationDone'));
       reload();
     } catch (error) {
       setDialogFailure((current) => current || errorText(error));
@@ -1114,14 +1127,200 @@ export function FilesPage({
         {t('files.explorer.inspectorEmpty')}
       </p>
     );
+  const selectionTools =
+    listing?.items.length && targets.length ? (
+      <div
+        role="region"
+        aria-label={t('files.explorer.selection')}
+        className="surface-bulk-bar flex flex-wrap items-center justify-between gap-2 rounded-panel border border-brand/25 bg-brand-soft/65 px-3 py-2"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <IconAction
+            size="sm"
+            label={t('files.explorer.none')}
+            tooltip
+            onPress={() => setSelected([])}
+          >
+            <X className="size-4" />
+          </IconAction>
+          <span className="text-sm font-semibold text-ink">
+            {t('files.selected', { count: targets.length })}
+          </span>
+          {selectedTotalBytes > 0 ? (
+            <span className="text-xs text-ink-muted">· {bytes(selectedTotalBytes)}</span>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {trash ? (
+            <>
+              <Action
+                variant="secondary"
+                size="sm"
+                leadingIcon={<RotateCcw className="size-4" />}
+                onPress={() => openDialog('restore', targets)}
+              >
+                {t('files.restore')}
+              </Action>
+              <Action
+                variant="danger"
+                size="sm"
+                leadingIcon={<Trash2 className="size-4" />}
+                disabled={loading || navigating}
+                onPress={() =>
+                  setTrashSelection({
+                    scope: 'selection',
+                    ids: targets.map((entry) => entry.id),
+                  })
+                }
+              >
+                {t('files.trashPurge.permanent')}
+              </Action>
+            </>
+          ) : (
+            <>
+              {targets.length === 1 && targets[0]?.kind === 'file' ? (
+                <Action
+                  size="sm"
+                  variant="secondary"
+                  leadingIcon={<Download className="size-4" />}
+                  onPress={() => {
+                    if (targets[0]) void download(targets[0]);
+                  }}
+                >
+                  {t('files.download')}
+                </Action>
+              ) : (
+                <Action
+                  size="sm"
+                  variant="secondary"
+                  leadingIcon={<Download className="size-4" />}
+                  loading={archiving}
+                  disabled={archiving || targets.some((entry) => entry.kind === 'shortcut')}
+                  onPress={() => {
+                    setArchiving(true);
+                    setNotice('');
+                    void port
+                      .archive(selected)
+                      .then(() => setNotice(t('files.archiveReady')))
+                      .catch((error: unknown) => setNotice(errorText(error)))
+                      .finally(() => setArchiving(false));
+                  }}
+                >
+                  {t('files.archive')}
+                </Action>
+              )}
+              {targets.length === 1 && targets[0]?.kind !== 'shortcut' ? (
+                <Action
+                  size="sm"
+                  variant="secondary"
+                  leadingIcon={<Share2 className="size-4" />}
+                  onPress={() => {
+                    if (targets[0]) setShareTarget(targets[0]);
+                  }}
+                >
+                  {t('files.share')}
+                </Action>
+              ) : null}
+              <Action
+                variant="secondary"
+                size="sm"
+                leadingIcon={<FolderInput className="size-4" />}
+                onPress={() => openDialog('move', targets)}
+              >
+                {t('files.move')}
+              </Action>
+              <Action
+                variant="danger"
+                size="sm"
+                leadingIcon={<Trash2 className="size-4" />}
+                onPress={() => openDialog('remove', targets)}
+              >
+                {t('files.remove')}
+              </Action>
+              <MenuButton
+                triggerSize="sm"
+                triggerVariant="standard"
+                ariaLabel={t('files.explorer.moreActions')}
+                label={
+                  <span className="flex items-center gap-1">
+                    <MoreHorizontal className="size-4" />
+                    <span className="hidden sm:inline">{t('files.explorer.moreActions')}</span>
+                  </span>
+                }
+                items={[
+                  {
+                    id: 'copy-clipboard',
+                    label: t('files.explorer.copyPending'),
+                    icon: <Copy className="size-4" />,
+                    disabled: clipboard.pending,
+                  },
+                  {
+                    id: 'cut-clipboard',
+                    label: t('files.explorer.cutPending'),
+                    icon: <Scissors className="size-4" />,
+                    disabled: clipboard.pending,
+                  },
+                  {
+                    id: 'create-zip',
+                    label: t('files.archives.createZIP.title'),
+                    icon: <Archive className="size-4" />,
+                    disabled: targets.some((entry) => entry.kind === 'shortcut'),
+                  },
+                  ...(targets.every((entry) => entry.kind === 'file')
+                    ? [
+                        {
+                          id: 'direct-links',
+                          label: t('files.directLinks.get'),
+                          icon: <Link2 className="size-4" />,
+                          disabled: targets.length > directLinkBatchLimit,
+                        },
+                      ]
+                    : []),
+                  {
+                    id: 'batch-add-tags',
+                    label: t('files.annotations.batchAdd'),
+                    icon: <Tag className="size-4" />,
+                    disabled:
+                      loading ||
+                      navigating ||
+                      galleryAnnotationsLoading ||
+                      !!galleryAnnotationFailure,
+                  },
+                  {
+                    id: 'batch-remove-tags',
+                    label: t('files.annotations.batchRemove'),
+                    icon: <Tag className="size-4" />,
+                    disabled:
+                      loading ||
+                      navigating ||
+                      galleryAnnotationsLoading ||
+                      !!galleryAnnotationFailure,
+                  },
+                ]}
+                onAction={(action) => {
+                  if (action === 'copy-clipboard') queueClipboard('copy', targets);
+                  else if (action === 'cut-clipboard') queueClipboard('cut', targets);
+                  else if (action === 'create-zip') setZIPSelection({ entries: targets, parent });
+                  else if (action === 'direct-links') setDirectTargets(targets);
+                  else if (action === 'batch-add-tags') openTagsBatch('add');
+                  else if (action === 'batch-remove-tags') openTagsBatch('remove');
+                }}
+              />
+            </>
+          )}
+        </div>
+      </div>
+    ) : null;
   return (
     <>
       <div
         ref={measureCollection}
-        className="surface-file-collection flex min-h-full min-w-0 flex-col gap-3"
+        data-collection-density={tableDensity}
+        className="surface-file-collection flex min-h-full min-w-0 flex-col gap-2"
       >
         <Toolbar
           label={title}
+          inset={preferences.view === 'list' ? 'compact' : 'standard'}
           primary={
             <div className="@container w-full min-w-0">
               <div className="flex min-w-0 flex-wrap items-center gap-2 @min-[48rem]:flex-nowrap">
@@ -1274,7 +1473,7 @@ export function FilesPage({
                   </div>
                   <div ref={compactActions} className="shrink-0 @min-[48rem]:hidden">
                     <MenuButton
-                      ariaLabel={t('files.explorer.moreActions')}
+                      ariaLabel={t('files.explorer.toolbarMore')}
                       label={<MoreHorizontal className="size-4" />}
                       triggerVariant="icon"
                       triggerSize="sm"
@@ -1313,6 +1512,7 @@ export function FilesPage({
                   </div>
                 </div>
               </div>
+              {selectionTools}
             </div>
           }
         />
@@ -1476,190 +1676,6 @@ export function FilesPage({
               : 'File icon rules are unavailable. Showing file type icons.'}
           </p>
         ) : null}
-        {listing?.items.length && targets.length ? (
-          <div
-            role="region"
-            aria-label={t('files.explorer.selection')}
-            className="surface-bulk-bar flex flex-wrap items-center justify-between gap-2 rounded-panel border border-brand/25 bg-brand-soft/65 px-3 py-2"
-          >
-            <div className="flex min-w-0 items-center gap-2">
-              <IconAction
-                size="sm"
-                label={t('files.explorer.none')}
-                tooltip
-                onPress={() => setSelected([])}
-              >
-                <X className="size-4" />
-              </IconAction>
-              <span className="text-sm font-semibold text-ink">
-                {t('files.selected', { count: targets.length })}
-              </span>
-              {selectedTotalBytes > 0 ? (
-                <span className="text-xs text-ink-muted">· {bytes(selectedTotalBytes)}</span>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {trash ? (
-                <>
-                  <Action
-                    variant="secondary"
-                    size="sm"
-                    leadingIcon={<RotateCcw className="size-4" />}
-                    onPress={() => openDialog('restore', targets)}
-                  >
-                    {t('files.restore')}
-                  </Action>
-                  <Action
-                    variant="danger"
-                    size="sm"
-                    leadingIcon={<Trash2 className="size-4" />}
-                    disabled={loading || navigating}
-                    onPress={() =>
-                      setTrashSelection({
-                        scope: 'selection',
-                        ids: targets.map((entry) => entry.id),
-                      })
-                    }
-                  >
-                    {t('files.trashPurge.permanent')}
-                  </Action>
-                </>
-              ) : (
-                <>
-                  {targets.length === 1 && targets[0]?.kind === 'file' ? (
-                    <Action
-                      size="sm"
-                      variant="secondary"
-                      leadingIcon={<Download className="size-4" />}
-                      onPress={() => {
-                        if (targets[0]) void download(targets[0]);
-                      }}
-                    >
-                      {t('files.download')}
-                    </Action>
-                  ) : (
-                    <Action
-                      size="sm"
-                      variant="secondary"
-                      leadingIcon={<Download className="size-4" />}
-                      loading={archiving}
-                      disabled={archiving || targets.some((entry) => entry.kind === 'shortcut')}
-                      onPress={() => {
-                        setArchiving(true);
-                        setNotice('');
-                        void port
-                          .archive(selected)
-                          .then(() => setNotice(t('files.archiveReady')))
-                          .catch((error: unknown) => setNotice(errorText(error)))
-                          .finally(() => setArchiving(false));
-                      }}
-                    >
-                      {t('files.archive')}
-                    </Action>
-                  )}
-                  {targets.length === 1 && targets[0]?.kind !== 'shortcut' ? (
-                    <Action
-                      size="sm"
-                      variant="secondary"
-                      leadingIcon={<Share2 className="size-4" />}
-                      onPress={() => {
-                        if (targets[0]) setShareTarget(targets[0]);
-                      }}
-                    >
-                      {t('files.share')}
-                    </Action>
-                  ) : null}
-                  <Action
-                    variant="secondary"
-                    size="sm"
-                    leadingIcon={<FolderInput className="size-4" />}
-                    onPress={() => openDialog('move', targets)}
-                  >
-                    {t('files.move')}
-                  </Action>
-                  <Action
-                    variant="danger"
-                    size="sm"
-                    leadingIcon={<Trash2 className="size-4" />}
-                    onPress={() => openDialog('remove', targets)}
-                  >
-                    {t('files.remove')}
-                  </Action>
-                  <MenuButton
-                    triggerSize="sm"
-                    triggerVariant="standard"
-                    ariaLabel={t('files.explorer.moreActions')}
-                    label={
-                      <span className="flex items-center gap-1">
-                        <MoreHorizontal className="size-4" />
-                        <span className="hidden sm:inline">{t('files.explorer.moreActions')}</span>
-                      </span>
-                    }
-                    items={[
-                      {
-                        id: 'copy-clipboard',
-                        label: t('files.explorer.copyPending'),
-                        icon: <Copy className="size-4" />,
-                        disabled: clipboard.pending,
-                      },
-                      {
-                        id: 'cut-clipboard',
-                        label: t('files.explorer.cutPending'),
-                        icon: <Scissors className="size-4" />,
-                        disabled: clipboard.pending,
-                      },
-                      {
-                        id: 'create-zip',
-                        label: t('files.archives.createZIP.title'),
-                        icon: <Archive className="size-4" />,
-                        disabled: targets.some((entry) => entry.kind === 'shortcut'),
-                      },
-                      ...(targets.every((entry) => entry.kind === 'file')
-                        ? [
-                            {
-                              id: 'direct-links',
-                              label: t('files.directLinks.get'),
-                              icon: <Link2 className="size-4" />,
-                              disabled: targets.length > directLinkBatchLimit,
-                            },
-                          ]
-                        : []),
-                      {
-                        id: 'batch-add-tags',
-                        label: t('files.annotations.batchAdd'),
-                        icon: <Tag className="size-4" />,
-                        disabled:
-                          loading ||
-                          navigating ||
-                          galleryAnnotationsLoading ||
-                          !!galleryAnnotationFailure,
-                      },
-                      {
-                        id: 'batch-remove-tags',
-                        label: t('files.annotations.batchRemove'),
-                        icon: <Tag className="size-4" />,
-                        disabled:
-                          loading ||
-                          navigating ||
-                          galleryAnnotationsLoading ||
-                          !!galleryAnnotationFailure,
-                      },
-                    ]}
-                    onAction={(action) => {
-                      if (action === 'copy-clipboard') queueClipboard('copy', targets);
-                      else if (action === 'cut-clipboard') queueClipboard('cut', targets);
-                      else if (action === 'create-zip')
-                        setZIPSelection({ entries: targets, parent });
-                      else if (action === 'direct-links') setDirectTargets(targets);
-                      else if (action === 'batch-add-tags') openTagsBatch('add');
-                      else if (action === 'batch-remove-tags') openTagsBatch('remove');
-                    }}
-                  />
-                </>
-              )}
-            </div>
-          </div>
-        ) : null}
         <div className="flex min-h-96 min-w-0 flex-1 items-start gap-4">
           <section
             ref={fileContent}
@@ -1667,7 +1683,7 @@ export function FilesPage({
             aria-label={title}
             aria-busy={loading || navigating}
             data-file-content
-            className={`min-h-96 min-w-0 flex-1 rounded-panel bg-surface p-2 ${!loading && !navigating && !failure && !listing?.items.length ? 'flex flex-col' : ''}`}
+            className={`min-h-96 min-w-0 flex-1 rounded-panel bg-surface p-2 ${preferences.view === 'list' && listing?.items.length ? 'pt-1' : ''} ${!loading && !navigating && !failure && !listing?.items.length ? 'flex flex-col' : ''}`}
           >
             {loading || navigating ? (
               <StateSurface
