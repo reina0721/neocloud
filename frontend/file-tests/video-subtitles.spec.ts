@@ -104,18 +104,26 @@ test('F521–F540：真实视频的自动外挂字幕、三格式切换、关闭
   const queue = page.getByRole('dialog', { name: '上传队列', exact: true });
   await expect(queue.getByText('上传完成', { exact: true })).toHaveCount(subtitles.length + 1);
   await queue.getByRole('button', { name: '关闭', exact: true }).click();
-  const srtId = await page.evaluate(
-    async ({ folderId, name }) => {
+  const { srtId, videoId } = await page.evaluate(
+    async ({ folderId, videoName, subtitleName }) => {
       const response = await fetch(
         '/api/console/v1/native/files?parent=' + encodeURIComponent(folderId),
       );
       if (!response.ok) throw new Error('字幕目录读取失败');
       const listing = (await response.json()) as { items: { id: string; name: string }[] };
-      return listing.items.find((file) => file.name === name)?.id;
+      return {
+        srtId: listing.items.find((file) => file.name === subtitleName)?.id,
+        videoId: listing.items.find((file) => file.name === videoName)?.id,
+      };
     },
-    { folderId: folder.id, name: srtName },
+    { folderId: folder.id, videoName: name, subtitleName: srtName },
   );
   expect(srtId).toBeTruthy();
+  expect(videoId).toBeTruthy();
+  let videoReads = 0;
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname.endsWith(`/native/files/${videoId}/content`)) videoReads++;
+  });
   await page.getByRole('button', { name, exact: true }).click();
   const player = page.getByRole('dialog', { name, exact: true });
   const video = player.locator('video');
@@ -136,13 +144,20 @@ test('F521–F540：真实视频的自动外挂字幕、三格式切换、关闭
     });
   await expect.poll(async () => (await snapshot()).text).toContain('海风\n第二行');
   await expect(menu).toContainText(/片段-CAF/);
+  expect(await video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(true);
   await video.evaluate(async (element: HTMLVideoElement) => {
     await element.play();
     element.pause();
     element.currentTime = 0.65;
   });
   await expect.poll(async () => (await snapshot()).active).toBe(1);
-  expect((await video.boundingBox())?.width ?? 0).toBeGreaterThan(560);
+  const desktopVideo = (await video.boundingBox())!;
+  const dimensions = await video.evaluate((element: HTMLVideoElement) => ({
+    width: element.videoWidth,
+    height: element.videoHeight,
+  }));
+  expect(desktopVideo.width).toBe(dimensions.width);
+  expect(desktopVideo.height).toBe(dimensions.height);
   await expect(video).toBeInViewport({ ratio: 0.98 });
   await expect(player.getByRole('button', { name: '下载', exact: true })).toBeInViewport();
   await page.screenshot({
@@ -185,11 +200,44 @@ test('F521–F540：真实视频的自动外挂字幕、三格式切换、关闭
   await choose(srtName);
   await expect.poll(async () => (await snapshot()).active).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const mobileVideo = (await video.boundingBox())!;
+  expect(mobileVideo.width).toBeLessThan(375);
+  expect(mobileVideo.width / mobileVideo.height).toBeCloseTo(
+    dimensions.width / dimensions.height,
+    1,
+  );
   await page.screenshot({
     path: info.outputPath('video-subtitles-mobile.png'),
     animations: 'disabled',
   });
   await writeFile(info.outputPath('video-folder.json'), JSON.stringify({ parent: folder.id }));
-  await player.getByRole('button', { name: '关闭', exact: true }).click();
-  await expect(video).toHaveCount(0);
+  await video.evaluate((element: HTMLVideoElement) => {
+    element.muted = true;
+    element.volume = 0.25;
+  });
+  const previewVideo = await video.elementHandle();
+  await player.getByRole('button', { name: '专注播放', exact: true }).click();
+  await expect(page).toHaveURL(/\/home\/view/);
+  const focused = page.locator('[data-reader-presentation="reader"]');
+  const focusedVideo = focused.locator('video');
+  await expect
+    .poll(() =>
+      focusedVideo.evaluate((element: HTMLVideoElement) => ({
+        position: Math.round(element.currentTime * 100),
+        muted: element.muted,
+        volume: element.volume,
+        paused: element.paused,
+      })),
+    )
+    .toEqual({ position: 65, muted: true, volume: 0.25, paused: true });
+  await expect(focused.getByRole('combobox', { name: '字幕', exact: true })).toContainText(srtName);
+  expect(videoReads).toBe(1);
+  expect(
+    await previewVideo?.evaluate(
+      (element: HTMLVideoElement) => element.paused && !element.isConnected,
+    ),
+  ).toBe(true);
+  await focused.getByRole('button', { name: '关闭', exact: true }).click();
+  await expect(focusedVideo).toHaveCount(0);
+  await expect(page.getByRole('button', { name, exact: true })).toBeFocused();
 });

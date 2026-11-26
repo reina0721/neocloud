@@ -1,5 +1,9 @@
 import { expect, test } from './preview-test';
-import { openReadingFixtureFolder, readPreviewAccess } from './reading-fixture';
+import {
+  editReadingFixtureText,
+  openReadingFixtureFolder,
+  readPreviewAccess,
+} from './reading-fixture';
 
 test('私有 Markdown 创建、渲染、编辑和安全图片', async ({ page }, info) => {
   const account = readPreviewAccess();
@@ -108,6 +112,25 @@ test('私有 Markdown 创建、渲染、编辑和安全图片', async ({ page },
   const item = page.getByRole('button', { name, exact: true });
   await item.click();
   const dialog = page.getByRole('dialog', { name, exact: true });
+  const quick = dialog.getByRole('article', { name: 'Markdown 预览', exact: true });
+  await expect(quick.locator('strong')).toHaveText('需要强调');
+  await expect(quick.getByRole('img', { name: '书页示意', exact: true })).toHaveAttribute(
+    'src',
+    /^blob:/,
+  );
+  await expect(quick.getByText('外部图替代')).toBeVisible();
+  await expect(quick.getByRole('link', { name: '危险网址', exact: true })).toHaveCount(0);
+  await expect(quick.locator('script')).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: '保存', exact: true })).toHaveCount(0);
+  await page.screenshot({
+    path: info.outputPath('quick-markdown-desktop.png'),
+    animations: 'disabled',
+  });
+  await dialog.getByRole('button', { name: '查看源码', exact: true }).click();
+  await expect(dialog.locator('[data-file-text-preview] pre')).toContainText('# 项目笔记');
+  await dialog.getByRole('button', { name: '编辑', exact: true }).click();
+  await expect(page).toHaveURL(/\/home\/view\?/);
+  await dialog.getByRole('button', { name: '预览', exact: true }).click();
   const savedPreview = dialog.getByRole('article', { name: '预览', exact: true });
   await expect(savedPreview.locator('strong')).toHaveText('需要强调');
   await expect(dialog.getByRole('button', { name: '保存', exact: true })).toBeDisabled();
@@ -132,7 +155,8 @@ test('私有 Markdown 创建、渲染、编辑和安全图片', async ({ page },
   await dialog.getByRole('button', { name: '关闭', exact: true }).click();
   await discard.getByRole('button', { name: '放弃修改', exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await item.click();
+  await editReadingFixtureText(page, name);
+  await dialog.getByRole('button', { name: '预览', exact: true }).click();
   await expect(savedPreview.locator('strong')).toHaveText('需要强调');
   await dialog.getByRole('button', { name: '源码', exact: true }).click();
   await savedInput.fill('x'.repeat(256 * 1024 + 1));

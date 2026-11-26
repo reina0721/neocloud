@@ -1,6 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Locator, type Page } from './preview-test';
-import { assertPreviewOrigin, openReadingFixtureFolder } from './reading-fixture';
+import {
+  assertPreviewOrigin,
+  editReadingFixtureText,
+  openReadingFixtureFolder,
+} from './reading-fixture';
 
 async function selectText(field: Locator, value: string) {
   await field.evaluate((node, selected) => {
@@ -55,10 +59,7 @@ test('Markdown 格式、撤销与同目录图片发布', async ({ page }, info) 
   await newDocument.getByRole('button', { name: '保存', exact: true }).click();
   await expect(newDocument).toHaveCount(0);
   const fileName = '写作演示.md';
-  const file = page.getByRole('button', { name: fileName, exact: true });
-  await file.click();
-
-  const editor = page.getByRole('dialog', { name: fileName, exact: true });
+  const editor = await editReadingFixtureText(page, fileName);
   const button = (name: string) => editor.getByRole('button', { name, exact: true });
   await button('并排').click();
   const input = editor.getByLabel('文件内容', { exact: true });
@@ -184,11 +185,11 @@ test('Markdown 格式、撤销与同目录图片发布', async ({ page }, info) 
   try {
     await chooseImage(page, editor, '取消等待.png', png);
     await commitSeen;
-    await expect(editor.getByRole('status')).toContainText('正在把图片上传');
+    await expect(editor.getByRole('status').filter({ hasText: '正在把图片上传' })).toBeVisible();
     await expect(button('保存')).toBeDisabled();
     await expect(input).toHaveValue(unchanged);
     await button('取消等待').click();
-    await expect(editor.getByRole('status')).toContainText('已停止等待');
+    await expect(editor.getByRole('status').filter({ hasText: '已停止等待' })).toBeVisible();
   } finally {
     releaseCommit();
   }
@@ -237,7 +238,8 @@ test('Markdown 格式、撤销与同目录图片发布', async ({ page }, info) 
   }, pictureName);
   expect(imageRevision).toBe(1);
 
-  await file.click();
+  await editReadingFixtureText(page, fileName);
+  await button('预览').click();
   await expect(image).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await button('源码').click();

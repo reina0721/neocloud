@@ -5,6 +5,27 @@ import { ReaderSurface } from './reader-surface';
 import { FileDocument } from '../../../src/files/runtime';
 import type { FileDocumentProps } from '../../../src/files/pdf-contract';
 import { useReaderSurface } from './reader-surface-context';
+
+export function PdfPreview({
+  entry,
+  limits,
+  onClose,
+  onReady,
+  onAnnotate,
+}: Pick<FileDocumentProps, 'entry' | 'limits' | 'onClose' | 'onReady' | 'onAnnotate'>) {
+  return (
+    <FileDocument
+      entry={entry}
+      limits={limits}
+      presentation="preview"
+      closeRequestSequence={0}
+      onClose={onClose}
+      {...(onReady ? { onReady } : {})}
+      {...(onAnnotate ? { onAnnotate } : {})}
+    />
+  );
+}
+
 /** PdfDialog 将关闭意图交给阅读器，确认未导出的批注后才卸载会话。 */
 export function PdfDialog(props: Omit<FileDocumentProps, 'closeRequestSequence'>) {
   const { t } = useFrontendTranslation();

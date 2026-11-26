@@ -41,6 +41,7 @@ import {
 } from './reader-surface-context';
 import { ReaderDock } from './reader-dock';
 import { MediaShelf } from './media-shelf';
+import type { PreviewHistory } from './use-quick-file-preview';
 
 const limit = 8;
 const musicApplication = 'music';
@@ -83,12 +84,19 @@ async function checkBookmark(
   return { entry, application };
 }
 
-type ListPosition = { href: string; scrollTop: number; focusId?: string; departed: boolean };
+type ListPosition = {
+  href: string;
+  scrollTop: number;
+  focusId?: string;
+  departed: boolean;
+  returnWithBack: boolean;
+};
 type ReaderLocation = {
   pathname: string;
   href: string;
   target: ReaderBookmark | undefined;
   navigate: (href: string, replace?: boolean) => void;
+  goBack: () => void;
 };
 
 export function ReaderWorkspace({
@@ -97,6 +105,7 @@ export function ReaderWorkspace({
   href,
   target,
   navigate,
+  goBack,
 }: ReaderLocation & { children: ReactNode }) {
   const { t } = useFrontendTranslation();
   const failureText = useCallback(
@@ -249,17 +258,23 @@ export function ReaderWorkspace({
       .catch(() => setMessage(t('files.viewer.workspaceFailure')));
   }, [persistence, restored, storedBookmarks, t]);
 
-  function rememberList(entryId?: string) {
+  function rememberList(entryId?: string, fromPreview?: PreviewHistory) {
     if (pathname !== '/home') return;
     const content = document.getElementById('main-content');
     const focused = document.activeElement;
-    const focusId =
-      focused instanceof HTMLElement && focused.id && content?.contains(focused)
+    const focusId = fromPreview
+      ? 'file-entry-' + fromPreview.sourceFileId
+      : focused instanceof HTMLElement && focused.id && content?.contains(focused)
         ? focused.id
         : entryId && document.getElementById('file-entry-' + entryId)?.id;
+    const params = new URLSearchParams(href.split('?')[1]);
+    params.delete('preview');
     listPosition.current = {
-      href,
+      href: '/home' + (params.size ? '?' + params.toString() : ''),
       departed: false,
+      returnWithBack: Boolean(
+        fromPreview?.owned && new URLSearchParams(href.split('?')[1]).has('preview'),
+      ),
       scrollTop: content?.scrollTop ?? 0,
       ...(focusId ? { focusId } : {}),
     };
@@ -274,10 +289,15 @@ export function ReaderWorkspace({
     (focused ?? content).focus({ preventScroll: true });
   }
 
-  function show(bookmark: ReaderBookmark, replace = false, entryId?: string) {
+  function show(
+    bookmark: ReaderBookmark,
+    replace = false,
+    entryId?: string,
+    fromPreview?: PreviewHistory,
+  ) {
     const key = readerKey(bookmark);
     if (active === key) return;
-    rememberList(entryId);
+    rememberList(entryId, fromPreview);
     setMessage('');
     restoringMini.current = mini === key ? key : undefined;
     navigate(readerHref(bookmark), replace);
@@ -285,6 +305,10 @@ export function ReaderWorkspace({
 
   function returnToFiles() {
     if (!foreground) return;
+    if (listPosition.current?.returnWithBack) {
+      goBack();
+      return;
+    }
     const parent = activeFile?.entry?.parentId;
     navigate(
       listPosition.current?.href ?? (parent ? `/home?${new URLSearchParams({ parent })}` : '/home'),
@@ -296,8 +320,9 @@ export function ReaderWorkspace({
     entry: FileEntry,
     application: string,
     session: OpenReaderSession,
-    replacing?: string,
+    options: { replacing?: string; fromPreview?: PreviewHistory } = {},
   ) {
+    const { replacing, fromPreview } = options;
     const bookmark = { fileId: entry.id, application };
     const key = readerKey(bookmark);
     const existing = files.find((item) => readerKey(item.bookmark) === key);
@@ -305,12 +330,15 @@ export function ReaderWorkspace({
       setMessage(t('files.viewer.limit'));
       return;
     }
-    if (replacing || !existing?.session)
+    if (replacing || !existing?.session || (fromPreview && application === 'video'))
       setFiles((current) => {
         const retained = replacing
           ? current.filter((item) => readerKey(item.bookmark) !== replacing)
           : current;
-        if (retained.some((item) => readerKey(item.bookmark) === key && item.session))
+        if (
+          !(fromPreview && application === 'video') &&
+          retained.some((item) => readerKey(item.bookmark) === key && item.session)
+        )
           return retained;
         return [
           ...retained.filter((item) => readerKey(item.bookmark) !== key),
@@ -324,7 +352,7 @@ export function ReaderWorkspace({
           },
         ];
       });
-    show(bookmark, Boolean(replacing), entry.id);
+    show(bookmark, Boolean(replacing || fromPreview), entry.id, fromPreview);
   }
 
   const patch = useCallback((key: string, update: (item: OpenFile) => OpenFile) => {
@@ -423,6 +451,8 @@ export function ReaderWorkspace({
       value={{
         foreground: Boolean(foreground && activeSession),
         openReader,
+        promoteReader: (entry, application, session, fromPreview) =>
+          openReader(entry, application, session, { fromPreview }),
         dockOpen: mediaOpen && useMusic && mediaFront === 'music',
         toggleDock: () => {
           if (mediaOpen && mediaFront === 'music') setMediaOpen(false);
@@ -492,7 +522,7 @@ export function ReaderWorkspace({
             }}
             close={() => finish(key)}
             replaceWithBuiltIn={(application, session) =>
-              openReader(entry, application, session, key)
+              openReader(entry, application, session, { replacing: key })
             }
             onChanged={() => refresh((value) => value + 1)}
             onMoveImage={(next) => moveImage(item, next)}
@@ -650,6 +680,7 @@ function MountedReader({
                 entry: target,
                 album: { ...current.album, index },
                 savedImageVersion: false,
+                openImageEditor: false,
               });
           }}
           refreshPublishedImage={async (target, signal) => {
@@ -664,6 +695,7 @@ function MountedReader({
                     ...current,
                     entry: next,
                     savedImageVersion: true,
+                    openImageEditor: false,
                     ...(current.album
                       ? {
                           album: {

@@ -16,12 +16,17 @@ export const pdfReaderLimitsSchema = z.object({
   workerReadyTimeoutMs: z.number().int().positive().safe(),
 });
 export type PDFReaderLimits = z.infer<typeof pdfReaderLimitsSchema>;
+export type PdfViewPosition = Readonly<{ page: number; scale: number }>;
 export type FileDocumentProps = Readonly<{
   entry: Pick<FileEntry, 'id' | 'name' | 'mediaType' | 'sizeBytes' | 'contentRevision'>;
   limits: PDFReaderLimits;
   version?: number;
   onClose: () => void;
   closeRequestSequence: number;
+  presentation?: 'preview' | 'workspace';
+  initialPosition?: PdfViewPosition;
+  onReady?: () => void;
+  onAnnotate?: (position: PdfViewPosition) => void;
   draft?: ReaderDraftHandle;
   onDraftState?: (state: ReaderDraftStatus) => void;
 }>;

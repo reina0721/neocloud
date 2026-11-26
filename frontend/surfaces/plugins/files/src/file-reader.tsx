@@ -157,6 +157,7 @@ export function FileReader({
               entry={mediaPreview.entry}
               mode="preview"
               maxBytes={mediaPreview.maxBytes}
+              {...(mediaPreview.videoHandoff ? { resumeVideo: mediaPreview.videoHandoff } : {})}
               {...(playback ? { playback } : {})}
               {...(mediaPreview.videoPlaylist
                 ? { videoPlaylist: { download: () => void download(mediaPreview.entry) } }
@@ -165,6 +166,7 @@ export function FileReader({
                 ? {
                     imageEditing: {
                       entry: mediaPreview.entry,
+                      ...(mediaPreview.openImageEditor ? { openOnMount: true } : {}),
                       ...(surface?.draft ? { draft: surface.draft } : {}),
                       ...(surface
                         ? {

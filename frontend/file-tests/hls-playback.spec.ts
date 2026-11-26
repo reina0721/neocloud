@@ -147,6 +147,7 @@ test('真实私有 HLS 支持多档清晰度、AES、范围分片和直播刷新
   const video = master.locator('video');
   const quality = master.getByRole('combobox', { name: '清晰度', exact: true });
   await expect(quality).toContainText('自动');
+  expect(await video.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(true);
   await quality.click();
   await page.getByRole('option', { name: '144p', exact: true }).click();
   await expect(quality).toContainText('144p');
@@ -183,6 +184,27 @@ test('真实私有 HLS 支持多档清晰度、AES、范围分片和直播刷新
   await page.screenshot({ path: info.outputPath('hls-desktop.png'), animations: 'disabled' });
   await page.getByRole('option', { name: /^自动/ }).click();
   await expect(quality).toContainText(/自动 · (144p|240p)/);
+  await quality.click();
+  await page.getByRole('option', { name: '240p', exact: true }).click();
+  await expect(quality).toContainText(/:\s*240p$/);
+  const previousPlayer = await video.elementHandle();
+  await video.evaluate(async (element) => {
+    const player = element as HTMLVideoElement;
+    player.currentTime = 0.7;
+    await player.play();
+  });
+  await master.getByRole('button', { name: '专注播放', exact: true }).click();
+  await expect(master.getByRole('button', { name: '专注播放', exact: true })).toHaveCount(0);
+  await expect(quality).toContainText(/:\s*240p$/);
+  await expect.poll(videoHeight).toBe(240);
+  await expect.poll(videoTime).toBeGreaterThan(0.65);
+  expect(await video.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(false);
+  expect(
+    await previousPlayer.evaluate((element) => ({
+      connected: element.isConnected,
+      paused: (element as HTMLVideoElement).paused,
+    })),
+  ).toEqual({ connected: false, paused: true });
   const download = page.waitForEvent('download');
   await master.getByRole('button', { name: '下载', exact: true }).click();
   expect((await download).suggestedFilename()).toBe('master.m3u8');

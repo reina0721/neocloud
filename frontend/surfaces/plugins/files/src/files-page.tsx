@@ -15,6 +15,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useEffectEvent,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -100,6 +101,12 @@ import { VersionsPanel } from './versions-panel';
 import { ViewOptionsDialog } from './view-options-dialog';
 import { useCursorFileFeed } from './use-cursor-file-feed';
 import { useFileReader } from './use-file-reader';
+import { QuickFilePreview } from './quick-file-preview';
+import {
+  canOpenQuickPreview,
+  useQuickFilePreview,
+  type PreviewRoute,
+} from './use-quick-file-preview';
 import { useReaderWorkspace } from './reader-workspace-context';
 import { FileApplicationSelection } from './file-reader';
 import { archiveFile } from './file-reader-session';
@@ -125,6 +132,7 @@ type Props = Readonly<{
   numbered: boolean;
   cursor: string;
   queryInvalid: boolean;
+  previewRoute: PreviewRoute;
   navigate: (query: Record<string, string>) => void;
 }>;
 type Dialog = {
@@ -145,6 +153,7 @@ export function FilesPage({
   numbered,
   cursor,
   queryInvalid,
+  previewRoute,
   navigate: routeNavigate,
 }: Props) {
   const filterKey = encodeFileFilters(filters);
@@ -675,7 +684,22 @@ export function FilesPage({
       cancelPendingOpen,
     ],
   );
-  const showPreview = reader.open;
+  const quickPreview = useQuickFilePreview({
+    route: previewRoute,
+    entries: visibleItems,
+    limits: {
+      maxMediaBytes,
+      maxTextBytes: listing?.maxTextBytes,
+      pdfReader: listing?.pdfReader,
+    },
+    enabled: !trash && !queryInvalid,
+    onOtherApplication: reader.openResolved,
+  });
+  const showPreview = (entry: FileEntry, requested?: 'choose' | 'archive') => {
+    if (!requested && !trash && canOpenQuickPreview(entry)) quickPreview.open(entry);
+    else void reader.open(entry, requested);
+  };
+  const showShortcutPreview = useEffectEvent((entry: FileEntry) => showPreview(entry));
   const download = reader.download;
   const selectedIds = useMemo(() => new Set(selected), [selected]);
   const targets = useMemo(
@@ -833,7 +857,7 @@ export function FilesPage({
           if (!entry) return;
           if (trash) openDialog('restore', [entry]);
           else if (entry.kind === 'folder') navigate({ parent: entry.id });
-          else void showPreview(entry);
+          else showShortcutPreview(entry);
         }
       }),
     [
@@ -843,7 +867,6 @@ export function FilesPage({
       trash,
       navigate,
       openDialog,
-      showPreview,
       reload,
       visibleIds,
       focusedEntry,
@@ -2392,6 +2415,7 @@ export function FilesPage({
         />
       ) : null}
       <FileApplicationSelection reader={reader} />
+      <QuickFilePreview controller={quickPreview} download={(entry) => void download(entry)} />
       {versionEntry ? (
         <VersionsPanel
           entry={versionEntry}

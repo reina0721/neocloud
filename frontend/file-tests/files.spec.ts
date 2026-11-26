@@ -101,7 +101,7 @@ test('真实文件闭环：目录、队列、预览、下载、移动、多选�
     .getByRole('button', { name: '关闭', exact: true })
     .click();
   await page.getByRole('button', { name: textName, exact: true }).click();
-  await expect(page.getByRole('dialog').getByLabel('文件内容', { exact: true })).toContainText(
+  await expect(page.getByRole('dialog').locator('[data-file-text-preview] pre')).toContainText(
     '<script>',
   );
   expect(await page.evaluate(() => 'filePreviewExecuted' in window)).toBe(false);

@@ -15,6 +15,7 @@ import type { AnnotationEditorLayerBuilder } from 'pdfjs-dist/types/web/annotati
 import {
   isPdfOpen,
   isPdfCommand,
+  isPdfFit,
   emptyPdfState,
   pdfProtocolVersion,
   pdfWorkerReadyKind,
@@ -31,6 +32,7 @@ import {
   type PdfOutline,
   type PdfEditorMode,
   type PdfFailure,
+  type PdfFit,
 } from '../protocol.js';
 
 type Core = typeof SDKCore;
@@ -55,6 +57,8 @@ let core: Core | undefined,
 let opening: PdfOpen | undefined,
   closed = false,
   ready = false;
+let viewportFit: PdfFit = 'page-width';
+let scaleChosen = false;
 let state: PdfReaderState = { ...emptyPdfState };
 let passwordUpdater: ((password: string) => void) | undefined;
 let thumbnailTask: RenderTask | undefined,
@@ -353,6 +357,10 @@ async function dispose(id: number) {
 async function open(message: PdfOpen) {
   if (opening || closed) return;
   opening = message;
+  const { presentation, fit, initialPosition } = message.view;
+  const preview = presentation === 'preview';
+  viewportFit = fit;
+  scaleChosen = Boolean(initialPosition);
   document.documentElement.lang = message.locale;
   document.documentElement.style.colorScheme = message.theme;
   const container = document.getElementById('viewerContainer');
@@ -399,7 +407,10 @@ async function open(message: PdfOpen) {
     maxCanvasDim: Math.floor(Math.sqrt(message.limits.maxCanvasPixels)),
     enableDetailCanvas: false,
     removePageBorders: true,
-    annotationEditorMode: core.AnnotationEditorType.NONE,
+    annotationMode: preview ? core.AnnotationMode.ENABLE : core.AnnotationMode.ENABLE_FORMS,
+    annotationEditorMode: preview
+      ? core.AnnotationEditorType.DISABLE
+      : core.AnnotationEditorType.NONE,
   });
   await l10n.translate(container);
   if (closed) return;
@@ -420,7 +431,10 @@ async function open(message: PdfOpen) {
   };
   bus.on('pagesinit', () => {
     if (viewer) {
-      viewer.currentScaleValue = 'page-width';
+      if (initialPosition) {
+        viewer.currentScale = initialPosition.scale;
+        viewer.currentPageNumber = Math.min(initialPosition.page, viewer.pagesCount);
+      } else viewer.currentScaleValue = viewportFit;
       remember();
       publish();
     }
@@ -568,6 +582,13 @@ async function outline(): Promise<readonly PdfOutline[]> {
 }
 async function command(request: PdfRequest) {
   if (!opening || !viewer || !doc || !core || !bus || !links || closed) return;
+  if (
+    opening.view.presentation === 'preview' &&
+    ['editor', 'stamp', 'edit', 'save', 'snapshot', 'exported'].includes(request.kind)
+  ) {
+    fail('unavailable', request.id);
+    return;
+  }
   const result = (
     extra: Partial<Extract<PdfEvent, { kind: 'result' }>> = {},
     transfer: Transferable[] = [],
@@ -586,6 +607,7 @@ async function command(request: PdfRequest) {
       break;
     case 'scale':
       state = { ...state, rendered: false };
+      scaleChosen = true;
       if (typeof request.scale === 'number')
         viewer.currentScale = Math.max(pdfMinScale, Math.min(pdfMaxScale, request.scale));
       else viewer.currentScaleValue = request.scale;
@@ -633,6 +655,7 @@ async function command(request: PdfRequest) {
       navigatingHistory = true;
       try {
         const position = navigation[index]!;
+        scaleChosen = true;
         viewer.currentScale = position.scale;
         viewer.currentPageNumber = position.page;
         await nextPaint();
@@ -746,6 +769,14 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
     document.documentElement.style.colorScheme = candidate.value;
     return;
   }
+  if (candidate.kind === 'fit' && isPdfFit(candidate.value)) {
+    if (opening.view.presentation === 'preview' && !scaleChosen) {
+      viewportFit = candidate.value;
+      if (ready && viewer && viewer.currentScaleValue !== viewportFit)
+        viewer.currentScaleValue = viewportFit;
+    }
+    return;
+  }
   if (
     candidate.kind === 'password' &&
     typeof candidate.value === 'string' &&
@@ -811,7 +842,13 @@ window.addEventListener(
 window.addEventListener('drop', (event) => preventUnboundedFiles(event, event.dataTransfer), true);
 // input只保守保护正在输入、尚未提交的文字；提交/撤销后的准确状态由SDK摘要重新计算。
 window.addEventListener('input', (event) => {
-  if (ready && !closed && event.target instanceof HTMLElement && event.target.isContentEditable) {
+  if (
+    opening?.view.presentation !== 'preview' &&
+    ready &&
+    !closed &&
+    event.target instanceof HTMLElement &&
+    event.target.isContentEditable
+  ) {
     uncommittedText = true;
     state = { ...state, modified: true };
     publish();

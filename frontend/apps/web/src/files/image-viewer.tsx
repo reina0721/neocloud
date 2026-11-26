@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
@@ -137,16 +137,89 @@ function MetadataFields({ source, labels }: { source: Blob; labels: typeof zh })
   );
 }
 
+function QuickImageViewport({
+  size,
+  scale,
+  rotation,
+  children,
+}: {
+  size?: ImageSize;
+  scale: number;
+  rotation: number;
+  children: ReactNode;
+}) {
+  const { t } = useFrontendTranslation();
+  const viewport = useRef<HTMLDivElement>(null);
+  const [available, setAvailable] = useState<ImageSize>({ width: 0, height: 0 });
+  useEffect(() => {
+    const target = viewport.current;
+    if (!target) return;
+    const observer = new ResizeObserver(([region]) => {
+      if (region) {
+        const { width, height } = region.contentRect;
+        setAvailable({ width, height });
+      }
+    });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+  const turned = rotation % 180 !== 0;
+  const rotatedWidth = (turned ? size?.height : size?.width) ?? 0;
+  const rotatedHeight = (turned ? size?.width : size?.height) ?? 0;
+  const fit =
+    rotatedWidth && rotatedHeight
+      ? Math.min(1, available.width / rotatedWidth, available.height / rotatedHeight)
+      : 0;
+  const magnification = fit * scale;
+  /* eslint-disable jsx-a11y-x/no-noninteractive-tabindex -- 滚动区可在图片放大后用键盘平移。 */
+  return (
+    <div
+      ref={viewport}
+      className="relative min-h-0 min-w-0 flex-1 overflow-auto rounded-control"
+      role="region"
+      aria-label={t('files.mediaPreview')}
+      tabIndex={0}
+    >
+      {!size ? (
+        <p
+          role="status"
+          className="absolute inset-0 grid place-items-center text-sm text-ink-muted"
+        >
+          {t('files.mediaLoading')}
+        </p>
+      ) : null}
+      <div
+        className="relative min-h-full min-w-full"
+        style={{ width: rotatedWidth * magnification, height: rotatedHeight * magnification }}
+      >
+        <div
+          className="absolute left-1/2 top-1/2"
+          style={{
+            width: (size?.width ?? 0) * magnification,
+            height: (size?.height ?? 0) * magnification,
+            transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+          }}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+  /* eslint-enable jsx-a11y-x/no-noninteractive-tabindex */
+}
+
 /** ImageViewer 将原件画布与按需拍摄信息并排，窄窗口会将信息移到画布下方。 */
 export default function ImageViewer({
   source,
   size,
   editor,
+  quick = false,
   children,
 }: {
   source: Blob;
   size?: ImageSize;
   editor?: ReactNode;
+  quick?: boolean;
   children: ReactNode;
 }) {
   const { locale } = useFrontendTranslation();
@@ -156,9 +229,15 @@ export default function ImageViewer({
   const [rotation, setRotation] = useState(0);
   const infoId = useId();
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-1.5">
+    <div className={quick ? 'flex min-h-0 flex-1 flex-col gap-2' : 'space-y-2'}>
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+        <div
+          className={
+            quick
+              ? 'flex flex-wrap items-center gap-1.5 rounded-control bg-surface px-1'
+              : 'flex flex-wrap items-center gap-1.5'
+          }
+        >
           <IconAction
             size="sm"
             label={labels.zoomOut}
@@ -199,47 +278,61 @@ export default function ImageViewer({
           </IconAction>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Action
-            size="sm"
-            variant="secondary"
-            expanded={open}
-            {...(open ? { controls: infoId } : {})}
-            onPress={() => setOpen((value) => !value)}
-          >
-            {labels.info}
-          </Action>
+          <span className={quick ? 'rounded-action bg-surface' : 'contents'}>
+            <Action
+              size="sm"
+              variant="secondary"
+              expanded={open}
+              {...(open ? { controls: infoId } : {})}
+              onPress={() => setOpen((value) => !value)}
+            >
+              {labels.info}
+            </Action>
+          </span>
           {editor}
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <div
-          className="flex min-w-0 items-center justify-center overflow-auto rounded-control border border-border/60"
-          style={{
-            flex: '5 1 28rem',
-            height: photoAreaHeight,
-            backgroundColor: 'var(--color-surface-inset)',
-          }}
-        >
+      <div
+        className={
+          quick ? 'flex min-h-0 flex-1 flex-col gap-2 sm:flex-row' : 'flex flex-wrap gap-2'
+        }
+      >
+        {quick ? (
+          <QuickImageViewport {...(size ? { size } : {})} scale={scale} rotation={rotation}>
+            {children}
+          </QuickImageViewport>
+        ) : (
           <div
-            className="flex items-center justify-center"
+            className="flex min-w-0 items-center justify-center overflow-auto rounded-control border border-border/60"
             style={{
-              transform: `scale(${scale}) rotate(${rotation}deg)`,
-              transformOrigin: 'center center',
-              transition: 'transform var(--motion-duration-control) var(--ease-product)',
+              flex: '5 1 28rem',
+              height: photoAreaHeight,
+              backgroundColor: 'var(--color-surface-inset)',
             }}
           >
-            {children}
+            <div
+              className="flex items-center justify-center"
+              style={{
+                transform: `scale(${scale}) rotate(${rotation}deg)`,
+                transformOrigin: 'center center',
+                transition: 'transform var(--motion-duration-control) var(--ease-product)',
+              }}
+            >
+              {children}
+            </div>
           </div>
-        </div>
+        )}
         {open ? (
           <section
             id={infoId}
             aria-label={labels.info}
-            className="min-w-0 space-y-2 rounded-control p-3 text-sm"
+            className={
+              quick
+                ? 'max-h-32 min-w-0 shrink-0 space-y-2 overflow-auto rounded-control bg-surface p-3 text-sm sm:max-h-full sm:w-52'
+                : 'min-w-0 space-y-2 rounded-control p-3 text-sm'
+            }
             style={{
-              flex: '1 1 17rem',
-              maxHeight: photoAreaHeight,
-              overflow: 'auto',
+              ...(quick ? {} : { flex: '1 1 17rem', maxHeight: photoAreaHeight, overflow: 'auto' }),
               overflowWrap: 'anywhere',
               border: '1px solid var(--color-border)',
             }}

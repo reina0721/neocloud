@@ -100,6 +100,14 @@ export function allowsOfflineFixture(): boolean {
   return readPreviewAccess().offlineSourceAllowed;
 }
 
+export async function editReadingFixtureText(page: Page, name: string) {
+  await page.getByRole('button', { name, exact: true }).click();
+  const dialog = page.getByRole('dialog', { name, exact: true });
+  await dialog.getByRole('button', { name: '编辑', exact: true }).click();
+  await page.waitForURL(/\/home\/view\?/);
+  return dialog;
+}
+
 export async function openReadingFixtureFolder(page: Page, prefix: string) {
   const name = prefix + randomUUID().slice(0, 8);
   const id = await page.evaluate(async (name) => {

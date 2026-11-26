@@ -11,7 +11,13 @@ body {
   inset: 0;
   overflow: auto;
   outline: none;
+  background: color-mix(in srgb, Canvas 92%, CanvasText);
 }
+
+.pdfViewer .page {
+  outline: 1px solid color-mix(in srgb, CanvasText 16%, transparent);
+}
+
 /* 阅读 frame 没有装配替代文本对话框，避免显示无操作的 SDK 控件。 */
 #viewerContainer .stampEditor .altText {
   display: none;

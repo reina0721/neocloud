@@ -310,6 +310,40 @@
       padding: calc(var(--spacing) * 3);
       overflow: hidden;
     }
+    .ui-dialog-layout.ui-dialog-preview {
+      pointer-events: none;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+    .ui-dialog-preview > :first-child {
+      pointer-events: auto;
+      background: var(--color-surface);
+      color: var(--color-ink);
+      padding-block-start: max(var(--spacing), env(safe-area-inset-top));
+    }
+    .ui-dialog-layout.ui-dialog-preview > .ui-dialog-body {
+      padding: 0;
+      overflow: hidden;
+    }
+    @media (width < 768px), (height < 480px) {
+      .ui-dialog-layout.ui-dialog-preview {
+        pointer-events: auto;
+        background: var(--color-canvas);
+      }
+    }
+    @media (width < 360px) {
+      .ui-dialog-preview > :first-child > div {
+        flex-wrap: wrap;
+        row-gap: 0;
+      }
+      .ui-dialog-preview > :first-child > div > :first-child {
+        flex-basis: 100%;
+      }
+      .ui-dialog-preview > :first-child > div > :last-child {
+        margin-inline-start: auto;
+      }
+    }
     @media (width < 40rem) {
       .ui-dialog-workspace > .ui-dialog-body {
         padding: calc(var(--spacing) * 2);

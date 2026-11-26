@@ -7,6 +7,10 @@ import { FilesPage } from '../src/files-page';
 export default function FilesRoute() {
   const params = useSearchParams();
   const router = useRouter();
+  const preview = params.get('preview') ?? '';
+  const listParams = new URLSearchParams(params.toString());
+  listParams.delete('preview');
+  const listHref = '/home' + (listParams.size ? '?' + listParams.toString() : '');
   const rawFilter = params.get('filter'),
     rawPage = params.get('page'),
     cursor = params.get('cursor') ?? '';
@@ -39,6 +43,25 @@ export default function FilesRoute() {
       numbered={rawPage !== null}
       cursor={cursor}
       queryInvalid={query.invalid}
+      previewRoute={{
+        fileId: /^[a-zA-Z0-9_-]{1,128}$/.test(preview) ? preview : undefined,
+        listHref,
+        isCurrent() {
+          const current = new URLSearchParams(window.location.search);
+          return window.location.pathname === '/home' && current.toString() === params.toString();
+        },
+        show(fileId, replace) {
+          const next = new URLSearchParams(listParams);
+          next.set('preview', fileId);
+          const href = '/home?' + next.toString() + window.location.hash;
+          if (replace) window.history.replaceState(null, '', href);
+          else window.history.pushState(null, '', href);
+        },
+        close(owned) {
+          if (owned) window.history.back();
+          else window.history.replaceState(null, '', listHref + window.location.hash);
+        },
+      }}
       navigate={(query) => {
         const next = new URLSearchParams();
         for (const [key, value] of Object.entries(query)) if (value) next.set(key, value);

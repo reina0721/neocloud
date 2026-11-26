@@ -15,7 +15,15 @@ async function login(page: Page) {
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
 }
-async function upload(page: Page, path: string) {
+async function annotate(page: Page, name: string, label = '标注') {
+  const dialog = page.getByRole('dialog', { name, exact: true });
+  await dialog.getByRole('button', { name: label, exact: true }).click();
+  await expect(page).toHaveURL(/\/home\/view\?/);
+  return dialog.filter({
+    has: page.getByRole('button', { name: /^(编辑与导出工具|Editing and export tools)$/ }),
+  });
+}
+async function upload(page: Page, path: string, presentation: 'preview' | 'workspace' = 'preview') {
   const name = 'pdf-' + Date.now() + '.pdf';
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: '新建', exact: true }).click();
@@ -28,7 +36,9 @@ async function upload(page: Page, path: string) {
   await expect(queue.getByText('上传完成', { exact: true })).toBeVisible();
   await queue.getByRole('button', { name: '关闭', exact: true }).click();
   await page.getByRole('button', { name, exact: true }).click();
-  return page.getByRole('dialog', { name, exact: true });
+  return presentation === 'workspace'
+    ? annotate(page, name)
+    : page.getByRole('dialog', { name, exact: true });
 }
 const fixture = (name: string) => resolve(__dirname, 'fixtures/pdf', name);
 test.beforeEach(async ({ page }) => {
@@ -41,6 +51,19 @@ test('F261–277：真实PDF分页显示文字查找导航与本地组件', asyn
   const d = await upload(page, fixture('reader.pdf'));
   const frame = d.frameLocator('iframe');
   await expect(frame.locator('.page[data-page-number="1"] canvas').first()).toBeVisible();
+  await expect(d.getByRole('button', { name: '编辑与导出工具', exact: true })).toHaveCount(0);
+  await expect
+    .poll(async () => {
+      const bounds = await d.locator('iframe').boundingBox();
+      const first = await frame.locator('.page[data-page-number="1"]').boundingBox();
+      return Boolean(
+        bounds &&
+        first &&
+        first.y >= bounds.y &&
+        first.y + first.height <= bounds.y + bounds.height + 1,
+      );
+    })
+    .toBe(true);
   await expect(d.getByText('第 1 / 10 页', { exact: true })).toBeVisible();
   await expect(frame.locator('.textLayer').first()).toContainText('Alpha');
   await d.getByRole('button', { name: '下一页', exact: true }).click();
@@ -118,15 +141,42 @@ test('阅读内容在窄屏、侧栏和查找打开时保持可用，键盘能�
   await choose(page, d, '文档导航', '页面缩略图');
   const side = d.getByRole('complementary', { name: '页面缩略图' });
   await expect(side).toBeVisible();
-  expect((await d.locator('iframe').boundingBox())?.height).toBeGreaterThanOrEqual(
-    before!.height - 1,
-  );
+  expect(
+    Math.abs((await d.locator('iframe').boundingBox())!.height - before!.height),
+  ).toBeLessThanOrEqual(1);
   await side.getByRole('button', { name: '收起侧栏', exact: true }).click();
   await input.press('Escape');
   await expect(input).toHaveCount(0);
   await expect(d).toBeVisible();
   await expect(search).toBeFocused();
   await page.screenshot({ path: info.outputPath('reading-mobile.png'), fullPage: false });
+  await choose(page, d, '缩放与显示', '100%实际大小');
+  const scale = d.getByRole('button', { name: '缩放与显示', exact: true });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await expect(scale).toContainText('100%');
+  await page.setViewportSize({ width: 320, height: 800 });
+  await expect(scale).toContainText('100%');
+  await d.getByRole('button', { name: '下一页', exact: true }).click();
+  await expect(d.getByText('第 2 / 10 页', { exact: true })).toBeVisible();
+  const workspace = await annotate(page, await d.getByRole('heading').innerText());
+  await expect(workspace.getByText('第 2 / 10 页', { exact: true })).toBeVisible();
+  await expect(workspace.getByRole('button', { name: '缩放与显示', exact: true })).toContainText(
+    '100%',
+  );
+  const workspaceSearch = workspace.getByRole('button', { name: '查找文字', exact: true });
+  await workspaceSearch.click();
+  await choose(page, workspace, '文档导航', '页面缩略图');
+  const tools = workspace.getByRole('button', { name: '编辑与导出工具', exact: true });
+  await tools.click();
+  expect((await workspace.locator('iframe').boundingBox())?.height).toBeGreaterThanOrEqual(360);
+  await tools.press('Escape');
+  await expect(tools).toHaveAttribute('aria-expanded', 'false');
+  const workspaceSide = workspace.getByRole('complementary', { name: '页面缩略图' });
+  await workspaceSide.getByRole('button', { name: '收起侧栏', exact: true }).press('Escape');
+  await expect(workspaceSide).toHaveCount(0);
+  await expect(workspace.getByRole('button', { name: '文档导航', exact: true })).toBeFocused();
+  await workspace.getByRole('searchbox', { name: '全文查找', exact: true }).press('Escape');
+  await expect(workspaceSearch).toBeFocused();
   await info.attach('reading-area.json', {
     body: JSON.stringify(metrics, null, 2),
     contentType: 'application/json',
@@ -135,8 +185,8 @@ test('阅读内容在窄屏、侧栏和查找打开时保持可用，键盘能�
 test('F278：真实加密PDF密码错误后重试', async ({ page }) => {
   const d = await upload(page, fixture('encrypted.pdf'));
   await expect(d.getByText('此PDF需要密码。', { exact: true })).toBeVisible();
-  await showTools(d);
-  await expect(d.getByRole('button', { name: '图片标注', exact: true })).toBeDisabled();
+  await expect(d.getByRole('button', { name: '标注', exact: true })).toBeDisabled();
+  await expect(d.getByRole('button', { name: '图片标注', exact: true })).toHaveCount(0);
   await d.getByLabel('PDF密码（不保存）', { exact: true }).fill('wrong');
   await d.getByRole('button', { name: '打开文档', exact: true }).click();
   await expect(d.getByText('密码不正确，请重试。', { exact: true })).toBeVisible();
@@ -156,7 +206,7 @@ async function showTools(d: ReturnType<Page['getByRole']>) {
   }
 }
 async function choose(page: Page, d: ReturnType<Page['getByRole']>, menu: string, item: string) {
-  await showTools(d);
+  if (menu === '标注工具') await showTools(d);
   await d.getByRole('button', { name: menu, exact: true }).click();
   await page.getByRole('menuitem', { name: item, exact: true }).click();
   if (menu === '标注工具') {
@@ -171,7 +221,7 @@ async function choose(page: Page, d: ReturnType<Page['getByRole']>, menu: string
   await expect(d.locator('iframe')).not.toHaveAttribute('inert', '');
 }
 test('F264–277：缩放旋转、缩略图、大纲、内部链接及位置历史', async ({ page }) => {
-  const d = await upload(page, fixture('reader.pdf')),
+  const d = await upload(page, fixture('reader.pdf'), 'workspace'),
     frame = d.frameLocator('iframe');
   await expect(frame.locator('canvas').first()).toBeVisible();
   await choose(page, d, '缩放与显示', '末页');
@@ -223,6 +273,7 @@ test('F264–277：缩放旋转、缩略图、大纲、内部链接及位置历�
   await choose(page, d, '文档导航', '文档大纲');
   await d.getByRole('button', { name: 'Chapter 3', exact: true }).click();
   await expect(d.getByText('第 3 / 10 页', { exact: true })).toBeVisible();
+  await showTools(d);
   await d.getByRole('button', { name: '返回上个文档位置', exact: true }).click();
   await expect(d.getByText('第 10 / 10 页', { exact: true })).toBeVisible();
   await d.getByRole('button', { name: '前进到下个文档位置', exact: true }).click();
@@ -276,7 +327,7 @@ test('PDF 本机图片标注可跨页编辑、缩放、撤销并导出真实副�
   await openReadingFixtureFolder(page, 'pdf-stamp-');
   await page.setViewportSize({ width: 1440, height: 1000 });
   const parent = new URL(page.url()).searchParams.get('parent');
-  const d = await upload(page, fixture('reader.pdf'));
+  const d = await upload(page, fixture('reader.pdf'), 'workspace');
   const sourceName = await d.getByRole('heading').innerText();
   const button = (name: string) => d.getByRole('button', { name, exact: true });
   const frame = d.frameLocator('iframe');
@@ -414,7 +465,7 @@ test('PDF 本机图片标注可跨页编辑、缩放、撤销并导出真实副�
 
 test('PDF 图片读取可取消，窗口导入有界，窄屏英文仍可使用', async ({ page }, info) => {
   test.setTimeout(150_000);
-  const d = await upload(page, fixture('reader.pdf'));
+  const d = await upload(page, fixture('reader.pdf'), 'workspace');
   const name = await d.getByRole('heading').innerText();
   const frame = d.frameLocator('iframe');
   const button = (label: string) => d.getByRole('button', { name: label, exact: true });
@@ -492,7 +543,7 @@ test('PDF 图片读取可取消，窗口导入有界，窄屏英文仍可使用'
   await page.getByRole('menuitemradio', { name: 'English', exact: true }).click();
   await page.setViewportSize({ width: 390, height: 800 });
   await page.getByRole('button', { name, exact: true }).click();
-  const reopened = page.getByRole('dialog', { name, exact: true });
+  const reopened = await annotate(page, name, 'Annotate');
   await chooseStamp(page, reopened, 'mobile.png', sample, 'image/png', 'Image annotation');
   await expect(
     reopened.getByText('Image annotation added on page 1.', { exact: true }),
@@ -502,7 +553,7 @@ test('PDF 图片读取可取消，窗口导入有界，窄屏英文仍可使用'
 });
 
 test('F279–280：真实文字批注、撤销重做、导出含批注副本再打开', async ({ page }, info) => {
-  const d = await upload(page, fixture('reader.pdf'));
+  const d = await upload(page, fixture('reader.pdf'), 'workspace');
   const frame = d.frameLocator('iframe');
   await expect(frame.locator('canvas').first()).toBeVisible();
   await choose(page, d, '缩放与显示', '适合整页');
@@ -521,6 +572,7 @@ test('F279–280：真实文字批注、撤销重做、导出含批注副本再�
   await page.reload();
   await expect(frame.locator('.freeTextAnnotation')).toContainText('PDF annotation acceptance');
   await expect(d.getByText('有未导出的标注', { exact: true })).toBeVisible();
+  await showTools(d);
   const download = page.waitForEvent('download');
   await d.getByRole('button', { name: '导出标注副本', exact: true }).click();
   const file = await download;
@@ -538,7 +590,7 @@ test('F279–280：真实文字批注、撤销重做、导出含批注副本再�
   );
 });
 test('F279：真实手绘和高亮批注，未导出关闭保护', async ({ page }, info) => {
-  const d = await upload(page, fixture('reader.pdf')),
+  const d = await upload(page, fixture('reader.pdf'), 'workspace'),
     frame = d.frameLocator('iframe');
   await expect(frame.locator('canvas').first()).toBeVisible();
   await choose(page, d, '缩放与显示', '适合整页');
@@ -593,7 +645,14 @@ test('Worker加载失败明确报错，禁用假Worker回退', async ({ page }) 
   await page.context().route('**/pdf.worker.min.mjs', (route) => route.abort());
   const d = await upload(page, fixture('reader.pdf'));
   await expect(d.getByRole('alert')).toContainText('阅读组件未能启动');
-  await expect(d.locator('iframe')).toHaveAttribute('src', 'about:blank');
+  await expect
+    .poll(() =>
+      d
+        .locator('iframe')
+        .evaluate((frame: HTMLIFrameElement) => frame.contentWindow?.location.href),
+    )
+    .toBe('about:blank');
+  await expect.poll(() => page.workers().length).toBe(0);
 });
 test('阅读器320px与深色视觉、资源按需加载和关闭释放', async ({ page }, info) => {
   const requests: string[] = [];
@@ -731,10 +790,11 @@ test('后台上传刷新文件列表不重开阅读会话或丢弃临时批注',
       buffer: Buffer.from('background upload'),
     });
     const queue = page.getByRole('dialog', { name: '上传队列', exact: true });
-    await expect(queue.getByText('上传中', { exact: true })).toBeVisible();
+    const transfer = queue.locator('[data-transfer-id]').filter({ hasText: backgroundName });
+    await expect(transfer).toContainText('上传中');
     await queue.getByRole('button', { name: '关闭', exact: true }).click();
     await page.getByRole('button', { name, exact: true }).click();
-    const d = page.getByRole('dialog', { name, exact: true }),
+    const d = await annotate(page, name),
       frame = d.frameLocator('iframe');
     await expect(d.getByRole('button', { name: '跳转', exact: true })).toBeEnabled();
     await choose(page, d, '缩放与显示', '适合整页');

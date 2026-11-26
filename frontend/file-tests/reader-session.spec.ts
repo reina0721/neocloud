@@ -79,10 +79,17 @@ test('离开目录后，迟到的应用选择响应不能打开旧文件', async
     }
   });
   await page.getByRole('button', { name: file.name, exact: true }).click();
-  await started;
-  await page.getByRole('button', { name: next.name, exact: true }).click();
-  await expect(page).toHaveURL(new RegExp('parent=' + next.id));
-  release();
+  try {
+    await started;
+    const preview = page.getByRole('dialog', { name: file.name, exact: true });
+    await expect(preview).toBeVisible();
+    await preview.getByRole('button', { name: '关闭', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`parent=${root.id}$`));
+    await page.getByRole('button', { name: next.name, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp('parent=' + next.id));
+  } finally {
+    release();
+  }
   await settled;
   // 给已完成响应一次完整打开窗口；断言的是旧阅读器始终没有出现。
   const opened = await page
@@ -105,9 +112,13 @@ test('独立文件页与应用盒子保留会话，盒子尺寸与打开数量�
   const launcher = page.getByRole('button', { name: '已打开应用', exact: true });
   const box = page.locator('[data-file-app-box]');
   const listFile = (name: string) => page.getByRole('button', { name, exact: true });
+  const openEditor = async (name: string) => {
+    await page.getByRole('button', { name: name + ' 的操作', exact: true }).click();
+    await page.getByRole('menuitem', { name: '编辑文本', exact: true }).click();
+  };
   let size: { width: number; height: number } | undefined;
   for (const [index, file] of files.slice(0, 8).entries()) {
-    await listFile(file.name).click();
+    await openEditor(file.name);
     await expect(page).toHaveURL(new RegExp(`/home/view\\?file=${file.id}&app=`));
     const reader = page.getByRole('dialog', { name: file.name, exact: true });
     await reader.getByRole('button', { name: '最小化', exact: true }).click();
@@ -121,7 +132,7 @@ test('独立文件页与应用盒子保留会话，盒子尺寸与打开数量�
       await page.keyboard.press('Escape');
     }
   }
-  await listFile(files[8]!.name).click();
+  await openEditor(files[8]!.name);
   await expect(page.getByRole('status').filter({ hasText: '最多打开 8 个文件' })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`parent=${root.id}$`));
   await listFile(next.name).click();
@@ -185,7 +196,8 @@ test('已回收文件刷新后暂停恢复并说明原因', async ({ page }) => 
   await login(page);
   const { root, file } = await fixture(page);
   await page.goto('/home?parent=' + root.id);
-  await page.getByRole('button', { name: file.name, exact: true }).click();
+  await page.getByRole('button', { name: file.name + ' 的操作', exact: true }).click();
+  await page.getByRole('menuitem', { name: '编辑文本', exact: true }).click();
   await page.getByRole('button', { name: '最小化', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`parent=${root.id}$`));
   await page.evaluate(async (id) => {

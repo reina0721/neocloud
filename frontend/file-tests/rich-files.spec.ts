@@ -130,7 +130,7 @@ test('文本与 Markdown、双窗口编辑冲突、独立副本、右键菜单�
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('button', { name, exact: true }).click();
   await expect(
-    page.getByRole('dialog').getByRole('article', { name: '预览', exact: true }),
+    page.getByRole('dialog').getByRole('article', { name: 'Markdown 预览', exact: true }),
   ).toHaveText('第一窗口已提交');
   await page.getByRole('dialog').getByRole('button', { name: '关闭', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -373,6 +373,10 @@ test('目录层级上传与复制、图片画廊、真实音视频播放和剪�
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('button', { name: 'video.webm', exact: true }).click();
   const video = page.getByRole('dialog').locator('video');
+  await expect(video).toBeVisible();
+  await expect(video).toHaveAttribute('src', /^blob:/);
+  await page.getByRole('button', { name: '专注播放', exact: true }).click();
+  await expect(page).toHaveURL(/\/home\/view/);
   await expect(video).toBeVisible();
   await expect(video).toHaveAttribute('src', /^blob:/);
   const ownedVideo = await video.elementHandle();

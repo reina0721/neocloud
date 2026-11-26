@@ -104,11 +104,11 @@ test('文件阅读成功与操作通知在真实路由中各出现一次', async
   const folder = await createFiles(page);
   await page.goto('/home?parent=' + folder.id);
   await page.getByRole('button', { name: '报告-01.txt', exact: true }).click();
-  const editor = page.getByRole('dialog', { name: '报告-01.txt', exact: true });
-  await expect(editor).toBeVisible();
+  const preview = page.getByRole('dialog', { name: '报告-01.txt', exact: true });
+  await expect(preview.locator('[data-file-text-preview] pre')).toHaveText('review');
   await expect(page.getByText('此文件或阅读应用当前不可用。', { exact: true })).toHaveCount(0);
-  await editor.getByRole('button', { name: '关闭', exact: true }).click();
-  await expect(editor).toHaveCount(0);
+  await preview.getByRole('button', { name: '关闭', exact: true }).click();
+  await expect(preview).toHaveCount(0);
 
   await page.getByRole('button', { name: '报告-02.txt', exact: true }).click({ button: 'right' });
   await page.getByRole('menuitem', { name: '重命名', exact: true }).click();

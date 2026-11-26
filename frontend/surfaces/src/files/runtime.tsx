@@ -10,7 +10,7 @@ import {
 } from 'react';
 import type { ConnectionsPort } from './connections';
 import type { DownloadsPort } from './downloads';
-import type { FileEntry, FilesPort, PublicFilesPort } from './model';
+import type { FileEntry, FilesError, FilesPort, PublicFilesPort } from './model';
 import type { NavigationPort } from './navigation';
 import type { FileDocumentProps } from './pdf-contract';
 import type { ArchivesPort } from './archives';
@@ -35,6 +35,7 @@ export type ImageCopyDestinationProps = Readonly<{
 }>;
 export type ImageEditingAccess = Readonly<{
   entry: FileEntry;
+  openOnMount?: boolean;
   draft?: ReaderDraftHandle;
   workspace?: Readonly<{
     visible: boolean;
@@ -47,18 +48,32 @@ export type ImageEditingAccess = Readonly<{
   onVersionPublished: (entry: FileEntry, signal: AbortSignal) => Promise<void>;
 }>;
 
+export type VideoPlaybackHandoff = Readonly<{
+  position: number;
+  volume: number;
+  muted: boolean;
+  playing: boolean;
+  subtitle?: string;
+  quality?: number;
+}>;
+
 export type FileMediaProps = Readonly<{
   entry: Pick<FileEntry, 'id' | 'name' | 'mediaType' | 'sizeBytes' | 'contentRevision'>;
   mode: 'preview' | 'thumbnail' | 'inline';
   alt?: string;
   maxBytes: number;
   version?: number;
+  presentation?: 'quick';
+  resumeVideo?: VideoPlaybackHandoff;
+  registerVideoHandoff?: (capture: (() => VideoPlaybackHandoff | undefined) | undefined) => void;
+  onReady?: () => void;
+  onFailure?: (error: FilesError) => void;
   /** 仅在当前本人文件通过视频应用打开 M3U8 时提供。 */
   videoPlaylist?: Readonly<{ download: () => void }>;
   playback?: Readonly<{
     presentation: 'reader' | 'mini' | 'parked';
     position?: number;
-    onPosition: (seconds: number) => void;
+    onPosition?: (seconds: number) => void;
   }>;
   /** 只由本人当前文件预览提供。 */
   imageEditing?: ImageEditingAccess;

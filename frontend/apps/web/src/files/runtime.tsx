@@ -32,7 +32,7 @@ import { FileMediaView, type ImageToolsProps, type VideoToolsProps } from './med
 import type { MusicRequest } from './music-player';
 import { createReaderPersistence } from './reader-persistence';
 import { downloadBlob } from './native-download';
-import { createReaderAudioFocus } from './reader-playback';
+import { createReaderAudioFocus, type VideoHandoffBuffers } from './reader-playback';
 import { MusicDock } from './music-dock';
 
 const PDFReader = lazy(() =>
@@ -135,7 +135,14 @@ export function FilesRuntime({
   const Media = useMemo(() => {
     if (!runtime || !claimAudio) return undefined;
     const { readMedia, subtitles, queueImageCopy, publishImageVersion, openPrivateHls } = runtime;
-    function VideoTools({ entry, media, presentation }: VideoToolsProps) {
+    const retainedVideo: VideoHandoffBuffers = new WeakMap();
+    function VideoTools({
+      entry,
+      media,
+      presentation,
+      initialChoice,
+      onChoiceChange,
+    }: VideoToolsProps) {
       return (
         <Suspense>
           <VideoSubtitles
@@ -144,17 +151,20 @@ export function FilesRuntime({
             entry={entry}
             media={media}
             {...(presentation ? { presentation } : {})}
+            {...(initialChoice === undefined ? {} : { initialChoice })}
+            {...(onChoiceChange ? { onChoiceChange } : {})}
           />
         </Suspense>
       );
     }
     function ImageTools(props: ImageToolsProps) {
       const { t } = useFrontendTranslation();
-      const [open, setOpen] = useState(false);
+      const [open, setOpen] = useState(Boolean(props.editing.openOnMount && !props.editing.draft));
       const [stored, setStored] = useState<ReaderDraft>();
       const [failed, setFailed] = useState(false);
       const exportRequest = useRef<AbortController | null>(null);
       const disk = props.editing.draft;
+      const openOnMount = props.editing.openOnMount;
       const revision = props.editing.entry.contentRevision;
       const conflict = stored && stored.revision !== revision ? stored : undefined;
       useEffect(() => {
@@ -164,16 +174,18 @@ export function FilesRuntime({
           .then((draft) => {
             if (!active) return;
             setStored(draft);
-            if (draft?.revision === revision) setOpen(true);
+            if (draft?.revision === revision || openOnMount) setOpen(true);
           })
           .catch(() => {
-            if (active) setFailed(true);
+            if (!active) return;
+            setFailed(true);
+            if (openOnMount) setOpen(true);
           });
         return () => {
           active = false;
           exportRequest.current?.abort();
         };
-      }, [disk, revision]);
+      }, [disk, revision, openOnMount]);
       const label = t('files.editImage');
       return (
         <div className="flex flex-wrap items-center gap-2">
@@ -253,6 +265,7 @@ export function FilesRuntime({
         <FileMediaView
           {...props}
           readContent={readMedia}
+          retainedVideo={retainedVideo}
           videoTools={VideoTools}
           claimAudio={claimAudio}
           {...(props.imageEditing ? { imageTools: ImageTools } : {})}
