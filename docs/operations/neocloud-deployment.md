@@ -134,32 +134,107 @@ bash scripts/deploy-docker.sh up --config ./deploy.env
 
 ## Release 下载版安装与升级
 
-下载版支持 Linux amd64、arm64，使用 SQLite 和本地文件存储。先完成[系统依赖](#安装-docker-与系统依赖)安装。安装脚本需要本机 Docker Unix socket、Compose 2.20 或更新版本、当前账户的 Docker 权限，以及可执行的 Cosign。发布验证使用 Cosign 2.6.5，可通过 `NEOCLOUD_COSIGN` 指定工具路径。在线方式从 GitHub Releases 下载并验签，离线方式使用单独准备的可信根校验同一套归档。两种方式均无需目标机安装 Go、Node.js 或 pnpm。安装前检查实例和数据盘、临时解包目录（默认 `/tmp`，可通过 `TMPDIR` 调整）以及 Docker 存储目录的可用空间。安装器会暂存下载归档和解包后的 `images.tar`，Docker 导入后还需要镜像空间。可通过 `docker info --format '{{.DockerRootDir}}'` 查看 Docker 存储目录。[Cosign 安装](https://docs.sigstore.dev/cosign/system_config/installation/)
+下载版支持 Linux amd64、arm64，使用 SQLite 和本地文件存储。安装器需要本机 Docker Unix socket、Compose 2.20 或更新版本和 Cosign。在线方式从 GitHub Releases 下载并验签，离线方式使用单独准备的可信根校验同一套归档。目标机无需 Go、Node.js 或 pnpm。安装器会暂存下载归档和解包后的 `images.tar`，Docker 导入后还需要镜像空间。可用 `TMPDIR` 指定临时解包目录，用 `docker info --format '{{.DockerRootDir}}'` 查看 Docker 存储目录。
 
 ### 安装指定正式版
 
-在目标正式版的 Assets 中确认有 `install.sh`、目标架构的 `neocloud_<tag>_linux_<arch>_docker.tar.gz`、`checksums.txt` 和 `checksums.txt.sigstore.json`。附件齐全后，在部署账号的 Bash 终端输入该正式标签，下载脚本。附件尚未齐全时，请[从源码部署](#从源码部署)。[GitHub Releases](https://github.com/reina0721/neocloud/releases)
+在联网且使用 systemd 的 Debian 12/13 或 Ubuntu 22.04/24.04/26.04（amd64、arm64）服务器上，用 root 的 Bash 终端复制执行下面整段。命令会补齐系统工具、Docker 和 Compose，校验并安装 Cosign 2.6.5，然后验签、启动已公开的 NeoCloud v0.4.3。已有可用的 Docker 和 Compose 会直接复用。其他发行版可按 Docker 官方说明准备系统依赖。[Docker Debian 安装](https://docs.docker.com/engine/install/debian/) · [Docker Ubuntu 安装](https://docs.docker.com/engine/install/ubuntu/) · [Cosign 官方附件与摘要](https://github.com/sigstore/cosign/releases/expanded_assets/v2.6.5) · [NeoCloud v0.4.3 公开附件](https://github.com/reina0721/neocloud/releases/tag/v0.4.3)
 
 ```bash
-installer=
-read -r -p '输入已确认附件齐全的 NeoCloud 正式标签：' tag &&
-  [[ $tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] &&
-  installer_dir=$(mktemp -d) &&
-  curl -fsSL --proto '=https' --proto-redir '=https' \
-    "https://github.com/reina0721/neocloud/releases/download/$tag/install.sh" -o "$installer_dir/install.sh" &&
-  installer="$installer_dir/install.sh"
+(
+  set -euo pipefail
+  tag=v0.4.3
+  bind=0.0.0.0
+  port=4180
+  instance="$HOME/neocloud"
+
+  [[ $EUID == 0 ]] || { echo '请在 root 的 Bash 终端执行。' >&2; exit 1; }
+  . /etc/os-release
+  case "${ID:-}:${VERSION_ID:-}" in
+    debian:12|debian:13|ubuntu:22.04|ubuntu:24.04|ubuntu:26.04) ;;
+    *) echo '此段命令适用于 Debian 12/13 和 Ubuntu 22.04/24.04/26.04。' >&2; exit 1 ;;
+  esac
+  arch=$(dpkg --print-architecture)
+  case "$arch" in
+    amd64) cosign_sha=c3b4f5410e608af03a5eb0aaac84a4313d8da131248e08ff1759ac70c79d1644 ;;
+    arm64) cosign_sha=426193b4c5da4d4d643e822f48fe0cc8a476ca1782a272704831f5a0cef716d7 ;;
+    *) echo 'NeoCloud Docker 正式包支持 amd64 和 arm64。' >&2; exit 1 ;;
+  esac
+
+  work=$(mktemp -d)
+  trap 'rm -rf -- "$work"' EXIT
+  cd "$work"
+  export DEBIAN_FRONTEND=noninteractive
+  curl_opts=(-fsSL --proto '=https' --proto-redir '=https')
+  apt-get update
+  apt-get install -y --no-remove ca-certificates curl coreutils diffutils grep gzip iproute2 mawk sed tar util-linux
+
+  compose_ready() {
+    local version
+    version=$(docker compose version --short 2>/dev/null) &&
+      dpkg --compare-versions "${version#v}" ge 2.20
+  }
+  docker_packages=()
+  if ! command -v docker >/dev/null; then
+    docker_packages=(docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin)
+  elif ! compose_ready; then
+    docker_packages=(docker-compose-plugin)
+  fi
+  if [[ -n ${docker_packages[0]:-} ]]; then
+    if ! apt-cache show "${docker_packages[0]}" >/dev/null 2>&1; then
+      docker_repo="https://download.docker.com/linux/$ID"
+      curl "${curl_opts[@]}" "$docker_repo/gpg" -o docker.asc
+      install -d -m 0755 /etc/apt/keyrings
+      install -m 0644 docker.asc /etc/apt/keyrings/docker.asc
+      cat > /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: $docker_repo
+Suites: $VERSION_CODENAME
+Components: stable
+Architectures: $arch
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+      apt-get update
+    fi
+    apt-get install -y --no-remove "${docker_packages[@]}"
+  fi
+  if [[ ${docker_packages[0]:-} == docker-ce ]]; then
+    systemctl enable --now docker
+  elif ! docker info >/dev/null 2>&1; then
+    systemctl start docker
+  fi
+  docker info --format '{{.OSType}}/{{.Architecture}}'
+  compose_ready || { echo '需要 Docker Compose 2.20 或更新版本。' >&2; exit 1; }
+
+  cosign=/usr/local/bin/cosign-v2.6.5
+  if [[ ! -x $cosign ]] || ! printf '%s  %s\n' "$cosign_sha" "$cosign" | sha256sum --check --status; then
+    curl "${curl_opts[@]}" "https://github.com/sigstore/cosign/releases/download/v2.6.5/cosign-linux-$arch" -o cosign
+    printf '%s  %s\n' "$cosign_sha" cosign | sha256sum --check --strict
+    mkdir -p /usr/local/bin
+    install -m 0755 cosign "$cosign"
+  fi
+  if [[ ! -e /usr/local/bin/cosign && ! -L /usr/local/bin/cosign ]]; then
+    ln -s "$cosign" /usr/local/bin/cosign
+  fi
+
+  release="https://github.com/reina0721/neocloud/releases/download/$tag"
+  for asset in install.sh checksums.txt checksums.txt.sigstore.json; do
+    curl "${curl_opts[@]}" "$release/$asset" -o "$asset"
+  done
+  "$cosign" verify-blob --new-bundle-format --bundle checksums.txt.sigstore.json \
+    --certificate-identity "https://github.com/reina0721/neocloud/.github/workflows/release.yml@refs/tags/$tag" \
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com checksums.txt
+  awk '$2 == "install.sh" {print}' checksums.txt | sha256sum --check --strict
+  NEOCLOUD_COSIGN="$cosign" bash ./install.sh install --version "$tag" --dir "$instance" --bind "$bind" --port "$port"
+  curl --noproxy '*' -fsS "http://127.0.0.1:$port/api/console/v1/auth/registration-policy" -o /dev/null
+)
 ```
 
-下载成功后，在同一 Bash 会话中运行脚本，安装时使用同一标签。下载失败时 `installer` 为空，以下命令会停止。本例绑定回环地址并显式使用 `4180`。安装器默认目录为 `~/neocloud`，默认端口为 `4173`。
+命令以 `0.0.0.0:4180` 监听，成功后打开 `http://服务器IP:4180/setup`。运行 `cat "$HOME/neocloud/.control/setup-token"` 读取令牌并创建管理员。令牌文件权限为 `0600`，应仅交给负责初始化的管理员。如果使用 SSH 隧道或本机反向代理，可把命令开头的 `bind` 改为 `127.0.0.1`。[远程访问与 HTTPS](#远程访问与-https)
 
-```bash
-bash "${installer:?请先成功下载安装脚本}" --help &&
-  bash "$installer" install --version "$tag" --dir "$HOME/neocloud" --bind 127.0.0.1 --port 4180 &&
-  "$HOME/neocloud/install.sh" status &&
-  curl -fsS http://127.0.0.1:4180/api/console/v1/auth/registration-policy
-```
+首次登录后可上传一个小文件，再运行 `"$HOME/neocloud/install.sh" restart` 并确认仍可下载原文件。
 
-在服务器打开 `http://127.0.0.1:4180/setup`，或按[远程访问](#ssh-隧道与局域网访问)从自己的电脑访问。运行 `cat "$HOME/neocloud/.control/setup-token"` 读取令牌，在设置页创建管理员。令牌文件权限为 `0600`，应仅交给负责初始化的管理员。创建管理员后登录并上传一个小文件，运行 `"$HOME/neocloud/install.sh" restart`，再登录确认可以下载原文件。
+安装中断时可以重跑整段。升级、导入或启用网页运维时，也可为管理命令传入 `NEOCLOUD_COSIGN=/usr/local/bin/cosign-v2.6.5`。换用其他 NeoCloud 版本前，先确认该版本已公开发布并提供安装脚本、目标架构的 Docker 归档与签名校验附件，再修改命令中的 `tag`。[GitHub Releases](https://github.com/reina0721/neocloud/releases)
 
 | 项目 | 上例的实际位置或名称 |
 | --- | --- |
@@ -168,7 +243,7 @@ bash "${installer:?请先成功下载安装脚本}" --help &&
 | Compose 项目 | `neocloud-<安装目录 SHA-256 的前 12 位>`，以解析后的绝对路径派生 |
 | 容器和网络 | `<项目>-backend-1`、`<项目>-web-1`、`<项目>_default` |
 | 镜像 | `neocloud-api:<版本>-<架构>`、`neocloud-web:<版本>-<架构>` |
-| 端口 | 宿主机 `127.0.0.1:4180` 映射到 Web 容器 `4173/tcp`。Go 的 `8080` 和 `9090` 在容器网络内 |
+| 端口 | 宿主机 `0.0.0.0:4180` 映射到 Web 容器 `4173/tcp`。Go 的 `8080` 和 `9090` 在容器网络内 |
 
 #### 安装参数
 
@@ -192,12 +267,12 @@ bash "${installer:?请先成功下载安装脚本}" --help &&
 
 ### 自定义实例与安装检查
 
-自定义实例需要归档声明 `INSTANCE_LAYOUT=1`。可在上述下载成功后，用下列命令替换默认安装步骤，沿用同一 Bash 会话中的 `installer` 和 `tag`。以下使用由部署账户拥有的路径，也可指定已授权的 `/opt/`、`/mnt/` 专用目录。
+自定义实例需要归档声明 `INSTANCE_LAYOUT=1`。可用下面的命令替换上面代码块最后的安装和 HTTP 检查两行，沿用验签后的脚本和 `tag`。以下使用由部署账户拥有的路径，也可指定已授权的 `/opt/`、`/mnt/` 专用目录。
 
 ```bash
-bash "${installer:?请先成功下载安装脚本}" plan --check --version "$tag" --name cloud-main --dir "$HOME/neocloud-main" \
+bash ./install.sh plan --check --version "$tag" --name cloud-main --dir "$HOME/neocloud-main" \
   --data-dir "$HOME/cloud-data/cloud-main" --bind 127.0.0.1 --port 44180 &&
-  bash "$installer" install --version "$tag" --name cloud-main --dir "$HOME/neocloud-main" \
+  NEOCLOUD_COSIGN="$cosign" bash ./install.sh install --version "$tag" --name cloud-main --dir "$HOME/neocloud-main" \
     --data-dir "$HOME/cloud-data/cloud-main" --bind 127.0.0.1 --port 44180
 ```
 
@@ -209,7 +284,7 @@ bash "${installer:?请先成功下载安装脚本}" plan --check --version "$tag
 
 ### 安装向导
 
-脚本下载成功后，可将默认安装步骤替换为 `bash "${installer:?请先成功下载安装脚本}" --version "$tag"`。向导询问安装目录、监听地址、端口和是否启用网页运维。新安装默认 `~/neocloud`、`0.0.0.0:4173`，局域网访问按[下方说明](#ssh-隧道与局域网访问)设置。安装器检查附件摘要和镜像身份，导入两张配套镜像，迁移数据库后启动并检查就绪。没有交互终端时使用 `install` 或 `--yes`。
+需要交互式安装时，可将上面代码块最后的安装和 HTTP 检查两行替换为 `NEOCLOUD_COSIGN="$cosign" bash ./install.sh --version "$tag"`。向导询问安装目录、监听地址、端口和是否启用网页运维。新安装默认 `~/neocloud`、`0.0.0.0:4173`。首次安装中断后，使用带 `install` 子命令的在线安装块重试原版本。
 
 ### 自动化与离线安装
 

@@ -26,7 +26,7 @@
 | [Docker 源码构建](docs/operations/neocloud-deployment.md#从源码部署) | Linux amd64/arm64 | Git、Docker Engine、Compose 和构建所需的网络访问 | `4180` |
 | [无 Docker 源码部署](docs/operations/neocloud-deployment.md#构建与进程) | Windows amd64、Linux amd64/arm64 | 构建用 Git、Go 和 Node，运行打包后的 Web Host 用 Node | `4173` |
 | [原生整包](docs/operations/backend-archive.md#运行原生-go-与-web-整包) | Windows amd64、Linux amd64/arm64 | 签名整包和 Cosign，网页由 Go 宿主提供 | `8080` |
-| [Docker 正式版](docs/operations/neocloud-deployment.md#release-下载版安装与升级) · [离线安装](docs/operations/neocloud-deployment.md#自动化与离线安装) | Linux amd64/arm64 | Docker Engine、Compose 和 Cosign，镜像从 GitHub Release 归档导入 | `4173` |
+| [Docker 正式版在线安装](docs/operations/neocloud-deployment.md#安装指定正式版) · [离线安装](docs/operations/neocloud-deployment.md#自动化与离线安装) | Linux amd64/arm64 | 在线命令会补齐系统依赖、Docker、Compose 和 Cosign | `4173`（在线示例 `4180`） |
 
 首次启动后，访问所选入口的 `/setup`，使用该实例的设置令牌创建管理员。服务器只监听回环地址时，可用 SSH 转发完成设置，再配置对外访问。[远程访问与 HTTPS](docs/operations/neocloud-deployment.md#远程访问与-https)
 
