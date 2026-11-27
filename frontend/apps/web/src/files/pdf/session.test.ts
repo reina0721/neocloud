@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { PDFFrameSession, checkedOutline } from './session';
-import { emptyPdfState, isPdfCommand, pdfProtocolVersion } from './protocol';
+import { emptyPdfState, isPdfCommand, isPdfOpen, pdfProtocolVersion } from './protocol';
 import type { PDFReaderLimits } from '@clouddrive/surface/files';
 const limits: PDFReaderLimits = {
   maxBytes: 1024,
@@ -14,6 +14,7 @@ const limits: PDFReaderLimits = {
   workTimeoutMs: 30000,
   workerReadyTimeoutMs: 10000,
 };
+const preview = { presentation: 'preview', fit: 'page-fit' } as const;
 afterEach(() => vi.useRealTimers());
 describe('PDF frame协议与生命周期', () => {
   it('只接受明确指令、有限比例和有界查询', () => {
@@ -36,6 +37,28 @@ describe('PDF frame协议与生命周期', () => {
     expect(() => checkedOutline([leaf, leaf], { ...limits, maxOutlineEntries: 1 })).toThrow();
     expect(() => checkedOutline([{ ...leaf, title: 'x'.repeat(4097) }], limits)).toThrow();
   });
+  it('预览启动验证适配模式和移交位置', () => {
+    const message = {
+      kind: 'open',
+      nonce: 'n',
+      id: 1,
+      limits,
+      bytes: new ArrayBuffer(5),
+      locale: 'zh-CN',
+      theme: 'light',
+    };
+    expect(isPdfOpen({ ...message, view: preview })).toBe(true);
+    expect(isPdfOpen({ ...message, view: { ...preview, fit: 'unknown' } })).toBe(false);
+    expect(
+      isPdfOpen({ ...message, view: { ...preview, initialPosition: { page: 0, scale: 1 } } }),
+    ).toBe(false);
+    expect(
+      isPdfOpen({ ...message, view: { ...preview, initialPosition: { page: 2, scale: 1.25 } } }),
+    ).toBe(true);
+    expect(isPdfOpen({ ...message, view: { ...preview, initialPosition: { page: 2 } } })).toBe(
+      true,
+    );
+  });
   it('拒绝其他窗口/来源/旧nonce，关闭后拒绝迟到消息并移除frame内容', async () => {
     const frame = document.createElement('iframe');
     document.body.append(frame);
@@ -47,7 +70,7 @@ describe('PDF frame协议与生命周期', () => {
       close: vi.fn(),
     };
     const session = new PDFFrameSession(frame, limits, cb);
-    const opened = session.open(new ArrayBuffer(5), 'zh-CN', 'light');
+    const opened = session.open(new ArrayBuffer(5), 'zh-CN', 'light', preview);
     const child = frame.contentWindow!;
     const post = vi.spyOn(child, 'postMessage').mockImplementation(() => {});
     const send = (data: unknown, origin = location.origin, source: MessageEventSource = child) =>
@@ -69,7 +92,7 @@ describe('PDF frame协议与生命周期', () => {
     session.forceClose();
     send(event);
     expect(cb.ready).toHaveBeenCalledOnce();
-    expect(frame.getAttribute('src')).toBe('about:blank');
+    expect(child.location.href).toBe('about:blank');
     await expect(session.command({ kind: 'save' })).rejects.toMatchObject({ code: 'canceled' });
     frame.remove();
   });
@@ -85,11 +108,11 @@ describe('PDF frame协议与生命周期', () => {
       close: vi.fn(),
     };
     const session = new PDFFrameSession(frame, limits, cb);
-    const pending = session.open(new ArrayBuffer(5), 'en', 'light');
+    const pending = session.open(new ArrayBuffer(5), 'en', 'light', preview);
     await vi.advanceTimersByTimeAsync(limits.workerReadyTimeoutMs);
     await pending;
     expect(cb.error).toHaveBeenCalledWith(expect.objectContaining({ code: 'timeout' }));
-    expect(frame.getAttribute('src')).toBe('about:blank');
+    expect(frame.contentWindow?.location.href).toBe('about:blank');
     frame.remove();
   });
 });

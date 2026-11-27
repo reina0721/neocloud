@@ -20,6 +20,7 @@ profile.*
 config.yaml
 config.yml
 config.json
+deploy.env
 
 **/node_modules
 **/.env

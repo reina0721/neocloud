@@ -3,10 +3,19 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
-import { cp, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import {
+  cp,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readlink,
+  rm,
+  rmdir,
+  writeFile,
+} from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { setTimeout } from "node:timers/promises";
 import { chromium } from "../frontend/node_modules/@playwright/test/index.mjs";
@@ -32,6 +41,9 @@ const candidate = resolve(values.candidate);
 const version = values.version;
 const baseline = values.baseline && resolve(values.baseline);
 const baselineVersion = values["baseline-version"] ?? version;
+const trustDir = process.env.CLOUDDRIVE_OFFLINE_TRUST_DIR;
+assert.ok(trustDir, "需要独立提供 CLOUDDRIVE_OFFLINE_TRUST_DIR");
+const cosign = process.env.CLOUDDRIVE_COSIGN ?? "cosign";
 const arch = process.arch === "x64" ? "amd64" : process.arch;
 assert.match(arch, /^(amd64|arm64)$/);
 const tool = resolve(
@@ -50,6 +62,7 @@ await new Promise((done) => socket.close(done));
 const origin = `http://127.0.0.1:${port}`;
 let project;
 let browser;
+let workerOverride;
 
 function run(command, args) {
   const result = spawnSync(command, args, {
@@ -59,6 +72,72 @@ function run(command, args) {
   });
   assert.equal(result.status, 0, result.error?.message ?? result.stderr);
   return result.stdout.trim();
+}
+
+function airgap(command, args) {
+  return run("unshare", ["--net", "--", command, ...args]);
+}
+
+const imageRefs = (tag) =>
+  ["api", "web"].map((part) => `clouddrive-${part}:${tag}-${arch}`);
+
+function baselineImageExists(ref) {
+  const result = spawnSync("docker", ["image", "inspect", ref], {
+    encoding: "utf8",
+    timeout: 15000,
+  });
+  if (result.status === 0) return true;
+  assert.match(result.stderr ?? "", /no such image|no such object/i);
+  return false;
+}
+
+function removeFixtureImages(refs) {
+  for (const ref of refs) {
+    const users = run("docker", [
+      "ps",
+      "--all",
+      "--filter",
+      `ancestor=${ref}`,
+      "--format",
+      "{{.Names}}",
+    ]);
+    assert.equal(users, "", `旧镜像仍被容器使用：${ref}`);
+  }
+  run("docker", ["image", "rm", ...refs]);
+  assert.ok(refs.every((ref) => !baselineImageExists(ref)));
+}
+
+async function isolateWorker() {
+  const unit = project + "-maintenance.service";
+  const directory = join("/run/systemd/system", unit + ".d");
+  await mkdir(directory, { mode: 0o755 });
+  workerOverride = join(directory, "90-clouddrive-offline-test.conf");
+  // Docker 和网关通过路径 Unix Socket 通信。就绪检查在容器内执行。
+  await writeFile(workerOverride, "[Service]\nPrivateNetwork=yes\n", {
+    flag: "wx",
+    mode: 0o644,
+  });
+  run("systemctl", ["daemon-reload"]);
+  run("systemctl", ["restart", unit]);
+  const pid = run("systemctl", ["show", unit, "--property=MainPID", "--value"]);
+  assert.match(pid, /^[1-9]\d*$/);
+  assert.notEqual(
+    await readlink(`/proc/${pid}/ns/net`),
+    await readlink("/proc/self/ns/net"),
+    "维护进程没有进入独立网络命名空间",
+  );
+  const ns = (...args) =>
+    run("nsenter", ["--target", pid, "--net", "--", ...args]);
+  assert.match(ns("ip", "-o", "link", "show"), /^\d+: lo: [^\n]+$/);
+  assert.equal(ns("ip", "route", "show", "default"), "");
+  assert.equal(ns("ip", "-6", "route", "show", "default"), "");
+  await wait(async () => {
+    const response = await fetch(origin + "/login", {
+      headers: { Connection: "close" },
+      signal: AbortSignal.timeout(15000),
+    });
+    return response.ok;
+  }, "断网维护进程、Docker Unix Socket 与原站点恢复就绪");
 }
 
 const read = async (path) => (await readFile(path, "utf8")).trim();
@@ -103,10 +182,36 @@ async function restorePoint(page, id) {
   await details.getByRole("button", { name: "恢复此备份" }).click();
 }
 
+async function finishedJob(id, action) {
+  return wait(async () => {
+    const journal = JSON.parse(await read(join(ctrl, "state.json")));
+    const matches = journal.jobs.filter((job) => job.id === id);
+    assert.ok(matches.length <= 1, "同一编号只能有一个持久化维护任务");
+    const job = matches[0];
+    return job?.action === action && job.finished ? job : null;
+  }, `维护任务完成：${action}`);
+}
+
 try {
   const initialBundle = baseline ?? candidate;
   const installer = join(initialBundle, "install.sh");
-  run("bash", [
+  const previousRefs = baseline ? imageRefs(baselineVersion) : [];
+  const ownsPreviousImages =
+    baseline && previousRefs.every((ref) => !baselineImageExists(ref));
+  if (baseline) {
+    airgap(tool, [
+      "verify-release",
+      "--release-dir",
+      baseline,
+      "--version",
+      baselineVersion,
+      "--trust-dir",
+      trustDir,
+      "--asset",
+      "install.sh",
+    ]);
+  }
+  airgap("bash", [
     installer,
     "install",
     "--dir",
@@ -118,11 +223,15 @@ try {
       : ["--bind", "127.0.0.1", "--public-url", origin, "--allow-http"]),
     "--release-dir",
     initialBundle,
+    ...(baseline ? [] : ["--trust-dir", trustDir]),
     "--version",
     baselineVersion,
   ]);
   project = await read(join(root, ".control", "project"));
   assert.match(project, /^clouddrive-[0-9a-f]{12}$/);
+  const imageID = (ref) =>
+    run("docker", ["image", "inspect", "--format", "{{.Id}}", ref]);
+  const previousImageIDs = previousRefs.map(imageID);
   const account = {
     email: "maintenance-owner@clouddrive.test",
     password: randomBytes(24).toString("base64url"),
@@ -167,24 +276,19 @@ try {
   if (baseline) await cp(resolve("install.sh"), join(root, "install.sh"));
   console.log("已初始化真实实例和文件，开始交接站点端口");
   if (baseline || values.tool) {
-    run(tool, [
-      "enable",
-      "--root",
-      root,
-      "--cosign",
-      process.env.CLOUDDRIVE_COSIGN ?? "cosign",
-    ]);
+    run(tool, ["enable", "--root", root, "--cosign", cosign]);
   } else {
-    const verifier = process.env.CLOUDDRIVE_COSIGN ?? "cosign";
     run("env", [
       "PATH=" +
-        (verifier.includes("/") ? resolve(verifier, "..") + ":" : "") +
+        (cosign.includes("/") ? resolve(cosign, "..") + ":" : "") +
         process.env.PATH,
       "bash",
       join(root, "install.sh"),
       "enable-web-management",
       "--release-dir",
       candidate,
+      "--trust-dir",
+      trustDir,
     ]);
   }
   const gateway = await fetch(origin + "/maintenance", {
@@ -196,6 +300,7 @@ try {
   const cfg = JSON.parse(await read(join(ctrl, "gateway.json")));
   assert.match(cfg.upstream, /^127\.0\.0\.1:\d+$/);
   assert.notEqual(cfg.upstream, `127.0.0.1:${port}`);
+  await isolateWorker();
 
   browser = await chromium.launch({
     executablePath: process.env.CLOUDDRIVE_CHROMIUM,
@@ -211,7 +316,9 @@ try {
   const visitor = await browser.newPage();
   await visitor.goto(origin + "/maintenance");
   assert.equal(
-    await visitor.getByRole("button", { name: "检查正式版" }).count(),
+    await visitor
+      .getByRole("button", { name: "检查本地包", exact: true })
+      .count(),
     0,
   );
   await visitor.getByLabel("恢复凭据", { exact: true }).fill("invalid");
@@ -230,7 +337,9 @@ try {
 
   await page.goto(origin + "/maintenance");
   const hasOwner = async () =>
-    (await page.getByRole("button", { name: "检查正式版" }).count()) > 0;
+    (await page
+      .getByRole("button", { name: "检查本地包", exact: true })
+      .count()) > 0;
   if (baseline && !(await hasOwner())) {
     await page
       .getByLabel("恢复凭据", { exact: true })
@@ -238,55 +347,75 @@ try {
     await page.getByRole("button", { name: "进入维护" }).click();
   }
   if (baseline) {
-    const assets = join(ctrl, "assets", version);
-    await mkdir(assets, { recursive: true });
-    for (const name of [
-      "checksums.txt",
-      "checksums.txt.sigstore.json",
-      `clouddrive_${version}_linux_${arch}_docker.tar.gz`,
-    ])
-      await cp(join(candidate, name), join(assets, name));
-    // 发布草稿的版本已固定。暂存同签名的附件，再从浏览器提交升级任务。
-    const portState = join(ctrl, "state.json");
-    await wait(
-      async () => JSON.parse(await read(portState)).current === baselineVersion,
-      "旧实例注册",
+    assert.equal(
+      await page
+        .getByRole("button", { name: `从本地包升级到 ${version}`, exact: true })
+        .count(),
+      0,
     );
-    const csrfInput = await page
-      .locator('input[name="csrf"]')
-      .first()
-      .inputValue();
-    const request = () =>
-      page.request.post(origin + "/maintenance", {
-        headers: { Origin: origin },
-        maxRedirects: 0,
-        form: {
-          action: "upgrade",
-          target: version,
-          expected: baselineVersion,
-          id: requestID,
-          csrf: csrfInput,
-        },
-      });
-    const requestID = randomBytes(16).toString("hex");
-    const responses = await Promise.all([request(), request()]);
-    assert.ok(responses.every((res) => res.status() === 303));
-    const observed = await wait(async () => {
-      const res = await fetch(origin + "/dav/release-fixture/", {
-        method: "PROPFIND",
-      });
-      return res.status === 503 ? res : null;
-    }, "停机期间 WebDAV 返回 503");
-    assert.ok(observed.headers.get("Retry-After"));
-    await page.goto(origin + "/maintenance");
-    await page.getByRole("heading", { name: "本次任务" }).waitFor();
-    await wait(
-      async () => (await read(join(root, ".control", "current"))) === version,
-      "升级并提交新版本",
-    );
+    for (const [bundle, tag] of [
+      [baseline, baselineVersion],
+      [candidate, version],
+    ]) {
+      const imported = airgap(tool, [
+        "import-release",
+        "--root",
+        root,
+        "--release-dir",
+        bundle,
+        "--version",
+        tag,
+        "--trust-dir",
+        trustDir,
+      ]);
+      assert.equal(JSON.parse(imported).version, tag);
+    }
+    await page.getByRole("button", { name: "检查本地包", exact: true }).click();
     await page
       .getByRole("status")
-      .filter({ hasText: /操作完成/ })
+      .filter({ hasText: /检查本地包.*操作完成/ })
+      .waitFor({ timeout: 90000 });
+    const localReleases = page.locator(".local-releases");
+    await localReleases.getByText(baselineVersion, { exact: true }).waitFor();
+    const upgrade = localReleases.getByRole("button", {
+      name: `从本地包升级到 ${version}`,
+      exact: true,
+    });
+    await upgrade.locator("..").getByLabel("确认停服备份和升级").check();
+    const [original, observed] = await Promise.all([
+      page.waitForRequest(
+        (req) =>
+          req.method() === "POST" &&
+          req.url() === origin + "/maintenance" &&
+          new URLSearchParams(req.postData()).get("action") === "upgrade",
+      ),
+      wait(async () => {
+        const res = await fetch(origin + "/dav/release-fixture/", {
+          method: "PROPFIND",
+          signal: AbortSignal.timeout(15000),
+        });
+        return res.status === 503 ? res : null;
+      }, "停机期间 WebDAV 返回 503"),
+      upgrade.click(),
+    ]);
+    assert.ok(observed.headers.get("Retry-After"));
+    const fields = Object.fromEntries(new URLSearchParams(original.postData()));
+    assert.equal(fields.source, "offline");
+    assert.equal(fields.target, version);
+    assert.equal(fields.expected, baselineVersion);
+    const retry = await page.request.post(origin + "/maintenance", {
+      headers: { Origin: origin },
+      maxRedirects: 0,
+      form: fields,
+    });
+    assert.equal(retry.status(), 303);
+    const installed = await finishedJob(fields.id, "upgrade");
+    assert.equal(installed.phase, "succeeded", installed.result);
+    assert.equal(installed.offline, true);
+    assert.equal(await read(join(root, ".control", "current")), version);
+    await page
+      .getByRole("status")
+      .filter({ hasText: /本地来源.*操作完成/ })
       .waitFor({ timeout: 90000 });
     assert.equal(await api("/native/files/" + sample.id + "/content"), content);
     await verifyShare();
@@ -332,7 +461,9 @@ try {
     );
     await visitor.goto(origin + "/maintenance");
     assert.equal(
-      await visitor.getByRole("button", { name: "检查正式版" }).count(),
+      await visitor
+        .getByRole("button", { name: "检查本地包", exact: true })
+        .count(),
       0,
     );
 
@@ -376,6 +507,11 @@ try {
       text: "after upgrade",
       key: randomUUID(),
     });
+    if (ownsPreviousImages) {
+      removeFixtureImages(previousRefs);
+    } else {
+      console.log("旧版本镜像在验收前已存在，保留原镜像并跳过清除测试");
+    }
     await page
       .getByRole("button", { name: `兼容回退到 ${baselineVersion}` })
       .click();
@@ -385,6 +521,7 @@ try {
       );
       return latest?.action === "rollback" && latest.finished ? latest : null;
     }, "网页兼容回退");
+    assert.equal(finalRollback.offline, true);
     const returned = await read(join(root, ".control", "current"));
     if (finalRollback.phase === "succeeded")
       assert.equal(returned, baselineVersion);
@@ -392,6 +529,7 @@ try {
       assert.equal(returned, version);
       assert.match(finalRollback.result, /不兼容/);
     }
+    assert.deepEqual(previousRefs.map(imageID), previousImageIDs);
     assert.equal(
       await api("/native/files/" + persistent.id + "/content"),
       "after upgrade",
@@ -403,6 +541,9 @@ try {
         .fill(await read(join(ctrl, "recovery-token")));
       await page.getByRole("button", { name: "进入维护" }).click();
     }
+    if (ownsPreviousImages && returned !== baselineVersion) {
+      removeFixtureImages(previousRefs);
+    }
     await restorePoint(page, previousData.id);
     await page
       .getByRole("status")
@@ -412,6 +553,7 @@ try {
       await read(join(root, ".control", "current")),
       baselineVersion,
     );
+    assert.deepEqual(previousRefs.map(imageID), previousImageIDs);
     assert.equal(await api("/native/files/" + sample.id + "/content"), content);
     await verifyShare();
     await api(
@@ -420,9 +562,11 @@ try {
       undefined,
       404,
     );
+    if (ownsPreviousImages)
+      console.log("删除测试旧镜像后，离线回退与恢复保留了原始镜像身份");
   }
   console.log(
-    `原生 Docker、systemd 与 Chromium 维护验收通过：${arch} ${baselineVersion} → ${version}`,
+    `原生 Docker、断网 systemd 维护进程与 Chromium 验收通过：${arch} ${baselineVersion} → ${version}`,
   );
 } finally {
   await browser?.close();
@@ -432,6 +576,10 @@ try {
       project + "-maintenance.service",
     ];
     spawnSync("systemctl", ["disable", "--now", ...units]);
+    if (workerOverride) {
+      await rm(workerOverride, { force: true });
+      await rmdir(dirname(workerOverride));
+    }
     const active = await read(join(root, ".control", "current"));
     run("docker", [
       "compose",

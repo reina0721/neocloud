@@ -1,10 +1,13 @@
 'use client';
+import { WorkspaceBrand, WorkspaceHeader } from '@clouddrive/surface-foundation/layout';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { CurrentSiteLogo, useSiteProfile } from '@clouddrive/surface/administration/runtime';
+import { useFileActionFeedback } from './use-file-action-feedback';
 import { Action } from '@clouddrive/ui-adapter/action';
+import { useNarrowLayout } from '@clouddrive/ui-adapter/browser-layout';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
 import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
-import { NavigationItem, NavigationTabs } from '@clouddrive/ui-adapter/destination-navigation';
+import { NavigationItem } from '@clouddrive/ui-adapter/destination-navigation';
 import { MobileNavigation } from '@clouddrive/ui-adapter/mobile-navigation';
 import { DrawerSurface } from '@clouddrive/ui-adapter/overlays';
 import { ProgressMeter } from '@clouddrive/ui-adapter/progress-meter';
@@ -67,6 +70,8 @@ import { useDirectoryTree } from './use-directory-tree';
 import { useWorkspaceRevision, WorkspaceCreateContext } from '../stores/workspace';
 import { ExplorerNavigation } from './explorer-navigation';
 import { FileLink } from './file-link';
+import { FileCategoryMenu } from './file-categories';
+import { fileCategoryKeys } from './file-category-keys';
 import { PinnedLinks } from './pinned-links';
 import { useReaderWorkspace } from './reader-workspace-context';
 import type { CreateAction } from './workspace-create';
@@ -98,8 +103,10 @@ export function FileWorkspace({
     snapshot = useTransferSnapshot(),
     { t, locale } = useFrontendTranslation();
   const { profile } = useSiteProfile();
+  const desktopNavigation = !useNarrowLayout();
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const siteName = profile?.name || t('files.brand');
+  const reportAction = useFileActionFeedback(pathname);
   const [revision, setRevision] = useWorkspaceRevision();
   const [emptyTrash, setEmptyTrash] = useState(false);
   const [trashRetention, setTrashRetention] = useState(false);
@@ -129,7 +136,6 @@ export function FileWorkspace({
     | 'error'
   >();
   const creationRequest = useRef<AbortController>(null);
-  useEffect(() => () => creationRequest.current?.abort(), [port]);
   function loadCreationMenu(open: boolean) {
     creationRequest.current?.abort();
     if (!open) return;
@@ -177,6 +183,7 @@ export function FileWorkspace({
   const isFiles = pathname === port.destinationHref('files'),
     isTransfers = pathname === port.destinationHref('transfers');
   const isTrash = isFiles && query.trash === 'true';
+  useEffect(() => () => creationRequest.current?.abort(), [desktopNavigation, isTrash, port]);
   const collapsed = sidebarSettings.collapsed;
   const directoryParent =
     isFiles && query.trash !== 'true' && !query.category ? (query.parent ?? '') : undefined;
@@ -272,7 +279,7 @@ export function FileWorkspace({
   ] as const;
   const categoryItems = [
     { key: '', label: 'files.nav', icon: <Home /> },
-    ...['image', 'video', 'audio', 'document'].map((key) => ({
+    ...fileCategoryKeys.map((key) => ({
       key,
       label: 'files.' + key,
       icon: (
@@ -329,6 +336,11 @@ export function FileWorkspace({
           </IconAction>
         ) : null}
       </div>
+      {!mobile && desktopNavigation && !isTrash ? (
+        <div className={rail ? 'mt-3 flex shrink-0 justify-center' : 'mt-3 flex shrink-0 px-3'}>
+          {renderCreationMenu(rail)}
+        </div>
+      ) : null}
       <nav
         aria-label={t('files.nav')}
         className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto pb-4"
@@ -488,80 +500,58 @@ export function FileWorkspace({
       ) : null}
     </div>
   );
-  const creationControl = (
-    <>
-      {isTrash ? (
-        <>
-          <Action
-            size="sm"
-            variant="danger"
-            leadingIcon={<Trash2 className="size-4" />}
-            onPress={() => setEmptyTrash(true)}
-          >
-            {t('files.trashPurge.empty')}
-          </Action>
-          <Action
-            size="sm"
-            variant="quiet"
-            leadingIcon={<Settings className="size-4" />}
-            onPress={() => setTrashRetention(true)}
-          >
-            {t('files.trashRetention.title')}
-          </Action>
-        </>
-      ) : (
-        <MenuButton
-          ariaLabel={t('files.new')}
-          triggerSize="sm"
-          triggerVariant="primary"
-          label={
-            <span className="flex items-center gap-1.5">
-              <FolderPlus className="size-4" />
-              <span className="hidden md:inline">{t('files.new')}</span>
-            </span>
+  function renderCreationMenu(iconOnly: boolean) {
+    return (
+      <MenuButton
+        ariaLabel={t('files.new')}
+        triggerVariant="primary"
+        label={
+          <span aria-hidden="true" className="flex items-center gap-1.5">
+            <FolderPlus className="size-4" />
+            {iconOnly ? null : <span>{t('files.new')}</span>}
+          </span>
+        }
+        items={[
+          { id: 'upload', label: t('files.upload') },
+          { id: 'directory', label: t('files.uploadDirectory') },
+          { id: 'clipboard', label: t('files.uploadClipboard') },
+          { id: 'folder', label: t('files.newFolder') },
+          ...templates.map(({ id, title }) => ({ id, label: title })),
+        ]
+          .map((item) => ({ ...item, disabled: !storage }))
+          .concat([
+            ...(storage && (!creationPolicy || creationPolicy === 'error')
+              ? [
+                  {
+                    id: 'creation-status',
+                    label:
+                      creationPolicy === 'error'
+                        ? locale.startsWith('zh')
+                          ? '无法读取新建文件映射，重新打开可重试。'
+                          : 'File mappings could not be loaded. Reopen the menu to retry.'
+                        : t('files.previewLoading'),
+                    disabled: true,
+                  },
+                ]
+              : []),
+            { id: 'downloads', label: t('files.downloads.title'), disabled: false },
+          ])}
+        onOpenChange={loadCreationMenu}
+        onAction={(action) => {
+          if (action === 'downloads') port.navigate('downloads');
+          else if (action === 'clipboard') {
+            port.focusFiles();
+            reportAction(t('files.workspace.clipboard'));
+          } else if (action === 'folder' || action === 'upload' || action === 'directory')
+            setCreate({ action });
+          else {
+            const template = templates.find((item) => item.id === action);
+            if (template) setCreate({ action: template.action, template });
           }
-          items={[
-            { id: 'upload', label: t('files.upload') },
-            { id: 'directory', label: t('files.uploadDirectory') },
-            { id: 'clipboard', label: t('files.uploadClipboard') },
-            { id: 'folder', label: t('files.newFolder') },
-            ...templates.map(({ id, title }) => ({ id, label: title })),
-          ]
-            .map((item) => ({ ...item, disabled: !storage }))
-            .concat([
-              ...(storage && (!creationPolicy || creationPolicy === 'error')
-                ? [
-                    {
-                      id: 'creation-status',
-                      label:
-                        creationPolicy === 'error'
-                          ? locale.startsWith('zh')
-                            ? '无法读取新建文件映射，重新打开可重试。'
-                            : 'File mappings could not be loaded. Reopen the menu to retry.'
-                          : t('files.previewLoading'),
-                      disabled: true,
-                    },
-                  ]
-                : []),
-              { id: 'downloads', label: t('files.downloads.title'), disabled: false },
-            ])}
-          onOpenChange={loadCreationMenu}
-          onAction={(action) => {
-            if (action === 'downloads') port.navigate('downloads');
-            else if (action === 'clipboard') {
-              port.focusFiles();
-              setNotice(t('files.workspace.clipboard'));
-            } else if (action === 'folder' || action === 'upload' || action === 'directory')
-              setCreate({ action });
-            else {
-              const template = templates.find((item) => item.id === action);
-              if (template) setCreate({ action: template.action, template });
-            }
-          }}
-        />
-      )}
-    </>
-  );
+        }}
+      />
+    );
+  }
   return (
     <div
       data-file-workspace
@@ -578,115 +568,132 @@ export function FileWorkspace({
           {(close, mobile) => renderNavigation(close, collapsed && !mobile, mobile)}
         </ExplorerNavigation>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <header
-            data-file-workspace-header
-            className="surface-file-workspace-toolbar flex shrink-0 flex-wrap items-center gap-x-2 gap-y-0 border-b border-border bg-surface px-3 md:h-14 md:flex-nowrap md:gap-3 md:px-6"
-          >
-            <div className="surface-file-mobile-header order-0 flex h-14 min-w-0 flex-1 items-center gap-1.5 md:hidden">
-              <IconAction
-                label={t('files.explorer.navigation')}
-                onPress={() => setMobileNavigationOpen(true)}
-              >
-                <Menu />
-              </IconAction>
-              <CurrentSiteLogo
-                className="size-5 shrink-0"
-                fallback={<Cloud className="size-5 text-brand" />}
-              />
-              <span className="min-w-0 flex-1 truncate text-sm font-bold text-brand">
-                {siteName}
-              </span>
-            </div>
-            <div className="order-1 shrink-0 md:order-0">{creationControl}</div>
-            <div className="surface-file-account-actions order-2 flex shrink-0 items-center gap-0.5 md:order-3 md:gap-1">
-              {music?.active ? (
-                <span data-file-dock-trigger>
-                  <IconAction
-                    label={t('files.viewer.music')}
-                    expanded={reader.dockOpen}
-                    onPress={reader.toggleDock}
-                  >
-                    <Music />
-                  </IconAction>
-                </span>
-              ) : null}
-              <FileAccountTools />
-            </div>
-            <div
-              aria-hidden="true"
-              className={isFiles ? 'order-3 basis-full md:hidden' : 'hidden'}
-            />
-            <div
-              className={`${isFiles ? 'flex' : 'hidden md:flex'} order-4 h-12 min-w-0 flex-1 items-center md:order-1 md:h-auto`}
-            >
-              <form
-                data-file-workspace-search
-                className="flex min-w-0 flex-1 items-center gap-1.5 md:max-w-lg"
-                onKeyDownCapture={(event) => {
-                  if (event.key === 'Escape') {
-                    event.preventDefault();
-                    setSearch(isFiles ? (query.search ?? '') : '');
-                    port.focusFiles();
-                  }
-                }}
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  port.navigate('files', searchQuery(search));
-                }}
-              >
-                <SearchBox
-                  label={t('files.search')}
-                  placeholder={t('files.searchPlaceholder')}
-                  value={search}
-                  onValueChange={(nextValue) => {
-                    setSearch(nextValue);
-                    if (!nextValue && isFiles && query.search) {
-                      port.navigate('files', searchQuery(''));
+          <div data-file-workspace-header className="surface-file-workspace-toolbar shrink-0">
+            <WorkspaceHeader
+              brand={
+                <div className="min-w-0 md:hidden">
+                  <WorkspaceBrand
+                    name={siteName}
+                    mark={
+                      <CurrentSiteLogo
+                        className="size-5 shrink-0"
+                        fallback={<Cloud className="size-4" />}
+                      />
                     }
-                  }}
-                />
-              </form>
-            </div>
-            <div
-              className={`${isFiles ? 'flex' : 'hidden md:flex'} order-5 h-12 shrink-0 items-center gap-1 md:order-2 md:h-auto`}
-            >
-              <div className="relative">
-                <IconAction
-                  label={`${t('files.workspace.queue')} ${t('files.workspace.queueCount', { count: activeCount })}`}
-                  tooltip
-                  onPress={() => {
-                    if (isTransfers) port.focusFiles();
-                    else setTray(pathname);
-                  }}
-                >
-                  <Upload className="size-5" />
-                </IconAction>
-                {activeCount > 0 ? (
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-xs font-semibold leading-4 text-on-brand"
+                  />
+                </div>
+              }
+              navigation={
+                <div className="md:hidden">
+                  <IconAction
+                    size="sm"
+                    label={t('files.explorer.navigation')}
+                    onPress={() => setMobileNavigationOpen(true)}
                   >
-                    {activeCount}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </header>
-          {isFiles && !isTrash ? (
-            <div className="surface-category-tabs">
-              <NavigationTabs
-                label={t('files.workspace.categories')}
-                value={query.category || 'all'}
-                items={categoryItems.map((item) => ({
-                  id: item.key || 'all',
-                  label: t(item.key ? item.label : 'files.workspace.allFiles'),
-                  href: port.destinationHref('files', { category: item.key }),
-                  icon: item.icon,
-                }))}
-                onNavigate={(id) => port.navigate('files', { category: id === 'all' ? '' : id })}
-              />
-            </div>
-          ) : null}
+                    <Menu />
+                  </IconAction>
+                </div>
+              }
+              searchMode={isFiles ? 'below' : 'desktop'}
+              search={
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <form
+                    data-file-workspace-search
+                    className="flex min-w-0 flex-1 items-center gap-1.5 md:max-w-lg"
+                    onKeyDownCapture={(event) => {
+                      if (event.key === 'Escape') {
+                        event.preventDefault();
+                        setSearch(isFiles ? (query.search ?? '') : '');
+                        port.focusFiles();
+                      }
+                    }}
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      port.navigate('files', searchQuery(search));
+                    }}
+                  >
+                    <SearchBox
+                      label={t('files.search')}
+                      placeholder={t('files.searchPlaceholder')}
+                      value={search}
+                      onValueChange={(nextValue) => {
+                        setSearch(nextValue);
+                        if (!nextValue && isFiles && query.search) {
+                          port.navigate('files', searchQuery(''));
+                        }
+                      }}
+                    />
+                  </form>
+                  <div className="relative">
+                    <IconAction
+                      label={`${t('files.workspace.queue')} ${t('files.workspace.queueCount', { count: activeCount })}`}
+                      tooltip
+                      onPress={() => {
+                        if (isTransfers) port.focusFiles();
+                        else setTray(pathname);
+                      }}
+                    >
+                      <Upload className="size-5" />
+                    </IconAction>
+                    {activeCount > 0 ? (
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-xs font-semibold leading-4 text-on-brand"
+                      >
+                        {activeCount}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              }
+              tools={
+                <>
+                  {!isFiles ? (
+                    <div className="hidden md:block">
+                      <FileCategoryMenu
+                        onSelect={(category) => port.navigate('files', { category })}
+                      />
+                    </div>
+                  ) : null}
+                  {isTrash ? (
+                    <>
+                      <Action
+                        size="sm"
+                        variant="danger"
+                        leadingIcon={<Trash2 className="size-4" />}
+                        onPress={() => setEmptyTrash(true)}
+                      >
+                        {t('files.trashPurge.empty')}
+                      </Action>
+                      <Action
+                        size="sm"
+                        variant="quiet"
+                        leadingIcon={<Settings className="size-4" />}
+                        onPress={() => setTrashRetention(true)}
+                      >
+                        {t('files.trashRetention.title')}
+                      </Action>
+                    </>
+                  ) : !desktopNavigation ? (
+                    <div className="md:hidden">{renderCreationMenu(true)}</div>
+                  ) : null}
+                  {music?.active ? (
+                    <span data-file-dock-trigger>
+                      <IconAction
+                        size="sm"
+                        label={t('files.viewer.music')}
+                        expanded={reader.dockOpen}
+                        onPress={reader.toggleDock}
+                      >
+                        <Music />
+                      </IconAction>
+                    </span>
+                  ) : null}
+                </>
+              }
+              account={<FileAccountTools />}
+            />
+          </div>
           {notice || sidebarPreference.failed ? (
             <p role="status" className="px-4 py-2 text-sm">
               {notice || t('files.workspace.readFailed')}
@@ -696,7 +703,7 @@ export function FileWorkspace({
             id="main-content"
             tabIndex={-1}
             data-file-scroll-region
-            className="surface-file-content min-h-0 min-w-0 flex-1 overflow-auto bg-canvas px-4 pb-14 pt-3 md:px-6"
+            className="surface-file-content min-h-0 min-w-0 flex-1 overflow-auto bg-canvas px-3 pb-14 pt-2 md:px-4 md:pb-3"
           >
             <WorkspaceCreateContext value={(action) => setCreate({ action })}>
               {children}
@@ -733,7 +740,7 @@ export function FileWorkspace({
             selection={allTrash}
             onClose={() => setEmptyTrash(false)}
             onPurged={(receipt) => {
-              setNotice(
+              reportAction(
                 t('files.trashPurge.done', {
                   entries: receipt.entryCount,
                   bytes: formatFileBytes(receipt.bytes),
@@ -762,7 +769,7 @@ export function FileWorkspace({
             onChanged={(queued) => {
               setCreate(undefined);
               refresh();
-              setNotice(t(queued ? 'files.workspace.queued' : 'files.operationDone'));
+              reportAction(t(queued ? 'files.workspace.queued' : 'files.operationDone'));
               if (queued && !isTransfers) setTray(pathname);
             }}
           />

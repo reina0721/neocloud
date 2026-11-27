@@ -99,7 +99,10 @@ describe('真实文件偏好边界', () => {
     ).toBe(false);
   });
   it('目录、根和全局回退分离，关闭记忆不会删除覆盖', () => {
-    let document = { ...defaultFilePreferences(), rememberFolders: true };
+    const fresh = defaultFilePreferences();
+    expect(resolveFileView(fresh).view).toBe('list');
+    let document = changeFileView(fresh, { ...fresh.defaults, view: 'grid' });
+    document = { ...document, rememberFolders: true };
     document = changeFileView(document, { ...document.defaults, view: 'list' }, '');
     expect(resolveFileView(document, '').view).toBe('list');
     expect(resolveFileView(document, 'd8f01c7d-7726-4f4c-978b-340f0b41a913').view).toBe('grid');

@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useState } from 'react';
 import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader, Section, Toolbar } from '@clouddrive/surface-foundation/layout';
+import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { TextField } from '@clouddrive/ui-adapter/form-field';
 import { DataTable, type DataColumn } from '@clouddrive/ui-adapter/data-display';
@@ -86,8 +86,9 @@ export function BackendSecurityPage() {
   const access = useProductAccess();
   if (access.loading || access.error || !access.data)
     return (
-      <Page>
+      <Page density="compact">
         <PageHeader
+          density="compact"
           title={t('administration.security')}
           description={t('administration.description')}
         />
@@ -132,9 +133,11 @@ function SecurityContent({
   const [codes, setCodes] = useState<readonly string[]>([]);
   const [enrollment, setEnrollment] = useState<{ secret: string; uri: string }>();
   const [archiveFailure, setArchiveFailure] = useState<string>();
+  const mfaAction = mfa.value ? 'disable' : enrollment ? 'confirm' : 'begin';
   return (
-    <Page>
+    <Page density="compact">
       <PageHeader
+        density="compact"
         title={t('administration.security')}
         description={t('administration.description')}
       />
@@ -144,46 +147,26 @@ function SecurityContent({
           errorTitle={t('administration.mfaStatusFailure')}
           errorDescription={t('administration.mfaStatusFailureHint')}
         >
-          <Section title={t('administration.mfa')} contentInset>
-            <p>{t(mfa.value ? 'administration.active' : 'administration.disabled')}</p>
-            {canManage ? (
-              <Toolbar
-                label={t('administration.actions')}
-                primary={
-                  <div className="flex flex-wrap gap-2">
-                    {!mfa.value ? (
-                      <>
-                        {!enrollment ? (
-                          <MfaAction
-                            action="begin"
-                            onSaved={mfa.reload}
-                            onCodes={setCodes}
-                            onEnrollment={setEnrollment}
-                          />
-                        ) : null}
-                        {enrollment ? (
-                          <MfaAction
-                            action="confirm"
-                            onSaved={mfa.reload}
-                            onCodes={setCodes}
-                            onEnrollment={setEnrollment}
-                          />
-                        ) : null}
-                      </>
-                    ) : (
-                      <MfaAction
-                        action="disable"
-                        onSaved={mfa.reload}
-                        onCodes={setCodes}
-                        onEnrollment={setEnrollment}
-                      />
-                    )}
-                  </div>
-                }
-              />
-            ) : null}
+          <Section
+            title={t('administration.mfa')}
+            appearance="outlined"
+            density="compact"
+            contentInset
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p>{t(mfa.value ? 'administration.active' : 'administration.disabled')}</p>
+              {canManage ? (
+                <MfaAction
+                  key={mfaAction}
+                  action={mfaAction}
+                  onSaved={mfa.reload}
+                  onCodes={setCodes}
+                  onEnrollment={setEnrollment}
+                />
+              ) : null}
+            </div>
             {enrollment ? (
-              <div className="space-y-3">
+              <div className="mt-3 space-y-3">
                 <p>{t('administration.mfaSetupHint')}</p>
                 <dl className="space-y-3 text-sm">
                   <div>
@@ -212,6 +195,8 @@ function SecurityContent({
         <Section
           title={t('administration.recoveryTitle')}
           description={t('administration.recovery')}
+          appearance="outlined"
+          density="compact"
           contentInset
         >
           <div className="space-y-3">
@@ -227,7 +212,12 @@ function SecurityContent({
         </Section>
       ) : null}
       {canArchive ? (
-        <Section title={t('administration.archiveSelf')} contentInset>
+        <Section
+          title={t('administration.archiveSelf')}
+          appearance="outlined"
+          density="compact"
+          contentInset
+        >
           <DialogSurface
             triggerLabel={t('administration.archiveSelf')}
             title={t('administration.archiveSelf')}
@@ -385,18 +375,18 @@ export function BackendTokensPage() {
     },
   ];
   return (
-    <Page>
+    <Page density="compact">
       <PageHeader
+        density="compact"
         title={t('administration.tokens')}
         description={t('administration.description')}
-      />
-      <Toolbar
-        label={t('administration.actions')}
-        primary={
-          <div className="flex flex-wrap gap-2">
+        actions={
+          <>
             <TokenAction action="create" onSaved={state.reload} onSecret={setSecret} />
-            <Action onPress={state.reload}>{t('administration.refresh')}</Action>
-          </div>
+            <Action variant="quiet" onPress={state.reload}>
+              {t('administration.refresh')}
+            </Action>
+          </>
         }
       />
       {secret ? (

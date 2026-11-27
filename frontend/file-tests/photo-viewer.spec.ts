@@ -116,7 +116,7 @@ test('同目录切图、真实 EXIF、定位隐私和窄屏照片查看', async 
   await openReadingFixtureFolder(page, '照片验收-');
   await page.getByRole('button', { name: '视图', exact: true }).click();
   await page.getByRole('menuitemradio', { name: '列表', exact: true }).click();
-  const [jpeg, png] = await page.evaluate(() => {
+  const [jpeg, png, largePng] = await page.evaluate(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 320;
     canvas.height = 240;
@@ -132,7 +132,12 @@ test('同目录切图、真实 EXIF、定位隐私和窄屏照片查看', async 
     canvas.height = 260;
     paint.fillStyle = '#396674';
     paint.fillRect(0, 0, canvas.width, canvas.height);
-    return [photo, canvas.toDataURL('image/png').split(',')[1]!] as const;
+    const portrait = canvas.toDataURL('image/png').split(',')[1]!;
+    canvas.width = 1600;
+    canvas.height = 1200;
+    paint.fillStyle = '#314765';
+    paint.fillRect(0, 0, canvas.width, canvas.height);
+    return [photo, portrait, canvas.toDataURL('image/png').split(',')[1]!] as const;
   });
   const source = photoWithExif(Buffer.from(jpeg, 'base64'));
   const chooser = page.waitForEvent('filechooser');
@@ -143,11 +148,12 @@ test('同目录切图、真实 EXIF、定位隐私和窄屏照片查看', async 
     await chooser
   ).setFiles([
     { name: '01-photo.jpg', mimeType: 'image/jpeg', buffer: source },
-    { name: '02-note.txt', mimeType: 'text/plain', buffer: Buffer.from('Skipped between photos') },
+    { name: '02-note.txt', mimeType: 'text/plain', buffer: Buffer.from('Text between photos') },
     { name: '03-portrait.png', mimeType: 'image/png', buffer: Buffer.from(png, 'base64') },
+    { name: '04-large.png', mimeType: 'image/png', buffer: Buffer.from(largePng, 'base64') },
   ]);
   const tray = page.getByRole('dialog', { name: '上传队列', exact: true });
-  await expect(tray.getByText('上传完成', { exact: true })).toHaveCount(3);
+  await expect(tray.getByText('上传完成', { exact: true })).toHaveCount(4);
   await tray.getByRole('button', { name: '关闭', exact: true }).click();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: '01-photo.jpg', exact: true }).click();
@@ -155,10 +161,13 @@ test('同目录切图、真实 EXIF、定位隐私和窄屏照片查看', async 
   const photo = page.getByRole('dialog', { name: '01-photo.jpg', exact: true });
   const image = photo.getByRole('img', { name: '01-photo.jpg' });
   await expect(image).toBeVisible();
-  expect((await image.boundingBox())?.width).toBeGreaterThan(850);
-  const navigation = photo.getByRole('group', { name: '照片导航' });
-  await expect(navigation.getByRole('status')).toHaveText('1 / 2');
-  await expect(navigation.getByRole('button', { name: '上一张' })).toBeDisabled();
+  const imageWidth = async () => Math.round((await image.boundingBox())?.width ?? 0);
+  await expect.poll(imageWidth).toBe(320);
+  await photo.getByRole('button', { name: '放大', exact: true }).click();
+  await expect.poll(imageWidth).toBe(400);
+  await photo.getByRole('button', { name: '125%', exact: true }).click();
+  await expect.poll(imageWidth).toBe(320);
+  await expect(photo.getByRole('button', { name: '上一个文件' })).toBeDisabled();
   const toggle = photo.getByRole('button', { name: '拍摄信息', exact: true });
   const metadata = photo.getByRole('region', { name: '拍摄信息' });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -200,32 +209,28 @@ test('同目录切图、真实 EXIF、定位隐私和窄屏照片查看', async 
   await page.screenshot({ path: info.outputPath('photo-desktop.png') });
   await toggle.click();
   await expect(metadata).toHaveCount(0);
-  const next = navigation.getByRole('button', { name: '下一张' });
+  const next = photo.getByRole('button', { name: '下一个文件' });
   await next.click();
+  const note = page.getByRole('dialog', { name: '02-note.txt', exact: true });
+  await expect(note.getByText('Text between photos', { exact: true })).toBeVisible();
+  await note.getByRole('button', { name: '下一个文件' }).click();
   const portrait = page.getByRole('dialog', { name: '03-portrait.png', exact: true });
   await expect(portrait.getByRole('img', { name: '03-portrait.png' })).toBeVisible();
-  await expect(portrait.getByRole('status')).toHaveText('2 / 2');
-  await expect(portrait.getByRole('button', { name: '下一张' })).toBeDisabled();
-  const previous = portrait.getByRole('button', { name: '上一张' });
+  const previous = portrait.getByRole('button', { name: '上一个文件' });
   await previous.press('ArrowLeft');
+  await note.getByRole('button', { name: '上一个文件' }).click();
   await expect(photo.getByRole('img', { name: '01-photo.jpg' })).toBeVisible();
   const pending = page.waitForEvent('download');
   await photo.getByRole('button', { name: '下载', exact: true }).click();
   const download = await pending;
   expect(download.suggestedFilename()).toBe('01-photo.jpg');
   expect(await readFile(await download.path())).toEqual(source);
-  await photo.getByRole('button', { name: '编辑图片' }).click();
-  const editor = page.getByRole('dialog', { name: '图片编辑器', exact: true });
-  await expect(editor.getByLabel('图片编辑画布')).toBeVisible();
-  await editor.getByRole('button', { name: '关闭', exact: true }).click();
-  await next.click();
-  await previous.click();
-  await expect(photo.getByRole('img', { name: '01-photo.jpg' })).toBeVisible();
   await toggle.click();
   await metadata.getByRole('button', { name: '显示拍摄位置' }).click();
   await expect(coordinate).toBeVisible();
   await page.setViewportSize({ width: 375, height: 760 });
   await next.click();
+  await note.getByRole('button', { name: '下一个文件' }).click();
   await expect(portrait.getByRole('region', { name: '拍摄信息' })).toHaveCount(0);
   await portrait.getByRole('button', { name: '拍摄信息' }).click();
   const plain = portrait.getByRole('region', { name: '拍摄信息' });
@@ -237,6 +242,21 @@ test('同目录切图、真实 EXIF、定位隐私和窄屏照片查看', async 
   expect((await plain.boundingBox())!.width).toBeLessThan(375);
   await plain.scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('photo-mobile.png') });
-  await portrait.getByRole('button', { name: '关闭', exact: true }).click();
-  await expect(portrait).toHaveCount(0);
+  await portrait.getByRole('button', { name: '下一个文件' }).click();
+  const large = page.getByRole('dialog', { name: '04-large.png', exact: true });
+  const largeImage = large.getByRole('img', { name: '04-large.png', exact: true });
+  await expect(largeImage).toBeVisible();
+  const largeSize = (await largeImage.boundingBox())!;
+  expect(largeSize.width).toBeLessThan(375);
+  expect(largeSize.width / largeSize.height).toBeCloseTo(4 / 3, 1);
+  await expect(large.getByRole('button', { name: '下一个文件' })).toBeDisabled();
+  await large.getByRole('button', { name: '关闭', exact: true }).click();
+  await expect(large).toHaveCount(0);
+  const original = page.getByRole('button', { name: '01-photo.jpg', exact: true });
+  await expect(original).toBeFocused();
+  await original.click();
+  await photo.getByRole('button', { name: '编辑副本' }).click();
+  const editor = page.getByRole('dialog', { name: '图片编辑器', exact: true });
+  await expect(editor.getByLabel('图片编辑画布')).toBeVisible();
+  await editor.getByRole('button', { name: '关闭', exact: true }).click();
 });

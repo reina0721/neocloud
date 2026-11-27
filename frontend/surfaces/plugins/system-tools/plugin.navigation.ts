@@ -74,6 +74,14 @@ export const navigationContribution = {
       routeId: 'system-tools.runtime',
     },
     {
+      navigationId: 'system-tools.update',
+      labelKey: 'systemTools.nav.update',
+      groupId: 'administration',
+      order: 45,
+      iconId: 'settings',
+      routeId: 'system-tools.update',
+    },
+    {
       navigationId: 'system-tools.root',
       labelKey: 'systemTools.nav.icons',
       groupId: 'development',

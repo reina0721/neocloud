@@ -33,6 +33,7 @@ const (
 	OperationFilesApplicationsRead          OperationID = "files.applications.read"
 	OperationFilesApplicationsSave          OperationID = "files.applications.save"
 	OperationFilesApplicationsWebLaunch     OperationID = "files.applications.web-launch"
+	OperationFilesApplicationsWebReadiness  OperationID = "files.applications.web-readiness"
 	OperationFilesApplicationsWopiDiscover  OperationID = "files.applications.wopi-discover"
 	OperationFilesArchive                   OperationID = "files.archive"
 	OperationFilesArchiveTasksCancel        OperationID = "files.archive-tasks.cancel"
@@ -262,6 +263,7 @@ var operationInventory = [...]Operation{
 	{ID: OperationFilesApplicationsRead, Method: "GET", Path: "/api/v1/files/applications", Policy: "protected", Scope: "files:settings:read", Action: "files.applications.read"},
 	{ID: OperationFilesApplicationsSave, Method: "PUT", Path: "/api/v1/files/applications", Policy: "protected", Scope: "files:settings:write", Action: "files.applications.save"},
 	{ID: OperationFilesApplicationsWebLaunch, Method: "POST", Path: "/api/v1/files/{id}/web-preview", Policy: "protected", Scope: "files:read", Action: "files.applications.web-launch"},
+	{ID: OperationFilesApplicationsWebReadiness, Method: "GET", Path: "/api/v1/files/applications/{applicationId}/web-preview-readiness", Policy: "protected", Scope: "files:read", Action: "files.applications.web-readiness"},
 	{ID: OperationFilesApplicationsWopiDiscover, Method: "POST", Path: "/api/v1/files/applications/wopi-discovery", Policy: "protected", Scope: "files:settings:write", Action: "files.applications.wopi-discover"},
 	{ID: OperationFilesArchive, Method: "POST", Path: "/api/v1/files/archive", Policy: "protected", Scope: "files:read", Action: "files.archive"},
 	{ID: OperationFilesArchiveTasksCancel, Method: "POST", Path: "/api/v1/files/archive-tasks/{id}/cancel", Policy: "protected", Scope: "files:write", Action: "files.archive-tasks.cancel"},

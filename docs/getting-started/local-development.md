@@ -10,7 +10,7 @@
 node scripts/dev.mjs
 ```
 
-入口检查端口后按锁文件同步前端依赖。新设备会下载缺失的依赖，已有安装会复用 pnpm 缓存并按当前锁文件更新。安装失败会在编译、迁移和启动服务前停止，具体原因由 pnpm 输出到终端。旧命令中的 `--prepare` 仍可使用。
+入口默认使用 `http://127.0.0.1:4180` 访问网页，Go 业务与管理端口默认分别为 8080 和 9090。入口检查端口后按锁文件同步前端依赖。新设备会下载缺失的依赖，已有安装会复用 pnpm 缓存并按当前锁文件更新。安装失败会在编译、迁移和启动服务前停止，具体原因由 pnpm 输出到终端。旧命令中的 `--prepare` 仍可使用。
 
 工具在前台拥有前后端及生成器进程。构建、迁移后等待 Go readiness、前端登录页和同源 API 全部成功。Ctrl+C 或任一服务退出时清理其余进程；日志在 `.data/dev/`，数据保留。探活超时会提示对应服务的日志文件及最近收到的 HTTP 状态。普通开发使用根 `config.yaml`，不存在时运行原生 `config init`；已有数据库不重置；浏览器 Origin 仅在子进程环境中按实际端口覆盖。
 
@@ -24,6 +24,8 @@ node scripts/dev.mjs --acceptance
 ```
 
 预览使用 `.data/preview/` 的 SQLite、文件、传输目录和账号，默认端口 4180 / 8120 / 9120。账号信息位于 `.data/preview/access.json`，重启复用账号与数据。设置 `CLOUDDRIVE_FILE_TEST_ACCESS` 为该文件的**绝对路径**后，在 frontend 运行 `pnpm exec playwright test --config playwright.files.config.ts file-tests/material-workspace.spec.ts`。
+
+本地联调外部文件阅读器可设置 `CLOUDDRIVE_ALLOWED_ORIGINS`，值为精确 HTTP(S) Origin 的 JSON 数组，例如 `["https://viewer.example"]`。启动器将本站 Origin 与这份清单同时传给 Next 和 Go。
 
 一次性验收每次在 `.data/acceptance/` 创建新目录，运行 Playwright Chromium 后关闭前后端，保留日志用于诊断。默认端口为 4185 / 8088 / 9098。预览和验收都忽略继承的 `APP_` 环境变量，前缀大小写均视为相同。`run.lock` 防止同一环境并发启动。异常退出留下锁时，先确认原进程已停止再移除锁。
 

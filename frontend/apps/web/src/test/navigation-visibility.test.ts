@@ -11,6 +11,8 @@ const ids = [
   'system-tools.tasks',
   'system-tools.nodes',
   'system-tools.storage',
+  'system-tools.runtime',
+  'system-tools.update',
   'files.root',
 ] as const;
 const entry = (id: string): NavigationNode => ({ kind: 'leaf', id, labelKey: id, href: '/' + id });
@@ -48,6 +50,21 @@ describe('管理导航只呈现当前允许的入口', () => {
       }),
     ).toEqual(['system-tools.nodes', 'workspace.root', 'files.root']);
     expect(result()).toEqual(['workspace.root']);
+  });
+  it('系统更新和运行状态共用管理读取权限，并注册为正式管理路由', () => {
+    expect(result(['management:read'])).toEqual([
+      'workspace.root',
+      'system-tools.runtime',
+      'system-tools.update',
+    ]);
+    const assignment = generatedRouteCatalog.contributions
+      .find(({ pluginId }) => pluginId === 'system-tools')
+      ?.contribution.parents.find(({ navigationId }) => navigationId === 'system-tools.update');
+    expect(assignment).toMatchObject({
+      groupId: 'administration',
+      labelKey: 'systemTools.nav.update',
+      routeId: 'system-tools.update',
+    });
   });
   it('模拟 Host 保留原概览，隐藏需要真实后台的文件管理项', () => {
     const visible = visibleProductNavigation(groups, {}, false, [], []).flatMap((group) =>

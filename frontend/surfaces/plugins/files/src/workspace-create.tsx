@@ -4,6 +4,7 @@ import { useFrontendTranslation } from '@clouddrive/i18n';
 import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
 import { TextField } from '@clouddrive/ui-adapter/form-field';
 import { FilesError, type FileListing, type UploadCandidate } from '../../../src/files/model';
+import { formatFileBytes } from '../../../src/files/format';
 import { useFiles, useTransfers } from '../../../src/files/runtime';
 import type { CreationTemplate } from '../../../src/files/file-applications';
 import { TextDialog } from './text-dialog';
@@ -138,6 +139,14 @@ export function WorkspaceCreate({
           <p>{t('files.workspace.dropped', { count: candidates.length })}</p>
         ) : action === 'upload' || action === 'directory' ? (
           <p className="text-sm text-ink-muted">{t('files.workspace.chooseBeforeUpload')}</p>
+        ) : null}
+        {listing && (action === 'upload' || action === 'directory') ? (
+          <p className="text-xs text-ink-muted">
+            {t('files.uploadLimit', {
+              size: formatFileBytes(listing.maxFileBytes),
+              count: listing.concurrentUploads,
+            })}
+          </p>
         ) : null}
       </div>
     </DialogSurface>

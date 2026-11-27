@@ -27,8 +27,7 @@ async function login(page: Page) {
 test('Material 导航按任务分组，真实路由保留选中语义与原生链接', async ({ page }, info) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await login(page);
-  const expand = page.getByRole('button', { name: '展开文件导航', exact: true });
-  if (await expand.isVisible()) await expand.click();
+  await expect(page.getByRole('button', { name: '收起文件导航', exact: true })).toBeVisible();
   const navigation = page.getByRole('navigation', { name: '我的文件', exact: true });
   const geometry = await navigation.locator('.ui-navigation-item').evaluateAll((items) =>
     items.map((item) => {
@@ -68,7 +67,11 @@ test('Material 导航按任务分组，真实路由保留选中语义与原生�
   }
   await navigation.getByRole('link', { name: '我的文件', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
-  const create = page.getByRole('button', { name: '新建', exact: true });
+  const sidebar = page.locator('.surface-file-sidebar');
+  const header = page.locator('[data-workspace-header]');
+  const create = sidebar.getByRole('button', { name: '新建', exact: true });
+  await expect(header.getByRole('button', { name: '新建', exact: true })).toHaveCount(0);
+  await expect(create.getByText('新建', { exact: true })).toBeVisible();
   const shape = await create.evaluate((button) => getComputedStyle(button).borderRadius);
   expect(parseFloat(shape)).toBeGreaterThanOrEqual(20);
   await create.click();
@@ -79,11 +82,34 @@ test('Material 导航按任务分组，真实路由保留选中语义与原生�
     (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze()).violations,
   ).toEqual([]);
   await page.screenshot({ path: info.outputPath('material-desktop.png'), fullPage: true });
+
+  await page.getByRole('button', { name: '收起文件导航', exact: true }).click();
+  await expect(create).toBeVisible();
+  await expect(create.getByText('新建', { exact: true })).toHaveCount(0);
+  await create.press('Enter');
+  const folder = page.getByRole('menuitem', { name: '创建文件夹', exact: true });
+  await expect(folder).toBeVisible();
+  await page.setViewportSize({ width: 767, height: 900 });
+  await expect(folder).toHaveCount(0);
+  const mobileCreate = header.getByRole('button', { name: '新建', exact: true });
+  await expect(mobileCreate).toBeVisible();
+  await expect(page.getByRole('button', { name: '新建', exact: true })).toHaveCount(1);
+  await mobileCreate.press('Enter');
+  await expect(folder).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(mobileCreate).toBeFocused();
+  await page.setViewportSize({ width: 768, height: 900 });
+  await expect(create).toBeVisible();
+  await expect(mobileCreate).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '展开文件导航', exact: true })).toBeVisible();
 });
 
 test('移动抽屉导航返回文件焦点，内容不横向溢出', async ({ page }, info) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page);
+  await expect(
+    page.locator('[data-workspace-header]').getByRole('button', { name: '新建', exact: true }),
+  ).toBeVisible();
   await page.getByRole('button', { name: '文件导航', exact: true }).click();
   const drawer = page.getByRole('dialog', { name: '文件导航', exact: true });
   await expect(drawer.getByRole('heading', { name: '协作', exact: true })).toBeVisible();
@@ -124,17 +150,32 @@ for (const width of [320, 390]) {
       'page',
     );
     await expect(page.locator('[data-file-workspace] .surface-masthead')).toBeHidden();
-    const header = await page.locator('.surface-file-mobile-header').boundingBox();
-    expect(header?.height).toBe(56);
+    const header = page.locator('[data-workspace-header]');
+    const search = header.getByRole('searchbox', { name: '搜索文件', exact: true });
+    const [headerBox, accountBox, searchBox] = await Promise.all([
+      header.boundingBox(),
+      header.getByRole('button', { name: '当前用户', exact: true }).boundingBox(),
+      search.boundingBox(),
+    ]);
+    expect(headerBox?.height).toBe(112);
+    if (!accountBox || !searchBox) throw Error('无法测量移动端顶栏');
+    expect(searchBox.y).toBeGreaterThanOrEqual(accountBox.y + accountBox.height);
     expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(
       true,
     );
     const collection = page.locator('.surface-file-collection');
-    await expect(collection.getByRole('heading', { level: 1 })).toBeVisible();
-    const controls = await collection.getByRole('toolbar').boundingBox();
-    expect(controls?.height).toBeLessThanOrEqual(64);
-    await destinations.getByRole('button', { name: '搜索文件', exact: true }).click();
-    await expect(page.getByRole('searchbox', { name: '搜索文件', exact: true })).toBeFocused();
+    const directory = collection.getByRole('heading', { level: 1 });
+    await expect(directory).toBeVisible();
+    const [toolbar, path, controls] = await Promise.all([
+      collection.getByRole('toolbar').boundingBox(),
+      directory.boundingBox(),
+      collection.locator('[data-file-collection-actions]').boundingBox(),
+    ]);
+    if (!toolbar || !path || !controls) throw Error('无法测量移动端文件集合');
+    expect(toolbar.height).toBeLessThanOrEqual(96);
+    expect(controls.y).toBeGreaterThanOrEqual(path.y + path.height);
+    await search.click();
+    await expect(search).toBeFocused();
     await destinations.getByRole('button', { name: '分类', exact: true }).click();
     const drawer = page.getByRole('dialog', { name: '文件导航', exact: true });
     await expect(drawer).toBeVisible();
@@ -147,15 +188,20 @@ for (const width of [320, 390]) {
     await page.screenshot({ path: info.outputPath('mobile-content.png') });
     await destinations.getByRole('link', { name: '传输中心', exact: true }).click();
     await expect(page).toHaveURL(/\/home\/transfers$/);
-    expect((await page.locator('[data-file-workspace-header]').boundingBox())?.height).toBe(56);
-    await expect(page.getByRole('searchbox', { name: '搜索文件', exact: true })).toBeHidden();
+    expect((await header.boundingBox())?.height).toBe(56);
+    await expect(search).toBeHidden();
     await expect(destinations.getByRole('link', { name: '传输中心', exact: true })).toHaveAttribute(
       'aria-current',
       'page',
     );
-    await destinations.getByRole('button', { name: '搜索文件', exact: true }).click();
+    await destinations.getByRole('link', { name: '全部文件', exact: true }).click();
     await expect(page).toHaveURL(/\/home$/);
-    await expect(page.getByRole('searchbox', { name: '搜索文件', exact: true })).toBeFocused();
+    await search.click();
+    await expect(search).toBeFocused();
+    await search.fill('未提交查询');
+    await search.press('Escape');
+    await expect(search).toHaveValue('');
+    await expect(page.locator('#main-content')).toBeFocused();
     await page.goto('/settings');
     await expect(page.getByRole('heading', { level: 1, name: '外观', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: '主题模式', exact: true })).toBeVisible();
@@ -209,14 +255,13 @@ test('类型目的地在非文件页也可用 Tab 和 Enter 到达', async ({ pa
   await login(page);
   await page.getByRole('link', { name: '传输中心', exact: true }).click();
   await expect(page).toHaveURL(/\/home\/transfers$/);
-  const types = page.getByRole('navigation', { name: '按文件类型浏览', exact: true });
+  const types = page.getByRole('button', { name: '按文件类型浏览', exact: true });
   await page.getByRole('button', { name: /^上传队列/ }).press('Tab');
-  const all = types.getByRole('link', { name: '全部文件', exact: true });
-  await expect(all).toBeFocused();
-  await all.press('Tab');
-  const images = types.getByRole('link', { name: '图片', exact: true });
-  await expect(images).toBeFocused();
+  await expect(types).toBeFocused();
+  await types.press('Enter');
+  const images = page.getByRole('menuitemradio', { name: '图片', exact: true });
   await images.press('Enter');
   await expect(page).toHaveURL(/category=image/);
-  await expect(images).toHaveAttribute('aria-current', 'page');
+  await types.press('Enter');
+  await expect(images).toHaveAttribute('aria-checked', 'true');
 });

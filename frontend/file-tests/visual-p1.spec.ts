@@ -77,13 +77,13 @@ test('V-01 窄屏路径、工具命中和更多菜单保持可用', async ({ pag
   );
   const entry = await createEntry(page, 'text', '示例.txt', leaf.id);
   const toolbar = page.getByRole('toolbar', { name: leaf.name, exact: true });
-  const more = toolbar.getByRole('button', { name: '更多操作', exact: true });
+  const more = toolbar.getByRole('button', { name: /^更多(?:目录)?操作$/ });
   await page.goto('/home?parent=' + leaf.id);
   await expect(page.locator('[data-file-item="' + entry.id + '"]')).toBeVisible();
 
   for (const width of [320, 390, 713, 800]) {
     await page.setViewportSize({ width, height: 844 });
-    const currentPath = toolbar.getByTitle(leaf.name, { exact: true });
+    const currentPath = toolbar.getByRole('heading', { name: leaf.name, exact: true });
     await expect(currentPath).toBeVisible();
     expect((await currentPath.boundingBox())?.width).toBeGreaterThan(76);
     await expectToolbarHits(toolbar);
@@ -102,7 +102,7 @@ test('V-01 窄屏路径、工具命中和更多菜单保持可用', async ({ pag
   await toolbar.getByRole('button', { name: '视图', exact: true }).tap();
   await expect(page.getByRole('menuitemradio', { name: '列表', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
-  await toolbar.getByRole('checkbox', { name: '选择本页全部项目' }).check();
+  await page.getByRole('checkbox', { name: '选择本页全部项目' }).check();
   await expectToolbarHits(toolbar);
   await expect(page.getByText('已选择 1 项', { exact: true })).toBeVisible();
   await more.click();
@@ -115,8 +115,10 @@ test('V-01 窄屏路径、工具命中和更多菜单保持可用', async ({ pag
   );
   await more.click();
   await page.getByRole('menuitem', { name: '高级搜索', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: '高级搜索', exact: true })).toBeVisible();
-  await page.keyboard.press('Escape');
+  const advancedSearch = page.getByRole('dialog', { name: '高级搜索', exact: true });
+  await expect(advancedSearch).toBeVisible();
+  await advancedSearch.getByRole('button', { name: '取消', exact: true }).click();
+  await expect(advancedSearch).toBeHidden();
   await more.click();
   await page.getByRole('menuitemradio', { name: '大小', exact: true }).click();
   await more.click();
@@ -140,12 +142,15 @@ test('V-01 窄屏路径、工具命中和更多菜单保持可用', async ({ pag
   await expect(more).toBeVisible();
   await expectToolbarHits(toolbar);
   await page.setViewportSize({ width: boundary + 2, height: 844 });
-  await expect(toolbar.getByRole('button', { name: '刷新', exact: true })).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: '详情面板', exact: true })).toBeVisible();
   await expectToolbarHits(toolbar);
 
   await page.setViewportSize({ width: 1280, height: 800 });
   await expect(toolbar.getByRole('navigation', { name: '完整目录路径' })).toBeVisible();
-  await expect(toolbar.getByRole('button', { name: '排序方式', exact: true })).toBeVisible();
+  await more.click();
+  await expect(page.getByRole('menuitemradio', { name: '名称', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(more).toBeFocused();
   await expectToolbarHits(toolbar);
   await page.screenshot({ path: info.outputPath('V-01-1280.png') });
 
@@ -172,12 +177,12 @@ test('V-02 详情抽屉与侧栏保持选择、内容和关闭焦点', async ({ 
   await page.goto('/home?parent=' + folder.id);
   await expect(selected(first.id)).toBeVisible();
   const toolbar = page.getByRole('toolbar', { name: folder.name, exact: true });
-  const more = toolbar.getByRole('button', { name: '更多操作', exact: true });
+  const more = toolbar.getByRole('button', { name: /^更多(?:目录)?操作$/ });
   const details = toolbar.getByRole('button', { name: '详情面板', exact: true });
   const drawer = page.getByRole('dialog', { name: '详情面板', exact: true });
   const dock = page.getByRole('complementary', { name: '详情面板', exact: true });
   const openDetails = async () => {
-    if (await more.isVisible()) {
+    if (!(await details.isVisible())) {
       await more.click();
       await page.getByRole('menuitem', { name: '详情面板', exact: true }).click();
     } else await details.click();
@@ -371,7 +376,7 @@ test('V-03 真实目录分页与五个目标选择入口读回同一作用范围
   ).toBeVisible();
 
   await openRoot();
-  await button(page.getByRole('banner'), '新建').click();
+  await page.getByRole('button', { name: '新建', exact: true }).click();
   await page.getByRole('menuitem', { name: '创建文件夹', exact: true }).click();
   const create = page.getByRole('dialog', { name: '创建文件夹', exact: true });
   await create.getByLabel('名称').fill('真实创建结果');
@@ -421,7 +426,7 @@ test('V-03 真实目录分页与五个目标选择入口读回同一作用范围
     return canvas.toDataURL('image/png').split(',')[1];
   });
   const chooser = page.waitForEvent('filechooser');
-  await button(page.getByRole('banner'), '新建').click();
+  await page.getByRole('button', { name: '新建', exact: true }).click();
   await page.getByRole('menuitem', { name: '上传文件', exact: true }).click();
   await button(page.getByRole('dialog', { name: '上传文件', exact: true }), '使用此位置').click();
   await (
@@ -435,7 +440,7 @@ test('V-03 真实目录分页与五个目标选择入口读回同一作用范围
   await expect(queue.getByText('上传完成', { exact: true })).toBeVisible();
   await button(queue, '关闭').click();
   await page.getByRole('button', { name: '0-source.png', exact: true }).click();
-  await page.getByRole('button', { name: '编辑图片', exact: true }).click();
+  await page.getByRole('button', { name: '编辑副本', exact: true }).click();
   const editor = page.getByRole('dialog', { name: '图片编辑器', exact: true });
   await button(editor, '更改副本保存位置').click();
   const imagePicker = page.getByRole('dialog', { name: '选择副本保存位置', exact: true });

@@ -112,7 +112,7 @@ export function SettingsContentFrame({
   children,
 }: Readonly<{ banner?: ReactNode; children: ReactNode }>) {
   return (
-    <div className="min-w-0 space-y-5 px-3 md:px-0">
+    <div className="grid min-w-0 gap-4">
       {banner}
       {children}
     </div>
@@ -124,11 +124,9 @@ export function SettingsCategoryHeader({ meta }: Readonly<{ meta: SettingsCatego
   return (
     <div className="min-w-0 flex-1">
       <PageHeader
-        eyebrow={t('settings.eyebrow')}
+        density="compact"
         title={t(meta.labelKey)}
-        description={t('settings.categoryDescription', {
-          scope: t(`settings.categoryIntro.${meta.shortId}`),
-        })}
+        description={t('settings.categoryDescription')}
       />
     </div>
   );

@@ -109,22 +109,38 @@ test('F301–308：桌面独立滚动、稳定工具、可见存储与完整品�
   await page.screenshot({ path: info.outputPath('desktop-scroll.png') });
 });
 test('F316–319：紧凑网格、长名称、列表和键盘焦点', async ({ page }, info) => {
+  await page.getByRole('button', { name: '视图', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '网格', exact: true }).click();
+  await expect(page.locator('[data-file-view="grid"]').first()).toBeVisible();
   const cards = page.locator('[data-file-item]');
   const first = await cards.nth(0).boundingBox();
   const sixth = await cards.nth(5).boundingBox();
   expect(first?.y).toBe(sixth?.y);
-  expect(first?.height).toBeLessThan(220);
-  // 分页必须排在完整文件集合之后，不能与网格内容重叠。
-  const lastCard = await cards.last().boundingBox();
-  const pagination = await page.getByText('第 1 / 1 页，共 31 项', { exact: true }).boundingBox();
-  if (!lastCard || !pagination) throw new Error('无法测量文件集合与分页位置');
-  expect(pagination.y).toBeGreaterThanOrEqual(lastCard.y + lastCard.height);
+  expect(first?.height).toBeLessThanOrEqual(112);
+  await expect(page.getByRole('button', { name: '上一页', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '下一页', exact: true })).toHaveCount(0);
   const long = page.getByRole('button', { name: fixture.longName, exact: true });
   await expect(long).toHaveAttribute('title', fixture.longName);
-  await page.screenshot({ path: info.outputPath('compact-grid.png') });
+  await page.screenshot({ path: info.outputPath('compact-grid.png'), animations: 'disabled' });
   await page.getByRole('button', { name: '视图', exact: true }).click();
   await page.getByRole('menuitemradio', { name: '列表', exact: true }).click();
-  await expect(page.getByRole('table')).toBeVisible();
+  const list = page.getByRole('table');
+  await expect(list).toBeVisible();
+  for (const width of [800, 1280]) {
+    await page.setViewportSize({ width, height: 720 });
+    const { collectionWidth, rows } = await list.evaluate((table) => ({
+      collectionWidth: table.getBoundingClientRect().width,
+      rows: [...table.querySelectorAll('[role="row"]')].slice(0, 2).map((row) =>
+        [...row.children].map((cell) => {
+          const { x, width: cellWidth } = cell.getBoundingClientRect();
+          return { x: Math.round(x), width: Math.round(cellWidth) };
+        }),
+      ),
+    }));
+    expect(rows[0]).toEqual(rows[1]);
+    expect(rows[0]?.slice(2, -1).some((cell) => cell.width > 0)).toBe(collectionWidth >= 576);
+    await noHorizontalOverflow(page);
+  }
   expect((await cards.first().boundingBox())?.height).toBeLessThan(72);
   await long.focus();
   await page.keyboard.press('End');
@@ -134,21 +150,95 @@ test('F316–319：紧凑网格、长名称、列表和键盘焦点', async ({ p
   await page.getByRole('button', { name: '视图', exact: true }).click();
   await page.getByRole('menuitemradio', { name: '网格', exact: true }).click();
 });
+
+test('真实缩略图与短卡混排时各自保持内容高度', async ({ page }, info) => {
+  const mixed = await create(page, '/folders', {
+    parentId: '',
+    name: '混合网格-' + randomUUID().slice(0, 8),
+  });
+  const note = '01-普通文本.txt';
+  const photo = '02-缩略图.png';
+  await create(page, '/text', {
+    parentId: mixed.id,
+    name: note,
+    text: '短卡样本',
+    key: randomUUID(),
+  });
+  await page.goto('/home?parent=' + mixed.id);
+  await page.getByRole('button', { name: '视图', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '网格', exact: true }).click();
+  const image = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 480;
+    canvas.height = 240;
+    const context = canvas.getContext('2d');
+    if (!context) throw Error('无法创建缩略图样本');
+    context.fillStyle = '#0f766e';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/png').split(',')[1]!;
+  });
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: '新建', exact: true }).click();
+  await page.getByRole('menuitem', { name: '上传文件', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '使用此位置', exact: true }).click();
+  await (
+    await chooser
+  ).setFiles({
+    name: photo,
+    mimeType: 'image/png',
+    buffer: Buffer.from(image, 'base64'),
+  });
+  const queue = page.getByRole('dialog', { name: '上传队列', exact: true });
+  await expect(queue.getByText('上传完成', { exact: true })).toBeVisible();
+  await queue.getByRole('button', { name: '关闭', exact: true }).click();
+  await page.reload();
+
+  const cards = page.locator('[data-file-view="grid"]');
+  const shortCard = cards.filter({ has: page.getByRole('button', { name: note, exact: true }) });
+  const photoCard = cards.filter({ has: page.getByRole('button', { name: photo, exact: true }) });
+  const thumbnail = photoCard.getByRole('img', { name: photo, exact: true });
+  await expect(thumbnail).toHaveAttribute('src', /^blob:/);
+  await expect
+    .poll(() => thumbnail.evaluate((element: HTMLImageElement) => element.naturalWidth))
+    .toBe(480);
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 800 });
+    const [shortBox, photoBox, thumbnailBox] = await Promise.all([
+      shortCard.boundingBox(),
+      photoCard.boundingBox(),
+      thumbnail.boundingBox(),
+    ]);
+    if (!shortBox || !photoBox || !thumbnailBox) throw Error('无法测量混合网格');
+    expect(shortBox.y).toBe(photoBox.y);
+    expect(shortBox.height).toBeLessThanOrEqual(112);
+    expect(photoBox.height).toBeGreaterThan(shortBox.height + 48);
+    expect(thumbnailBox.height).toBeLessThanOrEqual(96);
+    await noHorizontalOverflow(page);
+    await page.screenshot({
+      path: info.outputPath(`mixed-grid-${width}.png`),
+      animations: 'disabled',
+    });
+  }
+});
 test('F314–315：根目录隐藏无效返回，长路径和完整路径菜单可用', async ({ page }) => {
   await page.goto('/home');
   await expect(page.getByRole('button', { name: '上级目录', exact: true })).toHaveCount(0);
   await page.goto('/home?parent=' + fixture.longParent);
   await expect(page.getByRole('button', { name: '上级目录', exact: true })).toBeVisible();
   await noHorizontalOverflow(page);
-  await page.getByRole('button', { name: '完整目录路径', exact: true }).click();
-  await expect(
-    page
-      .getByRole('navigation', { name: '完整目录路径', exact: true })
-      .getByRole('link', { name: '我的文件', exact: true }),
-  ).toBeVisible();
+  const path = page.getByRole('button', { name: '完整目录路径', exact: true });
+  const root = page
+    .getByRole('menu', { name: '完整目录路径', exact: true })
+    .getByRole('menuitem', { name: '我的文件', exact: true });
+  await path.click();
+  await expect(root).toBeVisible();
   await page.keyboard.press('Escape');
+  await expect(path).toBeFocused();
   await page.getByRole('button', { name: '上级目录', exact: true }).click();
   await expect(page).not.toHaveURL(new RegExp(fixture.longParent));
+  await path.click();
+  await root.click();
+  await expect(page).toHaveURL(/\/home$/);
 });
 test('F309–313：320px与390px工具、移动抽屉和浮层', async ({ page }, info) => {
   for (const width of [320, 390]) {
@@ -168,22 +258,22 @@ test('F309–313：320px与390px工具、移动抽屉和浮层', async ({ page }
   ).toEqual([]);
   await page.screenshot({ path: info.outputPath('mobile-workspace.png') });
 });
-test('F320：空目录居中引导及真实上传入口', async ({ page }, info) => {
+test('F320：空目录轻量引导及真实上传入口', async ({ page }, info) => {
   await page.goto('/home?parent=' + fixture.empty);
   const empty = page.locator('[data-file-empty]');
   await expect(empty).toBeVisible();
   await expect(empty.getByRole('button', { name: '上传文件', exact: true })).toBeVisible();
-  // 不只检查可见性，还检查空态在桌面与高视口中都位于内容区中央。
+  // 空态指引应保持自然高度，工作面下方仍可留有空间。
+  const bounds = [];
   for (const height of [720, 1080]) {
     await page.setViewportSize({ width: 1280, height });
-    const contentBox = await page.locator('[data-file-content]').boundingBox();
     const emptyBox = await empty.boundingBox();
-    if (!contentBox || !emptyBox) throw new Error('无法测量空态与内容区');
-    expect(
-      Math.abs(emptyBox.y + emptyBox.height / 2 - contentBox.y - contentBox.height / 2),
-    ).toBeLessThan(2);
+    if (!emptyBox) throw new Error('无法测量空态引导');
+    expect(emptyBox.height).toBeLessThanOrEqual(240);
+    bounds.push(emptyBox);
   }
-  await page.screenshot({ path: info.outputPath('empty-directory.png') });
+  expect(Math.abs(bounds[0]!.y - bounds[1]!.y)).toBeLessThanOrEqual(2);
+  await page.screenshot({ path: info.outputPath('empty-directory.png'), animations: 'disabled' });
 });
 test('英文深色与超宽屏保留工具、网格和无障碍', async ({ page }, info) => {
   await page.getByRole('button', { name: '当前用户', exact: true }).click();

@@ -26,16 +26,20 @@ export function VideoSubtitles({
   entry,
   media,
   presentation = 'field',
+  initialChoice,
+  onChoiceChange,
 }: {
   source: VideoSubtitleSource;
   entry: FileMediaProps['entry'];
   media: RefObject<HTMLMediaElement | null>;
   presentation?: 'field' | 'toolbar';
+  initialChoice?: string;
+  onChoiceChange?: (choice: string) => void;
 }) {
   const { t } = useFrontendTranslation();
   const [catalog, setCatalog] = useState<Awaited<ReturnType<VideoSubtitleSource['list']>>>();
   const [catalogFailure, setCatalogFailure] = useState<FilesErrorCode>();
-  const [choice, setChoice] = useState<string>();
+  const [choice, setChoice] = useState(initialChoice);
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<{
     entry: NonNullable<typeof catalog>['entries'][number];
@@ -111,6 +115,7 @@ export function VideoSubtitles({
               if (next === selectedId) return;
               setStatus(undefined);
               setChoice(next);
+              onChoiceChange?.(next);
             }}
           />
         </div>

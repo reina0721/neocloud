@@ -19,8 +19,10 @@ x-backend: &backend
     APP_SCHEDULER__ENABLED: "true"
   volumes:
     - type: bind
-      source: ./data
+      source: ${CLOUDDRIVE_RELEASE_DATA_DIR:-./data}
       target: /app/.data
+      bind:
+        create_host_path: false
 
 services:
   migrate:

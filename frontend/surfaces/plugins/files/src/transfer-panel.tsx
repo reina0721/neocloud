@@ -8,6 +8,7 @@ import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
 import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
 import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
 import { FilesError, type FileListing } from '../../../src/files/model';
+import { formatFileBytes } from '../../../src/files/format';
 import {
   transferMatches,
   type TransferFilter,
@@ -39,8 +40,33 @@ export function TransferPanel({ compact = false }: Readonly<{ compact?: boolean 
     [name, setName] = useState('');
   const [directory, setDirectory] = useState<FileListing>(),
     [targetFailure, setTargetFailure] = useState('');
+  const [limits, setLimits] = useState<Pick<FileListing, 'maxFileBytes' | 'concurrentUploads'>>();
   const errorText = (error: unknown) =>
     t(`files.errors.${error instanceof FilesError ? error.code : 'unavailable'}`);
+  useEffect(() => {
+    const controller = new AbortController();
+    void files
+      .list(
+        {
+          parent: '',
+          category: '',
+          search: '',
+          trash: false,
+          sort: 'name',
+          desc: false,
+          page: 1,
+          pageSize: 1,
+        },
+        controller.signal,
+      )
+      .then(({ maxFileBytes, concurrentUploads }) => {
+        if (!controller.signal.aborted) setLimits({ maxFileBytes, concurrentUploads });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setLimits(undefined);
+      });
+    return () => controller.abort();
+  }, [files]);
   useEffect(() => {
     // 紧凑面板展示本标签已载入的队列，保留刚完成的回执；完整历史由传输中心读取。
     if (compact && port.getSnapshot().items.length) return;
@@ -156,6 +182,14 @@ export function TransferPanel({ compact = false }: Readonly<{ compact?: boolean 
           </Action>
         </div>
       </div>
+      {limits ? (
+        <p className="mt-2 text-xs text-ink-muted">
+          {t('files.uploadLimit', {
+            size: formatFileBytes(limits.maxFileBytes),
+            count: limits.concurrentUploads,
+          })}
+        </p>
+      ) : null}
       {!compact ? (
         <div className="mt-4 max-w-xs">
           <SelectField

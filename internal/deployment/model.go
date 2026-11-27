@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/netip"
@@ -77,6 +78,7 @@ type Request struct {
 	Target   string `json:"target,omitempty"`
 	Expected string `json:"expected,omitempty"`
 	Confirm  string `json:"confirm,omitempty"`
+	Offline  bool   `json:"offline,omitempty"`
 	Actor    string `json:"-"`
 }
 
@@ -91,6 +93,7 @@ type Job struct {
 	Actor       string     `json:"actor"`
 	WasServing  bool       `json:"wasServing,omitempty"`
 	WasRecovery bool       `json:"wasRecovery,omitempty"`
+	UsesReceipt bool       `json:"usesReceipt,omitempty"`
 }
 
 type Snapshot struct {
@@ -103,13 +106,24 @@ type Snapshot struct {
 }
 
 type State struct {
-	Current  string     `json:"current"`
-	Previous string     `json:"previous,omitempty"`
-	Serving  bool       `json:"serving"`
-	Recovery bool       `json:"recoveryRequired"`
-	Jobs     []Job      `json:"jobs"`
-	Backups  []Snapshot `json:"backups"`
-	Update   *Release   `json:"update,omitempty"`
+	Current       string     `json:"current"`
+	Previous      string     `json:"previous,omitempty"`
+	Serving       bool       `json:"serving"`
+	Recovery      bool       `json:"recoveryRequired"`
+	Jobs          []Job      `json:"jobs"`
+	Backups       []Snapshot `json:"backups"`
+	Update        *Release   `json:"update,omitempty"`
+	LocalReleases []Release  `json:"localReleases,omitempty"`
+}
+
+func (s State) LatestLocalUpgrade() (Release, bool) {
+	latest := Release{Version: s.Current}
+	for _, candidate := range s.LocalReleases {
+		if newer(candidate.Version, latest.Version) {
+			latest = candidate
+		}
+	}
+	return latest, latest.Version != s.Current
 }
 
 func RandomID() string {
@@ -122,6 +136,20 @@ func readText(path string) (string, error) {
 	// #nosec G304 -- 只读取宿主机控制目录的固定标记或凭据文件。
 	b, err := os.ReadFile(path)
 	return strings.TrimSpace(string(b)), err
+}
+
+func maintenanceProject(root string) (string, error) {
+	name, err := readText(filepath.Join(root, ".control", "maintenance-project"))
+	if errors.Is(err, os.ErrNotExist) {
+		name, err = readText(filepath.Join(root, ".control", "project"))
+	}
+	if err != nil {
+		return "", fmt.Errorf("读取实例维护标记: %w", err)
+	}
+	if !projectPattern.MatchString(name) {
+		return "", errors.New("实例维护标记无效")
+	}
+	return name, nil
 }
 
 func ReadJSON(path string, value any) error {
@@ -190,3 +218,6 @@ func newer(a, b string) bool {
 	}
 	return false
 }
+
+// NewerStableVersion compares two official release tags without accepting prereleases.
+func NewerStableVersion(candidate, current string) bool { return newer(candidate, current) }

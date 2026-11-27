@@ -1,9 +1,10 @@
-// Command native-archive 将 Windows Web 追踪树和 Go 产物直接写入 ZIP。
+// Command native-archive 打包原生 Web 追踪目录或托管 Go 发布产物。
 package main
 
 import (
 	"archive/zip"
 	"compress/flate"
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -13,25 +14,95 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"time"
+
+	"github.com/reina0721/clouddrive/internal/deployment"
 )
 
 func main() {
 	output := flag.String("output", "", "ZIP 输出路径")
 	work := flag.String("work", "", "包含 Go 产物、说明和许可的包根目录")
 	web := flag.String("web", "", "Next standalone 追踪目录")
+	managed := flag.Bool("managed", false, "打包托管 Go 发布目录")
+	verify := flag.String("verify-managed", "", "只读校验托管 Go 发布 ZIP")
+	online := flag.String("stage-online", "", "从正式 GitHub 发布获取并验签至验证目录")
+	offline := flag.String("stage-offline", "", "从本地已签名发布包验签并导入验证目录")
+	releaseDir := flag.String("release-dir", "", "已签名发布包目录")
+	trustDir := flag.String("trust-dir", "", "独立获取的 Sigstore 离线信任目录")
+	profile := flag.String("profile", string(deployment.NativeGo), "托管发布类型（managed-go 或 managed-full）")
+	version := flag.String("version", "", "托管发布的正式版本")
+	commit := flag.String("commit", "", "托管发布的源码提交")
+	goos := flag.String("os", "", "托管发布的目标系统")
+	arch := flag.String("arch", "", "托管发布的目标架构")
 	flag.Parse()
-	if *output == "" || *work == "" || *web == "" {
+	if (*offline != "" && (*releaseDir == "" || *trustDir == "" || *online != "")) ||
+		(*verify == "" && *online == "" && *offline == "" && (*output == "" || *work == "" || !*managed && *web == "")) {
 		flag.Usage()
 		os.Exit(2)
 	}
-	if err := createArchive(*output, *work, *web); err != nil {
+	var err error
+	releaseProfile := deployment.NativeProfile(*profile)
+	switch {
+	case *online != "":
+		err = stageRelease(*online, "", "", *version, *commit, releaseProfile)
+	case *offline != "":
+		err = stageRelease(*offline, *releaseDir, *trustDir, *version, *commit, releaseProfile)
+	case *verify != "":
+		err = verifyManagedArchive(*verify, *version, *commit, *goos, *arch, releaseProfile)
+	case *managed:
+		err = writeArchive(*output, func(writer *zip.Writer) error {
+			return addTree(writer, *work, "", nil)
+		})
+		if err == nil {
+			err = verifyManagedArchive(*output, *version, *commit, *goos, *arch, releaseProfile)
+		}
+	default:
+		err = createArchive(*output, *work, *web)
+	}
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func createArchive(output, work, web string) (result error) {
-	manifest, err := os.ReadFile(filepath.Join(work, ".standalone-links.json"))
+func stageRelease(directory, releaseDir, trustDir, version, commit string, profile deployment.NativeProfile) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
+	defer cancel()
+	var target deployment.NativeTarget
+	var err error
+	if releaseDir == "" {
+		target, err = deployment.NewReleases().StageNativeFor(ctx, directory, version, profile)
+	} else {
+		target, err = deployment.ImportNativeFor(ctx, directory, releaseDir, trustDir, version, profile)
+	}
+	if err != nil {
+		return err
+	}
+	if target.Manifest.Commit != commit {
+		return errors.New("原生发布包源码提交与发布版本不一致")
+	}
+	_, err = deployment.LoadNativeFor(ctx, directory, version, profile)
+	return err
+}
+
+func verifyManagedArchive(archive, version, commit, goos, arch string, profile deployment.NativeProfile) error {
+	manifest, err := deployment.InspectNativeArchiveFor(archive, version, goos, arch, profile)
+	if err != nil {
+		return err
+	}
+	if manifest.Commit != commit {
+		return errors.New("原生发布包源码提交与发布版本不一致")
+	}
+	return nil
+}
+
+func createArchive(output, work, web string) error {
+	workDir, err := os.OpenRoot(work)
+	if err != nil {
+		return err
+	}
+	manifest, err := workDir.ReadFile(".standalone-links.json")
+	err = errors.Join(err, workDir.Close())
 	if err != nil {
 		return err
 	}
@@ -43,7 +114,17 @@ func createArchive(output, work, web string) (result error) {
 	for _, link := range links {
 		excluded[filepath.Clean(link.Path)] = struct{}{}
 	}
-	file, err := os.OpenFile(output, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
+	return writeArchive(output, func(archive *zip.Writer) error {
+		if err := addTree(archive, work, "clouddrive", nil); err != nil {
+			return err
+		}
+		return addTree(archive, web, "clouddrive/web", excluded)
+	})
+}
+
+func writeArchive(output string, write func(*zip.Writer) error) (result error) {
+	// #nosec G304 -- 输出路径由打包命令显式指定，已有文件不会被覆盖。
+	file, err := os.OpenFile(output, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
 	}
@@ -59,26 +140,27 @@ func createArchive(output, work, web string) (result error) {
 		compressor.Reset(writer)
 		return compressor, nil
 	})
-	if err := addTree(archive, work, "clouddrive", nil); err != nil {
-		return err
-	}
-	return addTree(archive, web, "clouddrive/web", excluded)
+	return write(archive)
 }
 
-func addTree(archive *zip.Writer, root, prefix string, excluded map[string]struct{}) error {
-	return filepath.WalkDir(root, func(source string, entry fs.DirEntry, walkErr error) error {
+func addTree(archive *zip.Writer, directory, prefix string, excluded map[string]struct{}) (result error) {
+	root, err := os.OpenRoot(directory)
+	if err != nil {
+		return err
+	}
+	defer func() { result = errors.Join(result, root.Close()) }()
+	return fs.WalkDir(root.FS(), ".", func(relative string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
-		relative, err := filepath.Rel(root, source)
-		if err != nil {
-			return err
+		if prefix == "" && relative == "." {
+			return nil
 		}
 		// Windows junction 可能表现为 ModeIrregular。使用链接清单判断，
 		// 解包后由 Web 入口重建链接。
-		if _, skipped := excluded[relative]; skipped {
+		if _, skipped := excluded[filepath.FromSlash(relative)]; skipped {
 			if entry.IsDir() {
-				return filepath.SkipDir
+				return fs.SkipDir
 			}
 			return nil
 		}
@@ -87,13 +169,13 @@ func addTree(archive *zip.Writer, root, prefix string, excluded map[string]struc
 			return err
 		}
 		if !info.IsDir() && !info.Mode().IsRegular() {
-			return fmt.Errorf("无法归档文件类型 %s: %s", info.Mode(), source)
+			return fmt.Errorf("无法归档文件类型 %s: %s", info.Mode(), relative)
 		}
 		header, err := zip.FileInfoHeader(info)
 		if err != nil {
 			return err
 		}
-		header.Name = path.Join(prefix, filepath.ToSlash(relative))
+		header.Name = path.Join(prefix, relative)
 		if info.IsDir() {
 			header.Name += "/"
 		} else {
@@ -103,7 +185,7 @@ func addTree(archive *zip.Writer, root, prefix string, excluded map[string]struc
 		if err != nil || info.IsDir() {
 			return err
 		}
-		input, err := os.Open(source)
+		input, err := root.Open(filepath.FromSlash(relative))
 		if err != nil {
 			return err
 		}

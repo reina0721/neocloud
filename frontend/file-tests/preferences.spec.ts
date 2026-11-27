@@ -169,6 +169,14 @@ test('F323/F324：另一设备读取服务器设置，账号之间隔离', async
 });
 
 test('F325–F329：目录、根、全局回退及关闭再开启记忆', async ({ page }) => {
+  const document = defaultFilePreferences();
+  await write(page, { ...document, defaults: { ...document.defaults, view: 'grid' } });
+  await page.reload();
+  await options(page);
+  await page
+    .getByRole('dialog', { name: '视图选项', exact: true })
+    .getByRole('button', { name: '读取并使用服务器设置', exact: true })
+    .click();
   await options(page);
   await page
     .getByRole('dialog', { name: '视图选项', exact: true })
@@ -206,7 +214,8 @@ test('F325–F329：目录、根、全局回退及关闭再开启记忆', async 
 });
 
 test('F330–F332：设全局默认、重置单目录、清除全部覆盖', async ({ page }) => {
-  const document = defaultFilePreferences();
+  const defaults = defaultFilePreferences();
+  const document = { ...defaults, defaults: { ...defaults.defaults, view: 'grid' as const } };
   document.rememberFolders = true;
   document.folders = [fixture.first, fixture.second].map((parentId) => ({
     parentId,

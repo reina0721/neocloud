@@ -37,6 +37,7 @@ import {
   pdfMaxScale,
   pdfStampLimits,
   type PdfCommand,
+  type PdfFit,
   type PdfOutline,
 } from './protocol';
 
@@ -79,7 +80,12 @@ export function PDFReaderView(props: Props) {
     closeRequestSequence,
     draft,
     onDraftState,
+    presentation = 'workspace',
+    initialPosition,
+    onReady,
+    onAnnotate,
   } = props;
+  const preview = presentation === 'preview';
   // 会话预算固定在打开时，后台列表返回同值新对象不能重开frame、丢弃临时批注。
   const [limits] = useState(() => ({ ...suppliedLimits }));
   const { t, locale } = useFrontendTranslation();
@@ -120,6 +126,8 @@ export function PDFReaderView(props: Props) {
   const searchId = useId();
   const searchInput = useRef<HTMLInputElement>(null);
   const searchTrigger = useRef<HTMLButtonElement>(null);
+  const navigationTrigger = useRef<HTMLSpanElement>(null);
+  const toolsTrigger = useRef<HTMLButtonElement>(null);
   const frame = useRef<HTMLIFrameElement>(null),
     session = useRef<PDFFrameSession | null>(null);
   const activeState = useRef(state),
@@ -128,6 +136,11 @@ export function PDFReaderView(props: Props) {
     thumbnailTail = useRef(Promise.resolve());
   const labels = useRef({ p, t, locale });
   const closeCallback = useRef<() => void>(() => {});
+  const escapeCallback = useRef<() => void>(() => {});
+  const readyCallback = useRef(onReady);
+  useEffect(() => {
+    readyCallback.current = onReady;
+  }, [onReady]);
   useEffect(() => {
     labels.current = { p, t, locale };
   }, [p, t, locale]);
@@ -145,12 +158,33 @@ export function PDFReaderView(props: Props) {
     onClose();
   }, [onClose]);
   const requestClose = useCallback(() => {
-    if (activeState.current.modified || recoveredRef.current) setDiscard(true);
+    if (preview) onClose();
+    else if (activeState.current.modified || recoveredRef.current) setDiscard(true);
     else void finishClose();
-  }, [finishClose]);
+  }, [finishClose, onClose, preview]);
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    searchTrigger.current?.focus();
+  }, []);
+  const closePanel = useCallback(() => {
+    setPanel('none');
+    navigationTrigger.current?.querySelector('button')?.focus();
+  }, []);
+  const dismissTools = useCallback(() => {
+    if (toolsOpen) {
+      setToolsOpen(false);
+      toolsTrigger.current?.focus();
+    } else if (panel !== 'none') closePanel();
+    else if (searchOpen) closeSearch();
+    else return false;
+    return true;
+  }, [closePanel, closeSearch, panel, searchOpen, toolsOpen]);
   useEffect(() => {
     closeCallback.current = requestClose;
-  }, [requestClose]);
+    escapeCallback.current = () => {
+      if (!dismissTools()) requestClose();
+    };
+  }, [dismissTools, requestClose]);
   useEffect(() => {
     if (handledClose.current !== closeRequestSequence) {
       handledClose.current = closeRequestSequence;
@@ -165,7 +199,15 @@ export function PDFReaderView(props: Props) {
     if (!element) return;
     const controller = new AbortController();
     let active = true;
-    let restored: PdfDraft | undefined;
+    const fit = (): PdfFit =>
+      window.innerWidth >= 768 && window.innerHeight >= 480 ? 'page-fit' : 'page-width';
+    let viewportFit = fit();
+    const updateFit = () => {
+      const next = fit();
+      if (next === viewportFit) return;
+      viewportFit = next;
+      owned.fit(next);
+    };
     const owned = new PDFFrameSession(element, limits, {
       state: (value) => {
         if (!active) return;
@@ -177,13 +219,8 @@ export function PDFReaderView(props: Props) {
         if (active) {
           setPhase('ready');
           setPassword('');
-          if (restored) {
-            const next = restored;
-            void owned
-              .command({ kind: 'scale', scale: next.scale })
-              .then(() => owned.command({ kind: 'page', page: next.page }))
-              .catch(() => undefined);
-          }
+          owned.fit(viewportFit);
+          readyCallback.current?.();
         }
       },
       password: (wrong) => {
@@ -200,20 +237,29 @@ export function PDFReaderView(props: Props) {
           setPhase('error');
         }
       },
-      close: () => closeCallback.current(),
+      close: () => escapeCallback.current(),
     });
     session.current = owned;
+    window.addEventListener('resize', updateFit);
     void readContent({ ...props, limits }, controller.signal)
       .then(async (bytes) => {
         const saved = await draft?.read().catch(() => undefined);
         if (!active) return;
         const snapshot = pdfDraft(saved?.payload, limits.maxBytes);
+        let restored: PdfDraft | undefined;
         if (snapshot && saved?.revision === entry.contentRevision) {
           restored = snapshot;
           recoveredRef.current = true;
           setRecovered(true);
         } else if (snapshot) setOldDraft(snapshot);
-        return owned.open(restored?.bytes ?? bytes, labels.current.locale, currentTheme());
+        const startPosition =
+          initialPosition ??
+          (restored ? { page: restored.page, scale: restored.scale } : undefined);
+        return owned.open(restored?.bytes ?? bytes, labels.current.locale, currentTheme(), {
+          presentation,
+          fit: viewportFit,
+          ...(startPosition ? { initialPosition: startPosition } : {}),
+        });
       })
       .catch((error) => {
         if (active && !controller.signal.aborted) {
@@ -225,6 +271,7 @@ export function PDFReaderView(props: Props) {
     return () => {
       active = false;
       controller.abort();
+      window.removeEventListener('resize', updateFit);
       owned.forceClose();
       if (session.current === owned) session.current = null;
     };
@@ -240,6 +287,8 @@ export function PDFReaderView(props: Props) {
     attempt,
     errorText,
     draft,
+    initialPosition,
+    presentation,
   ]);
   useEffect(() => {
     const update = () => session.current?.theme(currentTheme());
@@ -450,9 +499,18 @@ export function PDFReaderView(props: Props) {
     submitted.caseSensitive === caseSensitive &&
     submitted.wholeWord === wholeWord;
   return (
-    <section aria-label={p('title')} className="flex h-full min-h-0 min-w-0 flex-col gap-2">
+    // eslint-disable-next-line jsx-a11y-x/no-noninteractive-element-interactions -- Escape 只收起当前阅读工具。
+    <section
+      aria-label={p('title')}
+      className="surface-pdf-reader flex h-full min-h-0 min-w-0 flex-col gap-2"
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape' || event.defaultPrevented || !dismissTools()) return;
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+    >
       <div
-        className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-control bg-surface-muted p-2"
+        className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-control bg-surface-muted px-2 py-1"
         role="toolbar"
         aria-label={p('title')}
       >
@@ -538,20 +596,24 @@ export function PDFReaderView(props: Props) {
           >
             <Plus className="size-icon-sm" aria-hidden="true" />
           </IconAction>
-          <MenuButton
-            triggerSize="sm"
-            label={<PanelLeft className="size-icon-sm" aria-hidden="true" />}
-            triggerVariant="icon"
-            ariaLabel={p('navigation')}
-            items={['thumbnails', 'outline', 'hidePanel'].map((id) => ({
-              id,
-              label: p(id),
-              disabled: phase !== 'ready',
-            }))}
-            onAction={(id) =>
-              openPanel(id === 'thumbnails' ? 'thumbnails' : id === 'outline' ? 'outline' : 'none')
-            }
-          />
+          <span ref={navigationTrigger} className="inline-flex">
+            <MenuButton
+              triggerSize="sm"
+              label={<PanelLeft className="size-icon-sm" aria-hidden="true" />}
+              triggerVariant="icon"
+              ariaLabel={p('navigation')}
+              items={['thumbnails', 'outline', 'hidePanel'].map((id) => ({
+                id,
+                label: p(id),
+                disabled: phase !== 'ready',
+              }))}
+              onAction={(id) =>
+                openPanel(
+                  id === 'thumbnails' ? 'thumbnails' : id === 'outline' ? 'outline' : 'none',
+                )
+              }
+            />
+          </span>
           <IconAction
             ref={searchTrigger}
             size="sm"
@@ -565,117 +627,41 @@ export function PDFReaderView(props: Props) {
           >
             <Search className="size-icon-sm" aria-hidden="true" />
           </IconAction>
-          <span className="surface-pdf-tools-toggle">
-            <IconAction
-              label={p('tools')}
-              size="sm"
-              tooltip
-              expanded={toolsOpen}
-              controls={searchId + '-tools'}
-              active={toolsOpen}
-              onPress={() => setToolsOpen((value) => !value)}
-            >
-              <SlidersHorizontal className="size-icon-sm" aria-hidden="true" />
-            </IconAction>
-          </span>
+          {preview ? (
+            onAnnotate ? (
+              <Action
+                variant="quiet"
+                size="sm"
+                disabled={!available}
+                onPress={() =>
+                  onAnnotate({
+                    page: state.page,
+                    ...(state.automaticFit
+                      ? {}
+                      : { scale: Math.min(pdfMaxScale, Math.max(pdfMinScale, state.scale)) }),
+                  })
+                }
+              >
+                {p('annotate')}
+              </Action>
+            ) : null
+          ) : (
+            <span className="surface-pdf-tools-toggle">
+              <IconAction
+                ref={toolsTrigger}
+                label={p('tools')}
+                size="sm"
+                tooltip
+                expanded={toolsOpen}
+                controls={searchId + '-tools'}
+                active={toolsOpen}
+                onPress={() => setToolsOpen((value) => !value)}
+              >
+                <SlidersHorizontal className="size-icon-sm" aria-hidden="true" />
+              </IconAction>
+            </span>
+          )}
         </div>
-      </div>
-      <div
-        id={searchId + '-tools'}
-        data-open={toolsOpen}
-        className="surface-pdf-tools shrink-0 flex-wrap items-center gap-2 rounded-control border border-border p-2"
-      >
-        <IconAction
-          label={p('back')}
-          tooltip
-          size="sm"
-          disabled={!available || !state.historyBack}
-          onPress={() => {
-            void act({ kind: 'history', direction: -1 });
-          }}
-        >
-          <ArrowLeft className="size-icon-sm" aria-hidden="true" />
-        </IconAction>
-        <IconAction
-          label={p('forward')}
-          tooltip
-          size="sm"
-          disabled={!available || !state.historyForward}
-          onPress={() => {
-            void act({ kind: 'history', direction: 1 });
-          }}
-        >
-          <ArrowRight className="size-icon-sm" aria-hidden="true" />
-        </IconAction>
-        <MenuButton
-          triggerSize="sm"
-          label={p('editor')}
-          ariaLabel={p('editor')}
-          items={readerModes.map((id) => ({
-            id,
-            label: p(id),
-            disabled: !available,
-          }))}
-          onAction={(id) => {
-            const mode = readerModes.find((item) => item === id);
-            if (mode) void act({ kind: 'editor', mode });
-          }}
-        />
-        <FileChoiceAction
-          acceptedTypes={imageOverlayTypes}
-          disabled={!available || stampLimitReached}
-          onSelect={chooseStamp}
-        >
-          {p('stamp')}
-        </FileChoiceAction>
-        <IconAction
-          label={p('undo')}
-          tooltip
-          size="sm"
-          disabled={!available || !state.undo}
-          onPress={() => {
-            void act({ kind: 'edit', action: 'undo' });
-          }}
-        >
-          <Undo2 className="size-icon-sm" aria-hidden="true" />
-        </IconAction>
-        <IconAction
-          label={p('redo')}
-          tooltip
-          size="sm"
-          disabled={!available || !state.redo}
-          onPress={() => {
-            void act({ kind: 'edit', action: 'redo' });
-          }}
-        >
-          <Redo2 className="size-icon-sm" aria-hidden="true" />
-        </IconAction>
-        <Action
-          size="sm"
-          variant={modified ? 'primary' : 'quiet'}
-          disabled={!available || !modified}
-          onPress={() => {
-            void act({ kind: 'save' }, async (value) => {
-              if (
-                !(value.bytes instanceof ArrayBuffer) ||
-                value.bytes.byteLength > limits.maxBytes ||
-                new TextDecoder().decode(value.bytes.slice(0, 5)) !== '%PDF-'
-              )
-                throw new PDFFrameError('invalid');
-              downloadBlob(
-                new Blob([value.bytes], { type: 'application/pdf' }),
-                entry.name.replace(/\.pdf$/i, '') + '.' + p('exportName') + '.pdf',
-              );
-              await session.current?.command({ kind: 'exported' });
-              recoveredRef.current = false;
-              setRecovered(false);
-              await backup.clear();
-              setNotice(p('exported'));
-            });
-          }}
-        >
-          {p('export')}
-        </Action>
       </div>
       {modified || busy ? (
         <div className="flex shrink-0 flex-wrap gap-3 text-xs text-ink-muted" role="status">
@@ -702,7 +688,6 @@ export function PDFReaderView(props: Props) {
       {stampLimitReached ? (
         <p role="status">{p('stampLimit', { count: pdfStampLimits.count })}</p>
       ) : null}
-      {phase === 'loading' ? <p role="status">{p('loading')}</p> : null}
       {phase === 'password' ? (
         <form
           className="space-y-3"
@@ -754,8 +739,7 @@ export function PDFReaderView(props: Props) {
             if (event.key !== 'Escape') return;
             event.preventDefault();
             event.stopPropagation();
-            setSearchOpen(false);
-            searchTrigger.current?.focus();
+            closeSearch();
           }}
           onSubmit={(event) => {
             event.preventDefault();
@@ -842,100 +826,207 @@ export function PDFReaderView(props: Props) {
           </div>
         </form>
       ) : null}
-      <div className="relative flex min-h-0 flex-1 gap-2">
-        {panel !== 'none' ? (
-          <aside
-            className="absolute inset-y-0 left-0 z-10 w-60 max-w-full overflow-y-auto space-y-2 rounded-panel border border-border bg-surface-raised p-3 shadow-overlay md:static md:shrink-0 md:shadow-none"
-            aria-label={p(panel)}
+      <div className="surface-pdf-reading relative flex min-h-0 flex-1 flex-col gap-2">
+        {preview ? null : (
+          <div
+            id={searchId + '-tools'}
+            data-open={toolsOpen}
+            className="surface-pdf-tools shrink-0 flex-wrap items-center gap-2 rounded-control border border-border p-2"
           >
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="font-semibold">{p(panel)}</h3>
-              <IconAction
-                label={p('hidePanel')}
-                size="sm"
-                tooltip
-                onPress={() => openPanel('none')}
-              >
-                <X className="size-icon-sm" aria-hidden="true" />
-              </IconAction>
-            </div>
-            {sideFailure ? <p role="alert">{sideFailure}</p> : null}
-            {panel === 'outline' ? (
-              outline ? (
-                outline.length ? (
-                  outlineNodes(outline)
+            <IconAction
+              label={p('back')}
+              tooltip
+              size="sm"
+              disabled={!available || !state.historyBack}
+              onPress={() => {
+                void act({ kind: 'history', direction: -1 });
+              }}
+            >
+              <ArrowLeft className="size-icon-sm" aria-hidden="true" />
+            </IconAction>
+            <IconAction
+              label={p('forward')}
+              tooltip
+              size="sm"
+              disabled={!available || !state.historyForward}
+              onPress={() => {
+                void act({ kind: 'history', direction: 1 });
+              }}
+            >
+              <ArrowRight className="size-icon-sm" aria-hidden="true" />
+            </IconAction>
+            <MenuButton
+              triggerSize="sm"
+              label={p('editor')}
+              ariaLabel={p('editor')}
+              items={readerModes.map((id) => ({
+                id,
+                label: p(id),
+                disabled: !available,
+              }))}
+              onAction={(id) => {
+                const mode = readerModes.find((item) => item === id);
+                if (mode) void act({ kind: 'editor', mode });
+              }}
+            />
+            <FileChoiceAction
+              acceptedTypes={imageOverlayTypes}
+              disabled={!available || stampLimitReached}
+              onSelect={chooseStamp}
+            >
+              {p('stamp')}
+            </FileChoiceAction>
+            <IconAction
+              label={p('undo')}
+              tooltip
+              size="sm"
+              disabled={!available || !state.undo}
+              onPress={() => {
+                void act({ kind: 'edit', action: 'undo' });
+              }}
+            >
+              <Undo2 className="size-icon-sm" aria-hidden="true" />
+            </IconAction>
+            <IconAction
+              label={p('redo')}
+              tooltip
+              size="sm"
+              disabled={!available || !state.redo}
+              onPress={() => {
+                void act({ kind: 'edit', action: 'redo' });
+              }}
+            >
+              <Redo2 className="size-icon-sm" aria-hidden="true" />
+            </IconAction>
+            <Action
+              size="sm"
+              variant={modified ? 'primary' : 'quiet'}
+              disabled={!available || !modified}
+              onPress={() => {
+                void act({ kind: 'save' }, async (value) => {
+                  if (
+                    !(value.bytes instanceof ArrayBuffer) ||
+                    value.bytes.byteLength > limits.maxBytes ||
+                    new TextDecoder().decode(value.bytes.slice(0, 5)) !== '%PDF-'
+                  )
+                    throw new PDFFrameError('invalid');
+                  downloadBlob(
+                    new Blob([value.bytes], { type: 'application/pdf' }),
+                    entry.name.replace(/\.pdf$/i, '') + '.' + p('exportName') + '.pdf',
+                  );
+                  await session.current?.command({ kind: 'exported' });
+                  recoveredRef.current = false;
+                  setRecovered(false);
+                  await backup.clear();
+                  setNotice(p('exported'));
+                });
+              }}
+            >
+              {p('export')}
+            </Action>
+          </div>
+        )}
+        <div className="relative flex min-h-0 flex-1 gap-2">
+          {phase === 'loading' ? (
+            <p
+              role="status"
+              className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-surface"
+            >
+              {p('loading')}
+            </p>
+          ) : null}
+          {panel !== 'none' ? (
+            <aside
+              className="surface-pdf-sidebar w-60 max-w-full shrink-0 space-y-2 overflow-y-auto rounded-panel border border-border bg-surface-raised p-3"
+              aria-label={p(panel)}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-semibold">{p(panel)}</h3>
+                <IconAction label={p('hidePanel')} size="sm" tooltip onPress={closePanel}>
+                  <X className="size-icon-sm" aria-hidden="true" />
+                </IconAction>
+              </div>
+              {sideFailure ? <p role="alert">{sideFailure}</p> : null}
+              {panel === 'outline' ? (
+                outline ? (
+                  outline.length ? (
+                    outlineNodes(outline)
+                  ) : (
+                    <p>{p('noOutline')}</p>
+                  )
                 ) : (
-                  <p>{p('noOutline')}</p>
+                  <p role="status">{p('outlineLoading')}</p>
                 )
               ) : (
-                <p role="status">{p('outlineLoading')}</p>
-              )
-            ) : (
-              <>
-                <div className="flex gap-2">
-                  <Action
-                    size="sm"
-                    variant="quiet"
-                    disabled={thumbnailPage <= 1 || thumbnailLoading}
-                    onPress={() => {
-                      setThumbnails([]);
-                      setThumbnailPage((value) => value - 1);
-                    }}
-                  >
-                    {p('previousGroup')}
-                  </Action>
-                  <Action
-                    size="sm"
-                    variant="quiet"
-                    disabled={
-                      thumbnailPage * pdfThumbnailPageSize >= state.pages || thumbnailLoading
-                    }
-                    onPress={() => {
-                      setThumbnails([]);
-                      setThumbnailPage((value) => value + 1);
-                    }}
-                  >
-                    {p('nextGroup')}
-                  </Action>
-                </div>
-                {thumbnailLoading ? <p role="status">{p('thumbnailLoading')}</p> : null}
-                <ul className="space-y-2">
-                  {thumbnails.map((item) => (
-                    <li key={item.page}>
-                      <Action
-                        size="sm"
-                        variant="quiet"
-                        disabled={!available}
-                        onPress={() => {
-                          void act({ kind: 'page', page: item.page });
-                        }}
-                      >
-                        <span className="flex items-center gap-2">
-                          <img
-                            src={item.url}
-                            alt=""
-                            className="max-h-24 max-w-full object-contain"
-                          />
-                          <span>{p('thumbnailPage', { page: item.page })}</span>
-                        </span>
-                      </Action>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </aside>
-        ) : null}
-        <iframe
-          key={attempt}
-          ref={frame}
-          inert={busy || stampImport.loading}
-          data-pdf-editor={state.editor}
-          title={p('frame')}
-          sandbox="allow-scripts allow-same-origin"
-          className="min-h-0 w-full flex-1 rounded-control border border-border"
-        />
+                <>
+                  <div className="flex gap-2">
+                    <Action
+                      size="sm"
+                      variant="quiet"
+                      disabled={thumbnailPage <= 1 || thumbnailLoading}
+                      onPress={() => {
+                        setThumbnails([]);
+                        setThumbnailPage((value) => value - 1);
+                      }}
+                    >
+                      {p('previousGroup')}
+                    </Action>
+                    <Action
+                      size="sm"
+                      variant="quiet"
+                      disabled={
+                        thumbnailPage * pdfThumbnailPageSize >= state.pages || thumbnailLoading
+                      }
+                      onPress={() => {
+                        setThumbnails([]);
+                        setThumbnailPage((value) => value + 1);
+                      }}
+                    >
+                      {p('nextGroup')}
+                    </Action>
+                  </div>
+                  {thumbnailLoading ? <p role="status">{p('thumbnailLoading')}</p> : null}
+                  <ul className="space-y-2">
+                    {thumbnails.map((item) => (
+                      <li key={item.page}>
+                        <Action
+                          size="sm"
+                          variant="quiet"
+                          disabled={!available}
+                          onPress={() => {
+                            void act({ kind: 'page', page: item.page });
+                          }}
+                        >
+                          <span className="flex items-center gap-2">
+                            <img
+                              src={item.url}
+                              alt=""
+                              className="max-h-24 max-w-full object-contain"
+                            />
+                            <span>{p('thumbnailPage', { page: item.page })}</span>
+                          </span>
+                        </Action>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </aside>
+          ) : null}
+          <iframe
+            key={attempt}
+            ref={frame}
+            inert={phase !== 'ready' || busy || stampImport.loading}
+            data-pdf-editor={state.editor}
+            title={p('frame')}
+            sandbox="allow-scripts allow-same-origin"
+            className="min-h-0 w-full flex-1 rounded-control border border-border"
+          />
+        </div>
       </div>
+      <p className="shrink-0 text-xs text-ink-muted">
+        {p('imageBudget', { pixels: limits.maxImagePixels.toLocaleString(locale) })}
+      </p>
       {draft && oldDraft ? (
         <div className="flex flex-wrap items-center gap-2">
           <p role="status">{t('files.viewer.draftConflict')}</p>

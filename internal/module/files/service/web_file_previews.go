@@ -28,6 +28,9 @@ const (
 // ErrWOPIAccessToken 表示无效、过期或用途不符的 WOPI 访问令牌。
 var ErrWOPIAccessToken = errors.New("invalid WOPI access token")
 
+// ErrWebPreviewOriginDenied 表示部署没有为该网页阅读器开放来源。
+var ErrWebPreviewOriginDenied = errors.New("web preview origin is not permitted")
+
 // WebFilePreviewRequest 确认发起预览时已展示的站点和文件版本。
 type WebFilePreviewRequest struct {
 	Application     FileApplicationID `json:"application" pattern:"^web-[a-f0-9]{32}$"`
@@ -86,10 +89,11 @@ type WebFilePreviews struct {
 	sealer       cipher.AEAD
 	wopiWrites   WOPIWriteRepository
 	lockPolicy   ConnectionPolicy
+	allowed      []string
 }
 
 // NewWebFilePreviews 在文件模块装配时创建仅供当前代使用的密钥。
-func NewWebFilePreviews(files *Service, applications *FileApplications, authority DirectLinkAuthority, writes WOPIWriteRepository, lockPolicy ConnectionPolicy) (*WebFilePreviews, error) {
+func NewWebFilePreviews(files *Service, applications *FileApplications, authority DirectLinkAuthority, writes WOPIWriteRepository, lockPolicy ConnectionPolicy, allowedOrigins []string) (*WebFilePreviews, error) {
 	if files == nil || applications == nil || authority == nil || writes == nil {
 		return nil, fmt.Errorf("web preview dependencies are required")
 	}
@@ -104,7 +108,29 @@ func NewWebFilePreviews(files *Service, applications *FileApplications, authorit
 	if err != nil {
 		return nil, fmt.Errorf("initialize web preview sealer: %w", err)
 	}
-	return &WebFilePreviews{files: files, applications: applications, authority: authority, sealer: sealer, wopiWrites: writes, lockPolicy: lockPolicy}, nil
+	return &WebFilePreviews{files: files, applications: applications, authority: authority, sealer: sealer, wopiWrites: writes, lockPolicy: lockPolicy, allowed: slices.Clone(allowedOrigins)}, nil
+}
+
+// Readiness 读取已启用普通阅读器的部署来源策略。WOPI 使用独立的协议。
+func (s *WebFilePreviews) Readiness(ctx context.Context, id FileApplicationID) (string, error) {
+	view, err := s.applications.Read(ctx)
+	if err != nil {
+		return "", err
+	}
+	for _, app := range view.WebApps {
+		if app.ID != id || !app.Enabled || app.Protocol == FilePreviewWOPI {
+			continue
+		}
+		if s.originAllowed(app.Origin) {
+			return "allowed", nil
+		}
+		return "denied", nil
+	}
+	return "unavailable", nil
+}
+
+func (s *WebFilePreviews) originAllowed(origin string) bool {
+	return origin != "" && slices.Contains(s.allowed, origin)
 }
 
 // Launch 校验文件和目标，再按用户选择签发短期查看或编辑票据。
@@ -159,8 +185,13 @@ func (s *WebFilePreviews) Launch(ctx context.Context, owner, entryID string, req
 			}
 			actionURL, lifetime = app.WOPI.Actions[action].EditURL, wopiEditTTL
 		}
-	} else if request.Mode != "" {
-		return WebFilePreview{}, model.ErrUnsupported
+	} else {
+		if request.Mode != "" {
+			return WebFilePreview{}, model.ErrUnsupported
+		}
+		if !s.originAllowed(app.Origin) {
+			return WebFilePreview{}, ErrWebPreviewOriginDenied
+		}
 	}
 	expires := s.files.clock.Now().Add(lifetime).Truncate(time.Second)
 	grant := webPreviewGrant{
@@ -283,10 +314,13 @@ func (s *WebFilePreviews) DownloadWOPITo(ctx context.Context, token, entryID str
 }
 
 // DownloadTo 验证网页授权并在现有文件读取租约内传输该版本。
-func (s *WebFilePreviews) DownloadTo(ctx context.Context, token string, use func(model.Entry, io.ReadSeeker, string) error) error {
+func (s *WebFilePreviews) DownloadTo(ctx context.Context, token, requestOrigin string, use func(model.Entry, io.ReadSeeker, string) error) error {
 	grant, err := s.readGrant(ctx, token, "", "")
 	if err != nil {
 		return err
+	}
+	if !s.originAllowed(grant.Origin) || (requestOrigin != "" && requestOrigin != grant.Origin) {
+		return model.ErrMissing
 	}
 	return s.downloadGrant(ctx, grant, func(entry model.Entry, reader io.ReadSeeker) error {
 		return use(entry, reader, grant.Origin)

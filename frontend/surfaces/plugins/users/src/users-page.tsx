@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { formatDate, formatNumber, useFrontendTranslation } from '@clouddrive/i18n';
 import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
 import {
@@ -21,7 +21,6 @@ import { DataTable, type DataColumn } from '@clouddrive/ui-adapter/data-display'
 import { SelectField, CheckboxField } from '@clouddrive/ui-adapter/form-field';
 import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
 import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { useRef } from 'react';
 import type { BatchStatusResult } from '@clouddrive/surface/identity/runtime';
 import { SearchBox } from '@clouddrive/ui-adapter/search-box';
 import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
@@ -46,9 +45,11 @@ import {
   IdentityMutationError,
 } from '../../../src/identity/query-state';
 import { useUsersColumnLayoutStore } from '../stores/column-layout';
+import { userListContext, userListParameters } from './user-list-context';
 import { browserCsvExport } from './csv-export';
 
 export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
+  const titleId = useId();
   const port = useIdentityPort();
   const { t, locale } = useFrontendTranslation();
   const { notify } = useFeedback();
@@ -67,12 +68,14 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
     () => preferencesPort.getSnapshot().dataDisplay.rememberColumnLayout,
   );
   const [filterError, setFilterError] = useState<IdentityError | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [selected, setSelected] = useState<readonly string[]>([]);
   const [batchNames, setBatchNames] = useState<ReadonlyMap<string, string>>(new Map());
   const [batchResult, setBatchResult] = useState<BatchStatusResult | null>(null);
   const [batchTarget, setBatchTarget] = useState<'active' | 'disabled' | null>(null);
   const [batchPending, setBatchPending] = useState(false);
   const batchLock = useRef(false);
+  const selectionControl = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState(query?.q ?? '');
   const result = useIdentityQuery(`users:${JSON.stringify(query)}`, async (service) => {
     if (!query) throw new IdentityError('validation');
@@ -96,15 +99,7 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
           'users',
           {},
           {
-            query: {
-              q: next.q,
-              status: next.status,
-              roleId: next.roleId,
-              sort: next.sort,
-              direction: next.direction,
-              page: String(next.page),
-              pageSize: String(next.pageSize),
-            },
+            query: userListParameters(next),
           },
         ),
       );
@@ -146,8 +141,20 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
       {t(`identityProduct.${user.status}`)}
     </StatusPill>
   );
+  const listContext = userListContext(query);
   const detailLink = (user: DirectoryUser) => (
-    <RouteLink target={route('users.detail', {}, { query: { id: user.id } })}>
+    <RouteLink
+      target={route(
+        'users.detail',
+        {},
+        {
+          query: {
+            id: user.id,
+            ...(listContext ? { list: listContext } : {}),
+          },
+        },
+      )}
+    >
       {user.name}
     </RouteLink>
   );
@@ -289,6 +296,13 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
       ]
     : [];
   const pages = Math.max(1, Math.ceil((data?.page.total ?? 0) / (query?.pageSize ?? 20)));
+  const hasActiveQuery =
+    query !== null &&
+    (activeFilters.length > 0 ||
+      query.sort !== defaultUserQuery.sort ||
+      query.direction !== defaultUserQuery.direction ||
+      query.pageSize !== defaultUserQuery.pageSize ||
+      query.page !== defaultUserQuery.page);
   const empty = (
     <StateSurface
       state="empty"
@@ -300,11 +314,11 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
     />
   );
   return (
-    <Page>
+    <Page density="compact">
       <PageHeader
-        eyebrow={t('users.eyebrow')}
+        density="compact"
         title={t('users.title')}
-        description={t('users.description')}
+        titleId={titleId}
         actions={
           data?.access.permissions.includes('users.create') &&
           (port.mode === 'mock' || data.access.permissions.includes('roles.read')) ? (
@@ -312,6 +326,8 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
               target={route('users.create')}
               presentation="action"
               variant="primary"
+              size="sm"
+              className="max-md:min-h-control"
               leadingIcon={<Plus className="size-4" />}
             >
               {t('users.create')}
@@ -321,6 +337,27 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
       />
       <IdentityModeNotice mode={port.mode} />
       <IdentityMutationError error={filterError} />
+      {batchResult ? (
+        <ul
+          aria-live="polite"
+          className="grid gap-1 rounded-control bg-surface-muted/50 px-3 py-2 text-sm"
+        >
+          {batchResult.items.map((item) => (
+            <li key={item.id} className="flex flex-wrap items-baseline gap-x-2">
+              <span className="font-medium">{batchNames.get(item.id) ?? item.id}:</span>
+              <span className={item.success ? 'text-success' : 'text-danger'}>
+                {item.success
+                  ? t('users.batchSuccess')
+                  : t(
+                      item.reason
+                        ? `identityProduct.reasons.${item.reason}`
+                        : `identityProduct.errors.${item.code}`,
+                    )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {!query ? (
         <StateSurface
           state="error"
@@ -334,246 +371,253 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
         <IdentityQueryState error={result.error} retry={result.reload} />
       ) : (
         <Collection
+          density="compact"
+          labelledBy={titleId}
           title={t('users.collection')}
-          count={formatNumber(locale, data.page.total)}
-          tools={
-            <IconAction
-              label={t('identityProduct.refresh')}
-              tooltip
-              loading={result.loading}
-              onPress={result.reload}
-            >
-              <RefreshCw className="size-4" />
-            </IconAction>
-          }
           query={
-            <CollectionQuery
-              search={
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    apply({ q: search, page: 1 });
-                  }}
-                >
-                  <SearchBox
-                    label={t('users.search')}
-                    placeholder={t('users.searchPlaceholder')}
-                    value={search}
-                    onValueChange={(val) => {
-                      setSearch(val);
-                      if (!val && query.q) {
-                        apply({ q: '', page: 1 });
-                      }
-                    }}
-                  />
-                </form>
-              }
-              filters={
-                <>
-                  <SelectField
-                    presentation="toolbar"
-                    label={t('identityProduct.status')}
-                    value={query.status}
-                    options={['all', 'active', 'disabled'].map((value) => ({
-                      value,
-                      label: t(`identityProduct.${value}`),
-                    }))}
-                    onValueChange={(value) => {
-                      if (value === 'all' || value === 'active' || value === 'disabled')
-                        apply({ status: value, page: 1 });
-                    }}
-                  />
-                  <SelectField
-                    presentation="toolbar"
-                    label={t('identityProduct.roles')}
-                    value={query.roleId}
-                    options={[
-                      { value: 'all', label: t('identityProduct.all') },
-                      ...data.roles.map((role) => ({ value: role.id, label: roleLabel(role.id) })),
-                    ]}
-                    onValueChange={(roleId) => apply({ roleId, page: 1 })}
-                  />
-                </>
-              }
-              advanced={
-                <div className="grid gap-3 rounded-panel border border-border bg-surface p-4 text-sm sm:grid-cols-3">
-                  <SelectField
-                    label={t('users.sort')}
-                    value={query.sort}
-                    options={[
-                      { value: 'name', label: t('identityProduct.name') },
-                      { value: 'email', label: t('identityProduct.email') },
-                      { value: 'createdAt', label: t('users.createdAt') },
-                    ]}
-                    onValueChange={(value) => {
-                      if (value === 'name' || value === 'email' || value === 'createdAt')
-                        apply({ sort: value, page: 1 });
-                    }}
-                  />
-                  <SelectField
-                    label={t('users.direction')}
-                    value={query.direction}
-                    options={[
-                      { value: 'asc', label: t('users.ascending') },
-                      { value: 'desc', label: t('users.descending') },
-                    ]}
-                    onValueChange={(value) => {
-                      if (value === 'asc' || value === 'desc') apply({ direction: value, page: 1 });
-                    }}
-                  />
-                  <SelectField
-                    label={t('users.pageSize')}
-                    value={String(query.pageSize)}
-                    options={[10, 20, 50].map((value) => ({
-                      value: String(value),
-                      label: formatNumber(locale, value),
-                    }))}
-                    onValueChange={(value) => {
-                      if (value === '10' || value === '20' || value === '50')
-                        apply({
-                          pageSize: value === '10' ? 10 : value === '20' ? 20 : 50,
-                          page: 1,
-                        });
-                    }}
-                  />
-                </div>
-              }
-              advancedLabel={t('users.advancedFilters')}
-              advancedOpenLabel={t('users.advancedFiltersOpen')}
-              activeFilters={activeFilters}
-              activeFiltersLabel={t('users.activeFilters')}
-              onResetFilters={() => {
-                setSearch('');
-                clear();
-              }}
-              resetFiltersLabel={t('users.resetFilters')}
-            />
-          }
-          toolbar={
-            <CollectionToolbar
-              label={t('users.toolbar')}
-              columnSettings={{
-                triggerLabel: t('users.columnSettings'),
-                columns: columns.map((column) => ({
-                  id: column.id,
-                  label: column.label,
-                  mandatory: column.id === 'name',
-                })),
-                visibleOrder: visibleColumnIds,
-                onChange: persistColumnOrder,
-                onReset: resetColumnOrder,
-                text: columnSettingsText,
-              }}
-              density={{
-                label: t('users.density'),
-                value: tableDensity,
-                labels: {
-                  compact: t('users.densityCompact'),
-                  standard: t('users.densityStandard'),
-                  comfortable: t('users.densityComfortable'),
-                },
-                onChange: changeDensity,
-              }}
-              {...(data.access.permissions.includes('users.read')
-                ? {
-                    exportMenu: {
-                      label: t('users.export'),
-                      menuLabel: t('users.exportMenu'),
-                      items: [
-                        {
-                          id: 'page',
-                          label: t('users.exportPage', { count: data.page.items.length }),
-                          onSelect: () => void exportCsv(data.page.items, 'users-page.csv'),
-                        },
-                        ...(selectedUsers.length > 0
-                          ? [
-                              {
-                                id: 'selection',
-                                label: t('users.exportSelection', {
-                                  count: selectedUsers.length,
-                                }),
-                                onSelect: () =>
-                                  void exportCsv(selectedUsers, 'users-selection.csv'),
-                              },
-                            ]
-                          : []),
-                      ],
-                    },
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+              <div className="min-w-0 grow basis-96">
+                <CollectionQuery
+                  density="compact"
+                  search={
+                    <form
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        apply({ q: search, page: 1 });
+                      }}
+                    >
+                      <SearchBox
+                        label={t('users.search')}
+                        placeholder={t('users.searchPlaceholder')}
+                        value={search}
+                        onValueChange={(val) => {
+                          setSearch(val);
+                          if (!val && query.q) {
+                            apply({ q: '', page: 1 });
+                          }
+                        }}
+                      />
+                    </form>
                   }
-                : {})}
-            />
-          }
-          bulk={
-            data.access.permissions.includes('users.status') ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-surface-muted/30 px-4 py-2">
-                <div className="flex items-center gap-3">
-                  <CheckboxField
-                    label={t('users.selectPage')}
-                    checked={
-                      Boolean(data.page.items.length) &&
-                      selectedUsers.length === data.page.items.length
-                    }
-                    disabled={batchPending || !data.page.items.length}
-                    onCheckedChange={(checked) =>
-                      setSelected(checked ? data.page.items.map((u) => u.id) : [])
-                    }
+                  filters={
+                    <>
+                      <SelectField
+                        presentation="toolbar"
+                        label={t('identityProduct.status')}
+                        value={query.status}
+                        options={['all', 'active', 'disabled'].map((value) => ({
+                          value,
+                          label: t(`identityProduct.${value}`),
+                        }))}
+                        onValueChange={(value) => {
+                          if (value === 'all' || value === 'active' || value === 'disabled')
+                            apply({ status: value, page: 1 });
+                        }}
+                      />
+                      <SelectField
+                        presentation="toolbar"
+                        label={t('identityProduct.roles')}
+                        value={query.roleId}
+                        options={[
+                          { value: 'all', label: t('identityProduct.all') },
+                          ...data.roles.map((role) => ({
+                            value: role.id,
+                            label: roleLabel(role.id),
+                          })),
+                        ]}
+                        onValueChange={(roleId) => apply({ roleId, page: 1 })}
+                      />
+                    </>
+                  }
+                  advanced={
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <SelectField
+                        label={t('users.sort')}
+                        value={query.sort}
+                        options={[
+                          { value: 'name', label: t('identityProduct.name') },
+                          { value: 'email', label: t('identityProduct.email') },
+                          { value: 'createdAt', label: t('users.createdAt') },
+                        ]}
+                        onValueChange={(value) => {
+                          if (value === 'name' || value === 'email' || value === 'createdAt')
+                            apply({ sort: value, page: 1 });
+                        }}
+                      />
+                      <SelectField
+                        label={t('users.direction')}
+                        value={query.direction}
+                        options={[
+                          { value: 'asc', label: t('users.ascending') },
+                          { value: 'desc', label: t('users.descending') },
+                        ]}
+                        onValueChange={(value) => {
+                          if (value === 'asc' || value === 'desc')
+                            apply({ direction: value, page: 1 });
+                        }}
+                      />
+                      <SelectField
+                        label={t('users.pageSize')}
+                        value={String(query.pageSize)}
+                        options={[10, 20, 50].map((value) => ({
+                          value: String(value),
+                          label: formatNumber(locale, value),
+                        }))}
+                        onValueChange={(value) => {
+                          if (value === '10' || value === '20' || value === '50')
+                            apply({
+                              pageSize: value === '10' ? 10 : value === '20' ? 20 : 50,
+                              page: 1,
+                            });
+                        }}
+                      />
+                    </div>
+                  }
+                  advancedLabel={t('users.advancedFilters')}
+                  advancedOpenLabel={t('users.advancedFiltersOpen')}
+                  advancedOpen={advancedOpen}
+                  onAdvancedOpenChange={setAdvancedOpen}
+                  activeFilters={activeFilters}
+                  activeFiltersLabel={t('users.activeFilters')}
+                  {...(hasActiveQuery
+                    ? {
+                        onResetFilters: () => {
+                          setSearch('');
+                          clear();
+                        },
+                        resetFiltersLabel: t('users.resetFilters'),
+                      }
+                    : {})}
+                />
+              </div>
+              <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+                <span className="text-xs text-ink-muted">
+                  {t('users.count', { countFormatted: formatNumber(locale, data.page.total) })}
+                </span>
+                <IconAction
+                  label={t('identityProduct.refresh')}
+                  size="sm"
+                  tooltip
+                  loading={result.loading}
+                  onPress={result.reload}
+                >
+                  <RefreshCw className="size-4" />
+                </IconAction>
+                {data.access.permissions.includes('users.status') && data.page.items.length ? (
+                  <>
+                    <div ref={selectionControl} tabIndex={-1} className="shrink-0">
+                      <CheckboxField
+                        label={t('users.selectPage')}
+                        checked={selectedUsers.length === data.page.items.length}
+                        disabled={batchPending}
+                        onCheckedChange={(checked) =>
+                          setSelected(checked ? data.page.items.map((user) => user.id) : [])
+                        }
+                      />
+                    </div>
+                    {selectedUsers.length ? (
+                      <>
+                        <span aria-live="polite" className="text-xs font-semibold text-ink">
+                          {t('users.selected', { count: selectedUsers.length })}
+                        </span>
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <Action
+                            size="sm"
+                            variant="quiet"
+                            onPress={() => {
+                              setSelected([]);
+                              selectionControl.current?.focus();
+                            }}
+                          >
+                            {t('identityProduct.clear')}
+                          </Action>
+                          <Action
+                            size="sm"
+                            variant="secondary"
+                            disabled={batchPending}
+                            leadingIcon={<UserCheck className="size-3.5" />}
+                            onPress={() => setBatchTarget('active')}
+                          >
+                            {t('users.batchEnable')}
+                          </Action>
+                          <Action
+                            size="sm"
+                            variant="secondary"
+                            disabled={batchPending}
+                            leadingIcon={<UserX className="size-3.5" />}
+                            onPress={() => setBatchTarget('disabled')}
+                          >
+                            {t('users.batchDisable')}
+                          </Action>
+                        </div>
+                      </>
+                    ) : null}
+                  </>
+                ) : null}
+                <div className="min-w-0 max-w-full">
+                  <CollectionToolbar
+                    label={t('users.toolbar')}
+                    inset="compact"
+                    {...(!selectedUsers.length
+                      ? {
+                          columnSettings: {
+                            triggerLabel: t('users.columnSettings'),
+                            columns: columns.map((column) => ({
+                              id: column.id,
+                              label: column.label,
+                              mandatory: column.id === 'name',
+                            })),
+                            visibleOrder: visibleColumnIds,
+                            onChange: persistColumnOrder,
+                            onReset: resetColumnOrder,
+                            text: columnSettingsText,
+                          },
+                          density: {
+                            label: t('users.density'),
+                            value: tableDensity,
+                            labels: {
+                              compact: t('users.densityCompact'),
+                              standard: t('users.densityStandard'),
+                              comfortable: t('users.densityComfortable'),
+                            },
+                            onChange: changeDensity,
+                          },
+                        }
+                      : {})}
+                    {...(data.access.permissions.includes('users.read')
+                      ? {
+                          exportMenu: {
+                            label: t('users.export'),
+                            menuLabel: t('users.exportMenu'),
+                            items: [
+                              {
+                                id: 'page',
+                                label: t('users.exportPage', { count: data.page.items.length }),
+                                onSelect: () => void exportCsv(data.page.items, 'users-page.csv'),
+                              },
+                              ...(selectedUsers.length > 0
+                                ? [
+                                    {
+                                      id: 'selection',
+                                      label: t('users.exportSelection', {
+                                        count: selectedUsers.length,
+                                      }),
+                                      onSelect: () =>
+                                        void exportCsv(selectedUsers, 'users-selection.csv'),
+                                    },
+                                  ]
+                                : []),
+                            ],
+                          },
+                        }
+                      : {})}
                   />
-                  {selectedUsers.length ? (
-                    <span aria-live="polite" className="text-xs font-medium text-ink-muted">
-                      {t('users.selected', { count: selectedUsers.length })}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="flex items-center gap-2">
-                  {selectedUsers.length ? (
-                    <Action size="sm" variant="quiet" onPress={() => setSelected([])}>
-                      {t('identityProduct.clear')}
-                    </Action>
-                  ) : null}
-                  <Action
-                    size="sm"
-                    variant="secondary"
-                    disabled={!selectedUsers.length || batchPending}
-                    leadingIcon={<UserCheck className="size-3.5" />}
-                    onPress={() => setBatchTarget('active')}
-                  >
-                    {t('users.batchEnable')}
-                  </Action>
-                  <Action
-                    size="sm"
-                    variant="secondary"
-                    disabled={!selectedUsers.length || batchPending}
-                    leadingIcon={<UserX className="size-3.5" />}
-                    onPress={() => setBatchTarget('disabled')}
-                  >
-                    {t('users.batchDisable')}
-                  </Action>
                 </div>
               </div>
-            ) : null
+            </div>
           }
           content={
             <div aria-busy={result.loading || undefined}>
-              {batchResult ? (
-                <div className="border-b border-border bg-surface-muted/30 p-3 text-sm">
-                  <ul aria-live="polite" className="grid gap-1">
-                    {batchResult.items.map((item) => (
-                      <li key={item.id} className="flex items-center gap-2">
-                        <span className="font-medium">{batchNames.get(item.id) ?? item.id}:</span>
-                        <span className={item.success ? 'text-success' : 'text-danger'}>
-                          {item.success
-                            ? t('users.batchSuccess')
-                            : t(
-                                item.reason
-                                  ? `identityProduct.reasons.${item.reason}`
-                                  : `identityProduct.errors.${item.code}`,
-                              )}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
               <DataTable
                 label={t('users.collection')}
                 columns={visibleColumns}
@@ -618,11 +662,12 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
                 aria-label={t('users.collection')}
               >
                 {data.page.items.map((user) => (
-                  <li key={user.id} className="flex items-start gap-3 p-4">
+                  <li key={user.id} className="flex items-start gap-2 px-3 py-2">
                     {data.access.permissions.includes('users.status') ? (
                       <div className="pt-0.5">
                         <CheckboxField
                           label={t('users.selectUser', { name: user.name })}
+                          presentation="control-only"
                           checked={selected.includes(user.id)}
                           disabled={batchPending}
                           onCheckedChange={(checked) =>
@@ -639,7 +684,7 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
                         {status(user)}
                       </div>
                       <p className="break-words text-sm text-ink-muted">{user.email}</p>
-                      <p className="text-sm text-ink-muted">
+                      <p className="break-words text-sm text-ink-muted">
                         {user.roleIds.map(roleLabel).join(' / ')}
                       </p>
                     </div>
@@ -651,24 +696,26 @@ export function UsersPage({ query }: Readonly<{ query: UserQuery | null }>) {
             )
           }
           pagination={
-            <CollectionPagination
-              summary={t('users.page', {
-                page: formatNumber(locale, query.page),
-                pages: formatNumber(locale, pages),
-              })}
-              pager={
-                <PaginationControl
-                  label={t('users.collection')}
-                  page={query.page}
-                  totalPages={pages}
-                  disabled={result.loading}
-                  previousLabel={t('users.previous')}
-                  nextLabel={t('users.next')}
-                  getPageLabel={(p) => formatNumber(locale, p)}
-                  onPageChange={(p) => apply({ page: p })}
-                />
-              }
-            />
+            pages > 1 || query.page > 1 ? (
+              <CollectionPagination
+                summary={t('users.page', {
+                  page: formatNumber(locale, query.page),
+                  pages: formatNumber(locale, pages),
+                })}
+                pager={
+                  <PaginationControl
+                    label={t('users.collection')}
+                    page={query.page}
+                    totalPages={pages}
+                    disabled={result.loading}
+                    previousLabel={t('users.previous')}
+                    nextLabel={t('users.next')}
+                    getPageLabel={(p) => formatNumber(locale, p)}
+                    onPageChange={(p) => apply({ page: p })}
+                  />
+                }
+              />
+            ) : undefined
           }
         />
       )}

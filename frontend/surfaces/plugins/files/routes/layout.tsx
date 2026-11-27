@@ -24,6 +24,7 @@ function WorkspaceRoute({ children }: { children: ReactNode }) {
       pathname={pathname}
       href={pathname + (query ? '?' + query : '')}
       target={target}
+      goBack={() => router.back()}
       navigate={(href, replace) => {
         if (replace) router.replace(href, { scroll: false });
         else router.push(href, { scroll: false });

@@ -10,7 +10,7 @@ import type { FileMediaProps } from '@clouddrive/surface/files/runtime';
 import { privateHlsLoader } from './hls-loader';
 import type { createPrivateHlsSource } from './hls-source';
 import type { VideoToolsProps } from './media-view';
-import { applyReaderPosition, useReaderPlayback } from './reader-playback';
+import { captureVideoPlayback, restoreVideoPlayback, useReaderPlayback } from './reader-playback';
 
 const zh = {
   quality: '清晰度',
@@ -60,8 +60,21 @@ export function HlsPlayer({
   onDownload,
   videoTools: VideoTools,
   playback: readerPlayback,
+  presentation,
+  resumeVideo,
+  registerVideoHandoff,
+  onReady,
   claimAudio,
-}: Pick<FileMediaProps, 'entry' | 'maxBytes' | 'playback'> & {
+}: Pick<
+  FileMediaProps,
+  | 'entry'
+  | 'maxBytes'
+  | 'playback'
+  | 'presentation'
+  | 'resumeVideo'
+  | 'registerVideoHandoff'
+  | 'onReady'
+> & {
   open: ReturnType<typeof createPrivateHlsSource>;
   onDownload: () => void;
   videoTools?: ComponentType<VideoToolsProps>;
@@ -70,12 +83,31 @@ export function HlsPlayer({
   const { t, locale } = useFrontendTranslation();
   const labels = locale.startsWith('zh') ? zh : en;
   const video = useRef<HTMLVideoElement>(null);
+  const resume = useRef(resumeVideo);
+  const subtitle = useRef(resumeVideo?.subtitle);
   useReaderPlayback(video, readerPlayback);
   const engine = useRef<Hls>(null);
   const [attempt, setAttempt] = useState(0);
-  const [selected, setSelected] = useState(auto);
+  const [selected, setSelected] = useState(resumeVideo?.quality ?? auto);
+  const initialQuality = useRef(resumeVideo?.quality);
+  const [videoReady, setVideoReady] = useState<number>();
   const [playback, setPlayback] = useState(initialPlayback(0));
   const current = playback.attempt === attempt ? playback : initialPlayback(attempt);
+  const quick = presentation === 'quick';
+
+  useEffect(() => {
+    if (!registerVideoHandoff) return;
+    registerVideoHandoff(() => {
+      const player = video.current;
+      if (!player) return undefined;
+      const choice = subtitle.current;
+      return captureVideoPlayback(player, {
+        quality: selected,
+        ...(choice === undefined ? {} : { subtitle: choice }),
+      });
+    });
+    return () => registerVideoHandoff(undefined);
+  }, [registerVideoHandoff, selected]);
 
   useEffect(() => {
     const player = video.current;
@@ -126,6 +158,12 @@ export function HlsPlayer({
         owned = hls;
         engine.current = hls;
         hls.on(Hls.Events.MANIFEST_PARSED, (_event, manifest) => {
+          const quality = initialQuality.current;
+          initialQuality.current = undefined;
+          if (quality !== undefined && quality !== auto) {
+            if (quality >= 0 && quality < manifest.levels.length) hls.loadLevel = quality;
+            else setSelected(auto);
+          }
           update({
             levels: manifest.levels.map(({ width, height, bitrate }) => ({
               width,
@@ -195,26 +233,57 @@ export function HlsPlayer({
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       {VideoTools ? (
         <div hidden={readerPlayback?.presentation === 'mini'}>
-          <VideoTools entry={entry} media={video} presentation="toolbar" />
+          <VideoTools
+            entry={entry}
+            media={video}
+            presentation="toolbar"
+            {...(resumeVideo?.subtitle === undefined
+              ? {}
+              : { initialChoice: resumeVideo.subtitle })}
+            onChoiceChange={(choice) => {
+              subtitle.current = choice;
+            }}
+          />
         </div>
       ) : null}
-      {/* 同目录字幕沿用原生 TextTrack。 */}
-      {/* eslint-disable-next-line jsx-a11y-x/media-has-caption */}
-      <video
-        ref={video}
-        aria-label={entry.name}
-        controls
-        playsInline
-        preload="metadata"
-        className="min-h-0 w-full flex-1 rounded-control object-contain"
-        style={{ backgroundColor: 'black' }}
-        onLoadedMetadata={(event) =>
-          applyReaderPosition(event.currentTarget, readerPlayback?.position)
-        }
-        onTimeUpdate={(event) => readerPlayback?.onPosition(event.currentTarget.currentTime)}
-        onPlay={(event) => claimAudio?.(event.currentTarget)}
-        onVolumeChange={(event) => claimAudio?.(event.currentTarget)}
-      />
+      <div className={quick ? 'relative min-h-0 flex-1' : 'contents'}>
+        {quick && videoReady !== attempt && !failure ? (
+          <p
+            role="status"
+            className="absolute inset-0 grid place-items-center text-sm text-ink-muted"
+          >
+            {t('files.mediaLoading')}
+          </p>
+        ) : null}
+        {/* 同目录字幕沿用原生 TextTrack。 */}
+        {/* eslint-disable-next-line jsx-a11y-x/media-has-caption */}
+        <video
+          ref={video}
+          aria-label={entry.name}
+          controls
+          playsInline
+          preload="metadata"
+          className={
+            quick
+              ? 'absolute inset-0 m-auto max-h-full max-w-full rounded-control object-contain'
+              : 'min-h-0 w-full flex-1 rounded-control object-contain'
+          }
+          style={
+            quick
+              ? { visibility: videoReady === attempt ? 'visible' : 'hidden' }
+              : { backgroundColor: 'black' }
+          }
+          onLoadedMetadata={(event) => {
+            setVideoReady(attempt);
+            restoreVideoPlayback(event.currentTarget, resume.current, readerPlayback?.position);
+            resume.current = undefined;
+          }}
+          onLoadedData={() => onReady?.()}
+          onTimeUpdate={(event) => readerPlayback?.onPosition?.(event.currentTarget.currentTime)}
+          onPlay={(event) => claimAudio?.(event.currentTarget)}
+          onVolumeChange={(event) => claimAudio?.(event.currentTarget)}
+        />
+      </div>
       <div hidden={readerPlayback?.presentation === 'mini'}>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           <div style={{ marginInlineEnd: 'auto' }}>
@@ -242,7 +311,7 @@ export function HlsPlayer({
             </>
           ) : (
             <>
-              {!current.levels.length ? (
+              {!quick && !current.levels.length ? (
                 <p role="status" className="text-sm text-ink-muted">
                   {t('files.mediaLoading')}
                 </p>

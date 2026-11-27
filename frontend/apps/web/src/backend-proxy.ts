@@ -1,5 +1,1 @@
-export {
-  backendDestination,
-  backendRequestHeaders,
-  isBackendOriginAllowed,
-} from '../runtime/backend-proxy-rules.mjs';
+export { backendDestination, backendRequestHeaders } from '../runtime/backend-proxy-rules.mjs';

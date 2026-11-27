@@ -10,6 +10,22 @@ export {
 } from './site-profile-runtime';
 const Context = createContext<AdministrationPort | null>(null);
 
+type DevelopmentEnvironment = 'windows-development' | 'development' | null;
+const SystemUpdateEnvironmentContext = createContext<DevelopmentEnvironment>(null);
+
+export function SystemUpdateEnvironmentProvider({
+  environment,
+  children,
+}: Readonly<{ environment: DevelopmentEnvironment; children: ReactNode }>) {
+  return (
+    <SystemUpdateEnvironmentContext value={environment}>{children}</SystemUpdateEnvironmentContext>
+  );
+}
+
+export function useSystemUpdateEnvironment() {
+  return useContext(SystemUpdateEnvironmentContext);
+}
+
 export type AccountNotificationSettings = Readonly<{
   values: AccountNotificationPreferences | null;
   editable: boolean;

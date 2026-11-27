@@ -99,7 +99,7 @@ test('管理概览串联真实入口、文件返回与待办创建完成', async
   await expect(row).toContainText('已完成');
   await accessible(page);
   await page.screenshot({ path: info.outputPath('management-desktop.png'), fullPage: true });
-  await main.getByRole('link', { name: '返回我的文件', exact: true }).click();
+  await page.getByRole('link', { name: '返回我的文件', exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByRole('heading', { name: '我的文件', exact: true })).toBeVisible();
   await page.goto('/workspace');
@@ -338,7 +338,9 @@ test('320px 英文深色管理页可读、可用键盘并满足无障碍要求',
   await page.setViewportSize({ width: 320, height: 800 });
   await expect(page.getByRole('heading', { name: 'Administration', exact: true })).toBeVisible();
   await accessible(page);
-  const link = page.getByRole('main').getByRole('link', { name: 'Back to my files', exact: true });
+  const link = page
+    .locator('[data-workspace-header]')
+    .getByRole('link', { name: 'Back to files', exact: true });
   await link.focus();
   await expect(link).toBeFocused();
   await page.screenshot({

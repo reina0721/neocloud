@@ -24,12 +24,17 @@ import (
 //
 // 技术实现由组合根调用本函数明确选择；配置只选择数据库协议和连接位置。
 func NewGORM(ctx context.Context, cfg *Config) (Resource, error) {
-	return newGORM(ctx, cfg, true)
+	return newGORM(ctx, cfg, true, false)
 }
 
 // OpenExistingGORM 打开已有数据库。SQLite 缺失时返回错误，不创建数据库或目录。
 func OpenExistingGORM(ctx context.Context, cfg *Config) (Resource, error) {
-	return newGORM(ctx, cfg, false)
+	return newGORM(ctx, cfg, false, false)
+}
+
+// OpenInspectionGORM 打开已有数据库供受控只读检查。SQLite 不设置日志模式或创建文件。
+func OpenInspectionGORM(ctx context.Context, cfg *Config) (Resource, error) {
+	return newGORM(ctx, cfg, false, true)
 }
 
 // PrepareLocalFile 为写入型工具准备 SQLite 文件与私有目录。其它数据库由服务端管理。
@@ -45,7 +50,7 @@ func PrepareLocalFile(ctx context.Context, cfg *Config) error {
 	return err
 }
 
-func newGORM(ctx context.Context, cfg *Config, createSQLite bool) (Resource, error) {
+func newGORM(ctx context.Context, cfg *Config, createSQLite, inspectOnly bool) (Resource, error) {
 	if err := validateContext(ctx); err != nil {
 		return nil, err
 	}
@@ -55,7 +60,14 @@ func newGORM(ctx context.Context, cfg *Config, createSQLite bool) (Resource, err
 	}
 	dsn := resolved.DSN
 	if resolved.Driver == DriverSQLite {
-		if createSQLite {
+		if inspectOnly {
+			var path string
+			path, err = ExistingSQLitePath(*cfg)
+			if err == nil {
+				uriPath := url.URL{Path: filepath.ToSlash(path)}
+				dsn = "file:" + uriPath.EscapedPath() + "?mode=ro&_pragma=busy_timeout(200)"
+			}
+		} else if createSQLite {
 			dsn, err = prepareSQLite(resolved.DSN)
 		} else {
 			dsn, err = openExistingSQLite(resolved.DSN)
@@ -301,6 +313,29 @@ func prepareSQLite(dsn string) (string, error) {
 
 func sqliteMemoryDSN(dsn string) bool {
 	return dsn == ":memory:" || strings.HasPrefix(dsn, "file::memory:")
+}
+
+// ExistingSQLitePath 返回已存在的持久化 SQLite 文件，用于实例锁和受限迁移连接。
+func ExistingSQLitePath(cfg Config) (string, error) {
+	resolved, err := resolveConfig(&cfg)
+	if err != nil {
+		return "", err
+	}
+	if resolved.Driver != DriverSQLite {
+		return "", fmt.Errorf("当前数据库不是 SQLite")
+	}
+	if _, err := openExistingSQLite(resolved.DSN); err != nil {
+		return "", err
+	}
+	path, err := sqlitePath(resolved.DSN)
+	if err != nil {
+		return "", err
+	}
+	absolute, err := filepath.Abs(path)
+	if err != nil {
+		return "", redactDriverError(err)
+	}
+	return absolute, nil
 }
 
 func openExistingSQLite(dsn string) (string, error) {

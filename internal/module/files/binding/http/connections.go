@@ -11,6 +11,7 @@ import (
 	"github.com/reina0721/clouddrive/internal/module/files/model"
 	"github.com/reina0721/clouddrive/internal/module/files/service"
 	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
+	"github.com/reina0721/clouddrive/pkg/httpx"
 )
 
 type connectionOriginContextKey struct{}
@@ -31,11 +32,7 @@ func connectionRequestOrigin(request *http.Request) string {
 			return value
 		}
 	}
-	scheme := "http"
-	if request.TLS != nil {
-		scheme = "https"
-	}
-	return scheme + "://" + request.Host
+	return httpx.RequestOrigin(request)
 }
 
 const maxConnectionControlBytes int64 = 4096

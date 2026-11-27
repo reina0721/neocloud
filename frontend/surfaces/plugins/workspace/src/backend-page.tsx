@@ -17,7 +17,7 @@ import { useRequiredAdministration } from '../../../src/administration/context';
 import { useRemote, RemoteRegion } from '../../../src/administration/resource-state';
 import type { Todo } from '../../../src/administration/model';
 import Link from 'next/link';
-import { managementTaskGroups, visibleNavigationEntries } from './management-tasks';
+import { managementTaskGroups } from './management-tasks';
 
 function TodoAction({ todo, onSaved }: Readonly<{ todo?: Todo; onSaved: () => void }>) {
   const port = useRequiredAdministration();
@@ -94,10 +94,11 @@ function TodoPanel({ canWrite }: { canWrite: boolean }) {
   return (
     <Section
       title={t('administration.todos')}
-      contentInset
+      appearance="embedded"
+      density="compact"
       description={t('workspace.management.todosHint')}
+      action={canWrite ? <TodoAction onSaved={todos.reload} /> : undefined}
     >
-      {canWrite ? <TodoAction onSaved={todos.reload} /> : null}
       <RemoteRegion {...todos}>
         <DataTable
           label={t('administration.todos')}
@@ -118,7 +119,6 @@ export function BackendWorkspacePage() {
   const [revision, setRevision] = useState(0);
   const dashboard = useRemote(useCallback(() => port.dashboard(), [port]));
   const groups = managementTaskGroups(view.groups);
-  const files = visibleNavigationEntries(view.groups).find((entry) => entry.id === 'files.root');
   const native = access.data?.nativePermissions ?? [];
   const canReadTodos = native.includes('todos:read');
   const canWriteTodos = native.includes('todos:write');
@@ -128,32 +128,22 @@ export function BackendWorkspacePage() {
     dashboard.value?.users !== null ||
     dashboard.value?.roles !== null;
   return (
-    <Page>
+    <Page density="compact">
       <PageHeader
+        density="compact"
         title={t('workspace.management.title')}
-        description={t('workspace.management.description')}
         actions={
-          <>
-            {files ? (
-              <Link
-                href={files.href}
-                className="ui-navigation-focus inline-flex min-h-control items-center rounded-action px-4 text-sm font-medium text-brand hover:bg-brand-soft"
-              >
-                {t('workspace.management.backToFiles')}
-              </Link>
-            ) : null}
-            <Action
-              variant="quiet"
-              onPress={() => {
-                dashboard.reload();
-                view.onReload();
-                access.reload();
-                setRevision((value) => value + 1);
-              }}
-            >
-              {t('administration.refresh')}
-            </Action>
-          </>
+          <Action
+            variant="quiet"
+            onPress={() => {
+              dashboard.reload();
+              view.onReload();
+              access.reload();
+              setRevision((value) => value + 1);
+            }}
+          >
+            {t('administration.refresh')}
+          </Action>
         }
       />
       {view.status === 'loading' ? (
@@ -170,15 +160,20 @@ export function BackendWorkspacePage() {
         />
       ) : groups.length ? (
         groups.map((group) => (
-          <Section key={group.id} title={t('workspace.management.groups.' + group.id)} contentInset>
-            <ul className="grid gap-3 md:grid-cols-2" data-reveal-items>
+          <Section
+            key={group.id}
+            title={t('workspace.management.groups.' + group.id)}
+            appearance="embedded"
+            density="compact"
+          >
+            <ul className="grid gap-x-4 px-2 md:grid-cols-2" data-reveal-items>
               {group.items.map((entry) => (
-                <li className="min-w-0" key={entry.id}>
+                <li className="min-w-0 border-b border-border/60" key={entry.id}>
                   <Link
                     href={entry.href}
-                    className="ui-navigation-focus flex h-full min-w-0 items-start gap-3 rounded-control bg-surface-muted/60 px-4 py-4 hover:bg-brand-soft"
+                    className="ui-navigation-focus flex h-full min-h-control min-w-0 items-center gap-3 rounded-control px-2 py-1.5 hover:bg-surface-muted"
                   >
-                    <span className="mt-0.5 shrink-0 text-brand" aria-hidden="true">
+                    <span className="shrink-0 text-ink-muted" aria-hidden="true">
                       <NavigationIcon
                         iconId={(entry.iconId ?? 'resource') as NavigationIconId}
                         size="size-5"
@@ -188,7 +183,7 @@ export function BackendWorkspacePage() {
                       <span className="block break-words text-sm font-semibold">
                         {view.labels[entry.labelKey] ?? t(entry.labelKey)}
                       </span>
-                      <span className="mt-1 block text-xs leading-5 text-ink-muted">
+                      <span className="block text-xs leading-4 text-ink-muted">
                         {t('workspace.management.tasks.' + entry.hint)}
                       </span>
                     </span>
@@ -207,7 +202,12 @@ export function BackendWorkspacePage() {
         />
       )}
       {showCounts ? (
-        <Section title={t('workspace.management.countsTitle')} contentInset>
+        <Section
+          title={t('workspace.management.countsTitle')}
+          appearance="embedded"
+          density="compact"
+          contentInset
+        >
           <RemoteRegion {...dashboard}>
             <DescriptionList
               label={t('workspace.management.countsTitle')}

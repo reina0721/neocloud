@@ -6,7 +6,8 @@ import { useReaderWorkspace } from '../../src/reader-workspace-context';
 
 export default function FileViewerRoute() {
   const { t } = useFrontendTranslation();
-  const { viewerPending, viewerError, returnToFiles } = useReaderWorkspace();
+  const { foreground, viewerPending, viewerError, returnToFiles } = useReaderWorkspace();
+  if (foreground) return null;
   return (
     <div className="grid min-h-full place-items-center">
       <div className="space-y-3 text-center">

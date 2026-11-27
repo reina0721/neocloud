@@ -5,7 +5,7 @@ export const fileColumnKeys = ['size', 'kind', 'updated', 'created'] as const;
 export const filePageSizes = [50, 100, 200] as const;
 export type FileColumn = (typeof fileColumnKeys)[number];
 export const defaultFileViewPreferences = {
-  view: 'grid',
+  view: 'list',
   sort: 'name',
   desc: false,
   foldersFirst: false,

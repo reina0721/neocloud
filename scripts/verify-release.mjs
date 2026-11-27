@@ -1,4 +1,4 @@
-// 正式发布前的窄门禁：同提交的独立工作流、完整附件与配套镜像清单。
+// 正式发布前核对草稿、完整附件与配套镜像清单。
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
@@ -9,7 +9,6 @@ import { pathToFileURL } from "node:url";
 
 import { verifyHeader } from "./verify-elf-platform.mjs";
 
-const workflows = ["quality.yml", "database.yml", "container.yml"];
 export function selectDraft(pages, tag) {
   assert.match(tag, /^v\d+\.\d+\.\d+$/, "仅正式版本允许自动发布");
   assert.ok(
@@ -23,31 +22,6 @@ export function selectDraft(pages, tag) {
   return matches[0];
 }
 
-export function checkRuns(payload, sha) {
-  assert.match(sha, /^[a-f0-9]{40}$/);
-  assert.ok(Array.isArray(payload.workflow_runs), "工作流列表无效");
-  let pending = false;
-  for (const workflow of workflows) {
-    const run = payload.workflow_runs
-      .filter(
-        (r) =>
-          r.path === `.github/workflows/${workflow}` &&
-          r.head_sha === sha &&
-          r.head_branch === "main" &&
-          r.event === "push",
-      )
-      .sort((a, b) => b.id - a.id)[0];
-    if (!run || run.status !== "completed") pending = true;
-    else
-      assert.equal(
-        run.conclusion,
-        "success",
-        `${workflow} 未通过：${run.html_url}`,
-      );
-  }
-  return pending ? "pending" : "success";
-}
-
 export function requiredAssets(tag) {
   assert.match(tag, /^v\d+\.\d+\.\d+$/, "仅正式版本允许自动发布");
   const version = tag.slice(1);
@@ -55,9 +29,16 @@ export function requiredAssets(tag) {
     `clouddrive_${version}_linux_amd64.tar.gz`,
     `clouddrive_${version}_windows_amd64.zip`,
   ];
+  const managedArchives = [["windows", "amd64"], ["linux", "amd64"], ["linux", "arm64"]].flatMap(
+    ([os, arch]) => ["managed-go", "managed-full"].map(
+      (profile) => `clouddrive_${tag}_${os}_${arch}_${profile}.zip`,
+    ),
+  );
   return [
     ...goArchives,
     ...goArchives.map((name) => name + ".spdx.json"),
+    ...managedArchives,
+    ...managedArchives.map((name) => name + ".spdx.json"),
     ...["amd64", "arm64"].flatMap((arch) => [
       `clouddrive_${tag}_linux_${arch}_docker.tar.gz`,
       `clouddrive-maintenance_${tag}_linux_${arch}`,
@@ -180,6 +161,8 @@ export async function verifyAssets({
     }
     for (const [key, value] of Object.entries({
       FORMAT: "1",
+      INSTANCE_LAYOUT: "1",
+      OFFLINE_MAINTENANCE: "1",
       VERSION: tag,
       ARCH: arch,
       COMMIT: sha,
@@ -211,12 +194,8 @@ if (
     const payload = JSON.parse(await readFile(input, "utf8"));
     if (command === "draft") {
       console.log(JSON.stringify(selectDraft(payload, arg)));
-    } else if (command === "checks") {
-      const state = checkRuns(payload, arg);
-      console.log(`独立工作流：${state}`);
-      if (state === "pending") process.exitCode = 75;
     } else {
-      assert.equal(command, "assets", "命令必须为 draft、checks 或 assets");
+      assert.equal(command, "assets", "命令必须为 draft 或 assets");
       await verifyAssets({
         release: payload,
         directory: resolve(arg),

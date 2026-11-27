@@ -36,9 +36,18 @@ test("启动前拒绝无效或重复端口", async () => {
     ["--web-port", "0"],
     ["--web-port", "65536"],
     ["--web-port", "4173", "--api-port", "4173"],
+    ["--api-port", "4180"],
     ["--unknown"],
   ])
     assert.notEqual((await cli(args)).code, 0);
+});
+
+test("启动前拒绝不精确的网页应用 Origin", async () => {
+  const result = await cli([], {
+    env: { ...process.env, CLOUDDRIVE_ALLOWED_ORIGINS: '["https://viewer.test/path"]' },
+  });
+  assert.equal(result.code, 1);
+  assert.match(result.output, /CLOUDDRIVE_ALLOWED_ORIGINS/);
 });
 
 test("端口冲突不终止占用者，也不启动 Go 或迁移", async () => {

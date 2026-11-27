@@ -7,6 +7,8 @@ import { zhTime, enTime } from './time-i18n';
 import { zhRetention, enRetention } from './retention-i18n';
 import { zhLocks, enLocks } from './locks-i18n';
 import { zhViewer, enViewer } from './viewer-i18n';
+import { zhQuickPreview, enQuickPreview } from './quick-preview-i18n';
+import { zhTextQuickPreview, enTextQuickPreview } from './text-quick-preview-i18n';
 const zh = {
   webPreview: {
     denied: '部署尚未允许此阅读器的站点来源。请联系管理员配置跨域白名单，或改用内置阅读器。',
@@ -16,6 +18,8 @@ const zh = {
     openBuiltIn: '改用内置阅读器',
   },
   viewer: zhViewer,
+  quickPreview: zhQuickPreview,
+  textQuickPreview: zhTextQuickPreview,
   locks: zhLocks,
   retention: zhRetention,
   time: zhTime,
@@ -265,6 +269,8 @@ const en: typeof zh = {
     openBuiltIn: 'Use a built-in viewer',
   },
   viewer: enViewer,
+  quickPreview: enQuickPreview,
+  textQuickPreview: enTextQuickPreview,
   locks: enLocks,
   retention: enRetention,
   time: enTime,

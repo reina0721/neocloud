@@ -100,6 +100,24 @@ export function allowsOfflineFixture(): boolean {
   return readPreviewAccess().offlineSourceAllowed;
 }
 
+export async function editReadingFixtureText(page: Page, name: string) {
+  await page.getByRole('button', { name, exact: true }).click();
+  const dialog = page.getByRole('dialog', { name, exact: true });
+  await dialog.getByRole('button', { name: '编辑', exact: true }).click();
+  await page.waitForURL(/\/home\/view\?/);
+  return dialog;
+}
+
+export async function fileCollectionAction(
+  page: Page,
+  name: string,
+  role: 'menuitem' | 'menuitemradio' = 'menuitem',
+) {
+  const label = /^更多(?:目录)?操作$/;
+  await page.locator('[data-file-collection-actions]').getByRole('button', { name: label }).click();
+  await page.getByRole('menu', { name: label }).getByRole(role, { name, exact: true }).click();
+}
+
 export async function openReadingFixtureFolder(page: Page, prefix: string) {
   const name = prefix + randomUUID().slice(0, 8);
   const id = await page.evaluate(async (name) => {

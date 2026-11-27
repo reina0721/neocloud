@@ -8,6 +8,7 @@
     "./action": "./src/action.tsx",
     "./accessibility": "./src/accessibility.tsx",
     "./async-region": "./src/async-region.tsx",
+    "./browser-layout": "./src/browser-layout.ts",
     "./busy-indicator": "./src/busy-indicator.tsx",
     "./content-swap-transition": "./src/content-swap-transition.tsx",
     "./card": "./src/card.tsx",

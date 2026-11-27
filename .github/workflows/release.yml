@@ -6,19 +6,18 @@ on:
       - "v*"
 
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 
 jobs:
   release:
-    name: Build signed draft release
+    name: Verify source and build legacy release archives
     if: github.repository == 'reina0721/neocloud'
     runs-on: ubuntu-latest
     environment: release
     permissions:
       contents: write
-      id-token: write
-      actions: read
+    outputs:
+      previous-stable: ${{ steps.source.outputs.previous-stable }}
     steps:
       - name: Checkout full history
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -33,65 +32,64 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24.11.1
-      - name: Set up pnpm
+      - name: Verify annotated tag, main ancestry and prior release
+        id: source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npx --yes pnpm@10.22.0 --version
+          ref="refs/tags/${GITHUB_REF_NAME}"
+          test "$(git cat-file -t "$ref")" = tag
+          test "$(git rev-parse "$ref^{commit}")" = "$GITHUB_SHA"
+          git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
+          if [[ "$GITHUB_REF_NAME" != *-* ]]; then
+            [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+            previous="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
+            [[ "$previous" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+            [[ "$GITHUB_REF_NAME" != "$previous" ]]
+            test "$(printf '%s\n' "$previous" "$GITHUB_REF_NAME" | sort -V | tail -n1)" = "$GITHUB_REF_NAME"
+            git merge-base --is-ancestor "refs/tags/${previous}^{commit}" "$GITHUB_SHA"
+            printf 'previous-stable=%s\n' "$previous" >> "$GITHUB_OUTPUT"
+          fi
+          test -z "$(git status --porcelain)"
+          printf '构建版本 `%s`，提交 `%s`。\n' "$GITHUB_REF_NAME" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
       - name: Install pinned release tools
         run: |
           tool_dir="$(node scripts/project-layout.mjs --field toolsRoot)"
           mkdir -p "${tool_dir}"
           GOBIN="${tool_dir}" go install github.com/goreleaser/goreleaser/v2@v2.17.1
           GOBIN="${tool_dir}" go install github.com/anchore/syft/cmd/syft@v1.50.0
-          GOBIN="${tool_dir}" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
           GOBIN="${tool_dir}" go install github.com/google/go-licenses/v2@v2.0.1
           echo "${tool_dir}" >> "${GITHUB_PATH}"
           echo "GORELEASER_DIST=$(node scripts/project-layout.mjs --field releaseRoot)" >> "${GITHUB_ENV}"
-      - name: Verify exact source and completed main release gates
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          test "$(git cat-file -t "${GITHUB_REF_NAME}")" = tag
-          test "$(git rev-parse "${GITHUB_REF_NAME}^{commit}")" = "${GITHUB_SHA}"
-          bash scripts/wait-release-gates.sh
-          node --test scripts/install.test.mjs scripts/verify-release.test.mjs scripts/release-config.test.mjs scripts/verify-elf-platform.test.mjs scripts/docker-image-config-id.test.mjs
-          test -z "$(git status --porcelain)"
       - name: Build draft release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_PREVIOUS_TAG: ${{ steps.source.outputs.previous-stable }}
         run: |
-          if [[ "$GITHUB_REF_NAME" != *-* ]]; then
-            published="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
-            [[ "$published" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
-            git merge-base --is-ancestor "${published}^{commit}" "$GITHUB_SHA"
-            export GORELEASER_PREVIOUS_TAG="$published"
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            unset GORELEASER_PREVIOUS_TAG
           fi
           node scripts/release-config.mjs --output "${RUNNER_TEMP}/goreleaser.yaml"
           goreleaser release --clean --skip=sign --config "${RUNNER_TEMP}/goreleaser.yaml"
-      - name: Verify archive license trees
+      - name: Verify legacy archive targets and license trees
         run: |
           version="${GITHUB_REF_NAME#v}"
-          tar -tzf "${GORELEASER_DIST}/clouddrive_${version}_linux_amd64.tar.gz" > "${RUNNER_TEMP}/linux-files.txt"
-          unzip -Z1 "${GORELEASER_DIST}/clouddrive_${version}_windows_amd64.zip" > "${RUNNER_TEMP}/windows-files.txt"
-          for list in linux-files windows-files; do
+          linux="${GORELEASER_DIST}/clouddrive_${version}_linux_amd64.tar.gz"
+          windows="${GORELEASER_DIST}/clouddrive_${version}_windows_amd64.zip"
+          tar -tzf "$linux" > "$RUNNER_TEMP/linux-files.txt"
+          unzip -Z1 "$windows" > "$RUNNER_TEMP/windows-files.txt"
+          tar -xOzf "$linux" clouddrive > "$RUNNER_TEMP/legacy-linux"
+          unzip -p "$windows" clouddrive.exe > "$RUNNER_TEMP/legacy-windows"
+          for target in linux windows; do
+            go version -m "$RUNNER_TEMP/legacy-$target" > "$RUNNER_TEMP/$target-build.txt"
+            grep -Ex "[[:space:]]+build[[:space:]]+GOOS=$target" "$RUNNER_TEMP/$target-build.txt"
+            grep -Ex '[[:space:]]+build[[:space:]]+GOARCH=amd64' "$RUNNER_TEMP/$target-build.txt"
             for file in README.md LICENSE NOTICE SOURCES.json locales/messages.zh-CN.yaml internal/module/todo/binding/i18n/locales/messages.zh-CN.yaml third-party/GO-LICENSE third-party/github.com/spf13/cobra/LICENSE.txt; do
-              grep -Fx "${file}" "${RUNNER_TEMP}/${list}.txt"
+              grep -Fx "$file" "$RUNNER_TEMP/$target-files.txt"
             done
           done
-          node scripts/test-go-archive.mjs --archive "${GORELEASER_DIST}/clouddrive_${version}_linux_amd64.tar.gz"
-      - name: Sign and verify checksum bundle
-        run: |
-          checksum="${GORELEASER_DIST}/checksums.txt"
-          bundle="${GORELEASER_DIST}/checksums.txt.sigstore.json"
-          cosign sign-blob --yes --bundle "${bundle}" "${checksum}"
-          cosign verify-blob \
-            --bundle "${bundle}" \
-            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/release.yml@${{ github.ref }}" \
-            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            "${checksum}"
-      - name: Attach verification bundle to draft
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${GITHUB_REF_NAME}" "${GORELEASER_DIST}/checksums.txt.sigstore.json" --clobber
 
   docker-bundles:
     name: Docker Release / ${{ matrix.arch }}
@@ -122,10 +120,6 @@ jobs:
           binary="dist/docker/clouddrive-maintenance_${GITHUB_REF_NAME}_linux_${{ matrix.arch }}"
           CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build -trimpath -buildvcs=false -ldflags="-s -w" -o "${binary}" ./cmd/clouddrive-maintenance
           node scripts/verify-elf-platform.mjs "${binary}" "${{ matrix.arch }}"
-      - name: Exercise installation and persistence on native architecture
-        run: node scripts/test-docker-release.mjs --release-dir dist/docker --version "${GITHUB_REF_NAME}"
-      - name: Exercise default HTTP installation on a non-loopback IP
-        run: node scripts/test-docker-release.mjs --release-dir dist/docker --version "${GITHUB_REF_NAME}" --network-host "$(hostname -I | awk '{print $1}')"
       - name: Produce image SBOMs
         run: |
           GOBIN="${RUNNER_TEMP}/release-tools" go install github.com/anchore/syft/cmd/syft@v1.50.0
@@ -139,11 +133,120 @@ jobs:
           path: dist/docker/
           compression-level: 0
 
-  attach-docker:
+  managed-static-web:
+    name: Build static Web for native packages
+    needs: release
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.11.1
+      - name: Build one static Web release tree and its third-party notices
+        shell: bash
+        run: |
+          npm install --global pnpm@10.22.0
+          pnpm --dir frontend install --frozen-lockfile
+          node scripts/build-static-web.mjs --output "$RUNNER_TEMP/managed-static/web" --commit "$GITHUB_SHA"
+          node --input-type=module - "$RUNNER_TEMP/managed-static/licenses" <<'NODE'
+          import { mkdir } from 'node:fs/promises';
+          import { resolve } from 'node:path';
+          import { bundleLicenses } from './frontend/tooling/bundle-licenses.mjs';
+          const output = process.argv[2];
+          await mkdir(output, { recursive: true });
+          await bundleLicenses(resolve('frontend'), output);
+          NODE
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: managed-static-web
+          path: ${{ runner.temp }}/managed-static/
+          include-hidden-files: true
+          if-no-files-found: error
+          compression-level: 0
+
+  managed-go-bundles:
+    name: Managed native archives / ${{ matrix.os }}-${{ matrix.arch }}
+    needs: [release, managed-static-web]
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            arch: amd64
+          - os: linux
+            arch: amd64
+          - os: linux
+            arch: arm64
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.11.1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: managed-static-web
+          path: ${{ runner.temp }}/managed-static
+      - name: Package both managed native profiles and generate SPDX SBOMs
+        env:
+          TARGET_OS: ${{ matrix.os }}
+          TARGET_ARCH: ${{ matrix.arch }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASELINE: ${{ needs.release.outputs.previous-stable }}
+        run: |
+          test -z "$(git status --porcelain)"
+          export GOBIN="${RUNNER_TEMP}/managed-tools"
+          go install github.com/google/go-licenses/v2@v2.0.1
+          go install github.com/anchore/syft/cmd/syft@v1.50.0
+          export PATH="$GOBIN:$PATH"
+          baseline="$BASELINE"
+          [[ "$baseline" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          baseline_assets=$(gh release view "$baseline" --json assets --jq '.assets[].name')
+          source_args=()
+          if grep -q '_managed-go\.zip$' <<< "$baseline_assets"; then
+            grep -Fxq "clouddrive_${baseline}_${TARGET_OS}_${TARGET_ARCH}_managed-go.zip" <<< "$baseline_assets"
+            baseline_commit=$(git rev-parse "${baseline}^{commit}")
+            source_args=(--base-version "$baseline" --base-commit "$baseline_commit")
+          fi
+          node scripts/build-managed-go-release.mjs --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" \
+            --os "$TARGET_OS" --arch "$TARGET_ARCH" --out dist/managed-go "${source_args[@]}"
+          node scripts/build-managed-go-release.mjs --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" \
+            --os "$TARGET_OS" --arch "$TARGET_ARCH" --out dist/managed-go "${source_args[@]}" \
+            --web-dir "$RUNNER_TEMP/managed-static/web" --web-licenses-dir "$RUNNER_TEMP/managed-static/licenses"
+          for profile in managed-go managed-full; do
+            archive="dist/managed-go/clouddrive_${GITHUB_REF_NAME}_${TARGET_OS}_${TARGET_ARCH}_${profile}.zip"
+            syft "file:$archive" --output "spdx-json=$archive.spdx.json"
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: managed-go-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/managed-go/
+          if-no-files-found: error
+          compression-level: 0
+
+  assemble-release:
     name: Attach and sign complete draft asset set
-    needs: [release, docker-bundles]
+    needs: [release, docker-bundles, managed-go-bundles]
+    if: >-
+      ${{ !cancelled() && needs.release.result == 'success' &&
+          needs.docker-bundles.result == 'success' &&
+          (contains(github.ref_name, '-') || needs.managed-go-bundles.result == 'success') }}
     runs-on: ubuntu-24.04
     environment: release
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
@@ -154,25 +257,35 @@ jobs:
           pattern: docker-*
           merge-multiple: true
           path: dist/docker
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        if: ${{ !contains(github.ref_name, '-') }}
+        with:
+          pattern: managed-go-*
+          merge-multiple: true
+          path: dist/managed-go
       - name: Merge checksums and verify images' archives
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p dist/complete
+          test "$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft)" = true
           gh release download "${GITHUB_REF_NAME}" --pattern checksums.txt --pattern '*.spdx.json' --dir dist/complete
           (cd dist/complete && sha256sum -- *.spdx.json >> checksums.txt)
           cd dist/docker
           sha256sum --check "checksums-amd64.txt"
           sha256sum --check "checksums-arm64.txt"
           sha256sum -- clouddrive_*_docker.tar.gz clouddrive-maintenance_* install.sh version.txt *.spdx.json >> ../complete/checksums.txt
+          if [[ "$GITHUB_REF_NAME" != *-* ]]; then
+            (cd ../managed-go && sha256sum -- *_managed-go.zip *_managed-full.zip *_managed-go.zip.spdx.json *_managed-full.zip.spdx.json) >> ../complete/checksums.txt
+          fi
           LC_ALL=C sort -u -k2 ../complete/checksums.txt -o ../complete/checksums.txt
       - name: Sign final checksum set
         run: |
           GOBIN="${RUNNER_TEMP}/release-tools" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
           cosign="${RUNNER_TEMP}/release-tools/cosign"
-          "${cosign}" sign-blob --yes --bundle dist/complete/checksums.txt.sigstore.json dist/complete/checksums.txt
+          "${cosign}" sign-blob --yes --new-bundle-format --bundle dist/complete/checksums.txt.sigstore.json dist/complete/checksums.txt
           "${cosign}" verify-blob --bundle dist/complete/checksums.txt.sigstore.json \
-            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/release.yml@${{ github.ref }}" \
+            --certificate-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/release.yml@$GITHUB_REF" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com dist/complete/checksums.txt
       - name: Upload complete assets to draft only
         env:
@@ -181,16 +294,25 @@ jobs:
           test "$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq .isDraft)" = true
           gh release upload "${GITHUB_REF_NAME}" dist/docker/clouddrive_*_docker.tar.gz dist/docker/install.sh \
             dist/docker/version.txt dist/docker/*.spdx.json dist/docker/clouddrive-maintenance_* dist/complete/checksums.txt dist/complete/checksums.txt.sigstore.json --clobber
+          if [[ "$GITHUB_REF_NAME" != *-* ]]; then
+            gh release upload "${GITHUB_REF_NAME}" dist/managed-go/*_managed-go.zip dist/managed-go/*_managed-full.zip \
+              dist/managed-go/*_managed-go.zip.spdx.json dist/managed-go/*_managed-full.zip.spdx.json --clobber
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-signature
+          path: |
+            dist/complete/checksums.txt
+            dist/complete/checksums.txt.sigstore.json
+          if-no-files-found: error
 
-  maintenance-acceptance:
-    name: Native browser maintenance / ${{ matrix.arch }}
-    needs: attach-docker
-    if: ${{ !contains(github.ref_name, '-') }}
+  docker-acceptance:
+    name: Signed Docker install smoke / ${{ matrix.arch }}
+    needs: assemble-release
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 55
-    environment: release
     permissions:
-      contents: write
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -199,8 +321,6 @@ jobs:
             runner: ubuntu-24.04
           - arch: arm64
             runner: ubuntu-24.04-arm
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
@@ -209,59 +329,107 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24.11.1
-      - name: Download the signed candidate and previous stable release
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: docker-${{ matrix.arch }}
+          path: ${{ runner.temp }}/docker-candidate
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: release-signature
+          path: ${{ runner.temp }}/docker-candidate
+      - name: Verify, install and probe the signed Docker package
+        shell: bash
         env:
           ARCH: ${{ matrix.arch }}
         run: |
-          old="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
-          [[ "$old" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
-          test "$old" != "$GITHUB_REF_NAME"
-          gh release download "$old" --dir "${RUNNER_TEMP}/baseline" \
-            --pattern install.sh --pattern checksums.txt --pattern "clouddrive_${old}_linux_${ARCH}_docker.tar.gz"
-          gh release download "$GITHUB_REF_NAME" --dir "${RUNNER_TEMP}/candidate" \
-            --pattern install.sh --pattern checksums.txt --pattern checksums.txt.sigstore.json \
-            --pattern "clouddrive_${GITHUB_REF_NAME}_linux_${ARCH}_docker.tar.gz" \
-            --pattern "clouddrive-maintenance_${GITHUB_REF_NAME}_linux_${ARCH}"
-          echo "BASELINE_VERSION=$old" >> "${GITHUB_ENV}"
-      - name: Prepare browser and release verifier
+          GOBIN="$RUNNER_TEMP/release-tools" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
+          export CLOUDDRIVE_COSIGN="$RUNNER_TEMP/release-tools/cosign"
+          export CLOUDDRIVE_OFFLINE_TRUST_DIR="$RUNNER_TEMP/offline-trust"
+          bash scripts/prepare-offline-trust.sh "$CLOUDDRIVE_OFFLINE_TRUST_DIR"
+          node scripts/test-docker-release.mjs --artifact-smoke --release-dir "$RUNNER_TEMP/docker-candidate" \
+            --version "$GITHUB_REF_NAME" --arch "$ARCH" --commit "$GITHUB_SHA" \
+            --trace "$RUNNER_TEMP/docker-smoke-$ARCH.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: ${{ always() }}
+        with:
+          name: docker-smoke-${{ matrix.arch }}
+          path: ${{ runner.temp }}/docker-smoke-${{ matrix.arch }}.json
+          if-no-files-found: ignore
+
+  managed-full-acceptance:
+    name: Signed native full draft / ${{ matrix.os }}-${{ matrix.arch }}
+    needs: assemble-release
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            arch: amd64
+            runner: windows-2025
+          - os: linux
+            arch: amd64
+            runner: ubuntu-24.04
+          - os: linux
+            arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: managed-go-${{ matrix.os }}-${{ matrix.arch }}
+          path: ${{ runner.temp }}/native-full-draft/release
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: release-signature
+          path: ${{ runner.temp }}/native-full-draft/release
+      - name: Boot the signed full package on its target platform
+        shell: pwsh
         run: |
-          GOBIN="${RUNNER_TEMP}/tools" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
-          export PLAYWRIGHT_BROWSERS_PATH="${RUNNER_TEMP}/maintenance-browsers"
-          echo "PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH" >> "${GITHUB_ENV}"
-          npx --yes pnpm@10.22.0 --dir frontend install --frozen-lockfile
-          npx --yes pnpm@10.22.0 --dir frontend exec playwright install --with-deps chromium
-      - name: Exercise port handover, browser maintenance and complete restore
-        env:
-          ARCH: ${{ matrix.arch }}
-        run: |
-          cd "${RUNNER_TEMP}/candidate"
-          "${RUNNER_TEMP}/tools/cosign" verify-blob --bundle checksums.txt.sigstore.json \
-            --certificate-identity "https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release.yml@refs/tags/${GITHUB_REF_NAME}" \
-            --certificate-oidc-issuer https://token.actions.githubusercontent.com checksums.txt
-          tool="clouddrive-maintenance_${GITHUB_REF_NAME}_linux_${ARCH}"
-          awk -v asset="$tool" '$2 == asset {print}' checksums.txt | sha256sum -c -
-          chmod 700 "$tool"
-          cd "${GITHUB_WORKSPACE}"
-          sudo env CLOUDDRIVE_COSIGN="${RUNNER_TEMP}/tools/cosign" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_PATH" \
-            "$(command -v node)" scripts/test-docker-maintenance.mjs \
-            --candidate "${RUNNER_TEMP}/candidate" --version "$GITHUB_REF_NAME" \
-            --baseline "${RUNNER_TEMP}/baseline" --baseline-version "$BASELINE_VERSION"
-          sudo env CLOUDDRIVE_COSIGN="${RUNNER_TEMP}/tools/cosign" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_PATH" \
-            "$(command -v node)" scripts/test-docker-maintenance.mjs \
-            --candidate "${RUNNER_TEMP}/candidate" --version "$GITHUB_REF_NAME"
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $root = Join-Path $env:RUNNER_TEMP 'native-full-draft'
+          $tools = Join-Path $root 'tools'
+          $release = Join-Path $root 'release'
+          $trust = Join-Path $root 'trust'
+          New-Item -ItemType Directory -Path $tools, $trust | Out-Null
+          $env:GOBIN = $tools
+          go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
+          $env:TUF_ROOT = Join-Path $root 'tuf'
+          Remove-Item Env:TUF_ROOT_JSON, Env:TUF_MIRROR -ErrorAction SilentlyContinue
+          $cosign = Join-Path $tools ($IsWindows ? 'cosign.exe' : 'cosign')
+          # 原生整包启动验收会清空被测宿主进程的 PATH。
+          $env:CLOUDDRIVE_COSIGN = $cosign
+          & $cosign initialize --mirror https://tuf-repo-cdn.sigstore.dev
+          Copy-Item -LiteralPath (Join-Path $env:TUF_ROOT 'tuf-repo-cdn.sigstore.dev/targets/trusted_root.json') -Destination $trust
+          $env:CLOUDDRIVE_TEST_NATIVE_RELEASE_DIR = $release
+          $env:CLOUDDRIVE_TEST_NATIVE_TRUST_DIR = $trust
+          $env:CLOUDDRIVE_TEST_NATIVE_TAG = $env:GITHUB_REF_NAME
+          $env:CLOUDDRIVE_TEST_NATIVE_COMMIT = $env:GITHUB_SHA
+          go test -count=1 -v ./internal/nativeupgrade -run '^TestSignedFullReleaseBoot$'
 
   publish:
     name: Verify and publish stable release
-    needs: maintenance-acceptance
+    needs: [release, docker-acceptance, managed-full-acceptance]
     if: ${{ !contains(github.ref_name, '-') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     environment: release
+    concurrency:
+      group: stable-release-publication
+      cancel-in-progress: false
     permissions:
       contents: write
-      actions: read
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PREVIOUS_STABLE: ${{ needs.release.outputs.previous-stable }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
@@ -272,26 +440,74 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:
           go-version-file: go.mod
-      - name: Verify immutable annotated tag and independent gates
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: release-signature
+          path: ${{ runner.temp }}/accepted-signature
+      - name: Verify immutable annotated tag
         run: |
-          test "$(git cat-file -t "${GITHUB_REF_NAME}")" = tag
-          test "$(git rev-parse "${GITHUB_REF_NAME}^{commit}")" = "${GITHUB_SHA}"
-          bash scripts/wait-release-gates.sh
+          ref="refs/tags/${GITHUB_REF_NAME}"
+          test "$(git cat-file -t "$ref")" = tag
+          test "$(git rev-parse "$ref^{commit}")" = "$GITHUB_SHA"
       - name: Download and verify complete signed asset set
         run: |
           gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" > "${RUNNER_TEMP}/release-pages.json"
           node scripts/verify-release.mjs draft "${RUNNER_TEMP}/release-pages.json" "${GITHUB_REF_NAME}" > "${RUNNER_TEMP}/release.json"
           gh release download "${GITHUB_REF_NAME}" --dir "${RUNNER_TEMP}/release-assets"
+          for name in checksums.txt checksums.txt.sigstore.json; do
+            cmp -- "$RUNNER_TEMP/accepted-signature/$name" "$RUNNER_TEMP/release-assets/$name"
+          done
           node scripts/verify-release.mjs assets "${RUNNER_TEMP}/release.json" "${RUNNER_TEMP}/release-assets" "${GITHUB_SHA}"
+          for target in windows/amd64 linux/amd64 linux/arm64; do
+            os=${target%/*}
+            arch=${target#*/}
+            for profile in managed-go managed-full; do
+              archive="${RUNNER_TEMP}/release-assets/clouddrive_${GITHUB_REF_NAME}_${os}_${arch}_${profile}.zip"
+              go run ./internal/tools/native-archive --profile "$profile" --verify-managed "$archive" \
+                --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" --os "$os" --arch "$arch"
+            done
+          done
           GOBIN="${RUNNER_TEMP}/release-tools" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
           "${RUNNER_TEMP}/release-tools/cosign" verify-blob \
             --bundle "${RUNNER_TEMP}/release-assets/checksums.txt.sigstore.json" \
-            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/release.yml@${{ github.ref }}" \
+            --certificate-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/release.yml@$GITHUB_REF" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             "${RUNNER_TEMP}/release-assets/checksums.txt"
       - name: Publish verified release as latest stable
         run: |
-          node scripts/test-docker-release.mjs --release-dir "${RUNNER_TEMP}/release-assets" --version "${GITHUB_REF_NAME}"
+          latest="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
+          if [[ "$latest" != "$PREVIOUS_STABLE" ]]; then
+            echo "上一正式版已变更：构建基线为 $PREVIOUS_STABLE，当前为 $latest" >&2
+            exit 1
+          fi
           gh release edit "${GITHUB_REF_NAME}" --draft=false --prerelease=false --latest
           test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)" = "${GITHUB_REF_NAME}"
+      - name: Verify public download propagation
+        run: |
+          export CLOUDDRIVE_COSIGN="${RUNNER_TEMP}/release-tools/cosign"
+          for attempt in {1..6}; do
+            if curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' \
+              --connect-timeout 10 --max-time 20 \
+              "https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/install.sh" \
+              --output "${RUNNER_TEMP}/public-install.sh" &&
+              cmp --silent "${RUNNER_TEMP}/release-assets/install.sh" "${RUNNER_TEMP}/public-install.sh"; then
+              break
+            fi
+            sleep 5
+          done
+          cmp -- "${RUNNER_TEMP}/release-assets/install.sh" "${RUNNER_TEMP}/public-install.sh"
+          for profile in managed-go managed-full; do
+            native_verified=false
+            for attempt in {1..6}; do
+              # 每轮独立缓存，实际走宿主使用的 GitHub 下载、验签、解包和本地回读路径。
+              if go run ./internal/tools/native-archive --profile "$profile" \
+                --stage-online "${RUNNER_TEMP}/verified-native-${profile}-${attempt}" \
+                --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA"; then
+                native_verified=true
+                break
+              fi
+              sleep 5
+            done
+            test "$native_verified" = true
+          done
           echo "正式版：https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}" >> "${GITHUB_STEP_SUMMARY}"

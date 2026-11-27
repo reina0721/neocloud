@@ -9,6 +9,8 @@ import {
   type PdfReaderState,
   type PdfOutline,
   type PdfFailure,
+  type PdfFit,
+  type PdfOpenView,
 } from './protocol';
 
 export class PDFFrameError extends Error {
@@ -148,14 +150,17 @@ export class PDFFrameSession {
         return;
     }
   };
-  async open(bytes: ArrayBuffer, locale: string, theme: 'light' | 'dark') {
+  async open(bytes: ArrayBuffer, locale: string, theme: 'light' | 'dark', view: PdfOpenView) {
     if (this.closed || this.openSent) throw new FilesError('canceled');
     this.openSent = true;
     const boot = new Promise<void>((resolve) => {
       this.bootResolver = resolve;
     });
     this.deadline(this.limits.workerReadyTimeoutMs);
-    this.frame.src = assets.publicPath + '/index.html';
+    // 阅读器子窗口启动和清理都不应在文件预览后面再插入浏览器历史。
+    this.frame.contentWindow?.location.replace(
+      new URL(assets.publicPath + '/index.html', location.origin),
+    );
     await boot;
     if (this.closed) return;
     this.deadline(this.limits.workerReadyTimeoutMs);
@@ -168,10 +173,18 @@ export class PDFFrameSession {
         limits: this.limits,
         locale,
         theme,
+        view,
       },
       location.origin,
       [bytes],
     );
+  }
+  fit(value: PdfFit) {
+    if (!this.closed && this.openSent)
+      this.frame.contentWindow?.postMessage(
+        { kind: 'fit', nonce: this.nonce, value },
+        location.origin,
+      );
   }
   theme(value: 'light' | 'dark') {
     if (!this.closed)
@@ -249,7 +262,7 @@ export class PDFFrameSession {
       pending.reject(new FilesError('canceled'));
     }
     this.pending.clear();
-    this.frame.src = 'about:blank';
+    this.frame.contentWindow?.location.replace('about:blank');
   }
 }
 /** checkedOutline 只接受本次有界的普通文字投影，不让SDK目的地对象穿过frame。 */

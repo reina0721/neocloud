@@ -1,12 +1,13 @@
 'use client';
 import { useFrontendTranslation } from '@clouddrive/i18n';
+import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
 import { Toolbar } from '@clouddrive/surface-foundation/layout';
 import { BreadcrumbTrail } from '@clouddrive/ui-adapter/navigation';
 import { IconAction } from '@clouddrive/ui-adapter/icon-action';
 import { Action } from '@clouddrive/ui-adapter/action';
 import { CheckboxField, TextField } from '@clouddrive/ui-adapter/form-field';
 import { useContainerBreakpoint } from '@clouddrive/ui-adapter/container-layout';
-import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
+import { MenuButton, type MenuAction } from '@clouddrive/ui-adapter/menu-button';
 import { DialogSurface, DrawerSurface } from '@clouddrive/ui-adapter/overlays';
 import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
 import {
@@ -14,6 +15,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useEffectEvent,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -28,7 +30,7 @@ import { formatFileBytes as bytes } from '../../../src/files/format';
 import {
   Archive,
   ArrowUp,
-  ArrowUpDown,
+  ChevronDown,
   Cloud,
   Copy,
   Download,
@@ -41,6 +43,7 @@ import {
   Info,
   LayoutGrid,
   Link2,
+  List,
   MoreHorizontal,
   PanelRight,
   Pencil,
@@ -85,6 +88,7 @@ import { ActiveFilterChips } from './active-filter-chips';
 import { AdvancedSearchDialog } from './advanced-search-dialog';
 import { AnnotationPanel } from './annotation-panel';
 import { FileItem, FileListHeader, type FileSelectionGesture } from './file-item';
+import { FileCategoryMenu } from './file-categories';
 import { CursorFilePagination, NumberedFilePagination } from './file-pagination';
 import { PinDialog } from './pinned-links';
 import { ShareDialog } from './share-dialog';
@@ -93,10 +97,18 @@ import { SaveShortcutDialog, ShortcutActionDialog } from './shortcut-dialogs';
 import { TagsBatchDialog } from './tags-batch-dialog';
 import { TagBadges } from './tag-badges';
 import { useFileTime } from './use-file-time';
+import { useFileActionFeedback } from './use-file-action-feedback';
+import type { Preferences } from '../../../src/preferences-model';
 import { VersionsPanel } from './versions-panel';
 import { ViewOptionsDialog } from './view-options-dialog';
 import { useCursorFileFeed } from './use-cursor-file-feed';
 import { useFileReader } from './use-file-reader';
+import { QuickFilePreview } from './quick-file-preview';
+import {
+  canOpenQuickPreview,
+  useQuickFilePreview,
+  type PreviewRoute,
+} from './use-quick-file-preview';
 import { useReaderWorkspace } from './reader-workspace-context';
 import { FileApplicationSelection } from './file-reader';
 import { archiveFile } from './file-reader-session';
@@ -122,6 +134,7 @@ type Props = Readonly<{
   numbered: boolean;
   cursor: string;
   queryInvalid: boolean;
+  previewRoute: PreviewRoute;
   navigate: (query: Record<string, string>) => void;
 }>;
 type Dialog = {
@@ -131,6 +144,15 @@ type Dialog = {
 const FileAccessDialog = lazy(() =>
   import('./access-dialog').then((module) => ({ default: module.FileAccessDialog })),
 );
+const fileViewIcons = {
+  grid: <LayoutGrid className="size-4" aria-hidden="true" />,
+  list: <List className="size-4" aria-hidden="true" />,
+  gallery: (
+    <span aria-hidden="true" className="[&>svg]:size-4 [&>svg]:text-current">
+      <FileGlyph kind="file" mediaType="image/*" size="small" />
+    </span>
+  ),
+};
 
 export function FilesPage({
   parent,
@@ -142,9 +164,19 @@ export function FilesPage({
   numbered,
   cursor,
   queryInvalid,
+  previewRoute,
   navigate: routeNavigate,
 }: Props) {
   const filterKey = encodeFileFilters(filters);
+  const reportAction = useFileActionFeedback(
+    JSON.stringify([parent, category, trash, search, filterKey, page, cursor]),
+  );
+  const preferencesPort = usePreferencesPort<Preferences>();
+  const tableDensity = useSyncExternalStore(
+    preferencesPort.subscribe,
+    preferencesPort.getSnapshot,
+    preferencesPort.getSnapshot,
+  ).dataDisplay.tableDensity;
   const port = useFiles();
   const transfers = useTransfers();
   const transferState = useTransferSnapshot();
@@ -184,17 +216,17 @@ export function FilesPage({
     [inspectorOpen, setInspectorOpen] = useState(false),
     [historySettingsOpen, setHistorySettingsOpen] = useState(false);
 
-  const { ref: measureCollection, matches: inspectorDocked } = useContainerBreakpoint('4xl');
+  const { ref: measureCollection, matches: roomyCollection } = useContainerBreakpoint('4xl');
   const inspectorTrigger = useRef<HTMLButtonElement>(null);
   const compactActions = useRef<HTMLDivElement>(null);
   const inspectorHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    if (!inspectorOpen || !inspectorDocked) return;
+    if (!inspectorOpen || !roomyCollection) return;
     const frame = requestAnimationFrame(() =>
       inspectorHeading.current?.focus({ preventScroll: true }),
     );
     return () => cancelAnimationFrame(frame);
-  }, [inspectorOpen, inspectorDocked]);
+  }, [inspectorOpen, roomyCollection]);
   const time = useFileTime();
   const [focusedEntry, setFocusedEntry] = useState(''),
     [selectionAnchor, setSelectionAnchor] = useState('');
@@ -237,6 +269,7 @@ export function FilesPage({
     navigate({ parent, category, trash: trash ? 'true' : '', search, filter: filterKey });
   const preferenceReady = !!preferenceSnapshot || !!preferenceFailure;
   const cursorWaitingForPreferences = !!cursor && !preferenceReady;
+  const gallery = preferences.view === 'gallery';
   const listQuery = useMemo<FileQuery>(
     () => ({
       parent,
@@ -247,9 +280,9 @@ export function FilesPage({
       desc: preferences.desc,
       filters: decodeFileFilters(filterKey),
       foldersFirst: preferences.foldersFirst,
-      page: preferences.view === 'gallery' ? 1 : page,
-      pageSize: preferences.view === 'gallery' ? 0 : preferences.pageSize,
-      ...(preferences.view !== 'gallery'
+      page: gallery ? 1 : page,
+      pageSize: gallery ? 0 : preferences.pageSize,
+      ...(!gallery
         ? { pagination: numbered ? ('numbered' as const) : ('auto' as const), cursor }
         : {}),
     }),
@@ -262,7 +295,7 @@ export function FilesPage({
       preferences.desc,
       filterKey,
       preferences.foldersFirst,
-      preferences.view,
+      gallery,
       preferences.pageSize,
       page,
       numbered,
@@ -495,7 +528,7 @@ export function FilesPage({
       if (preferenceScopeRef.current !== scope) return true;
       setPreferenceSnapshot(snapshot);
       applyPreferences(resolveFileView(snapshot.configuration, preferenceParent));
-      setNotice(t('files.preferences.saved'));
+      if (previewRoute.isCurrent()) reportAction(t('files.preferences.saved'));
       return true;
     } catch (error) {
       if (preferenceScopeRef.current === scope)
@@ -522,7 +555,7 @@ export function FilesPage({
       next.desc !== preferences.desc ||
       next.foldersFirst !== preferences.foldersFirst ||
       next.pageSize !== preferences.pageSize ||
-      next.view !== preferences.view;
+      (next.view === 'gallery') !== gallery;
     setPreferences(fileViewPreferencesSchema.parse(next));
     if (affectsQuery && (page !== 1 || cursor)) firstPage();
   }
@@ -581,7 +614,7 @@ export function FilesPage({
           throw lastError;
         }
       }
-      setNotice(t('files.operationDone'));
+      reportAction(t('files.operationDone'));
       reload();
     } catch (error) {
       setDialogFailure((current) => current || errorText(error));
@@ -662,7 +695,22 @@ export function FilesPage({
       cancelPendingOpen,
     ],
   );
-  const showPreview = reader.open;
+  const quickPreview = useQuickFilePreview({
+    route: previewRoute,
+    entries: visibleItems,
+    limits: {
+      maxMediaBytes,
+      maxTextBytes: listing?.maxTextBytes,
+      pdfReader: listing?.pdfReader,
+    },
+    enabled: !trash && !queryInvalid,
+    onOtherApplication: reader.openResolved,
+  });
+  const showPreview = (entry: FileEntry, requested?: 'choose' | 'archive') => {
+    if (!requested && !trash && canOpenQuickPreview(entry)) quickPreview.open(entry);
+    else void reader.open(entry, requested);
+  };
+  const showShortcutPreview = useEffectEvent((entry: FileEntry) => showPreview(entry));
   const download = reader.download;
   const selectedIds = useMemo(() => new Set(selected), [selected]);
   const targets = useMemo(
@@ -820,7 +868,7 @@ export function FilesPage({
           if (!entry) return;
           if (trash) openDialog('restore', [entry]);
           else if (entry.kind === 'folder') navigate({ parent: entry.id });
-          else void showPreview(entry);
+          else showShortcutPreview(entry);
         }
       }),
     [
@@ -830,7 +878,6 @@ export function FilesPage({
       trash,
       navigate,
       openDialog,
-      showPreview,
       reload,
       visibleIds,
       focusedEntry,
@@ -945,7 +992,7 @@ export function FilesPage({
 
   useEffect(() => {
     const element = inspectorHeading.current?.closest('.surface-file-collection');
-    if (!element || !inspectorOpen || !inspectorDocked) return;
+    if (!element || !inspectorOpen || !roomyCollection) return;
     function escape(event: Event) {
       if (event instanceof KeyboardEvent && event.key === 'Escape' && !event.defaultPrevented) {
         event.preventDefault();
@@ -954,7 +1001,7 @@ export function FilesPage({
     }
     element.addEventListener('keydown', escape);
     return () => element.removeEventListener('keydown', escape);
-  }, [closeInspector, inspectorDocked, inspectorOpen]);
+  }, [closeInspector, roomyCollection, inspectorOpen]);
 
   function toggleInspector() {
     if (inspectorOpen) closeInspector();
@@ -962,7 +1009,7 @@ export function FilesPage({
   }
 
   function runInspectorAction(action: () => void) {
-    if (!inspectorDocked) setInspectorOpen(false);
+    if (!roomyCollection) setInspectorOpen(false);
     action();
   }
 
@@ -1114,17 +1161,145 @@ export function FilesPage({
         {t('files.explorer.inspectorEmpty')}
       </p>
     );
+  const hasSelection = targets.length > 0;
+  const singleFile = targets.length === 1 && targets[0]?.kind === 'file' ? targets[0] : undefined;
+  const shareable =
+    targets.length === 1 && targets[0]?.kind !== 'shortcut' ? targets[0] : undefined;
+  const archiveDisabled = archiving || targets.some((entry) => entry.kind === 'shortcut');
+  const tagActionsDisabled =
+    loading || navigating || galleryAnnotationsLoading || !!galleryAnnotationFailure;
+
+  function downloadSelection() {
+    if (singleFile) {
+      void download(singleFile);
+      return;
+    }
+    setArchiving(true);
+    setNotice('');
+    void port
+      .archive(selected)
+      .then(() => setNotice(t('files.archiveReady')))
+      .catch((error: unknown) => setNotice(errorText(error)))
+      .finally(() => setArchiving(false));
+  }
+
+  const selectionActions: readonly MenuAction[] = trash
+    ? [
+        {
+          id: 'selection-restore',
+          label: t('files.restore'),
+          icon: <RotateCcw className="size-4" />,
+        },
+        {
+          id: 'selection-purge',
+          label: t('files.trashPurge.permanent'),
+          icon: <Trash2 className="size-4" />,
+          tone: 'danger',
+          disabled: loading || navigating,
+        },
+      ]
+    : [
+        {
+          id: 'selection-download',
+          label: t(singleFile ? 'files.download' : 'files.archive'),
+          icon: <Download className="size-4" />,
+          disabled: archiveDisabled,
+        },
+        ...(shareable
+          ? [
+              {
+                id: 'selection-share',
+                label: t('files.share'),
+                icon: <Share2 className="size-4" />,
+              },
+            ]
+          : []),
+        { id: 'selection-move', label: t('files.move'), icon: <FolderInput className="size-4" /> },
+        {
+          id: 'copy-clipboard',
+          label: t('files.explorer.copyPending'),
+          icon: <Copy className="size-4" />,
+          disabled: clipboard.pending,
+        },
+        {
+          id: 'cut-clipboard',
+          label: t('files.explorer.cutPending'),
+          icon: <Scissors className="size-4" />,
+          disabled: clipboard.pending,
+        },
+        {
+          id: 'create-zip',
+          label: t('files.archives.createZIP.title'),
+          icon: <Archive className="size-4" />,
+          disabled: targets.some((entry) => entry.kind === 'shortcut'),
+        },
+        ...(targets.every((entry) => entry.kind === 'file')
+          ? [
+              {
+                id: 'direct-links',
+                label: t('files.directLinks.get'),
+                icon: <Link2 className="size-4" />,
+                disabled: targets.length > directLinkBatchLimit,
+              },
+            ]
+          : []),
+        {
+          id: 'batch-add-tags',
+          label: t('files.annotations.batchAdd'),
+          icon: <Tag className="size-4" />,
+          disabled: tagActionsDisabled,
+        },
+        {
+          id: 'batch-remove-tags',
+          label: t('files.annotations.batchRemove'),
+          icon: <Tag className="size-4" />,
+          disabled: tagActionsDisabled,
+        },
+        {
+          id: 'selection-remove',
+          label: t('files.remove'),
+          icon: <Trash2 className="size-4" />,
+          tone: 'danger',
+        },
+      ];
+
+  function runToolbarAction(action: string) {
+    if (action === 'selection-download') downloadSelection();
+    else if (action === 'selection-share') setShareTarget(shareable);
+    else if (action === 'selection-move') openDialog('move', targets);
+    else if (action === 'selection-remove') openDialog('remove', targets);
+    else if (action === 'selection-restore') openDialog('restore', targets);
+    else if (action === 'selection-purge')
+      setTrashSelection({ scope: 'selection', ids: targets.map((entry) => entry.id) });
+    else if (action === 'copy-clipboard') queueClipboard('copy', targets);
+    else if (action === 'cut-clipboard') queueClipboard('cut', targets);
+    else if (action === 'create-zip') setZIPSelection({ entries: targets, parent });
+    else if (action === 'direct-links') setDirectTargets(targets);
+    else if (action === 'batch-add-tags') openTagsBatch('add');
+    else if (action === 'batch-remove-tags') openTagsBatch('remove');
+    else runCompactAction(action);
+  }
+
+  const selectPage = {
+    checked: visibleItems.every((entry) => selectedIds.has(entry.id)),
+    onCheckedChange: (checked: boolean) => {
+      setSelectionAnchor('');
+      setSelected(checked ? visibleItems.map((entry) => entry.id) : []);
+    },
+  };
   return (
     <>
       <div
         ref={measureCollection}
-        className="surface-file-collection flex min-h-full min-w-0 flex-col gap-3"
+        data-collection-density={tableDensity}
+        className="surface-file-collection flex min-h-full min-w-0 flex-col gap-1 rounded-panel bg-surface px-2 py-2 sm:px-3"
       >
         <Toolbar
           label={title}
+          embedded
           primary={
             <div className="@container w-full min-w-0">
-              <div className="flex min-w-0 flex-wrap items-center gap-2 @min-[48rem]:flex-nowrap">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 @min-[48rem]:flex-nowrap">
                 <div
                   data-file-breadcrumbs
                   className="flex min-w-0 basis-full items-center gap-1 @min-[48rem]:flex-1"
@@ -1141,7 +1316,7 @@ export function FilesPage({
                     </IconAction>
                   ) : null}
                   {parent ? (
-                    <div className="shrink-0 @min-[48rem]:hidden">
+                    <div className="shrink-0">
                       <MenuButton
                         ariaLabel={t('files.explorer.ancestors')}
                         triggerVariant="icon"
@@ -1158,158 +1333,214 @@ export function FilesPage({
                       />
                     </div>
                   ) : null}
-                  <h1 className="sr-only">{title}</h1>
-                  <span
-                    className="min-w-0 flex-1 truncate text-sm font-semibold text-ink @min-[48rem]:hidden"
+                  <h1
+                    className={`min-w-0 flex-1 truncate text-lg font-semibold text-ink ${parent && !trash && !category ? '@min-[48rem]:sr-only' : ''}`}
                     title={title}
                   >
                     {title}
-                  </span>
-                  <div className="hidden min-w-0 flex-1 overflow-x-auto @min-[48rem]:block">
-                    <BreadcrumbTrail
-                      label={t('files.explorer.ancestors')}
-                      items={[
-                        {
-                          id: 'root',
-                          label: t('files.nav'),
-                          icon: <Home className="size-4" />,
-                          href: port.destinationHref('files'),
-                          onNavigate: () => navigate({}),
-                        },
-                        ...(listing?.breadcrumbs.map((entry) => ({
-                          id: entry.id,
-                          label: entry.name,
-                          href: port.destinationHref('files', { parent: entry.id }),
-                          onNavigate: () => navigate({ parent: entry.id }),
-                        })) ?? []),
-                        ...(trash || category ? [{ id: 'scope', label: title }] : []),
-                      ]}
-                    />
-                  </div>
-                  {listing ? (
-                    <span className="shrink-0 whitespace-nowrap rounded-action bg-surface-muted px-2 py-0.5 text-xs text-ink-muted">
-                      {t('files.explorer.itemCount', { count: listing.total })}
-                    </span>
+                  </h1>
+                  {parent && !trash && !category ? (
+                    <div
+                      title={title}
+                      className="hidden min-w-0 flex-1 @min-[48rem]:block [&_ol]:flex-nowrap [&_li:last-child]:min-w-0 [&_[aria-current=page]]:text-lg [&_[aria-current=page]]:font-semibold"
+                    >
+                      <BreadcrumbTrail
+                        label={t('files.explorer.ancestors')}
+                        items={[
+                          {
+                            id: 'root',
+                            label: t('files.nav'),
+                            icon: <Home className="size-4" />,
+                            href: port.destinationHref('files'),
+                            onNavigate: () => navigate({}),
+                          },
+                          ...(listing?.breadcrumbs.slice(-2).map((entry) => ({
+                            id: entry.id,
+                            label: entry.name,
+                            href: port.destinationHref('files', { parent: entry.id }),
+                            onNavigate: () => navigate({ parent: entry.id }),
+                          })) ?? []),
+                        ]}
+                      />
+                    </div>
                   ) : null}
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  {listing?.items.length ? (
-                    <CheckboxField
-                      label={t('files.discovery.selectPage')}
-                      presentation="control-only"
-                      checked={selected.length === visibleItems.length}
-                      onCheckedChange={(checked) => {
-                        setSelectionAnchor('');
-                        setSelected(checked ? visibleItems.map((entry) => entry.id) : []);
-                      }}
-                    />
-                  ) : null}
-                  <div className="hidden items-center gap-1 @min-[48rem]:flex">
-                    <IconAction size="sm" label={t('files.refresh')} tooltip onPress={reload}>
-                      <RefreshCw className="size-4" />
-                    </IconAction>
+                <div
+                  data-file-collection-actions
+                  role={hasSelection ? 'region' : undefined}
+                  aria-label={hasSelection ? t('files.explorer.selection') : undefined}
+                  className={`flex h-control min-w-0 flex-1 items-center gap-1 @min-[48rem]:flex-none ${hasSelection ? 'rounded-control bg-brand-soft/65 px-1' : ''}`}
+                >
+                  {hasSelection ? (
+                    <>
+                      <IconAction
+                        size="sm"
+                        label={t('files.explorer.none')}
+                        tooltip
+                        onPress={() => setSelected([])}
+                      >
+                        <X className="size-4" />
+                      </IconAction>
+                      <span className="min-w-0 shrink-0 text-xs font-semibold text-ink">
+                        <span>{t('files.selected', { count: targets.length })}</span>
+                        {selectedTotalBytes > 0 ? (
+                          <span className="hidden pl-1 font-normal text-ink-muted @min-[56rem]:inline">
+                            · {bytes(selectedTotalBytes)}
+                          </span>
+                        ) : null}
+                      </span>
+                      <div className="hidden items-center gap-1 @min-[48rem]:flex">
+                        {selectionActions
+                          .filter(({ id }) =>
+                            [
+                              'selection-download',
+                              'selection-move',
+                              'selection-share',
+                              'selection-restore',
+                            ].includes(id),
+                          )
+                          .map(({ id, label, icon, disabled }) => (
+                            <IconAction
+                              key={id}
+                              size="sm"
+                              label={label}
+                              tooltip
+                              disabled={disabled ?? false}
+                              onPress={() => runToolbarAction(id)}
+                            >
+                              {icon}
+                            </IconAction>
+                          ))}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {visibleItems.length && preferences.view !== 'list' ? (
+                        <CheckboxField
+                          label={t('files.discovery.selectPage')}
+                          presentation="control-only"
+                          checked={selectPage.checked}
+                          onCheckedChange={selectPage.onCheckedChange}
+                        />
+                      ) : null}
+                      {!trash ? (
+                        <FileCategoryMenu
+                          category={category}
+                          onSelect={(key) => navigate(key ? { category: key } : {})}
+                        />
+                      ) : null}
+                      {listing ? (
+                        <span className="hidden shrink-0 whitespace-nowrap text-xs text-ink-muted @min-[48rem]:inline">
+                          {t('files.explorer.itemCount', { count: listing.total })}
+                        </span>
+                      ) : null}
+                    </>
+                  )}
+                  <div className="ml-auto flex shrink-0 items-center gap-1">
                     <MenuButton
-                      label={<MoreHorizontal className="size-4" />}
-                      ariaLabel={t('files.discovery.folderActions')}
-                      triggerVariant="icon"
                       triggerSize="sm"
-                      items={folderActions}
-                      onAction={runFolderAction}
-                    />
-                    <IconAction
-                      size="sm"
-                      label={t('files.discovery.advanced')}
-                      tooltip
-                      disabled={loading || navigating}
-                      onPress={() => setAdvancedOpen(true)}
-                    >
-                      <SlidersHorizontal className="size-4" />
-                    </IconAction>
-                  </div>
-                  <MenuButton
-                    triggerSize="sm"
-                    ariaLabel={t('files.explorer.view')}
-                    triggerVariant="icon"
-                    label={<LayoutGrid className="size-4" />}
-                    items={[
-                      ...(['grid', 'list', 'gallery'] as const).map((view) => ({
-                        id: view,
-                        label: t('files.' + view),
-                        selected: preferences.view === view,
-                      })),
-                      {
-                        id: 'options',
-                        label: t('files.discovery.viewOptions'),
-                        icon: <Settings className="size-4" />,
-                      },
-                    ].map((item) => ({ ...item, disabled: preferenceBusy || !preferenceSnapshot }))}
-                    onAction={(view) =>
-                      view === 'options'
-                        ? setViewOptionsOpen(true)
-                        : savePreferences({
-                            ...preferences,
-                            view: view as FileViewPreferences['view'],
-                          })
-                    }
-                  />
-                  <div className="hidden items-center gap-1 @min-[48rem]:flex">
-                    <MenuButton
-                      triggerSize="sm"
-                      ariaLabel={t('files.explorer.sort')}
-                      triggerVariant="icon"
-                      label={<ArrowUpDown className="size-4" />}
-                      groups={sortGroups}
-                      onAction={changeSort}
-                    />
-                    <IconAction
-                      size="sm"
-                      label={t('files.explorer.inspector')}
-                      tooltip
-                      ref={inspectorTrigger}
-                      expanded={inspectorOpen}
-                      onPress={toggleInspector}
-                    >
-                      <PanelRight className="size-4" />
-                    </IconAction>
-                  </div>
-                  <div ref={compactActions} className="shrink-0 @min-[48rem]:hidden">
-                    <MenuButton
-                      ariaLabel={t('files.explorer.moreActions')}
-                      label={<MoreHorizontal className="size-4" />}
-                      triggerVariant="icon"
-                      triggerSize="sm"
-                      groups={[
+                      ariaLabel={t('files.explorer.view')}
+                      triggerVariant={roomyCollection ? 'standard' : 'icon'}
+                      label={
+                        <>
+                          {fileViewIcons[preferences.view]}
+                          {roomyCollection ? (
+                            <>
+                              <span className="text-xs">{t(`files.${preferences.view}`)}</span>
+                              <ChevronDown className="size-4" aria-hidden="true" />
+                            </>
+                          ) : null}
+                        </>
+                      }
+                      items={[
+                        ...Object.entries(fileViewIcons).map(([view, icon]) => ({
+                          id: view,
+                          label: t(`files.${view}`),
+                          icon,
+                          selected: preferences.view === view,
+                        })),
                         {
-                          id: 'tools',
-                          label: t('files.explorer.menuActions'),
-                          items: [
-                            {
-                              id: 'refresh',
-                              label: t('files.refresh'),
-                              icon: <RefreshCw className="size-4" />,
-                            },
-                            {
-                              id: 'advanced',
-                              label: t('files.discovery.advanced'),
-                              icon: <SlidersHorizontal className="size-4" />,
-                              disabled: loading || navigating,
-                            },
-                            {
-                              id: 'inspector',
-                              label: t('files.explorer.inspector'),
-                              icon: <PanelRight className="size-4" />,
-                            },
-                          ],
+                          id: 'options',
+                          label: t('files.discovery.viewOptions'),
+                          icon: <Settings className="size-4" />,
                         },
-                        {
-                          id: 'folder',
-                          label: t('files.discovery.folderActions'),
-                          items: folderActions,
-                        },
-                        ...sortGroups,
-                      ]}
-                      onAction={runCompactAction}
+                      ].map((item) => ({
+                        ...item,
+                        disabled: preferenceBusy || !preferenceSnapshot,
+                      }))}
+                      onAction={(view) =>
+                        view === 'options'
+                          ? setViewOptionsOpen(true)
+                          : void savePreferences({
+                              ...preferences,
+                              view: view as FileViewPreferences['view'],
+                            })
+                      }
                     />
+                    <div className="hidden @min-[48rem]:block">
+                      <IconAction
+                        size="sm"
+                        label={t('files.explorer.inspector')}
+                        tooltip
+                        ref={inspectorTrigger}
+                        expanded={inspectorOpen}
+                        onPress={toggleInspector}
+                      >
+                        <PanelRight className="size-4" />
+                      </IconAction>
+                    </div>
+                    <div ref={compactActions} className="shrink-0">
+                      <MenuButton
+                        ariaLabel={
+                          hasSelection
+                            ? t('files.explorer.moreActions')
+                            : t('files.explorer.toolbarMore')
+                        }
+                        label={<MoreHorizontal className="size-4" />}
+                        triggerVariant="icon"
+                        triggerSize="sm"
+                        groups={[
+                          ...(hasSelection
+                            ? [
+                                {
+                                  id: 'selection',
+                                  label: t('files.explorer.selection'),
+                                  items: selectionActions,
+                                },
+                              ]
+                            : []),
+                          {
+                            id: 'tools',
+                            label: t('files.explorer.menuActions'),
+                            items: [
+                              {
+                                id: 'refresh',
+                                label: t('files.refresh'),
+                                icon: <RefreshCw className="size-4" />,
+                              },
+                              {
+                                id: 'advanced',
+                                label: t('files.discovery.advanced'),
+                                icon: <SlidersHorizontal className="size-4" />,
+                                disabled: loading || navigating,
+                              },
+                              {
+                                id: 'inspector',
+                                label: t('files.explorer.inspector'),
+                                icon: <PanelRight className="size-4" />,
+                              },
+                            ],
+                          },
+                          {
+                            id: 'folder',
+                            label: t('files.discovery.folderActions'),
+                            items: folderActions,
+                          },
+                          ...sortGroups,
+                        ]}
+                        onAction={runToolbarAction}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1476,202 +1707,19 @@ export function FilesPage({
               : 'File icon rules are unavailable. Showing file type icons.'}
           </p>
         ) : null}
-        {listing?.items.length && targets.length ? (
-          <div
-            role="region"
-            aria-label={t('files.explorer.selection')}
-            className="surface-bulk-bar flex flex-wrap items-center justify-between gap-2 rounded-panel border border-brand/25 bg-brand-soft/65 px-3 py-2"
-          >
-            <div className="flex min-w-0 items-center gap-2">
-              <IconAction
-                size="sm"
-                label={t('files.explorer.none')}
-                tooltip
-                onPress={() => setSelected([])}
-              >
-                <X className="size-4" />
-              </IconAction>
-              <span className="text-sm font-semibold text-ink">
-                {t('files.selected', { count: targets.length })}
-              </span>
-              {selectedTotalBytes > 0 ? (
-                <span className="text-xs text-ink-muted">· {bytes(selectedTotalBytes)}</span>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {trash ? (
-                <>
-                  <Action
-                    variant="secondary"
-                    size="sm"
-                    leadingIcon={<RotateCcw className="size-4" />}
-                    onPress={() => openDialog('restore', targets)}
-                  >
-                    {t('files.restore')}
-                  </Action>
-                  <Action
-                    variant="danger"
-                    size="sm"
-                    leadingIcon={<Trash2 className="size-4" />}
-                    disabled={loading || navigating}
-                    onPress={() =>
-                      setTrashSelection({
-                        scope: 'selection',
-                        ids: targets.map((entry) => entry.id),
-                      })
-                    }
-                  >
-                    {t('files.trashPurge.permanent')}
-                  </Action>
-                </>
-              ) : (
-                <>
-                  {targets.length === 1 && targets[0]?.kind === 'file' ? (
-                    <Action
-                      size="sm"
-                      variant="secondary"
-                      leadingIcon={<Download className="size-4" />}
-                      onPress={() => {
-                        if (targets[0]) void download(targets[0]);
-                      }}
-                    >
-                      {t('files.download')}
-                    </Action>
-                  ) : (
-                    <Action
-                      size="sm"
-                      variant="secondary"
-                      leadingIcon={<Download className="size-4" />}
-                      loading={archiving}
-                      disabled={archiving || targets.some((entry) => entry.kind === 'shortcut')}
-                      onPress={() => {
-                        setArchiving(true);
-                        setNotice('');
-                        void port
-                          .archive(selected)
-                          .then(() => setNotice(t('files.archiveReady')))
-                          .catch((error: unknown) => setNotice(errorText(error)))
-                          .finally(() => setArchiving(false));
-                      }}
-                    >
-                      {t('files.archive')}
-                    </Action>
-                  )}
-                  {targets.length === 1 && targets[0]?.kind !== 'shortcut' ? (
-                    <Action
-                      size="sm"
-                      variant="secondary"
-                      leadingIcon={<Share2 className="size-4" />}
-                      onPress={() => {
-                        if (targets[0]) setShareTarget(targets[0]);
-                      }}
-                    >
-                      {t('files.share')}
-                    </Action>
-                  ) : null}
-                  <Action
-                    variant="secondary"
-                    size="sm"
-                    leadingIcon={<FolderInput className="size-4" />}
-                    onPress={() => openDialog('move', targets)}
-                  >
-                    {t('files.move')}
-                  </Action>
-                  <Action
-                    variant="danger"
-                    size="sm"
-                    leadingIcon={<Trash2 className="size-4" />}
-                    onPress={() => openDialog('remove', targets)}
-                  >
-                    {t('files.remove')}
-                  </Action>
-                  <MenuButton
-                    triggerSize="sm"
-                    triggerVariant="standard"
-                    ariaLabel={t('files.explorer.moreActions')}
-                    label={
-                      <span className="flex items-center gap-1">
-                        <MoreHorizontal className="size-4" />
-                        <span className="hidden sm:inline">{t('files.explorer.moreActions')}</span>
-                      </span>
-                    }
-                    items={[
-                      {
-                        id: 'copy-clipboard',
-                        label: t('files.explorer.copyPending'),
-                        icon: <Copy className="size-4" />,
-                        disabled: clipboard.pending,
-                      },
-                      {
-                        id: 'cut-clipboard',
-                        label: t('files.explorer.cutPending'),
-                        icon: <Scissors className="size-4" />,
-                        disabled: clipboard.pending,
-                      },
-                      {
-                        id: 'create-zip',
-                        label: t('files.archives.createZIP.title'),
-                        icon: <Archive className="size-4" />,
-                        disabled: targets.some((entry) => entry.kind === 'shortcut'),
-                      },
-                      ...(targets.every((entry) => entry.kind === 'file')
-                        ? [
-                            {
-                              id: 'direct-links',
-                              label: t('files.directLinks.get'),
-                              icon: <Link2 className="size-4" />,
-                              disabled: targets.length > directLinkBatchLimit,
-                            },
-                          ]
-                        : []),
-                      {
-                        id: 'batch-add-tags',
-                        label: t('files.annotations.batchAdd'),
-                        icon: <Tag className="size-4" />,
-                        disabled:
-                          loading ||
-                          navigating ||
-                          galleryAnnotationsLoading ||
-                          !!galleryAnnotationFailure,
-                      },
-                      {
-                        id: 'batch-remove-tags',
-                        label: t('files.annotations.batchRemove'),
-                        icon: <Tag className="size-4" />,
-                        disabled:
-                          loading ||
-                          navigating ||
-                          galleryAnnotationsLoading ||
-                          !!galleryAnnotationFailure,
-                      },
-                    ]}
-                    onAction={(action) => {
-                      if (action === 'copy-clipboard') queueClipboard('copy', targets);
-                      else if (action === 'cut-clipboard') queueClipboard('cut', targets);
-                      else if (action === 'create-zip')
-                        setZIPSelection({ entries: targets, parent });
-                      else if (action === 'direct-links') setDirectTargets(targets);
-                      else if (action === 'batch-add-tags') openTagsBatch('add');
-                      else if (action === 'batch-remove-tags') openTagsBatch('remove');
-                    }}
-                  />
-                </>
-              )}
-            </div>
-          </div>
-        ) : null}
-        <div className="flex min-h-96 min-w-0 flex-1 items-start gap-4">
+        <div className="flex min-w-0 items-start gap-3">
           <section
             ref={fileContent}
             tabIndex={-1}
             aria-label={title}
             aria-busy={loading || navigating}
             data-file-content
-            className={`min-h-96 min-w-0 flex-1 rounded-panel bg-surface p-2 ${!loading && !navigating && !failure && !listing?.items.length ? 'flex flex-col' : ''}`}
+            className="min-w-0 flex-1"
           >
             {loading || navigating ? (
               <StateSurface
                 state="loading"
+                compact
                 icon={<Cloud />}
                 title={t('files.loading')}
                 description={t('files.loadingDescription')}
@@ -1679,6 +1727,7 @@ export function FilesPage({
             ) : failure ? (
               <StateSurface
                 state="error"
+                compact
                 icon={<Cloud />}
                 title={t('files.error')}
                 description={failure}
@@ -1686,9 +1735,10 @@ export function FilesPage({
                 onAction={reload}
               />
             ) : !listing?.items.length ? (
-              <div data-file-empty className="grid min-h-80 flex-1 place-items-center">
+              <div data-file-empty className="grid place-items-center py-2">
                 <StateSurface
                   state="empty"
+                  compact
                   icon={
                     search || category || filterKey ? <Search /> : trash ? <Trash2 /> : <Upload />
                   }
@@ -1730,13 +1780,14 @@ export function FilesPage({
                 aria-label={preferences.view === 'list' ? title : undefined}
                 className={
                   preferences.view === 'grid'
-                    ? 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'
-                    : 'flex flex-col divide-y divide-border'
+                    ? 'grid grid-cols-2 items-start gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'
+                    : '@container/file-list flex flex-col'
                 }
               >
                 {preferences.view === 'list' ? (
                   <FileListHeader
                     preferences={preferences}
+                    selection={selectPage}
                     onSort={(sort) =>
                       savePreferences({
                         ...preferences,
@@ -2052,7 +2103,7 @@ export function FilesPage({
               </div>
             )}
           </section>
-          {inspectorDocked ? (
+          {roomyCollection ? (
             inspectorOpen ? (
               <aside
                 aria-label={t('files.explorer.inspector')}
@@ -2089,13 +2140,13 @@ export function FilesPage({
             </DrawerSurface>
           )}
         </div>
-        {listing &&
-        listing.total > 0 &&
-        !loading &&
-        !navigating &&
-        preferences.view !== 'gallery' ? (
+        {listing && !loading && !navigating && preferences.view !== 'gallery' ? (
           listing.cursorPage ? (
-            preferenceReady ? (
+            preferenceReady &&
+            (listing.cursorPage.next ||
+              cursor ||
+              feed.phase !== 'ready' ||
+              listing.items.length > (firstListing?.items.length ?? 0)) ? (
               <CursorFilePagination
                 next={!!listing.cursorPage.next}
                 previous={!!listing.cursorPage.previous}
@@ -2116,16 +2167,16 @@ export function FilesPage({
                 onRestart={restartCursor}
               />
             ) : null
-          ) : (
+          ) : page > 1 || listing.total > listing.pageSize ? (
             <NumberedFilePagination
               page={page}
               pageSize={listing.pageSize}
               total={listing.total}
               onPage={goToNumberedPage}
             />
-          )
+          ) : null
         ) : null}
-        {listing && preferences.view === 'gallery' ? (
+        {listing && preferences.view === 'gallery' && pageCount > 1 ? (
           <p className="text-xs text-ink-muted">
             {t('files.discovery.galleryBudget', { count: listing.maxGalleryEntries })}
           </p>
@@ -2170,14 +2221,6 @@ export function FilesPage({
               {t('files.nextPage')}
             </Action>
           </div>
-        ) : null}
-        {listing && !trash ? (
-          <p className="text-xs text-ink-muted">
-            {t('files.uploadLimit', {
-              size: bytes(listing.maxFileBytes),
-              count: listing.concurrentUploads,
-            })}
-          </p>
         ) : null}
       </div>
       {dialog ? (
@@ -2376,6 +2419,7 @@ export function FilesPage({
         />
       ) : null}
       <FileApplicationSelection reader={reader} />
+      <QuickFilePreview controller={quickPreview} download={(entry) => void download(entry)} />
       {versionEntry ? (
         <VersionsPanel
           entry={versionEntry}

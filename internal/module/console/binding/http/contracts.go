@@ -116,25 +116,25 @@ const SessionListActive = "active"
 const AccountActive = "active"
 
 var (
-	ErrSetupClosed         = errors.New("console setup closed")
-	ErrPasswordReused      = errors.New("console password already used")
-	ErrInvalidCredentials  = errors.New("console invalid credentials")
+	ErrSetupClosed             = errors.New("console setup closed")
+	ErrPasswordReused          = errors.New("console password already used")
+	ErrInvalidCredentials      = errors.New("console invalid credentials")
 	ErrCurrentPasswordMismatch = errors.New("console current password does not match")
-	ErrSessionInvalid      = errors.New("console invalid session")
-	ErrMFAInvalidCode      = ErrInvalidCredentials
-	ErrMFAChallengeInvalid = ErrInvalidCredentials
-	ErrRegistrationClosed  = errors.New("console registration disabled")
-	ErrAccountDisabled     = errors.New("console account disabled")
-	ErrAccountLocked       = errors.New("console account locked")
-	ErrVersionConflict     = errors.New("console version conflict")
-	ErrOwnerInvariant      = errors.New("console last administrator protection")
-	ErrImmutableOwner      = errors.New("console protected role")
-	ErrInvalidUsername     = errors.New("console invalid username")
-	ErrInvalidName         = errors.New("console invalid name")
-	ErrInvalidPassword     = errors.New("console invalid password")
-	ErrInvalidID           = errors.New("console invalid id")
-	ErrUnknownPermission   = errors.New("console unknown permission")
-	ErrInvalidQuery        = errors.New("console invalid query")
+	ErrSessionInvalid          = errors.New("console invalid session")
+	ErrMFAInvalidCode          = ErrInvalidCredentials
+	ErrMFAChallengeInvalid     = ErrInvalidCredentials
+	ErrRegistrationClosed      = errors.New("console registration disabled")
+	ErrAccountDisabled         = errors.New("console account disabled")
+	ErrAccountLocked           = errors.New("console account locked")
+	ErrVersionConflict         = errors.New("console version conflict")
+	ErrOwnerInvariant          = errors.New("console last administrator protection")
+	ErrImmutableOwner          = errors.New("console protected role")
+	ErrInvalidUsername         = errors.New("console invalid username")
+	ErrInvalidName             = errors.New("console invalid name")
+	ErrInvalidPassword         = errors.New("console invalid password")
+	ErrInvalidID               = errors.New("console invalid id")
+	ErrUnknownPermission       = errors.New("console unknown permission")
+	ErrInvalidQuery            = errors.New("console invalid query")
 )
 
 type MFARequiredError struct{ ChallengeID string }

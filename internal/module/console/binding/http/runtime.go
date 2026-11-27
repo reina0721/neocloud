@@ -12,7 +12,7 @@ type RuntimeMetadata struct {
 }
 
 func (h *Handler) runtimeMetadata(w http.ResponseWriter, r *http.Request) {
-	if !require(w, r, "management:read") {
+	if !require(w, r, managementRead) {
 		return
 	}
 	reply(w, h.runtime())

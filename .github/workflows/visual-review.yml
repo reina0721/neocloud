@@ -2,9 +2,6 @@ name: Visual review
 
 on:
   workflow_dispatch:
-  push:
-    branches: [codex/release-platform-checks]
-    paths: [frontend/**, .github/workflows/visual-review.yml]
 
 permissions:
   contents: read
@@ -13,7 +10,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# 原生浏览器取证；先重复验证跨文档账号入口，再采集截图。不替代 main 全量门禁。
+# 手动原生浏览器取证，先重复验证跨文档账号入口，再采集截图。
 jobs:
   windows-lifecycle:
     name: Native Windows lifecycle evidence

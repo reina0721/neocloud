@@ -82,7 +82,9 @@ func ReadTablePresence(ctx context.Context, config pkgdatabase.Config, tables []
 	return result, nil
 }
 
-func migrationTableExists(ctx context.Context, connection *sql.DB, driver pkgdatabase.Driver, table string) (bool, error) {
+func migrationTableExists(ctx context.Context, connection interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}, driver pkgdatabase.Driver, table string) (bool, error) {
 	var exists bool
 	switch driver {
 	case pkgdatabase.DriverSQLite:

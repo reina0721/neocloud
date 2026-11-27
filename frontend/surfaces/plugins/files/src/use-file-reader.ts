@@ -13,6 +13,7 @@ import type { FileDocumentProps } from '../../../src/files/pdf-contract';
 import { useFiles, useFileNavigation, usePlayFileAudio } from '../../../src/files/runtime';
 import { isMarkdownFile } from '../../../src/files/markdown';
 import {
+  defaultReaderApplication,
   makeReaderSession,
   readerApplications,
   type FileApplicationPicker,
@@ -131,25 +132,20 @@ export function useFileReader({
       try {
         const policy = await port.readActiveFileApplications(controller.signal);
         if (controller.signal.aborted) return;
-        const { choice, web } = readerApplications(
+        const applications = readerApplications(
           policy,
           entry,
           fileApplicationDevice(window.innerWidth),
         );
+        const { choice, web } = applications;
         const webOptions = requested === 'archive' ? [] : web;
-        const selectedWeb = requested
-          ? undefined
-          : (webOptions.find((app) => app.id === choice.defaultApp) ??
-            (webOptions.length === 1 && choice.options.length === 0 ? webOptions[0] : undefined));
         const selected =
           requested === 'archive'
             ? choice.options.find((id) => id === requested)
             : requested === 'choose'
               ? undefined
-              : webOptions.length
-                ? choice.options.find((id) => id === choice.defaultApp)
-                : choice.automatic;
-        if (selectedWeb || selected) launch(entry, (selectedWeb ?? selected)!, policy);
+              : defaultReaderApplication(applications);
+        if (selected) launch(entry, selected, policy);
         else
           setSnapshot({
             scope,
@@ -179,6 +175,25 @@ export function useFileReader({
     open,
     download,
     cancelPending,
+    openResolved: (entry: FileEntry, policy: FileApplicationPolicy) => {
+      cancelPending();
+      pending.current = new AbortController();
+      const applications = readerApplications(
+        policy,
+        entry,
+        fileApplicationDevice(window.innerWidth),
+      );
+      const selected = defaultReaderApplication(applications);
+      if (selected) launch(entry, selected, policy);
+      else
+        setSnapshot({
+          scope,
+          entry,
+          options: applications.choice.options,
+          webOptions: applications.web,
+          policy,
+        });
+    },
     edit(entry: FileEntry) {
       cancelPending();
       launch(entry, isMarkdownFile(entry) ? 'markdown' : 'text', undefined, true);

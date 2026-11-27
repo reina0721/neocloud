@@ -78,8 +78,25 @@ async function replace(page: Page, file: Entry, text: string) {
 async function versions(page: Page, file: Entry) {
   return api<Versions>(page, '/' + file.id + '/versions');
 }
+async function openHistorySettings(page: Page, english = false) {
+  const compact = page.getByRole('button', {
+    name: english ? 'More folder actions' : '更多目录操作',
+    exact: true,
+  });
+  const desktop = page.getByRole('button', {
+    name: english ? 'Current folder actions' : '当前目录操作',
+    exact: true,
+  });
+  await compact.or(desktop).filter({ visible: true }).click();
+  await page
+    .getByRole('menuitem', {
+      name: english ? 'Version retention settings' : '版本保留设置',
+      exact: true,
+    })
+    .click();
+}
 async function settings(page: Page) {
-  await page.getByRole('button', { name: '版本保留设置', exact: true }).click();
+  await openHistorySettings(page);
   const dialog = page.getByRole('dialog', { name: '版本保留设置', exact: true });
   await expect(dialog.getByRole('button', { name: '保存版本规则', exact: true })).toBeEnabled();
   return dialog;
@@ -326,7 +343,7 @@ test('F398：真实CAS冲突和读取/保存失败保留草稿并明确恢复', 
   await expect(dialog.getByLabel('最多保留旧版本数', { exact: true })).toHaveValue('3');
   await dialog.getByRole('button', { name: '关闭', exact: true }).click();
   await page.route('**/native/files/preferences/history', (route) => route.abort(), { times: 1 });
-  await page.getByRole('button', { name: '版本保留设置', exact: true }).click();
+  await openHistorySettings(page);
   dialog = page.getByRole('dialog', { name: '版本保留设置', exact: true });
   await expect(dialog.getByRole('alert')).toBeVisible();
   await expect(dialog.getByRole('button', { name: '保存版本规则', exact: true })).toBeDisabled();
@@ -354,7 +371,7 @@ test('F400：英文深色320px设置与版本解释无溢出、可访问', async
     .click();
   await page.goto('/home?parent=' + root.id);
   await page.setViewportSize({ width: 320, height: 800 });
-  await page.getByRole('button', { name: 'Version retention settings', exact: true }).click();
+  await openHistorySettings(page, true);
   const dialog = page.getByRole('dialog', { name: 'Version retention settings', exact: true });
   await expect(
     dialog.getByRole('button', { name: 'Save version rules', exact: true }),

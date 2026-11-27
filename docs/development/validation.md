@@ -46,7 +46,7 @@ bash scripts/verify-quality.sh          # 完整后端、生成、race、构建�
 node scripts/verify-changed.mjs --full  # 双端完整回归
 ```
 
-PowerShell 对应 `Verify-WebUI.ps1 -Prepare` 和 `Verify-Quality.ps1 -GoExecutable <path>`。依赖使用冻结锁文件，准备失败直接停止。完整入口和 release 保留真实覆盖，CI 显式准备；不把安装写成每次局部更新的固定步骤。
+PowerShell 对应 `Verify-WebUI.ps1 -Prepare` 和 `Verify-Quality.ps1 -GoExecutable <path>`。依赖使用冻结锁文件，准备失败直接停止。源码与业务完整验收以本地入口为准。手动 CI 使用对应验证流程，正式发布使用独立的产物检查。
 
 两种后端入口共用 `scripts/verify-go-format.mjs`，按 Git 清单检查已跟踪和未忽略的新 Go 源码。忽略目录中的运行诊断、临时 checkout 不参与格式门禁；Git 或 gofmt 执行失败仍会终止验证。
 
@@ -68,6 +68,6 @@ SQLite 等私有数据夹具使用 `testkit.PrivateTempDir`，不依赖测试进
 
 ## CI
 
-Quality 的 `Repository configuration gates` 始终检查工作流语法、项目使用的 Issue 表单子集、文档链接与入口、GoReleaser 配置、安装与发布控制流程及产物清单，并进入最终汇总。工具版本见 `scripts/tool-versions.env`；本地可用 `actionlint`、`go run ./internal/tools/docs-guard`、渲染后的 `goreleaser check` 与现有 Node 测试重现。表单检查不代替 GitHub 完整 schema 或真实页面验收。
+自动 `Quality` 在 PR 和 `main` push 执行工作流语法、文档链接和仓库产物检查。涉及 OpenAPI 的 PR 比较基分支契约。普通分支的 push 由对应 PR 提供检查结果。
 
-Quality/Database/Container 只接收分支 push（以及各自声明的其它事件）；tag push 由 Release 按同一 SHA 检查并复用 `main` 的完整结果，正式镜像与安装仍重新构建和验收。Quality/Database 使用相同分类逻辑，PR 比较基分支，分支 push 比较 before。主分支和手动完整验证执行全量；release 使用完整入口。相关检查有稳定 job 和汇总结果，无关步骤明确跳过，失败和取消不能伪装成功。相同事件序列的新运行取消被取代的旧运行。安全检查保持原有覆盖，不修改远端分支保护或发布权限。
+在 Actions 的手动入口可以运行完整 `Quality`、`Database`、`Container` 和 `Visual review`。它们保留原有平台矩阵、业务用例、fuzz、浏览器和安全扫描。本机工具版本见 `scripts/tool-versions.env`。发布 tag 核对经过本地完整验收的源提交并启动 [Release 产物检查](../operations/release.md#正式发布)。

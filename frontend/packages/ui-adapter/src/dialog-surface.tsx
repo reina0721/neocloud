@@ -3,7 +3,14 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
-import { useId, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEventHandler,
+  type ReactNode,
+} from 'react';
 import { Action } from './action';
 import { IconAction } from './icon-action';
 import { OverlayTriggerAction } from './overlay-trigger';
@@ -18,7 +25,9 @@ export type DialogSurfaceProps = Readonly<{
   headerAction?: ReactNode;
   keepMounted?: boolean;
   /** workspace 为连续阅读保留视口，使用紧凑边距；普通确认保持standard。 */
-  layout?: 'standard' | 'workspace';
+  layout?: 'standard' | 'workspace' | 'preview';
+  onExited?: () => void;
+  onKeyDown?: KeyboardEventHandler<HTMLDivElement>;
   /**
    * 可选确认动作：缺省时 Dialog 只保留关闭动作（设置面板等不需要二次确认的
    * 普通决策场景），不再强行渲染"确认"语义。
@@ -57,6 +66,8 @@ export function DialogSurface({
   onConfirm,
   isOpen,
   onOpenChange,
+  onExited,
+  onKeyDown,
   headerAction,
   keepMounted = false,
 }: DialogSurfaceProps) {
@@ -74,7 +85,12 @@ export function DialogSurface({
   const pendingRef = useRef(false);
   const [failed, setFailed] = useState(false);
   const showConfirm = Boolean(onConfirm) && Boolean(confirmLabel);
-  const headerClose = layout === 'workspace' && !showConfirm && !footerAction;
+  const preview = layout === 'preview';
+  const workspace = layout === 'workspace' || preview;
+  const headerClose = workspace && !showConfirm && !footerAction;
+  const focusClose = useCallback((node: HTMLButtonElement | null) => {
+    node?.focus({ preventScroll: true });
+  }, []);
 
   const confirm = async () => {
     if (!onConfirm || busy || pendingRef.current) return;
@@ -100,6 +116,8 @@ export function DialogSurface({
       <Dialog
         open={open}
         keepMounted={keepMounted}
+        disableRestoreFocus={preview}
+        onKeyDown={onKeyDown}
         onClose={() => {
           if (!pending) setOpen(false);
         }}
@@ -109,8 +127,11 @@ export function DialogSurface({
         fullScreen={size === 'fullscreen'}
         maxWidth={size === 'lg' ? 'md' : false}
         slotProps={{
+          ...(preview ? { backdrop: { className: 'backdrop-blur-md' } } : {}),
+          transition: { onExited },
           paper: {
-            className: `ui-overlay-surface ui-dialog-layout ${layout === 'workspace' ? 'ui-dialog-workspace' : ''} ${size === 'fullscreen' ? 'ui-dialog-fullscreen' : ''}`,
+            className: `ui-overlay-surface ui-dialog-layout ${workspace ? 'ui-dialog-workspace' : ''} ${preview ? 'ui-dialog-preview' : ''} ${size === 'fullscreen' ? 'ui-dialog-fullscreen' : ''}`,
+            ...(preview ? { inert: !open } : {}),
             sx:
               size === 'cover'
                 ? {
@@ -126,7 +147,7 @@ export function DialogSurface({
         <DialogTitle
           id={titleId + '-container'}
           component="div"
-          className={`shrink-0 border-b border-border ${size === 'fullscreen' ? 'px-4 py-1' : layout === 'workspace' ? 'px-4 py-3' : 'px-6 py-5'}`}
+          className={`shrink-0 border-b border-border ${size === 'fullscreen' ? 'px-4 py-1' : workspace ? 'px-4 py-3' : 'px-6 py-5'}`}
         >
           <div
             className={`flex ${size === 'fullscreen' ? 'items-center' : 'items-start'} justify-between gap-3`}
@@ -134,14 +155,15 @@ export function DialogSurface({
             <div className="min-w-0">
               <h2
                 id={titleId}
-                className={`${layout === 'workspace' ? 'truncate text-base' : 'text-lg'} font-semibold text-ink`}
+                title={preview ? title : undefined}
+                className={`${workspace ? 'truncate text-base' : 'text-lg'} font-semibold text-ink`}
               >
                 {title}
               </h2>
               {description ? (
                 <p
                   id={descriptionId}
-                  className={`${layout === 'workspace' ? 'hidden md:block' : ''} mt-1 text-sm leading-6 text-ink-muted`}
+                  className={`${workspace ? 'hidden md:block' : ''} mt-1 text-sm leading-6 text-ink-muted`}
                 >
                   {description}
                 </p>
@@ -151,6 +173,7 @@ export function DialogSurface({
               {headerAction}
               {headerClose ? (
                 <IconAction
+                  {...(preview ? { ref: focusClose } : {})}
                   size={size === 'fullscreen' ? 'lg' : 'md'}
                   label={cancelLabel}
                   disabled={pending}

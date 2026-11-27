@@ -63,18 +63,22 @@ function SiblingImage({
   name,
   alt,
   missing,
+  signal,
 }: {
   parentId: string;
   name: string;
   alt: string;
   missing: string;
+  signal: AbortSignal | undefined;
 }) {
   const files = useFiles();
   const [result, setResult] = useState<{ parentId: string; name: string; entry?: FileEntry }>();
   useEffect(() => {
     const controller = new AbortController();
+    const scope = signal ? AbortSignal.any([controller.signal, signal]) : controller.signal;
     void (async () => {
       try {
+        scope.throwIfAborted();
         for (let page = 1; page <= maxLookupPages; page++) {
           const listing = await files.list(
             {
@@ -89,9 +93,9 @@ function SiblingImage({
               page,
               pageSize: imageLookupPageSize,
             },
-            controller.signal,
+            scope,
           );
-          if (controller.signal.aborted) return;
+          if (scope.aborted) return;
           const entry = listing.items.find(
             (item) =>
               item.parentId === parentId &&
@@ -109,10 +113,10 @@ function SiblingImage({
       } catch {
         // 图片是独立的可选资源。失败时保留 Markdown 的替代文字。
       }
-      if (!controller.signal.aborted) setResult({ parentId, name });
+      if (!scope.aborted) setResult({ parentId, name });
     })();
     return () => controller.abort();
-  }, [files, parentId, name]);
+  }, [files, parentId, name, signal]);
 
   const current = result?.name === name && result.parentId === parentId ? result : undefined;
   return current?.entry ? (
@@ -126,6 +130,8 @@ export function MarkdownPreview({
   text,
   parentId,
   labels,
+  presentation = 'split',
+  signal,
 }: {
   text: string;
   parentId: string;
@@ -136,6 +142,8 @@ export function MarkdownPreview({
     missingImage: string;
     failed: string;
   };
+  presentation?: 'split' | 'reading' | 'embedded';
+  signal?: AbortSignal;
 }) {
   const source = useDeferredValue(text);
   const missingImage = labels.missingImage;
@@ -205,13 +213,19 @@ export function MarkdownPreview({
       img: ({ src, alt }) => {
         const name = typeof src === 'string' ? markdownSiblingName(src) : undefined;
         return name ? (
-          <SiblingImage parentId={parentId} name={name} alt={alt ?? ''} missing={missingImage} />
+          <SiblingImage
+            parentId={parentId}
+            name={name}
+            alt={alt ?? ''}
+            missing={missingImage}
+            signal={signal}
+          />
         ) : alt ? (
           <span title={missingImage}>{alt}</span>
         ) : null;
       },
     }),
-    [missingImage, parentId],
+    [missingImage, parentId, signal],
   );
   const rendered = useMemo(() => {
     if (encoder.encode(source).length > renderBytes) return <p role="status">{labels.tooLarge}</p>;
@@ -231,8 +245,7 @@ export function MarkdownPreview({
   return (
     <article
       aria-label={labels.preview}
-      className="min-w-0 overflow-auto rounded-panel border border-border bg-surface p-4 text-ink"
-      style={{ minHeight: '12rem', overflowWrap: 'anywhere' }}
+      className={`min-w-0 wrap-anywhere p-4 text-ink ${presentation === 'embedded' ? '' : 'overflow-auto rounded-panel border border-border bg-surface'} ${presentation === 'split' ? 'min-h-48' : ''}`}
     >
       <PreviewBoundary source={source} message={labels.failed}>
         {rendered}

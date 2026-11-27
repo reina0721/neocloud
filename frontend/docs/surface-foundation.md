@@ -84,4 +84,4 @@ Host 的 remember 在原 v1 key 中追加可选上次模式字段，缺字段旧
 - 水印与锁屏属于 Host Shell 表现（需要当前身份与全局遮挡），不下沉到 Foundation；
   Foundation 不反向依赖身份或会话。
 
-`ProductMasthead` 接收品牌名、说明与可选动作槽，统一文件、管理、登录和公开分享的几何品牌横幅；装饰与间距由产品层 Token 管理。其同源示例位于 `/page-patterns/layout-navigation`。
+`ProductMasthead` 接收品牌名、说明与可选动作槽，统一登录及公开分享的几何品牌横幅；装饰与间距由产品层 Token 管理。其同源示例位于 `/page-patterns/layout-navigation`。已登录工作区由 `WorkspaceHeader` 提供品牌、导航、搜索、工具和身份插槽，并由 `WorkspaceBrand` 统一标识的布局。

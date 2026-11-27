@@ -128,6 +128,10 @@ test('文件浏览应用保存、默认选择、平台限制和恢复', async ({
   const heading = viewer
     .getByRole('article', { name: '预览', exact: true })
     .getByRole('heading', { name: '内置文件应用', exact: true });
+  const quickText = viewer.locator('[data-file-text-preview] pre');
+  const quickHeading = viewer
+    .getByRole('article', { name: 'Markdown 预览', exact: true })
+    .getByRole('heading', { name: '内置文件应用', exact: true });
 
   try {
     await admin();
@@ -151,7 +155,7 @@ test('文件浏览应用保存、默认选择、平台限制和恢复', async ({
     await selectTextDefault();
     await apply();
     await openFile();
-    await expect(viewer.getByLabel('文件内容', { exact: true })).toHaveText('# 内置文件应用');
+    await expect(quickText).toHaveText('# 内置文件应用');
     await viewer.getByRole('button', { name: '关闭', exact: true }).click();
     await openWith();
     await expect(text).toBeVisible();
@@ -182,7 +186,7 @@ test('文件浏览应用保存、默认选择、平台限制和恢复', async ({
     await page.screenshot({ path: info.outputPath('applications-admin.png') });
     await page.setViewportSize({ width: 390, height: 760 });
     await openFile();
-    await expect(viewer.getByLabel('文件内容', { exact: true })).toHaveText('# 内置文件应用');
+    await expect(quickText).toHaveText('# 内置文件应用');
     await viewer.getByRole('button', { name: '关闭', exact: true }).click();
     await openWith();
     await expect(text).toBeVisible();
@@ -205,7 +209,7 @@ test('文件浏览应用保存、默认选择、平台限制和恢复', async ({
     await page.getByRole('button', { name: '恢复内置策略', exact: true }).click();
     await apply();
     await openFile();
-    await expect(heading).toBeVisible();
+    await expect(quickHeading).toBeVisible();
     await admin();
     const diagram = page.getByRole('checkbox', { name: '启用 Draw.io 图表', exact: true });
     await expect(diagram).toBeChecked();
@@ -312,7 +316,7 @@ test('扩展名关联编辑、别名打开和清空恢复', async ({ page }, inf
     await expect(noteDefault).toContainText('Markdown 编辑器');
 
     await open(alias);
-    const preview = viewer.getByRole('article', { name: '预览', exact: true });
+    const preview = viewer.getByRole('article', { name: 'Markdown 预览', exact: true });
     await expect(
       preview.getByRole('heading', { name: '已存在的别名文件', exact: true }),
     ).toBeVisible();
@@ -320,13 +324,15 @@ test('扩展名关联编辑、别名打开和清空恢复', async ({ page }, inf
       path: info.outputPath('extensions-preview.png'),
       animations: 'disabled',
     });
+    await viewer.getByRole('button', { name: '编辑', exact: true }).click();
+    await expect(page).toHaveURL(/\/home\/view\?/);
     await viewer.getByRole('button', { name: '源码', exact: true }).click();
     await viewer.getByLabel('文件内容', { exact: true }).fill('# 别名编辑已保存');
     await viewer.getByRole('button', { name: '保存', exact: true }).click();
     await expect(viewer).toHaveCount(0);
     await page.setViewportSize({ width: 390, height: 760 });
     await open(alias);
-    await expect(viewer.getByLabel('文件内容', { exact: true })).toHaveText('# 别名编辑已保存');
+    await expect(viewer.locator('[data-file-text-preview] pre')).toHaveText('# 别名编辑已保存');
     await page.setViewportSize({ width: 1280, height: 900 });
     await open(broken);
     const damaged = page.getByRole('dialog', { name: broken, exact: true });
@@ -343,7 +349,7 @@ test('扩展名关联编辑、别名打开和清空恢复', async ({ page }, inf
     ).toHaveCount(0);
     await savePolicy();
     await open(alias);
-    await expect(viewer.getByLabel('文件内容', { exact: true })).toHaveText('# 别名编辑已保存');
+    await expect(viewer.locator('[data-file-text-preview] pre')).toHaveText('# 别名编辑已保存');
     await openApplications(page);
     await markdownRow.getByRole('button', { name: '恢复内置扩展名', exact: true }).click();
     await expect(markdownRow).toContainText('.md, .markdown');

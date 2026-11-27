@@ -13,13 +13,67 @@ import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import {
-  checkRuns,
   requiredAssets,
   selectDraft,
   verifyAssets,
 } from "./verify-release.mjs";
 const sha = "a".repeat(40),
   tag = "v0.1.0";
+
+const readWorkflow = (name) =>
+  readFile(new URL(`../.github/workflows/${name}.yml`, import.meta.url), "utf8")
+    .then((contents) => contents.replace(/\r\n/g, "\n"));
+
+function triggers(workflow) {
+  const body = /^on:\n([\s\S]*?)(?=^\S)/m.exec(workflow)?.[1];
+  assert.ok(body, "缺少工作流触发配置");
+  return [...body.matchAll(/^  ([a-z_]+):/gm)].map((match) => match[1]);
+}
+
+test("自动源码检查收敛到主分支和 PR，完整矩阵由维护者按需运行", async () => {
+  const quality = await readWorkflow("quality");
+  assert.deepEqual(triggers(quality), ["push", "pull_request", "workflow_dispatch"]);
+  assert.match(quality, /^    branches: \[main\]$/m);
+  for (const job of ["windows", "linux", "webui-windows", "webui-linux", "security"]) {
+    assert.match(
+      quality,
+      new RegExp(`^  ${job}:\\n    if: github\\.event_name == 'workflow_dispatch'$`, "m"),
+    );
+  }
+  assert.match(quality, /oasdiff breaking/);
+  assert.match(quality, /openapi-breaking:[\s\S]*?github\.event_name == 'pull_request'/);
+  for (const name of ["database", "container", "visual-review"]) {
+    assert.deepEqual(triggers(await readWorkflow(name)), ["workflow_dispatch"]);
+  }
+});
+
+test("正式 tag 只执行发布构建和实际附件检查", async () => {
+  const release = await readWorkflow("release");
+  assert.deepEqual(triggers(release), ["push"]);
+  assert.match(release, /^    tags:\n      - "v\*"$/m);
+  assert.match(release, /git cat-file -t/);
+  assert.match(release, /git merge-base --is-ancestor[^\n]+refs\/remotes\/origin\/main/);
+  assert.match(release, /"\$GITHUB_REF_NAME" "\$GITHUB_SHA" >> "\$GITHUB_STEP_SUMMARY"/);
+  assert.match(release, /contains\(github\.ref_name, '-'\) \|\| needs\.managed-go-bundles\.result == 'success'/);
+  assert.doesNotMatch(
+    release,
+    /wait-release-gates|\/actions\/runs|node --test|playwright|managed-go-acceptance|test-offline-(?:release|transition)|test-docker-maintenance/,
+  );
+  assert.equal([...release.matchAll(/\bsign-blob\b/g)].length, 1);
+  assert.equal([...release.matchAll(/\bgo test\b/g)].length, 1);
+  assert.match(release, /go test[^\n]+TestSignedFullReleaseBoot/);
+  assert.match(release, /\$env:CLOUDDRIVE_COSIGN = \$cosign[\s\S]+go test[^\n]+TestSignedFullReleaseBoot/);
+  assert.equal([...release.matchAll(/test-docker-release\.mjs/g)].length, 1);
+  assert.match(release, /--artifact-smoke/);
+
+  const publish = /^  publish:\n([\s\S]+)$/m.exec(release)?.[1];
+  assert.ok(publish, "缺少正式发布任务");
+  assert.match(publish, /needs: \[release, docker-acceptance, managed-full-acceptance\]/);
+  assert.match(publish, /!contains\(github\.ref_name, '-'\)/);
+  assert.match(publish, /verify-release\.mjs assets[\s\S]+verify-blob[\s\S]+gh release edit/);
+  assert.match(publish, /--certificate-identity "https:\/\/github\.com\/\$GITHUB_REPOSITORY\/\.github\/workflows\/release\.yml@\$GITHUB_REF"/);
+  assert.match(publish, /gh release edit[^\n]+--draft=false[^\n]+--latest/);
+});
 test("从完整分页列表读取 draft，保留 REST 附件元数据", () => {
   const draft = {
     tag_name: tag,
@@ -60,54 +114,11 @@ test("draft CLI 仅输出可被后续附件门禁直接读取的 JSON", async (t
   );
   assert.deepEqual(JSON.parse(output), draft);
 });
-const runs = () => ({
-  workflow_runs: ["quality.yml", "database.yml", "container.yml"].map(
-    (path, id) => ({
-      id,
-      path: ".github/workflows/" + path,
-      head_sha: sha,
-      head_branch: "main",
-      event: "push",
-      status: "completed",
-      conclusion: "success",
-      html_url: "https://github.com/example/run/" + id,
-    }),
-  ),
-});
-test("自动发布必须等待同一提交的三个独立工作流", () => {
-  assert.equal(checkRuns(runs(), sha), "success");
-  const pending = runs();
-  pending.workflow_runs.pop();
-  assert.equal(checkRuns(pending, sha), "pending");
-  assert.equal(checkRuns(runs(), "b".repeat(40)), "pending");
-  const latest = runs();
-  latest.workflow_runs.push({
-    ...latest.workflow_runs[0],
-    id: 99,
-    conclusion: "failure",
-  });
-  assert.throws(() => checkRuns(latest, sha), /quality.yml 未通过/);
-  latest.workflow_runs[3].status = "in_progress";
-  assert.equal(checkRuns(latest, sha), "pending");
-});
-test("其它分支或 tag 的局部门禁不能代替 main 全量验收", () => {
-  const payload = runs();
-  payload.workflow_runs[0].conclusion = "failure";
-  payload.workflow_runs.push({
-    ...payload.workflow_runs[0],
-    id: 99,
-    head_branch: "codex/partial",
-    conclusion: "success",
-  });
-  assert.throws(() => checkRuns(payload, sha), /quality.yml 未通过/);
-  payload.workflow_runs.shift();
-  assert.equal(checkRuns(payload, sha), "pending");
-});
 test("预发布标签不能自动提升为正式版本", () => {
   assert.throws(() => requiredAssets("v0.1.0-rc.1"), /仅正式版本/);
 });
 
-async function fixture(t, { armSha = sha } = {}) {
+async function fixture(t, { armSha = sha, layout = true, armToolMachine = 183 } = {}) {
   const directory = await mkdtemp(join(tmpdir(), "release-assets-unit-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const installerPath = join(directory, "source-installer");
@@ -122,7 +133,7 @@ async function fixture(t, { armSha = sha } = {}) {
     if (name.startsWith("clouddrive-maintenance_")) {
       bytes = Buffer.alloc(20);
       bytes.set([127, 69, 76, 70, 2, 1, 1]);
-      bytes.writeUInt16LE(name.endsWith("arm64") ? 183 : 62, 18);
+      bytes.writeUInt16LE(name.endsWith("arm64") ? armToolMachine : 62, 18);
     }
     if (name === "install.sh") bytes = await readFile(installerPath);
     if (name === "version.txt") bytes = tag + "\n";
@@ -140,7 +151,7 @@ async function fixture(t, { armSha = sha } = {}) {
     );
     await writeFile(
       join(stage, "manifest.txt"),
-      `FORMAT=1\nVERSION=${tag}\nARCH=${arch}\nCOMMIT=${arch === "arm64" ? armSha : sha}\nAPI_ID=sha256:${"1".repeat(64)}\nWEB_ID=sha256:${"2".repeat(64)}\n`,
+      `FORMAT=1\n${layout ? "INSTANCE_LAYOUT=1\n" : ""}OFFLINE_MAINTENANCE=1\nVERSION=${tag}\nARCH=${arch}\nCOMMIT=${arch === "arm64" ? armSha : sha}\nAPI_ID=sha256:${"1".repeat(64)}\nWEB_ID=sha256:${"2".repeat(64)}\n`,
     );
     execFileSync("tar", [
       "-czf",
@@ -176,8 +187,13 @@ async function fixture(t, { armSha = sha } = {}) {
 }
 test("完整双架构产物及其清单可通过验收", async (t) =>
   verifyAssets(await fixture(t)));
+
+test("缺少自定义布局能力的草稿产物不能发布", async (t) => {
+  await assert.rejects(verifyAssets(await fixture(t, { layout: false })), /INSTANCE_LAYOUT/);
+});
 for (const missing of [
   "checksums.txt.sigstore.json",
+  "clouddrive_v0.1.0_windows_amd64_managed-full.zip",
   `clouddrive_${tag}_linux_arm64_docker.tar.gz`,
 ]) {
   test("缺少必要附件必须阻止发布：" + missing, async (t) => {
@@ -210,4 +226,9 @@ test("摘要损坏和未纳入签名清单的 SBOM 均阻止发布", async (t) =
 test("即使摘要正确，另一提交的镜像包仍不能发布", async (t) => {
   const f = await fixture(t, { armSha: "b".repeat(40) });
   await assert.rejects(verifyAssets(f), /配套镜像身份不符/);
+});
+
+test("即使摘要正确，架构错误的维护程序仍不能发布", async (t) => {
+  const f = await fixture(t, { armToolMachine: 62 });
+  await assert.rejects(verifyAssets(f), /架构/);
 });

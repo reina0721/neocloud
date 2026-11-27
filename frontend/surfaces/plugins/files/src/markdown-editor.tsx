@@ -173,6 +173,7 @@ export default function MarkdownEditor({
   const [selectedView, setSelectedView] = useState<View>(reading ? 'preview' : 'split');
   const view = selectedView === 'split' && !matches ? 'source' : selectedView;
   const views: readonly View[] = matches ? ['source', 'split', 'preview'] : ['source', 'preview'];
+  const readingColumn = view === 'preview' ? ' mx-auto max-w-3xl' : '';
   const textarea = useRef<HTMLTextAreaElement>(null);
   const nextSelection = useRef<Selection>(null);
   const upload = useRef<AbortController>(null);
@@ -393,7 +394,7 @@ export default function MarkdownEditor({
         </p>
       ) : null}
       <div
-        className="grid min-w-0 gap-3"
+        className={'grid min-w-0 gap-3' + readingColumn}
         style={view === 'split' ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } : undefined}
       >
         {view !== 'preview' ? (
@@ -420,7 +421,12 @@ export default function MarkdownEditor({
           />
         ) : null}
         {view !== 'source' ? (
-          <MarkdownPreview text={text} parentId={parentId} labels={labels} />
+          <MarkdownPreview
+            text={text}
+            parentId={parentId}
+            labels={labels}
+            presentation={view === 'preview' ? 'reading' : 'split'}
+          />
         ) : null}
       </div>
       {link ? (

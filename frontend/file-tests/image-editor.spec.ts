@@ -143,7 +143,7 @@ async function imageAnnotationWorkspace(page: Page) {
   await uploadFixtures(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'source.png', exact: true }).click();
-  await page.getByRole('button', { name: '编辑图片', exact: true }).click();
+  await page.getByRole('button', { name: '编辑副本', exact: true }).click();
   const editor = page.getByRole('dialog', { name: '图片编辑器', exact: true });
   const button = (name: string) => editor.getByRole('button', { name, exact: true });
   const canvas = editor.getByRole('img', { name: '图片编辑画布', exact: true });
@@ -430,7 +430,7 @@ test('图片按原版本保存并可将过期草稿另存到指定目录', async
   if (!sourceEntry) throw new Error('没有原图片');
   const openEditor = async (owner: Page) => {
     await owner.getByRole('button', { name: 'source.png', exact: true }).click();
-    await owner.getByRole('button', { name: '编辑图片', exact: true }).click();
+    await owner.getByRole('button', { name: '编辑副本', exact: true }).click();
     return owner.getByRole('dialog', { name: '图片编辑器', exact: true });
   };
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -483,7 +483,7 @@ test('图片按原版本保存并可将过期草稿另存到指定目录', async
   await expect.poll(() => topLeft(staleCanvas)).toEqual([0, 255, 0, 255]);
   await expect(stale.getByText('已存为本机草稿', { exact: true })).toBeVisible();
   await stalePage.reload();
-  await stalePage.getByRole('button', { name: '编辑图片', exact: true }).click();
+  await expect(staleCanvas).toBeVisible();
   await expect.poll(() => topLeft(staleCanvas)).toEqual([0, 255, 0, 255]);
 
   let release = () => {};
@@ -616,7 +616,7 @@ test('图片编辑器支持视图缩放、原图对比及独立导出质量', as
   await uploadFixtures(page, '#60789c');
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'source.png', exact: true }).click();
-  await page.getByRole('button', { name: '编辑图片', exact: true }).click();
+  await page.getByRole('button', { name: '编辑副本', exact: true }).click();
   const editor = page.getByRole('dialog', { name: '图片编辑器', exact: true });
   const button = (name: string) => editor.getByRole('button', { name, exact: true });
   const canvas = editor.getByRole('img', { name: '图片编辑画布', exact: true });
@@ -828,7 +828,7 @@ test('WebP 支持图片水印、透明副本和原件保留', async ({ page }, i
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'source.webp', exact: true }).click();
   await expect(page.getByRole('img', { name: 'source.webp', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '编辑图片', exact: true }).click();
+  await page.getByRole('button', { name: '编辑副本', exact: true }).click();
   const editor = page.getByRole('dialog', { name: '图片编辑器', exact: true });
   const button = (name: string) => editor.getByRole('button', { name, exact: true });
   const canvas = editor.getByRole('img', { name: '图片编辑画布', exact: true });
@@ -1021,7 +1021,7 @@ test('图片外观调整支持色彩、滤镜、文字水印和副本导出', as
   await uploadFixtures(page, '#60789c');
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'source.png', exact: true }).click();
-  await page.getByRole('button', { name: '编辑图片', exact: true }).click();
+  await page.getByRole('button', { name: '编辑副本', exact: true }).click();
   const editor = page.getByRole('dialog', { name: '图片编辑器', exact: true });
   const button = (name: string) => editor.getByRole('button', { name, exact: true });
   const slider = (name: string) => editor.getByRole('slider', { name, exact: true });
@@ -1188,7 +1188,7 @@ test('本人图片标注支持图形、样式、历史和带标注副本', async
   await uploadFixtures(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'source.png', exact: true }).click();
-  await page.getByRole('button', { name: '编辑图片', exact: true }).click();
+  await page.getByRole('button', { name: '编辑副本', exact: true }).click();
   const editor = page.getByRole('dialog', { name: '图片编辑器', exact: true });
   const button = (name: string) => editor.getByRole('button', { name, exact: true });
   const canvas = editor.getByRole('img', { name: '图片编辑画布', exact: true });
@@ -1393,7 +1393,13 @@ test('本人图片可裁剪、变换、调整尺寸、下载与上传独立副�
   const editor = page.getByRole('dialog', { name: '图片编辑器', exact: true });
   const button = (name: string) => editor.getByRole('button', { name, exact: true });
   const canvas = editor.getByRole('img', { name: '图片编辑画布', exact: true });
-  const editEntry = () => page.getByRole('button', { name: '编辑图片', exact: true }).click();
+  const editEntry = () =>
+    page
+      .getByRole('button', {
+        name: new URL(page.url()).pathname === '/home/view' ? '编辑图片' : '编辑副本',
+        exact: true,
+      })
+      .click();
 
   await page.getByRole('button', { name: 'oversize.png', exact: true }).click();
   await editEntry();

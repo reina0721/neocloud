@@ -104,6 +104,21 @@ describe('leave-confirm 注册表与统一询问', () => {
     expect(isAnyDirty()).toBe(false);
   });
 
+  it('整页重载对正在提交的输入也保留原生确认', () => {
+    setLeaveConfirmEnabled(false);
+    const unregisterGuard = installBeforeUnloadGuard();
+    const unregister = registerDirtySource({
+      pageId: 'submitting-edit',
+      message: () => '保存正在提交',
+      isDirty: () => false,
+      isSubmitting: () => true,
+    });
+    const event = new Event('beforeunload', { cancelable: true });
+    expect(window.dispatchEvent(event)).toBe(false);
+    unregister();
+    unregisterGuard();
+  });
+
   it('confirmLeave 偏好关闭 → 不询问直接 proceed（即使 dirty）', async () => {
     setLeaveConfirmEnabled(false);
     const resolver = vi.fn(() => Promise.resolve(true));

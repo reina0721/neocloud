@@ -3,6 +3,7 @@ import { test, expect, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { fileCollectionAction } from './reading-fixture';
 
 test.use({ actionTimeout: 15_000 });
 const color = '#4589ab';
@@ -263,10 +264,7 @@ test('批量标签冲突不部分写入，标签与属性组合检索可恢复',
   expect(annotation.tags.some((tag) => tag.name === shared)).toBe(false);
   await dialog.getByRole('button', { name: '取消', exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await page
-    .getByRole('toolbar', { name: value.name, exact: true })
-    .getByRole('button', { name: '刷新', exact: true })
-    .click();
+  await fileCollectionAction(page, '刷新');
   await expect(page.getByText('已选择 2 项', { exact: true })).toHaveCount(0);
   await select();
   await page.getByRole('button', { name: '更多操作', exact: true }).click();
@@ -294,7 +292,7 @@ test('批量标签冲突不部分写入，标签与属性组合检索可恢复',
   await dialog.getByLabel('标签名称', { exact: true }).press('Enter');
   await dialog.getByRole('button', { name: '保存', exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await page.getByRole('button', { name: '高级搜索', exact: true }).click();
+  await fileCollectionAction(page, '高级搜索');
   dialog = page.getByRole('dialog');
   for (const name of [tagA, tagB]) {
     await dialog.getByLabel('标签名称', { exact: true }).fill(name);
@@ -312,7 +310,7 @@ test('批量标签冲突不部分写入，标签与属性组合检索可恢复',
   await expect(page).toHaveURL(address);
   await expect(page.locator('[data-file-item]')).toHaveCount(1);
   await page.getByRole('button', { name: /移除 自定义属性: Empty/ }).click();
-  await page.getByRole('button', { name: '高级搜索', exact: true }).click();
+  await fileCollectionAction(page, '高级搜索');
   dialog = page.getByRole('dialog');
   await dialog.getByRole('checkbox', { name: '需包含全部标签', exact: true }).press('Space');
   await dialog.getByRole('button', { name: '搜索', exact: true }).click();
@@ -444,21 +442,16 @@ test('副本与回收保留整理信息，画廊按本屏加载且可批量整�
       body: '{"title":"temporary annotation outage"}',
     }),
   );
-  await page
-    .getByRole('toolbar', { name: value.name, exact: true })
-    .getByRole('button', { name: '刷新', exact: true })
-    .click();
+  await fileCollectionAction(page, '刷新');
   await expect(page.getByText('服务暂时不可用，请重试。', { exact: true })).toBeVisible();
   await page
     .getByRole('button', { name: image.name, exact: true })
     .click({ modifiers: ['Control'] });
   await page.getByRole('button', { name: '更多操作', exact: true }).click();
   await expect(page.getByRole('menuitem', { name: '批量添加标签', exact: true })).toBeDisabled();
+  await page.keyboard.press('Escape');
   await page.unroute('**/native/files/annotations/summaries**');
-  await page
-    .getByRole('toolbar', { name: value.name, exact: true })
-    .getByRole('button', { name: '刷新', exact: true })
-    .click();
+  await fileCollectionAction(page, '刷新');
   await expect(
     row(page, image.id).getByRole('button', {
       name: '按标签 画廊-' + value.suffix + ' 查看全部自有文件',

@@ -1,7 +1,6 @@
-import { assertPreviewOrigin } from './reading-fixture';
+import { readPreviewAccess } from './reading-fixture';
 import { test, expect, type Page } from './preview-test';
 import AxeBuilder from '@axe-core/playwright';
-import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 
 type Entry = { id: string; name: string; contentRevision: number };
@@ -11,11 +10,7 @@ const lockXML =
   '<lockinfo xmlns="DAV:"><lockscope><exclusive/></lockscope><locktype><write/></locktype><owner><href>browser-fixture</href></owner></lockinfo>';
 
 async function login(page: Page) {
-  if (!process.env.CLOUDDRIVE_FILE_TEST_ACCESS) throw Error('必须使用隔离文件账号');
-  const access = JSON.parse(
-    (await readFile(process.env.CLOUDDRIVE_FILE_TEST_ACCESS, 'utf8')).replace(/^\uFEFF/, ''),
-  ) as { url: string; username: string; password: string };
-  assertPreviewOrigin(access.url);
+  const access = readPreviewAccess();
   await page.goto('/login?returnTo=%2Fhome');
   await page.getByLabel('邮箱', { exact: true }).fill(access.username);
   await page.getByLabel('密码', { exact: true }).fill(access.password);
@@ -50,8 +45,14 @@ async function dav(
   data?: string,
   headers: Record<string, string> = {},
 ) {
-  if (connection.endpointOrigin !== 'http://127.0.0.1:8130') throw Error('只允许隔离WebDAV');
-  return page.request.fetch(connection.endpointOrigin + connection.endpointPath + name, {
+  const access = readPreviewAccess();
+  const endpoint = new URL(connection.endpointPath + name, connection.endpointOrigin);
+  if (
+    ![access.origin, access.apiOrigin].includes(endpoint.origin) ||
+    !endpoint.pathname.startsWith('/dav/')
+  )
+    throw Error('只允许隔离WebDAV');
+  return page.request.fetch(endpoint.href, {
     method,
     headers: {
       Authorization:

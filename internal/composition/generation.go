@@ -10,6 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/reina0721/clouddrive/internal/deployment"
 	"github.com/reina0721/clouddrive/internal/kernel"
 	kernelalerting "github.com/reina0721/clouddrive/internal/kernel/app/alerting"
 	cacheapp "github.com/reina0721/clouddrive/internal/kernel/app/cache"
@@ -81,6 +82,7 @@ type applicationGenerationFactory struct {
 	currentMu sync.RWMutex
 	current   *applicationGeneration
 	build     opsmodel.BuildInfo
+	managed   *managedService
 }
 
 type applicationGeneration struct {
@@ -101,22 +103,23 @@ type applicationGeneration struct {
 	scheduler *immutableComponent[scheduleapp.Access]
 	messaging *immutableComponent[messagingapp.Output]
 
-	module             todo.HTTPModule
-	authModule         auth.Module
-	iamModule          iam.HTTPModule
-	organizationModule organization.HTTPModule
-	navigationModule   navigation.HTTPModule
-	opsModule          ops.Module
-	participants       []supervisor.Participant
-	route              *httpx.PreparedRoute
-	routePublished     bool
-	server             *httpx.Server
-	runDone            chan struct{}
-	runErr             error
-	managementRoute    *httpx.PreparedRoute
-	managementServer   *httpx.Server
-	managementRunDone  chan struct{}
-	managementRunErr   error
+	module              todo.HTTPModule
+	authModule          auth.Module
+	iamModule           iam.HTTPModule
+	organizationModule  organization.HTTPModule
+	navigationModule    navigation.HTTPModule
+	opsModule           ops.Module
+	participants        []supervisor.Participant
+	pendingParticipants []supervisor.Participant
+	route               *httpx.PreparedRoute
+	routePublished      bool
+	server              *httpx.Server
+	runDone             chan struct{}
+	runErr              error
+	managementRoute     *httpx.PreparedRoute
+	managementServer    *httpx.Server
+	managementRunDone   chan struct{}
+	managementRunErr    error
 
 	activeRequests      atomic.Int64
 	resourceStats       kernel.GenerationResourceStats
@@ -184,6 +187,11 @@ func (f *applicationGenerationFactory) Prepare(
 ) (kernel.PreparedGeneration, error) {
 	if ctx == nil {
 		return nil, fmt.Errorf("application generation prepare context is nil")
+	}
+	if f.managed != nil {
+		if err := f.managed.checkSnapshot(snapshot, previous == nil); err != nil {
+			return nil, err
+		}
 	}
 	if previous != nil {
 		if err := requireReloadableConfiguration(previous.Snapshot(), snapshot); err != nil {
@@ -347,11 +355,7 @@ func (f *applicationGenerationFactory) Prepare(
 	if err != nil {
 		return abort(err)
 	}
-	migrationService, err := applicationMigrationService(snapshot, databaseConfig.PackageConfig())
-	if err != nil {
-		return abort(err)
-	}
-	if err := migrationService.Compatible(ctx); err != nil {
+	if err := f.verifyMigration(ctx, snapshot, databaseConfig); err != nil {
 		return abort(fmt.Errorf("verify application migration compatibility: %w", err))
 	}
 	iamConfig, err := iamconfig.Decode(snapshot)
@@ -363,7 +367,7 @@ func (f *applicationGenerationFactory) Prepare(
 		IAMConfig: iamConfig, AuthConfig: authConfig,
 		Permissions: generation.blueprint.permissions, Policies: generation.blueprint.policyCopy(),
 		AllowedOrigins:  httpConfig.CORS.AllowedOrigins,
-		ReconcileOwners: previous == nil,
+		ReconcileOwners: previous == nil && f.managed == nil,
 		AlertNotifier:   generation.alerting.output,
 	})
 	if err != nil {
@@ -422,6 +426,7 @@ func (f *applicationGenerationFactory) Prepare(
 		Execution: generation.execution.value(), ExecutionHealth: generation.execution.value().Health,
 		Telemetry: generation.telemetry.output,
 		Factories: []messagingapp.Factory{rabbitmqapp.Factory()},
+		Admit:     f.workAdmission(),
 	})
 	if err != nil {
 		return abort(fmt.Errorf("define messaging app: %w", err))
@@ -451,6 +456,10 @@ func (f *applicationGenerationFactory) Prepare(
 	}
 	if authConfig.Mode == authconfig.ModeDevelopmentAnonymous && !opsconfig.ManagementIsLoopback(opsConfig.Management.Addr) {
 		return abort(fmt.Errorf("development anonymous auth requires loopback management HTTP"))
+	}
+	if f.managed != nil {
+		httpConfig.Addr = managedPrivateAddress
+		opsConfig.Management.Addr = managedPrivateAddress
 	}
 	generation.opsModule, err = ops.New(ctx, ops.Dependencies{
 		Runtime: generationOpsSource{process: f.opsRuntime, generation: generation}, Build: f.build, Config: opsConfig,
@@ -494,7 +503,7 @@ func (f *applicationGenerationFactory) Prepare(
 		Actors:         filesActorAdapter{}, Passwords: iam.NewCredentialDigests(), Clock: clock.System(), IDs: idgen.UUID(),
 		Logger: generation.logger.value(), PublicOrigins: httpConfig.CORS.AllowedOrigins,
 		TaskEnabled: func(id pkgschedule.TaskID) (bool, error) { return scheduleapp.TaskConfiguredEnabled(snapshot, id) },
-	}, previous == nil)
+	}, previous == nil && (f.managed == nil || f.managed.initializeStorage))
 	if err != nil {
 		return abort(err)
 	}
@@ -521,13 +530,13 @@ func (f *applicationGenerationFactory) Prepare(
 	if err != nil {
 		return abort(err)
 	}
-	consoleHandler, err := console.New(console.Dependencies{Runtime: generation.consoleRuntime, DeploymentOwner: (consoleIAMPort{generation.iamModule.Service}).deploymentOwner, IAM: consoleIAMPort{generation.iamModule.Service}, CookieName: generation.iamModule.SessionCookieName(), Cookies: generation.iamModule.Cookies, Native: httptransport.IsolatedRoutes(apiRoutes), Origins: httpConfig.CORS.AllowedOrigins, SiteOrigins: consoleConfig.SiteOrigins, Database: databaseAccess, Logger: generation.logger.value(), Relay: consoleConfig.Relay, Executor: generation.execution.value(), Authenticate: consoleAuthenticate(generation.authModule.SessionSource.AuthenticateRequest), Todos: consoleTodoPort{generation.module.Operations}, Navigation: consoleNavigationPort{generation.navigationModule.Operations}})
+	consoleHandler, err := console.New(console.Dependencies{Runtime: generation.consoleRuntime, DeploymentOwner: (consoleIAMPort{generation.iamModule.Service}).deploymentOwner, IAM: consoleIAMPort{generation.iamModule.Service}, CookieName: generation.iamModule.SessionCookieName(), Cookies: generation.iamModule.Cookies, Native: httptransport.IsolatedRoutes(apiRoutes), Origins: httpConfig.CORS.AllowedOrigins, SiteOrigins: consoleConfig.SiteOrigins, Database: databaseAccess, Logger: generation.logger.value(), Relay: consoleConfig.Relay, Executor: generation.execution.value(), Authenticate: consoleAuthenticate(generation.authModule.SessionSource.AuthenticateRequest), Todos: consoleTodoPort{generation.module.Operations}, Navigation: consoleNavigationPort{generation.navigationModule.Operations}, ReleaseCatalog: http.HandlerFunc(deployment.NewReleases().ServeReleaseCatalog)})
 	if err != nil {
 		return abort(err)
 	}
 	nativeRoutes := apiRoutes
 	apiRoutes = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, console.Prefix+"/") {
+		if strings.HasPrefix(r.URL.Path, console.Prefix+"/") || r.URL.Path == console.ReleaseCatalogPath {
 			consoleHandler.ServeHTTP(w, r)
 			return
 		}
@@ -551,6 +560,7 @@ func (f *applicationGenerationFactory) Prepare(
 		Logger: generation.logger.value(), Clock: clock.System(), Execution: generation.execution.value(), Coordination: coordinationManager,
 		Telemetry: generation.telemetry.output, Bindings: schedules,
 		ReportFailure: generation.reportScheduleFailure,
+		Admit:         f.workAdmission(),
 	})
 	if err != nil {
 		return abort(fmt.Errorf("define scheduler app: %w", err))
@@ -565,15 +575,20 @@ func (f *applicationGenerationFactory) Prepare(
 	generation.resourceStats.Built = append(generation.resourceStats.Built, "organization")
 	generation.resourceStats.Built = append(generation.resourceStats.Built, "navigation")
 	generation.resourceStats.Built = append(generation.resourceStats.Built, "ops")
-	participants := []supervisor.Participant{}
 	for _, contribution := range contributions {
-		participants = append(participants, contribution.Participants...)
-	}
-	for _, participant := range participants {
-		if err := participant.Start(ctx); err != nil {
-			return abort(fmt.Errorf("start generation participant %s: %w", participant.Name(), err))
+		generation.pendingParticipants = append(generation.pendingParticipants, contribution.Participants...)
+		if f.managed != nil && !f.managed.published.Load() && contribution.ID == generation.authModule.Contribution.ID {
+			// JWKS fetching is part of private readiness; it does not mutate the
+			// database or admit user requests.
+			if err := generation.startParticipants(ctx); err != nil {
+				return abort(err)
+			}
 		}
-		generation.participants = append(generation.participants, participant)
+	}
+	if f.managed == nil || f.managed.published.Load() {
+		if err := generation.startParticipants(ctx); err != nil {
+			return abort(err)
+		}
 	}
 
 	transferRoutes, err := transferBudgetMatcher(f.blueprint.httpDefinitions, fileswebdav.Metadata().TransferRequest)
@@ -593,7 +608,17 @@ func (f *applicationGenerationFactory) Prepare(
 	if err != nil {
 		return abort(err)
 	}
-	generation.server, err = httpx.NewServer(&httpConfig, generation.trackRequests(observedAPIRouter))
+	business := generation.trackRequests(observedAPIRouter)
+	management := generation.opsModule.ManagementHTTP
+	if f.managed != nil {
+		ingress, err := newBrowserIngress(filesPolicy.Connections.PublicOrigin, httpConfig)
+		if err != nil {
+			return abort(err)
+		}
+		business = f.managed.handler(ingress.wrap(business), false)
+		management = f.managed.handler(management, true)
+	}
+	generation.server, err = httpx.NewServer(&httpConfig, business)
 	if err != nil {
 		return abort(err)
 	}
@@ -607,7 +632,7 @@ func (f *applicationGenerationFactory) Prepare(
 	if err != nil {
 		return abort(err)
 	}
-	generation.managementServer, err = httpx.NewServer(&generation.opsModule.Management, generation.opsModule.ManagementHTTP)
+	generation.managementServer, err = httpx.NewServer(&generation.opsModule.Management, management)
 	if err != nil {
 		return abort(err)
 	}
@@ -636,6 +661,24 @@ func (f *applicationGenerationFactory) Prepare(
 }
 
 func (f *applicationGenerationFactory) Failures() <-chan error { return f.failures }
+
+func (f *applicationGenerationFactory) workAdmission() func() (func(), bool) {
+	if f.managed == nil {
+		return nil
+	}
+	return f.managed.admitWork
+}
+
+func (f *applicationGenerationFactory) verifyMigration(ctx context.Context, snapshot config.Snapshot, databaseConfig databaseapp.Config) error {
+	if f.managed != nil {
+		return f.managed.application.CheckOnlineMigration(ctx, snapshot, f.managed.plan.Load())
+	}
+	service, err := applicationMigrationService(snapshot, databaseConfig.PackageConfig())
+	if err != nil {
+		return err
+	}
+	return service.Compatible(ctx)
+}
 
 func (f *applicationGenerationFactory) Stop(ctx context.Context) error {
 	var joined error
@@ -753,14 +796,10 @@ func (g *applicationGeneration) Commit(previous kernel.ActiveGeneration) (kernel
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), kernel.DefaultReloadTimeout)
 	defer cancel()
-	if err := g.messaging.output.Control.OpenPublisher(ctx); err != nil {
-		return nil, fmt.Errorf("open messaging publisher admission: %w", err)
-	}
-	if err := g.factory.messagingHub.Commit(ctx, g.messaging.output.Control); err != nil {
-		return nil, g.failPublication(err)
-	}
-	if err := g.factory.scheduleHub.Commit(ctx, g.scheduler.output); err != nil {
-		return nil, g.failPublication(err)
+	if g.factory.managed == nil || g.factory.managed.published.Load() {
+		if err := g.openBackground(ctx); err != nil {
+			return nil, err
+		}
 	}
 	if _, err := g.factory.hub.Commit(g.route, previousRoute); err != nil {
 		return nil, g.failPublication(err)
@@ -779,6 +818,33 @@ func (g *applicationGeneration) Commit(previous kernel.ActiveGeneration) (kernel
 	}
 	g.factory.setCurrent(g)
 	return g, nil
+}
+
+func (g *applicationGeneration) startParticipants(ctx context.Context) error {
+	for _, participant := range g.pendingParticipants {
+		if err := participant.Start(ctx); err != nil {
+			return fmt.Errorf("start generation participant %s: %w", participant.Name(), err)
+		}
+		g.participants = append(g.participants, participant)
+	}
+	g.pendingParticipants = nil
+	return nil
+}
+
+func (g *applicationGeneration) openBackground(ctx context.Context) error {
+	if err := g.startParticipants(ctx); err != nil {
+		return err
+	}
+	if err := g.messaging.output.Control.OpenPublisher(ctx); err != nil {
+		return fmt.Errorf("open messaging publisher admission: %w", err)
+	}
+	if err := g.factory.messagingHub.Commit(ctx, g.messaging.output.Control); err != nil {
+		return g.failPublication(err)
+	}
+	if err := g.factory.scheduleHub.Commit(ctx, g.scheduler.output); err != nil {
+		return g.failPublication(err)
+	}
+	return nil
 }
 
 func (g *applicationGeneration) failPublication(err error) error {

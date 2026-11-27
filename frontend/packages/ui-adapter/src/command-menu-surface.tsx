@@ -62,6 +62,9 @@ export default function CommandMenuSurface({
           options={[...items]}
           autoHighlight
           clearOnBlur={false}
+          onClose={(_, reason) => {
+            if (reason === 'escape') setOpen(false);
+          }}
           getOptionLabel={(item) => item.label}
           noOptionsText={emptyLabel}
           filterOptions={(options, state) => {

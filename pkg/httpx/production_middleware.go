@@ -291,20 +291,33 @@ func safeCrossOriginMethod(method string) bool {
 	}
 }
 
-// SameOrigin 判断 Origin 是否与服务端当前看到的请求 scheme 和 Host 精确一致。
-func SameOrigin(request *http.Request, origin string) bool {
+type verifiedRequestOriginKey struct{}
+
+// WithVerifiedRequestOrigin 保存入口根据传输及受信反代策略确认的来源。
+// 调用方必须用入口事实验证 origin，不能直接传入客户端 Origin 或转发头。
+func WithVerifiedRequestOrigin(request *http.Request, origin string) *http.Request {
+	return request.WithContext(context.WithValue(request.Context(), verifiedRequestOriginKey{}, origin))
+}
+
+// RequestOrigin 返回已验证的公开入口来源，或当前 HTTP 连接的来源。
+func RequestOrigin(request *http.Request) string {
 	if request == nil || request.Host == "" {
-		return false
+		return ""
 	}
-	origin = strings.TrimSpace(origin)
-	if origin == "" {
-		return false
+	if origin, ok := request.Context().Value(verifiedRequestOriginKey{}).(string); ok {
+		return origin
 	}
 	scheme := "http"
 	if request.TLS != nil {
 		scheme = "https"
 	}
-	return origin == scheme+"://"+request.Host
+	return scheme + "://" + request.Host
+}
+
+// SameOrigin 判断 Origin 是否与服务端验证的请求来源精确一致。
+func SameOrigin(request *http.Request, origin string) bool {
+	origin = strings.TrimSpace(origin)
+	return origin != "" && origin == RequestOrigin(request)
 }
 
 // BodyLimit 限制请求体大小。

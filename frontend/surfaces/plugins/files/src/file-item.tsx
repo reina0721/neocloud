@@ -13,46 +13,77 @@ import { TagBadges } from './tag-badges';
 import { useFileTime } from './use-file-time';
 
 export type FileSelectionGesture = Readonly<{ extend: boolean; toggle: boolean }>;
+
+const listRow = 'flex min-w-0 items-center gap-2 border-b border-border px-2';
+const selectionCell = 'flex w-8 shrink-0 items-center justify-center';
+const nameCell = 'flex min-w-0 flex-1 items-center gap-3';
+const metadataCell = 'hidden w-20 min-w-0 shrink-0 @xl/file-list:block @2xl/file-list:w-24';
+const actionsCell = 'flex w-9 shrink-0 items-center justify-center';
+const rowBackground = (target: EventTarget) =>
+  target instanceof Element && !target.closest('button, a, input, label, [role="menuitem"]');
+
 export function FileListHeader({
   preferences,
   onSort,
+  selection,
 }: {
   preferences: FileViewPreferences;
   onSort: (key: FileViewPreferences['sort']) => void;
+  selection?: Readonly<{
+    checked: boolean;
+    disabled?: boolean;
+    onCheckedChange: (checked: boolean) => void;
+  }>;
 }) {
   const { t } = useFrontendTranslation();
-  const header = (key: FileViewPreferences['sort'], label: string) => (
+  const header = (key: FileViewPreferences['sort'], label: string, cell: string) => (
     <div
+      key={key}
       role="columnheader"
       aria-sort={
         preferences.sort === key ? (preferences.desc ? 'descending' : 'ascending') : 'none'
       }
+      className={cell}
     >
-      <Action size="sm" variant="quiet" onPress={() => onSort(key)}>
-        {label}
-        {preferences.sort === key ? (preferences.desc ? ' ↓' : ' ↑') : ''}
-      </Action>
+      {key === 'name' ? <span className="w-7 shrink-0" aria-hidden="true" /> : null}
+      <div className="min-w-0 [&>button]:min-w-0 [&>button]:justify-start [&>button]:px-0">
+        <Action size="sm" variant="quiet" fullWidth onPress={() => onSort(key)}>
+          <span className="min-w-0 truncate" title={label}>
+            {label}
+          </span>
+          {preferences.sort === key ? (
+            <span aria-hidden="true">{preferences.desc ? '↓' : '↑'}</span>
+          ) : null}
+        </Action>
+      </div>
     </div>
   );
   return (
-    <div
-      role="row"
-      className="flex min-w-0 items-center gap-3 border-b border-border py-2 text-xs text-ink-muted"
-    >
-      <div role="columnheader" className="w-5 shrink-0">
-        <span className="sr-only">{t('files.discovery.selectPage')}</span>
+    <div role="row" className={`${listRow} surface-file-list-heading text-xs text-ink-muted`}>
+      <div role="columnheader" className={selectionCell}>
+        {selection ? (
+          <CheckboxField
+            label={t('files.discovery.selectPage')}
+            presentation="control-only"
+            checked={selection.checked}
+            disabled={selection.disabled ?? false}
+            onCheckedChange={selection.onCheckedChange}
+          />
+        ) : (
+          <span className="sr-only">{t('files.discovery.selectPage')}</span>
+        )}
       </div>
-      <div className="min-w-0 flex-1">{header('name', t('files.name'))}</div>
-      {preferences.columns.map((column) => (
-        <div key={column} className="hidden w-20 shrink-0 sm:block">
-          {column === 'kind' ? (
-            <div role="columnheader">{t('files.discovery.kind')}</div>
-          ) : (
-            header(column, t(`files.discovery.${column}`))
-          )}
-        </div>
-      ))}
-      <div role="columnheader" className="w-8 shrink-0">
+      {header('name', t('files.name'), nameCell)}
+      {preferences.columns.map((column) =>
+        column === 'kind' ? (
+          <div key={column} role="columnheader" className={metadataCell}>
+            {t('files.discovery.kind')}
+          </div>
+        ) : (
+          header(column, t(`files.discovery.${column}`), metadataCell)
+        ),
+      )}
+      <div role="columnheader" className={actionsCell}>
         <span className="sr-only">{t('files.discovery.actions')}</span>
       </div>
     </div>
@@ -141,7 +172,7 @@ export function FileItem({
     <FileGlyph
       kind={entry.kind}
       mediaType={entry.mediaType}
-      size={isList ? 'small' : 'large'}
+      size="small"
       emoji={annotation?.emoji}
       color={annotation?.folderColor}
       rule={iconRule}
@@ -163,9 +194,21 @@ export function FileItem({
           : '—'
         : time.date(column === 'created' ? entry.createdAt : entry.updatedAt);
   return (
+    // eslint-disable-next-line jsx-a11y-x/click-events-have-key-events, jsx-a11y-x/no-noninteractive-element-interactions -- 行本身保留表格语义，键盘通过文件名和复选框打开与选择。
     <article
       role={isList ? 'row' : undefined}
       data-file-item={entry.id}
+      onClick={(event) => {
+        if (isList && rowBackground(event.target)) {
+          event.currentTarget
+            .querySelector<HTMLButtonElement>('[data-file-entry]')
+            ?.focus({ preventScroll: true });
+          onSelect({ extend: event.shiftKey, toggle: event.ctrlKey || event.metaKey });
+        }
+      }}
+      onDoubleClick={(event) => {
+        if (isList && rowBackground(event.target)) onOpen();
+      }}
       onContextMenu={(event) => {
         event.preventDefault();
         onContext();
@@ -174,15 +217,15 @@ export function FileItem({
       data-selected={selected || undefined}
       data-file-view={view}
       data-file-kind={entry.kind}
-      className={`group surface-file-item ${isList ? 'flex min-w-0 items-center gap-2 border-b border-border py-2' : 'flex min-w-0 flex-col rounded-panel border border-border/70 p-2.5 shadow-panel'} ${selected ? 'bg-brand-soft' : isList ? 'hover:bg-surface-muted' : 'bg-surface hover:bg-surface-muted/70'} ${cut ? 'opacity-50' : ''}`}
+      className={`surface-file-item ${isList ? listRow : 'flex w-full min-w-0 flex-col gap-1 self-start rounded-control border border-border/70 px-2 py-1 shadow-none hover:shadow-none'} ${selected ? 'bg-brand-soft' : isList ? 'hover:bg-surface-muted' : 'bg-surface hover:bg-surface-muted/70'} ${cut ? 'opacity-50' : ''}`}
     >
       {isList ? (
         <>
-          <div role="cell" className="w-5 shrink-0">
+          <div role="cell" className={`${selectionCell} surface-file-row-selection`}>
             {selection}
             {cut ? <span className="sr-only">{t('files.explorer.cutMark')}</span> : null}
           </div>
-          <div role="cell" className="flex min-w-0 flex-1 items-center gap-3">
+          <div role="cell" className={nameCell}>
             <div className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-control [&_img]:size-full [&_img]:object-cover">
               {icon}
             </div>
@@ -190,7 +233,7 @@ export function FileItem({
               {title}
               {tags}
               {expiry}
-              <p className="mt-1 text-xs text-ink-muted sm:hidden">
+              <p className="mt-1 text-xs text-ink-muted @xl/file-list:hidden">
                 {entry.kind === 'file' ? formatFileBytes(entry.sizeBytes) : kind}
               </p>
             </div>
@@ -199,49 +242,45 @@ export function FileItem({
             <div
               role="cell"
               key={column}
-              className="hidden w-24 shrink-0 truncate text-xs text-ink-muted sm:block"
+              className={`${metadataCell} truncate text-xs text-ink-muted`}
               title={columnValue(column)}
             >
               {columnValue(column)}
             </div>
           ))}
-          <div role="cell" className="w-8 shrink-0">
+          <div role="cell" className={actionsCell}>
             {actions}
           </div>
         </>
       ) : (
         <>
-          <div className="mb-1.5 flex items-center justify-between gap-2">
-            <div
-              className={
-                selected
-                  ? 'opacity-100'
-                  : 'opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100'
-              }
-            >
-              {selection}
+          <div className="flex min-w-0 items-center gap-1.5">
+            <div className="flex size-6 shrink-0 items-center justify-center overflow-hidden">
+              {glyph}
             </div>
-            {cut ? (
-              <span className="text-xs text-ink-muted">{t('files.explorer.cutMark')}</span>
-            ) : null}
-            {actions}
+            <div className="min-w-0 flex-1">{title}</div>
           </div>
-          <div className="surface-file-preview flex min-w-0 flex-1 flex-col gap-2">
-            <div className="surface-file-preview-box flex h-28 w-full items-center justify-center overflow-hidden rounded-control border border-border/50 bg-surface-muted/60 [&_img]:max-h-full [&_img]:max-w-full [&_img]:rounded-control [&_img]:object-contain [&_img]:p-1">
-              {icon}
+          {thumbnail && !annotation?.emoji ? (
+            <div
+              data-file-thumbnail
+              className="flex min-w-0 justify-center rounded-control bg-surface-muted/60 p-1 [&_img]:max-h-24 [&_img]:w-full [&_img]:object-contain"
+            >
+              {thumbnail}
             </div>
-            <div className="min-w-0 w-full">
-              {title}
-              {tags}
-              {expiry}
-              <p
-                className="surface-file-metadata mt-1 truncate text-xs text-ink-muted"
-                title={time.full(entry.trashedAt ?? entry.updatedAt)}
-              >
-                {entry.kind === 'file' ? formatFileBytes(entry.sizeBytes) : kind} ·{' '}
-                {time.date(entry.trashedAt ?? entry.updatedAt)}
-              </p>
-            </div>
+          ) : null}
+          {tags}
+          {expiry}
+          <div className="flex min-w-0 items-center gap-1">
+            <div className={selectionCell}>{selection}</div>
+            <p
+              className="min-w-0 flex-1 truncate text-xs text-ink-muted"
+              title={time.full(entry.trashedAt ?? entry.updatedAt)}
+            >
+              {entry.kind === 'file' ? formatFileBytes(entry.sizeBytes) : kind} ·{' '}
+              {time.date(entry.trashedAt ?? entry.updatedAt)}
+            </p>
+            {cut ? <span className="sr-only">{t('files.explorer.cutMark')}</span> : null}
+            <div className={actionsCell}>{actions}</div>
           </div>
         </>
       )}

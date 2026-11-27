@@ -5,6 +5,7 @@ package deployment
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -41,7 +42,13 @@ action=$1; root=$3; version=$5
 printf '%s %s\n' "$action" "$version" >> "$root/calls"
 if [[ -f "$root/fail" ]] && grep -Fqx "$action $version" "$root/fail"; then exit 7; fi
 case "$action" in
-_capture) tar -C "$root/data" -czf - . ;;
+_images) [[ ! -f "$root/uncached-$version" ]] ;;
+_prepare) rm -f -- "$root/uncached-$version" ;;
+_serving) [[ -z "$CLOUDDRIVE_MAINTENANCE_COMPOSE" ]]; printf 'false\n' ;;
+_capture)
+  data="$root/data"
+  if [[ -f "$root/.control/data-dir" ]]; then data=$(cat "$root/.control/data-dir"); fi
+  tar -C "$data" -czf - . ;;
 _extract) tar -C "$CLOUDDRIVE_MAINTENANCE_STAGE" -xzf - ;;
 esac
 `,
@@ -60,7 +67,12 @@ esac
 
 func submitTest(t *testing.T, w *Worker, action, target, confirm string) Job {
 	t.Helper()
-	req := Request{ID: RandomID(), Action: action, Target: target, Confirm: confirm, Expected: w.Status().Current, Actor: "owner"}
+	return submitRequestTest(t, w, Request{Action: action, Target: target, Confirm: confirm})
+}
+
+func submitRequestTest(t *testing.T, w *Worker, req Request) Job {
+	t.Helper()
+	req.ID, req.Expected, req.Actor = RandomID(), w.Status().Current, "owner"
 	job, err := w.Submit(req)
 	if err != nil {
 		t.Fatal(err)
@@ -108,6 +120,127 @@ func TestCompleteRestoreAndRollback(t *testing.T) {
 	got, _ := readText(filepath.Join(root, "data/storage/file"))
 	if got != "baseline" {
 		t.Fatal("rollback changed live data")
+	}
+}
+
+func customLayout(t *testing.T) (*Worker, string, string) {
+	t.Helper()
+	w, root := fixture(t)
+	data := filepath.Join(t.TempDir(), "CloudDrive data")
+	if err := os.Rename(filepath.Join(root, "data"), data); err != nil {
+		t.Fatal(err)
+	}
+	for name, value := range map[string]string{
+		"project": "team-documents", "maintenance-project": w.engine.cfg.Project, "data-dir": data,
+	} {
+		if err := os.WriteFile(filepath.Join(root, ".control", name), []byte(value+"\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	next, err := NewWorker(t.Context(), root, w.engine.cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return next, root, data
+}
+
+func TestCustomLayoutRestore(t *testing.T) {
+	w, root, data := customLayout(t)
+	backup := submitTest(t, w, "backup", "", "")
+	if backup.Phase != "succeeded" {
+		t.Fatalf("backup: %+v", backup)
+	}
+	const updated = "after snapshot"
+	if err := os.WriteFile(filepath.Join(data, "storage", "file"), []byte(updated), 0600); err != nil {
+		t.Fatal(err)
+	}
+	restore := submitTest(t, w, "restore", backup.Backup, backup.Backup)
+	if restore.Phase != "succeeded" {
+		t.Fatalf("restore: %+v", restore)
+	}
+	for name, want := range map[string]string{
+		filepath.Join(data, "storage", "file"): "baseline",
+		filepath.Join(filepath.Dir(data), ".clouddrive-restore-"+restore.ID, "original-data", "storage", "file"): updated,
+		filepath.Join(root, ".control", "maintenance", "restore-"+restore.ID, "original.env"):                    "WEB_PORT=4173",
+	} {
+		got, err := readText(name)
+		if err != nil || got != want {
+			t.Fatalf("%s: %q %v", name, got, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "data")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("restored to default data directory: %v", err)
+	}
+}
+
+func TestCustomLayoutRestoreRecovery(t *testing.T) {
+	for _, tc := range []string{"live directory absent", "replacement installed"} {
+		t.Run(tc, func(t *testing.T) {
+			w, root, data := customLayout(t)
+			backup := submitTest(t, w, "backup", "", "")
+			if backup.Phase != "succeeded" {
+				t.Fatalf("backup: %+v", backup)
+			}
+			const updated = "live data before restore"
+			if err := os.WriteFile(filepath.Join(data, "storage", "file"), []byte(updated), 0600); err != nil {
+				t.Fatal(err)
+			}
+			const changedConfig = "WEB_PORT=4180"
+			configPath := filepath.Join(root, "runtime.env")
+			if err := os.WriteFile(configPath, []byte(changedConfig), 0600); err != nil {
+				t.Fatal(err)
+			}
+			id := RandomID()
+			if err := w.change(func(s *State) {
+				s.Serving = false
+				s.Jobs = append(s.Jobs, Job{
+					Request:  Request{ID: id, Action: "restore", Target: backup.Backup},
+					Original: fromVersion, WasServing: true, Phase: "restore-switch",
+				})
+			}); err != nil {
+				t.Fatal(err)
+			}
+			stage := filepath.Join(filepath.Dir(data), "restore-stage")
+			meta := w.Status().Backups[0]
+			if tc == "replacement installed" {
+				if err := os.Mkdir(stage, 0700); err != nil {
+					t.Fatal(err)
+				}
+				if err := w.engine.prepareRestore(t.Context(), meta, stage); err != nil {
+					t.Fatal(err)
+				}
+			}
+			err := w.engine.beginSwap(id, meta, stage)
+			if tc == "replacement installed" && err != nil || tc == "live directory absent" && !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("swap: %v", err)
+			}
+			next, err := NewWorker(t.Context(), root, w.engine.cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			state := next.Status()
+			if !state.Serving || state.Recovery || findJob(&state, id).Phase != "interrupted" {
+				t.Fatalf("recovered state: %+v", state)
+			}
+			if err := next.engine.undoSwap(id); err != nil {
+				t.Fatalf("repeated recovery: %v", err)
+			}
+			for name, want := range map[string]string{
+				filepath.Join(data, "storage", "file"): updated,
+				configPath:                             changedConfig,
+			} {
+				got, err := readText(name)
+				if err != nil || got != want {
+					t.Fatalf("%s: %q %v", name, got, err)
+				}
+			}
+			if tc == "replacement installed" {
+				name := filepath.Join(filepath.Dir(data), ".clouddrive-restore-"+id, "failed-data", "storage", "file")
+				if got, err := readText(name); err != nil || got != "baseline" {
+					t.Fatalf("failed replacement was not retained: %q %v", got, err)
+				}
+			}
+		})
 	}
 }
 
@@ -163,12 +296,211 @@ func TestInstallerLockAndVerificationBeforeStop(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("CLOUDDRIVE_COSIGN", "/bin/false")
+	if err := os.WriteFile(filepath.Join(root, "uncached-"+toVersion), nil, 0600); err != nil {
+		t.Fatal(err)
+	}
 	failed := submitTest(t, w, "upgrade", toVersion, "")
 	if failed.Phase != "failed" || !w.Status().Serving || w.Status().Current != fromVersion {
 		t.Fatalf("unverified assets changed instance: %+v", w.Status())
 	}
-	if _, err := os.Stat(filepath.Join(root, "calls")); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("unverified assets reached Compose: %v", err)
+	if calls, err := readText(filepath.Join(root, "calls")); err != nil || calls != "_images "+toVersion {
+		t.Fatalf("unverified assets reached Compose: %q %v", calls, err)
+	}
+}
+
+type disallowedNetwork struct{ t *testing.T }
+
+func (n disallowedNetwork) RoundTrip(r *http.Request) (*http.Response, error) {
+	n.t.Errorf("offline task requested %s", r.URL.Host)
+	return nil, errors.New("offline network is disabled")
+}
+
+func TestOfflinePreflightPreservesService(t *testing.T) {
+	for _, missing := range []string{fromVersion, toVersion} {
+		t.Run(missing, func(t *testing.T) {
+			w, root := fixture(t)
+			w.engine.releases.http.Transport = disallowedNetwork{t}
+			if err := os.WriteFile(filepath.Join(root, "uncached-"+missing), nil, 0600); err != nil {
+				t.Fatal(err)
+			}
+			job := submitRequestTest(t, w, Request{Action: "upgrade", Target: toVersion, Offline: true})
+			state := w.Status()
+			if job.Phase != "failed" || !strings.Contains(job.Result, "本地资产") || !state.Serving || state.Recovery || state.Current != fromVersion {
+				t.Fatalf("unsafe offline failure: job=%+v state=%+v", job, state)
+			}
+			calls, err := readText(filepath.Join(root, "calls"))
+			if err != nil || !strings.Contains(calls, "_images "+missing) || strings.Contains(calls, "_stop") || strings.Contains(calls, "_migrate") {
+				t.Fatalf("unsafe preflight: %q %v", calls, err)
+			}
+		})
+	}
+}
+
+func TestLocalWorkerPreservesStoppedInstance(t *testing.T) {
+	w, root := fixture(t)
+	launcher, err := os.ReadFile(filepath.Join(w.engine.control(), "engine.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(root, "install.sh"), launcher, 0700); err != nil {
+		t.Fatal(err)
+	}
+	local, err := NewLocalWorker(t.Context(), root)
+	if err != nil || local.Status().Serving {
+		t.Fatalf("local worker serving state: %v", err)
+	}
+	second, err := NewLocalWorker(t.Context(), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if job := submitTest(t, local, "backup", "", ""); job.Phase != "succeeded" || local.Status().Serving {
+		t.Fatalf("backup changed serving state: %+v", job)
+	}
+	if job := submitTest(t, second, "backup", "", ""); job.Phase != "succeeded" || len(second.Status().Backups) != 2 {
+		t.Fatalf("second local client lost the existing backup: %+v", second.Status())
+	}
+	if calls, err := readText(filepath.Join(root, "calls")); err != nil || strings.Contains(calls, "_start") {
+		t.Fatalf("stopped instance restarted: %q %v", calls, err)
+	}
+}
+
+func TestSameVersionUpgradePreflightsWithoutMigration(t *testing.T) {
+	w, root := fixture(t)
+	w.engine.releases.http.Transport = disallowedNetwork{t}
+	job := submitRequestTest(t, w, Request{Action: "upgrade", Target: fromVersion, Offline: true})
+	if job.Phase != "succeeded" || !w.Status().Serving {
+		t.Fatalf("same-version validation: %+v", job)
+	}
+	if err := os.WriteFile(filepath.Join(root, "uncached-"+fromVersion), nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, action := range []string{"upgrade", "restart"} {
+		req := Request{Action: action}
+		if action == "upgrade" {
+			req.Target, req.Offline = fromVersion, true
+		}
+		if job := submitRequestTest(t, w, req); job.Phase != "failed" || !w.Status().Serving {
+			t.Fatalf("reported success without current images: %+v", job)
+		}
+	}
+	if calls, err := readText(filepath.Join(root, "calls")); err != nil || calls != strings.TrimSpace(strings.Repeat("_images "+fromVersion+"\n", 3)) {
+		t.Fatalf("same-version validation performed non-preflight actions: %q %v", calls, err)
+	}
+}
+
+type releaseFiles map[string]string
+
+const fixtureBundle = `{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}`
+
+func (f releaseFiles) RoundTrip(r *http.Request) (*http.Response, error) {
+	contents, ok := f[filepath.Base(r.URL.Path)]
+	if !ok {
+		return nil, fmt.Errorf("unexpected release URL %s", r.URL)
+	}
+	return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(contents))}, nil
+}
+
+func TestVerifiedDownloadIsRetained(t *testing.T) {
+	w, root := fixture(t)
+	t.Setenv("CLOUDDRIVE_COSIGN", "/bin/true")
+	name := dockerAssetName(toVersion, runtime.GOARCH)
+	asset := "verified flow fixture"
+	digest := fmt.Sprintf("%x", sha256.Sum256([]byte(asset)))
+	files := releaseFiles{offlineChecksums: digest + "  " + name + "\n", offlineBundle: fixtureBundle, name: asset}
+	w.engine.releases.http.Transport = files
+	if err := os.WriteFile(filepath.Join(root, "uncached-"+toVersion), nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if job := submitTest(t, w, "upgrade", toVersion, ""); job.Phase != "succeeded" {
+		t.Fatalf("online upgrade: %+v", job)
+	}
+	for name, want := range files {
+		path := filepath.Join(w.engine.downloadRoot(), toVersion, name)
+		got, err := os.ReadFile(path)
+		if err != nil || string(got) != want {
+			t.Fatalf("retained artifact %s: %q, %v", name, got, err)
+		}
+	}
+	w.engine.releases.http.Transport = disallowedNetwork{t}
+	if err := w.engine.prepare(t.Context(), toVersion, false); err != nil {
+		t.Fatalf("reusing retained assets: %v", err)
+	}
+}
+
+func TestReconcileUpgradeCommitReceipt(t *testing.T) {
+	w, root := fixture(t)
+	id := RandomID()
+	if err := w.change(func(s *State) {
+		s.Serving = false
+		s.Jobs = append(s.Jobs, Job{Request: Request{ID: id, Action: "upgrade", Target: toVersion}, Phase: "committing", Original: fromVersion, UsesReceipt: true})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := atomicWrite(w.engine.commitReceiptPath(), []byte(id+" "+toVersion+"\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	next, err := NewWorker(t.Context(), root, w.engine.cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := next.Status()
+	if state.Current != toVersion || state.Previous != fromVersion || !state.Serving || state.Recovery || findJob(&state, id).Phase != "succeeded" {
+		t.Fatalf("commit was not reconciled: %+v", state)
+	}
+	if current, err := readText(w.engine.currentPath()); err != nil || current != toVersion {
+		t.Fatalf("version marker: %q %v", current, err)
+	}
+}
+
+func TestReconcileSameVersionRestoreCommit(t *testing.T) {
+	for _, scenario := range []struct{ name, phase, live string }{
+		{"without receipt", "interrupted", "before restore"},
+		{"with receipt", "succeeded", "baseline"},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			w, root := fixture(t)
+			backup := submitTest(t, w, "backup", "", "")
+			if backup.Phase != "succeeded" {
+				t.Fatal(backup.Result)
+			}
+			if err := os.WriteFile(filepath.Join(root, "data", "storage", "file"), []byte("before restore"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			stage, err := os.MkdirTemp(root, ".restore-")
+			if err != nil {
+				t.Fatal(err)
+			}
+			meta := w.Status().Backups[0]
+			if err = w.engine.prepareRestore(t.Context(), meta, stage); err != nil {
+				t.Fatal(err)
+			}
+			id := RandomID()
+			if err = w.engine.beginSwap(id, meta, stage); err != nil {
+				t.Fatal(err)
+			}
+			if err = w.change(func(s *State) {
+				s.Serving = false
+				s.Jobs = append(s.Jobs, Job{Request: Request{ID: id, Action: "restore", Target: meta.ID}, Phase: "committing", Original: fromVersion, WasServing: true, UsesReceipt: true})
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if scenario.phase == "succeeded" {
+				if err := atomicWrite(w.engine.commitReceiptPath(), []byte(id+" "+fromVersion+"\n"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			next, err := NewWorker(t.Context(), root, w.engine.cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			state := next.Status()
+			if state.Current != fromVersion || !state.Serving || state.Recovery || findJob(&state, id).Phase != scenario.phase {
+				t.Fatalf("unexpected restore reconciliation: %+v", state)
+			}
+			if value, err := readText(filepath.Join(root, "data", "storage", "file")); err != nil || value != scenario.live {
+				t.Fatalf("unexpected same-version data: %q %v", value, err)
+			}
+		})
 	}
 }
 
@@ -325,6 +657,9 @@ func TestUpgradeFailureKeepsDataAndGatesOldProgram(t *testing.T) {
 		t.Run(run.name, func(t *testing.T) {
 			w, root := fixture(t)
 			t.Setenv("CLOUDDRIVE_COSIGN", "/bin/true")
+			if err := os.WriteFile(filepath.Join(root, "uncached-"+toVersion), nil, 0600); err != nil {
+				t.Fatal(err)
+			}
 			cache := filepath.Join(w.engine.control(), "assets", toVersion)
 			if err := os.MkdirAll(cache, 0700); err != nil {
 				t.Fatal(err)
@@ -338,6 +673,9 @@ func TestUpgradeFailureKeepsDataAndGatesOldProgram(t *testing.T) {
 				t.Fatal(err)
 			}
 			if err = os.WriteFile(filepath.Join(cache, "checksums.txt"), []byte(digest+"  "+name+"\n"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err = os.WriteFile(filepath.Join(cache, offlineBundle), []byte(fixtureBundle), 0600); err != nil {
 				t.Fatal(err)
 			}
 			if err = os.WriteFile(filepath.Join(root, "fail"), []byte(run.failures), 0600); err != nil {

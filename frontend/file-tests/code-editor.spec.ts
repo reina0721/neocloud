@@ -1,6 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Locator } from './preview-test';
-import { openReadingFixtureFolder, readPreviewAccess } from './reading-fixture';
+import {
+  editReadingFixtureText,
+  openReadingFixtureFolder,
+  readPreviewAccess,
+} from './reading-fixture';
 
 test.use({ actionTimeout: 15_000 });
 
@@ -56,6 +60,19 @@ test('代码编辑、搜索替换、版本冲突及原始编码保存', async ({
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'source.js', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'source.js', exact: true });
+  const plaintext = dialog.locator('[data-file-text-preview] pre');
+  await expect(plaintext).toContainText('function greet(name)');
+  await expect(plaintext).toHaveCSS('white-space', 'pre-wrap');
+  await expect(dialog.getByRole('button', { name: '保存', exact: true })).toHaveCount(0);
+  await page.screenshot({
+    path: info.outputPath('quick-text-desktop.png'),
+    animations: 'disabled',
+  });
+  await dialog.getByRole('checkbox', { name: '自动折行', exact: true }).press('Space');
+  await expect(plaintext).toHaveCSS('white-space', 'pre');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await dialog.getByRole('button', { name: '编辑', exact: true }).click();
+  await expect(page).toHaveURL(/\/home\/view\?/);
   const editor = dialog.getByLabel('文件内容', { exact: true });
   const language = dialog.getByRole('combobox', { name: '语言', exact: true });
   await expect(editor).toContainText('function greet(name)');
@@ -116,8 +133,7 @@ test('代码编辑、搜索替换、版本冲突及原始编码保存', async ({
   const second = await context.newPage();
   try {
     await second.goto(folder);
-    await second.getByRole('button', { name: 'source.js', exact: true }).click();
-    const secondDialog = second.getByRole('dialog', { name: 'source.js', exact: true });
+    const secondDialog = await editReadingFixtureText(second, 'source.js');
     const draft = secondDialog.getByLabel('文件内容', { exact: true });
     await expect(draft).toContainText('orange');
     await dialog.getByRole('button', { name: '保存', exact: true }).click();
@@ -140,6 +156,11 @@ test('代码编辑、搜索替换、版本冲突及原始编码保存', async ({
   await page.setViewportSize({ width: 375, height: 760 });
   await page.getByRole('button', { name: 'legacy.txt', exact: true }).click();
   const legacy = page.getByRole('dialog', { name: 'legacy.txt', exact: true });
+  await expect(legacy.getByRole('alert')).toContainText('无法用所选编码读取');
+  await select(legacy.getByRole('combobox', { name: '读取编码', exact: true }), 'GB18030 / GBK');
+  await expect(legacy.locator('[data-file-text-preview] pre')).toContainText('中文');
+  await legacy.getByRole('button', { name: '编辑', exact: true }).click();
+  await expect(page).toHaveURL(/\/home\/view\?/);
   const legacyEditor = legacy.getByLabel('文件内容', { exact: true });
   const encoding = legacy.getByRole('combobox', { name: '读取编码', exact: true });
   await expect(legacy.getByRole('alert')).toContainText('无法用所选编码读取');
@@ -154,7 +175,7 @@ test('代码编辑、搜索替换、版本冲突及原始编码保存', async ({
   await expect(encoding).toBeDisabled();
   await legacy.getByRole('button', { name: '保存', exact: true }).click();
   await expect(legacy).toHaveCount(0);
-  await page.getByRole('button', { name: 'legacy.txt', exact: true }).click();
+  await editReadingFixtureText(page, 'legacy.txt');
   await expect(legacyEditor).toContainText('中文更新');
   await expect(legacy.getByText('UTF-8 · CRLF', { exact: true })).toBeVisible();
   const download = page.waitForEvent('download');
@@ -162,8 +183,7 @@ test('代码编辑、搜索替换、版本冲突及原始编码保存', async ({
   expect(await readFile(await (await download).path(), 'utf8')).toBe('中文更新\r\n另一行');
   await legacy.getByRole('button', { name: '关闭', exact: true }).click();
 
-  await page.getByRole('button', { name: 'unicode.txt', exact: true }).click();
-  const unicode = page.getByRole('dialog', { name: 'unicode.txt', exact: true });
+  const unicode = await editReadingFixtureText(page, 'unicode.txt');
   await expect(unicode.getByLabel('文件内容', { exact: true })).toHaveText('Unicode 文本');
   const unicodeEncoding = unicode.getByRole('combobox', { name: '读取编码', exact: true });
   await select(unicodeEncoding, 'UTF-8');
@@ -184,7 +204,7 @@ test('代码编辑、搜索替换、版本冲突及原始编码保存', async ({
     await route.fulfill({ response, json: { ...listing, maxTextBytes: 64 } });
   });
   await page.reload();
-  await page.getByRole('button', { name: 'legacy.txt', exact: true }).click();
+  await editReadingFixtureText(page, 'legacy.txt');
   await legacyEditor.fill('界'.repeat(30));
   await expect(legacy.getByRole('button', { name: '保存', exact: true })).toBeDisabled();
 });

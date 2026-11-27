@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
+	sqlmysql "github.com/go-sql-driver/mysql"
 	golangmigrate "github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"
 	"github.com/golang-migrate/migrate/v4/database/mysql"
@@ -80,6 +80,15 @@ func New(ctx context.Context, config Config, set Set) (*Runner, error) {
 	}
 	if err := validateSet(set, config.Database.Driver); err != nil {
 		return nil, err
+	}
+	if config.Database.Driver == pkgdatabase.DriverMySQL {
+		// golang-migrate 把一个嵌入文件作为一条请求，只为本次迁移连接启用多条语句。
+		dsn, err := sqlmysql.ParseDSN(config.Database.DSN)
+		if err != nil {
+			return nil, fmt.Errorf("configure MySQL migration connection: %w", sanitize(err))
+		}
+		dsn.MultiStatements = true
+		config.Database.DSN = dsn.FormatDSN()
 	}
 	driverPath := set.DriverPaths[config.Database.Driver]
 	sourceDriver, err := iofs.New(set.FS, driverPath)

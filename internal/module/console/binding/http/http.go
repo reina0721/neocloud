@@ -46,6 +46,7 @@ type Handler struct {
 	todos               TodoOperations
 	navigation          NavigationOperations
 	deploymentOwner     func(context.Context, string) (bool, error)
+	releaseCatalog      http.Handler
 }
 
 type Dependencies struct {
@@ -64,6 +65,7 @@ type Dependencies struct {
 	Todos           TodoOperations
 	Navigation      NavigationOperations
 	DeploymentOwner func(context.Context, string) (bool, error)
+	ReleaseCatalog  http.Handler
 }
 
 // New 显式注入当前 Generation 的 IAM 服务及原生 API，不拥有共享资源关闭权。
@@ -84,6 +86,7 @@ func New(dependencies Dependencies) (*Handler, error) {
 	h.todos = dependencies.Todos
 	h.navigation = dependencies.Navigation
 	h.deploymentOwner = dependencies.DeploymentOwner
+	h.releaseCatalog = dependencies.ReleaseCatalog
 	h.siteOrigins = slices.Clone(dependencies.SiteOrigins)
 	for _, origin := range origins {
 		h.origins[origin] = true
@@ -102,6 +105,10 @@ func New(dependencies Dependencies) (*Handler, error) {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
+	if r.URL.Path == ReleaseCatalogPath && h.releaseCatalog != nil {
+		h.serveReleaseCatalog(w, r)
+		return
+	}
 	path := strings.TrimPrefix(r.URL.Path, Prefix)
 	if r.Method != "GET" && r.Method != "HEAD" {
 		origin := r.Header.Get("Origin")

@@ -1,5 +1,5 @@
 'use client';
-import { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useEffect, useId, useState, useSyncExternalStore } from 'react';
 import {
   useFrontendTranslation,
   formatDate,
@@ -61,6 +61,7 @@ const AuditTable = lazy(() =>
   })),
 );
 export function AuditPage({ query }: Readonly<{ query: AuditQuery | null }>) {
+  const titleId = useId();
   const { t, locale } = useFrontendTranslation();
   const { notify } = useFeedback();
   const port = useIdentityPort();
@@ -297,17 +298,23 @@ export function AuditPage({ query }: Readonly<{ query: AuditQuery | null }>) {
   const pages = Math.max(1, Math.ceil((result.data?.total ?? 0) / filters.pageSize));
 
   return (
-    <Page>
-      <PageHeader title={t('audit.nav')} description={t('audit.description')} />
+    <Page density="compact">
+      <PageHeader
+        density="compact"
+        title={t('audit.nav')}
+        titleId={titleId}
+        description={t('audit.description')}
+      />
       <IdentityModeNotice mode={port.mode} />
       <IdentityMutationError error={failure} />
       {result.error || !result.data ? (
         <IdentityQueryState error={result.error} retry={result.reload} />
       ) : (
         <Collection
+          density="compact"
+          labelledBy={titleId}
           title={t('audit.records')}
           count={formatNumber(locale, result.data.total)}
-          description={t('audit.readonly')}
           tools={
             <IconAction
               label={t('identityProduct.refresh')}
@@ -320,6 +327,7 @@ export function AuditPage({ query }: Readonly<{ query: AuditQuery | null }>) {
           }
           query={
             <CollectionQuery
+              density="compact"
               search={
                 <form
                   onSubmit={(event) => {
@@ -376,7 +384,7 @@ export function AuditPage({ query }: Readonly<{ query: AuditQuery | null }>) {
               }
               advanced={
                 <form
-                  className="grid gap-3 rounded-panel border border-border bg-surface p-4 text-sm"
+                  className="grid gap-3"
                   onSubmit={(event) => {
                     event.preventDefault();
                     apply({ q: search, actor, object, from, to, page: 1 });
@@ -430,6 +438,7 @@ export function AuditPage({ query }: Readonly<{ query: AuditQuery | null }>) {
           toolbar={
             <CollectionToolbar
               label={t('audit.toolbar')}
+              inset="compact"
               columnSettings={{
                 triggerLabel: t('audit.columnSettings'),
                 columns: columns.map((column) => ({

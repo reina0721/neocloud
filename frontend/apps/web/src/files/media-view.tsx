@@ -18,7 +18,12 @@ import { rasterType } from './media-signatures';
 import type { ImageSize } from './image-edit';
 import { editableImageType } from './image-format';
 import { audioMediaType } from './audio-format';
-import { applyReaderPosition, useReaderPlayback } from './reader-playback';
+import {
+  captureVideoPlayback,
+  restoreVideoPlayback,
+  useReaderPlayback,
+  type VideoHandoffBuffers,
+} from './reader-playback';
 const videoTypes = new Set(['video/mp4', 'video/webm', 'video/ogg']);
 const ImageViewer = lazy(() => import('./image-viewer'));
 
@@ -26,6 +31,8 @@ export type VideoToolsProps = Readonly<{
   entry: FileMediaProps['entry'];
   media: RefObject<HTMLMediaElement | null>;
   presentation?: 'toolbar';
+  initialChoice?: string;
+  onChoiceChange?: (choice: string) => void;
 }>;
 
 export type ImageToolsProps = Readonly<{
@@ -47,6 +54,12 @@ export function FileMediaView({
   claimAudio,
   labels,
   imageEditing,
+  presentation,
+  resumeVideo,
+  registerVideoHandoff,
+  onReady,
+  onFailure,
+  retainedVideo,
   videoTools: VideoTools,
   imageTools: ImageTools,
 }: FileMediaProps &
@@ -60,6 +73,7 @@ export function FileMediaView({
     videoTools?: ComponentType<VideoToolsProps>;
     imageTools?: ComponentType<ImageToolsProps>;
     claimAudio?: (media: HTMLMediaElement) => void;
+    retainedVideo?: VideoHandoffBuffers;
   }>) {
   const { t } = useFrontendTranslation();
   const [result, setResult] = useState<
@@ -68,12 +82,18 @@ export function FileMediaView({
       reader: typeof readContent;
       url: string;
       failure: FilesErrorCode | '';
+      failureCause?: unknown;
       imageSource?: Blob;
+      videoSource?: Blob;
     }>
   >();
   const [naturalSize, setNaturalSize] = useState<{ url: string; size: ImageSize }>();
+  const [videoReady, setVideoReady] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const imageWorkspace = mode === 'preview' && version === undefined && imageEditing !== undefined;
+  const quick = presentation === 'quick';
+  const imageWorkspace =
+    mode === 'preview' && version === undefined && (Boolean(imageEditing) || quick);
+  const videoSourceAllowed = registerVideoHandoff !== undefined;
   const requestKey = JSON.stringify([
     entry.id,
     entry.contentRevision,
@@ -86,12 +106,31 @@ export function FileMediaView({
   ]);
   const current = result?.key === requestKey && result.reader === readContent ? result : undefined;
   const url = current?.url ?? '';
+  const failureCode = current?.failure;
+  const failureCause = current?.failureCause;
+  useEffect(() => {
+    if (failureCode) onFailure?.(new FilesError(failureCode, { cause: failureCause }));
+  }, [failureCode, failureCause, onFailure]);
   const media = useRef<HTMLMediaElement | null>(null);
+  const resume = useRef(resumeVideo);
+  const subtitle = useRef(resumeVideo?.subtitle);
   useReaderPlayback(media, playback);
   // ref 可能先解绑，StrictMode 也会模拟解绑；保留最后的自有节点，交给 effect 真正释放。
   const attachMedia = useCallback((node: HTMLMediaElement | null) => {
     if (node) media.current = node;
   }, []);
+  useEffect(() => {
+    if (!registerVideoHandoff) return;
+    registerVideoHandoff(() => {
+      const player = media.current;
+      if (!player) return undefined;
+      const choice = subtitle.current;
+      const state = captureVideoPlayback(player, choice === undefined ? {} : { subtitle: choice });
+      if (current?.videoSource) retainedVideo?.set(state, { entry, blob: current.videoSource });
+      return state;
+    });
+    return () => registerVideoHandoff(undefined);
+  }, [registerVideoHandoff, current?.videoSource, entry, retainedVideo]);
   useEffect(() => {
     const controller = new AbortController();
     let ownedURL = '';
@@ -108,12 +147,22 @@ export function FileMediaView({
           const probe = document.createElement(videoTypes.has(type) ? 'video' : 'audio');
           if (!probe.canPlayType(type)) throw new FilesError('unsupported');
         }
-        const blob = await readContent(entry.id, entry.sizeBytes, controller.signal, version);
+        const held = resumeVideo && retainedVideo?.get(resumeVideo);
+        const reused =
+          held &&
+          held.entry.id === entry.id &&
+          held.entry.contentRevision === entry.contentRevision &&
+          held.entry.mediaType === entry.mediaType &&
+          held.blob.size === entry.sizeBytes
+            ? held.blob
+            : undefined;
+        const blob =
+          reused ?? (await readContent(entry.id, entry.sizeBytes, controller.signal, version));
         if (blob.size > maxBytes) throw new FilesError('large');
         const safeType = image ? await rasterType(blob) : type;
         if (!safeType) throw new FilesError('unsupported');
         if (controller.signal.aborted) return;
-        const safeBlob = new Blob([blob], { type: safeType });
+        const safeBlob = reused ?? new Blob([blob], { type: safeType });
         ownedURL = URL.createObjectURL(safeBlob);
         setResult({
           key: requestKey,
@@ -121,6 +170,7 @@ export function FileMediaView({
           url: ownedURL,
           failure: '',
           ...(image && imageWorkspace ? { imageSource: safeBlob } : {}),
+          ...(videoSourceAllowed && videoTypes.has(type) ? { videoSource: safeBlob } : {}),
         });
       } catch (error) {
         if (!controller.signal.aborted)
@@ -129,6 +179,7 @@ export function FileMediaView({
             reader: readContent,
             url: '',
             failure: error instanceof FilesError ? error.code : 'unavailable',
+            failureCause: error,
           });
       }
     })();
@@ -154,6 +205,9 @@ export function FileMediaView({
     readContent,
     requestKey,
     imageWorkspace,
+    videoSourceAllowed,
+    resumeVideo,
+    retainedVideo,
   ]);
   if (current?.failure) {
     const failure =
@@ -181,9 +235,11 @@ export function FileMediaView({
   if (!url) {
     if (mode === 'inline') return <span role="status">{alt || entry.name}</span>;
     return (
-      <p role="status" className="text-xs text-ink-muted">
-        {labels?.loading ?? t('files.mediaLoading')}
-      </p>
+      <div className={quick ? 'grid min-h-0 flex-1 place-items-center' : undefined}>
+        <p role="status" className="text-xs text-ink-muted">
+          {labels?.loading ?? t('files.mediaLoading')}
+        </p>
+      </div>
     );
   }
   if (entry.mediaType.startsWith('image/')) {
@@ -194,11 +250,13 @@ export function FileMediaView({
         src={url}
         alt={alt ?? entry.name}
         style={
-          source
-            ? { maxHeight: '100%' }
-            : mode === 'inline'
-              ? { maxWidth: '100%', maxHeight: 'min(28rem, 60vh)', objectFit: 'contain' }
-              : undefined
+          quick
+            ? { width: '100%', height: '100%', objectFit: 'contain' }
+            : source
+              ? { maxHeight: '100%' }
+              : mode === 'inline'
+                ? { maxWidth: '100%', maxHeight: 'min(28rem, 60vh)', objectFit: 'contain' }
+                : undefined
         }
         className={
           mode === 'thumbnail'
@@ -209,14 +267,16 @@ export function FileMediaView({
         }
         onLoad={
           source
-            ? ({ currentTarget }) =>
+            ? ({ currentTarget }) => {
                 setNaturalSize({
                   url,
                   size: {
                     width: currentTarget.naturalWidth,
                     height: currentTarget.naturalHeight,
                   },
-                })
+                });
+                onReady?.();
+              }
             : undefined
         }
         onError={() =>
@@ -231,7 +291,13 @@ export function FileMediaView({
       ) : null;
     return (
       <Suspense fallback={<p role="status">{labels?.loading ?? t('files.mediaLoading')}</p>}>
-        <ImageViewer key={url} source={source} {...(size ? { size } : {})} editor={editor}>
+        <ImageViewer
+          key={url}
+          source={source}
+          {...(size ? { size } : {})}
+          editor={editor}
+          quick={quick}
+        >
           {picture}
         </ImageViewer>
       </Suspense>
@@ -242,28 +308,64 @@ export function FileMediaView({
       <>
         {VideoTools ? (
           <div hidden={playback?.presentation === 'mini'}>
-            <VideoTools entry={entry} media={media} />
+            <VideoTools
+              entry={entry}
+              media={media}
+              {...(quick ? { presentation: 'toolbar' as const } : {})}
+              {...(resumeVideo?.subtitle === undefined
+                ? {}
+                : { initialChoice: resumeVideo.subtitle })}
+              onChoiceChange={(choice) => {
+                subtitle.current = choice;
+              }}
+            />
           </div>
         ) : null}
-        {/* 本人视频按需通过 TextTrack 接入字幕，其他原始媒体沿用原生控制。 */}
-        {/* eslint-disable-next-line jsx-a11y-x/media-has-caption */}
-        <video
-          ref={attachMedia}
-          controls
-          playsInline
-          preload="metadata"
-          src={url}
-          aria-label={entry.name}
-          className="min-h-0 max-h-full w-full flex-1 object-contain"
-          style={VideoTools ? { minHeight: 0, backgroundColor: 'black' } : undefined}
-          onLoadedMetadata={(event) => applyReaderPosition(event.currentTarget, playback?.position)}
-          onTimeUpdate={(event) => playback?.onPosition(event.currentTarget.currentTime)}
-          onPlay={(event) => claimAudio?.(event.currentTarget)}
-          onVolumeChange={(event) => claimAudio?.(event.currentTarget)}
-          onError={() =>
-            setResult({ key: requestKey, reader: readContent, url: '', failure: 'unsupported' })
-          }
-        />
+        <div className={quick ? 'relative min-h-0 flex-1' : 'contents'}>
+          {quick && videoReady !== url ? (
+            <p
+              role="status"
+              className="absolute inset-0 grid place-items-center text-sm text-ink-muted"
+            >
+              {labels?.loading ?? t('files.mediaLoading')}
+            </p>
+          ) : null}
+          {/* 本人视频按需通过 TextTrack 接入字幕，其他原始媒体沿用原生控制。 */}
+          {/* eslint-disable-next-line jsx-a11y-x/media-has-caption */}
+          <video
+            ref={attachMedia}
+            controls
+            playsInline
+            preload="metadata"
+            src={url}
+            aria-label={entry.name}
+            className={
+              quick
+                ? 'absolute inset-0 m-auto max-h-full max-w-full rounded-control object-contain'
+                : 'min-h-0 max-h-full w-full flex-1 object-contain'
+            }
+            style={
+              quick
+                ? { visibility: videoReady === url ? 'visible' : 'hidden' }
+                : VideoTools
+                  ? { minHeight: 0, backgroundColor: 'black' }
+                  : undefined
+            }
+            onLoadedMetadata={(event) => {
+              setVideoReady(url);
+              if (resume.current) retainedVideo?.delete(resume.current);
+              restoreVideoPlayback(event.currentTarget, resume.current, playback?.position);
+              resume.current = undefined;
+            }}
+            onLoadedData={() => onReady?.()}
+            onTimeUpdate={(event) => playback?.onPosition?.(event.currentTarget.currentTime)}
+            onPlay={(event) => claimAudio?.(event.currentTarget)}
+            onVolumeChange={(event) => claimAudio?.(event.currentTarget)}
+            onError={() =>
+              setResult({ key: requestKey, reader: readContent, url: '', failure: 'unsupported' })
+            }
+          />
+        </div>
       </>
     );
   return (

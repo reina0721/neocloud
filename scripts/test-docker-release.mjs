@@ -11,6 +11,8 @@ import {
   chmod,
   rm,
   readdir,
+  lstat,
+  realpath,
 } from "node:fs/promises";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { tmpdir, networkInterfaces } from "node:os";
@@ -29,6 +31,10 @@ const { values } = parseArgs({
     faults: { type: "boolean", default: false },
     "network-host": { type: "string" },
     "legacy-entrypoint": { type: "boolean", default: false },
+    "artifact-smoke": { type: "boolean", default: false },
+    arch: { type: "string" },
+    commit: { type: "string" },
+    trace: { type: "string" },
   },
 });
 assert.ok(
@@ -40,6 +46,42 @@ assert.equal(
   Boolean(values["upgrade-version"]),
   "升级目录和版本必须一起提供",
 );
+const artifactSmoke = values["artifact-smoke"];
+assert.ok(
+  artifactSmoke || (!values.arch && !values.commit && !values.trace),
+  "--arch、--commit 和 --trace 用于 --artifact-smoke",
+);
+if (artifactSmoke) {
+  assert.ok(
+    ["amd64", "arm64"].includes(values.arch),
+    "产物冒烟必须指定 --arch amd64 或 arm64",
+  );
+  assert.match(
+    values.commit ?? "",
+    /^[a-f0-9]{40}$/,
+    "产物冒烟必须指定 --commit 完整源码提交",
+  );
+  assert.match(
+    values.version,
+    /^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$/,
+    "产物冒烟必须指定发布 tag",
+  );
+  assert.ok(
+    !values["upgrade-dir"] &&
+      !values["emulated-arch"] &&
+      !values["network-host"] &&
+      !values["legacy-entrypoint"] &&
+      !values.faults,
+    "产物冒烟只在原生架构执行一次签名包安装",
+  );
+  assert.equal(process.platform, "linux", "产物冒烟需要原生 Linux Docker 主机");
+  assert.ok(
+    process.env.CLOUDDRIVE_OFFLINE_TRUST_DIR,
+    "产物冒烟需要独立的 CLOUDDRIVE_OFFLINE_TRUST_DIR",
+  );
+}
+const smokeTracePath = values.trace ? resolve(values.trace) : undefined;
+if (smokeTracePath) await assert.rejects(lstat(smokeTracePath), { code: "ENOENT" });
 const source = resolve(values["release-dir"]);
 const networkHost = values["network-host"];
 assert.ok(
@@ -56,6 +98,11 @@ assert.ok(
   "--network-host 必须是当前机器的非回环 IPv4，不能用 localhost 冒充 HTTP 外部入口",
 );
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const dockerPath = spawnSync("sh", ["-c", "command -v docker"], {
+  encoding: "utf8",
+});
+assert.equal(dockerPath.status, 0, "Docker 验收需要可执行的 docker 命令");
+const docker = dockerPath.stdout.trim();
 const base = await mkdtemp(join(tmpdir(), "clouddrive-release-test-"));
 await writeFile(join(base, ".test-owner"), "clouddrive-release-fixture-v1", {
   mode: 0o600,
@@ -65,9 +112,6 @@ const bootstrap = join(base, "bootstrap.sh");
 await cp(join(projectRoot, "install.sh"), bootstrap);
 const bin = join(base, "bin");
 await mkdir(bin);
-const docker = spawnSync("sh", ["-c", "command -v docker"], {
-  encoding: "utf8",
-}).stdout.trim();
 const quote = (s) => "'" + s.replaceAll("'", "'\\''") + "'";
 const dockerArgs =
   process.env.CLOUDDRIVE_DOCKER_SUDO === "1"
@@ -165,6 +209,197 @@ async function request(path, method = "GET", body) {
   return response.json();
 }
 const sha = (b) => createHash("sha256").update(b).digest("hex");
+async function exerciseInstanceLayout(version) {
+  const release = join(root, "releases", version);
+  const manifest = await readFile(join(release, "manifest.txt"), "utf8");
+  if (!manifest.split("\n").includes("INSTANCE_LAYOUT=1")) return;
+
+  const parent = await realpath(base);
+  const instance = join(parent, "named-instance");
+  const data = join(parent, "named-data");
+  const name = `clouddrive-test-${randomBytes(8).toString("hex")}`;
+  const volume = `${name}-instance`;
+  const owner = sha(Buffer.from([instance, name, data].join("\0")));
+  const instancePort = await freePort();
+  const dockerOutput = (...args) => run("docker", args).stdout.trim();
+  const args = (project, dir, storage, publishedPort) => [
+    "--name",
+    project,
+    "--dir",
+    dir,
+    "--data-dir",
+    storage,
+    "--bind",
+    "127.0.0.1",
+    "--port",
+    String(publishedPort),
+    "--version",
+    version,
+    "--release-dir",
+    source,
+  ];
+  const volumeExists = (target) =>
+    dockerOutput("volume", "ls", "-q", "--filter", `name=${target}`)
+      .split("\n")
+      .includes(target);
+  const assertAbsent = async (path) => {
+    await assert.rejects(lstat(path), { code: "ENOENT" });
+  };
+  const volumeOwner = () =>
+    dockerOutput(
+      "volume",
+      "inspect",
+      "--format",
+      '{{index .Labels "io.clouddrive.release.owner"}}',
+      volume,
+    );
+  let stopped = false;
+  let completed = false;
+  try {
+    const installArgs = args(name, instance, data, instancePort);
+    const planned = install("plan", "--check", ...installArgs);
+    for (const value of [instance, data, name, volume, String(instancePort)]) {
+      assert.ok(planned.stdout.includes(value), planned.stdout);
+    }
+    await assertAbsent(instance);
+    await assertAbsent(data);
+    assert.equal(volumeExists(volume), false);
+    assert.equal(
+      dockerOutput(
+        "ps",
+        "-aq",
+        "--filter",
+        `label=com.docker.compose.project=${name}`,
+      ),
+      "",
+    );
+    assert.equal(
+      dockerOutput("network", "ls", "-q", "--filter", `name=^${name}_default$`),
+      "",
+    );
+
+    install("install", ...installArgs);
+    assert.equal(
+      (await readFile(join(instance, ".control/project"), "utf8")).trim(),
+      name,
+    );
+    assert.equal(
+      (await readFile(join(instance, ".control/data-dir"), "utf8")).trim(),
+      data,
+    );
+    await assertAbsent(join(instance, "data"));
+
+    const [backend, web] = JSON.parse(
+      dockerOutput("container", "inspect", `${name}-backend-1`, `${name}-web-1`),
+    );
+    for (const container of [backend, web]) {
+      assert.equal(container.Config.Labels["com.docker.compose.project"], name);
+      assert.ok(container.NetworkSettings.Networks[`${name}_default`]);
+    }
+    const mount = backend.Mounts.find(
+      (item) => item.Destination === "/app/.data",
+    );
+    assert.equal(mount?.Type, "bind");
+    assert.equal(mount.Source, data);
+    assert.equal(mount.RW, true);
+    assert.equal(volumeOwner(), owner);
+    assert.equal(
+      (
+        await fetch(`http://127.0.0.1:${instancePort}/login`, {
+          signal: AbortSignal.timeout(15000),
+        })
+      ).status,
+      200,
+    );
+
+    const conflictRoot = join(parent, "layout-conflict");
+    const unusedData = join(parent, "layout-unused");
+    const unusedPort = await freePort();
+    const otherName = `${name}-two`;
+    const rejectConflict = async (conflictingArgs, details) => {
+      for (const command of [["plan", "--check"], ["install"]]) {
+        const failed = run(
+          "bash",
+          [bootstrap, ...command, ...conflictingArgs],
+          { failure: true },
+        );
+        for (const value of details)
+          assert.ok(failed.stderr.includes(value), failed.stderr);
+        assert.doesNotMatch(failed.stderr, /下载 checksums\.txt/);
+        await assertAbsent(conflictRoot);
+        await assertAbsent(unusedData);
+        assert.equal(volumeExists(`${otherName}-instance`), false);
+      }
+    };
+    await rejectConflict(args(name, conflictRoot, unusedData, unusedPort), [
+      name,
+      "--name",
+    ]);
+    await rejectConflict(args(otherName, conflictRoot, data, unusedPort), [
+      data,
+      "--data-dir",
+    ]);
+    await rejectConflict(
+      args(otherName, conflictRoot, unusedData, instancePort),
+      [`127.0.0.1:${instancePort}`, "--port"],
+    );
+
+    compose(instance, version, "down", "--remove-orphans");
+    stopped = true;
+    await rejectConflict(args(name, conflictRoot, unusedData, unusedPort), [
+      volume,
+      "--name",
+    ]);
+    console.log(
+      "真实 Docker 自定义实例验证通过：外部数据挂载、项目命名、同名与路径及端口预检。",
+    );
+    completed = true;
+  } finally {
+    try {
+      if (volumeExists(volume)) {
+        assert.equal(
+          volumeOwner(),
+          owner,
+          "拒绝清理不属于当前测试的实例归属卷",
+        );
+        const config = join(instance, "releases", version, "compose.yaml");
+        const installed = await lstat(config).then(
+          () => true,
+          (error) => {
+            if (error.code !== "ENOENT") throw error;
+            return false;
+          },
+        );
+        if (!stopped && installed)
+          compose(instance, version, "down", "--remove-orphans");
+        dockerOutput("volume", "rm", volume);
+
+        const webImage = (await readFile(join(release, "images.env"), "utf8"))
+          .split("\n")
+          .find((line) => line.startsWith("WEB_IMAGE="))
+          .slice(10);
+        run("docker", [
+          "run",
+          "--rm",
+          "--pull",
+          "never",
+          "--user",
+          "0:0",
+          "--mount",
+          `type=bind,source=${parent},target=/fixture`,
+          webImage,
+          "node",
+          "-e",
+          'require("node:fs").rmSync("/fixture/named-data",{recursive:true,force:true})',
+        ]);
+        await assertAbsent(data);
+      }
+    } catch (error) {
+      if (completed) throw error;
+      console.error("自定义实例验收清理失败：", error);
+    }
+  }
+}
 async function storageSnapshot() {
   const webImage = (
     await readFile(join(root, "releases", active, "images.env"), "utf8")
@@ -197,7 +432,67 @@ async function storageSnapshot() {
   ]);
   return JSON.parse(result.stdout);
 }
-try {
+async function exerciseArtifactSmoke(trace) {
+  const platform = {
+    x86_64: "amd64", aarch64: "arm64", amd64: "amd64", arm64: "arm64",
+  };
+  const hostArch = { x64: "amd64", arm64: "arm64" }[process.arch];
+  const [os, daemonArch] = run("docker", [
+    "info", "--format", "{{.OSType}}|{{.Architecture}}",
+  ]).stdout.trim().split("|");
+  trace.platform = { os, hostArch, daemonArch };
+  assert.equal(hostArch, values.arch, "Node 运行平台与目标原生架构不符");
+  assert.equal(os, "linux", "Docker daemon 必须运行 Linux 容器");
+  assert.equal(platform[daemonArch], values.arch, "Docker daemon 与目标原生架构不符");
+
+  trace.phase = "install";
+  install(
+    "install", "--dir", root, "--bind", "127.0.0.1", "--port", String(port),
+    "--version", active, "--release-dir", source,
+  );
+  assert.equal((await readFile(join(root, ".control/current"), "utf8")).trim(), active);
+
+  trace.phase = "health";
+  const probe = async (path) => {
+    const response = await fetch(origin + path, {
+      signal: AbortSignal.timeout(10_000),
+      redirect: "error",
+    });
+    trace.http[path] = response.status;
+    assert.equal(response.status, 200, `${path} 未就绪`);
+    return response;
+  };
+  const page = await probe("/login");
+  assert.match(page.headers.get("Content-Type") ?? "", /^text\/html(?:;|$)/i);
+  assert.match(await page.text(), /<!doctype html>/i);
+  assert.equal((await (await probe("/management/readyz")).json()).status, "pass");
+  const build = await (await probe("/management/build")).json();
+  trace.runningBuild = { version: build.version, commit: build.commit, dirty: build.dirty };
+  assert.equal(build.version, active);
+  assert.equal(build.commit, values.commit);
+  assert.equal(build.dirty, false);
+
+  trace.phase = "image-identity";
+  for (const service of ["backend", "web"]) {
+    const container = compose(root, active, "ps", "--quiet", service).stdout.trim();
+    assert.match(container, /^[a-f0-9]{12,64}$/, `${service} 必须有且只有一个运行容器`);
+    const image = run("docker", ["container", "inspect", "--format", "{{.Image}}", container]).stdout.trim();
+    assert.match(image, /^sha256:[a-f0-9]{64}$/);
+    const format = [
+      "{{.Os}}",
+      "{{.Architecture}}",
+      '{{index .Config.Labels "org.opencontainers.image.version"}}',
+      '{{index .Config.Labels "org.opencontainers.image.revision"}}',
+      '{{index .Config.Labels "org.opencontainers.image.licenses"}}',
+    ].join("|");
+    const identity = run("docker", ["image", "inspect", "--format", format, image]).stdout.trim();
+    trace.images[service] = { id: image, identity };
+    assert.equal(identity, `linux|${values.arch}|${active}|${values.commit}|Apache-2.0`);
+  }
+  trace.phase = "ready";
+}
+
+async function exerciseFullRelease() {
   install(
     "install",
     "--dir",
@@ -221,6 +516,7 @@ try {
     "--release-dir",
     source,
   );
+  await exerciseInstanceLayout(active);
   if (values["legacy-entrypoint"]) {
     // 后续成功升级真正由旧包自带安装器执行，验证已发布管理入口的兼容性。
     await cp(join(root, "install.sh"), bootstrap);
@@ -749,7 +1045,9 @@ try {
   );
   if (values.keep) console.log("验收实例保留：" + base);
   ok = true;
-} finally {
+}
+
+async function cleanupFixture() {
   for (const item of additionalInstances) {
     try {
       compose(item.root, item.version, "down", "--remove-orphans");
@@ -759,8 +1057,11 @@ try {
   }
   if (!values.keep || !ok) {
     try {
-      compose(root, active, "down", "--remove-orphans");
-    } catch {
+      if (!artifactSmoke || (await validateSmokeProject())) {
+        compose(root, active, "down", "--remove-orphans");
+      }
+    } catch (error) {
+      if (artifactSmoke) throw error;
       /* 失败现场仍保留。 */
     }
   }
@@ -791,4 +1092,71 @@ try {
     ]);
     await rm(base, { recursive: true, force: true });
   } else if (!ok) console.error("已保留失败验收现场：" + base);
+}
+
+async function validateSmokeProject() {
+  assert.equal(
+    await readFile(join(base, ".test-owner"), "utf8"),
+    "clouddrive-release-fixture-v1",
+  );
+  const project = await readFile(join(root, ".control/project"), "utf8").catch((error) => {
+    if (error.code !== "ENOENT" || ok) throw error;
+    return "";
+  });
+  if (!project) return false;
+  const expected = "clouddrive-" + sha(await realpath(root)).slice(0, 12);
+  assert.equal(project.trim(), expected, "拒绝清理不属于本次验收的 Compose 项目");
+  return true;
+}
+
+async function runArtifactSmoke() {
+  const started = Date.now();
+  const trace = {
+    schema: "clouddrive-docker-artifact-smoke-v1",
+    version: active,
+    expectedArch: values.arch,
+    expectedCommit: values.commit,
+    phase: "platform",
+    http: {},
+    images: {},
+  };
+  const failures = [];
+  try {
+    await exerciseArtifactSmoke(trace);
+    ok = true;
+  } catch (error) {
+    failures.push(error);
+  }
+  try {
+    await cleanupFixture();
+    trace.fixture = ok && !values.keep ? "removed" : base;
+  } catch (error) {
+    failures.push(error);
+    trace.fixture = base;
+    trace.cleanup = "failed";
+  }
+  trace.result = failures.length ? "failed" : "passed";
+  trace.elapsedMs = Date.now() - started;
+  if (smokeTracePath) {
+    try {
+      await mkdir(dirname(smokeTracePath), { recursive: true });
+      await writeFile(smokeTracePath, JSON.stringify(trace, null, 2) + "\n", {
+        flag: "wx", mode: 0o600,
+      });
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  if (failures.length) throw new AggregateError(failures, "Docker 签名产物冒烟失败");
+  console.log(`Docker 签名产物冒烟通过：${active} linux/${values.arch} ${values.commit}。`);
+  if (values.keep) console.log("验收实例保留：" + base);
+}
+
+if (artifactSmoke) await runArtifactSmoke();
+else {
+  try {
+    await exerciseFullRelease();
+  } finally {
+    await cleanupFixture();
+  }
 }

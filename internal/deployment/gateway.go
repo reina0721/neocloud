@@ -29,7 +29,11 @@ var pageHTML string
 
 var pageTemplate = template.Must(template.New("maintenance").Funcs(template.FuncMap{
 	"requestID": RandomID,
-	"action": func(action string) string {
+	"newer":     newer,
+	"action": func(action string, offline bool) string {
+		if action == "check" && offline {
+			return "检查本地包"
+		}
 		return map[string]string{"check": "检查正式版", "backup": "完整备份", "upgrade": "升级", "rollback": "兼容回退", "restore": "恢复备份", "start": "启动", "stop": "停止", "restart": "重启"}[action]
 	},
 	"phase": func(phase string) string {
@@ -268,13 +272,14 @@ func (g *Gateway) owner(r *http.Request, origin string, write bool) string {
 
 type maintenancePage struct {
 	State
-	Authorized bool
-	Permitted  bool
-	Receipt    *Job
-	Active     bool
-	IsNewer    bool
-	CSRF       string
-	Error      string
+	Authorized      bool
+	Permitted       bool
+	Receipt         *Job
+	Active          bool
+	IsNewer         bool
+	CSRF            string
+	Error           string
+	LocalCheckError string
 }
 
 func (g *Gateway) maintenance(w http.ResponseWriter, r *http.Request) {
@@ -315,6 +320,12 @@ func (g *Gateway) maintenance(w http.ResponseWriter, r *http.Request) {
 				page.IsNewer = state.Update != nil && newer(state.Update.Version, state.Current)
 				for _, job := range state.Jobs {
 					page.Active = page.Active || job.Finished == nil
+					if job.Action == "check" && job.Offline && job.Finished != nil {
+						page.LocalCheckError = ""
+						if job.Phase != "succeeded" {
+							page.LocalCheckError = "上次本地检查未通过，请核对已导入的发布包后重试。"
+						}
+					}
 				}
 			}
 			if id := g.value(r, "receipt", origin); id != "" {
@@ -370,6 +381,12 @@ func (g *Gateway) mutate(w http.ResponseWriter, r *http.Request, origin string, 
 			g.render(w, 400, maintenancePage{Error: "无效的维护操作"})
 			return
 		}
+		source := r.PostForm.Get("source")
+		selectableSource := action == "check" || action == "upgrade"
+		if len(r.PostForm["source"]) > 1 || (source != "" && (!selectableSource || source != "github" && source != "offline")) {
+			g.render(w, 400, maintenancePage{Error: "无效的发布来源"})
+			return
+		}
 		actor := "recovery"
 		if !recovery {
 			actor = g.owner(r, origin, true)
@@ -378,8 +395,10 @@ func (g *Gateway) mutate(w http.ResponseWriter, r *http.Request, origin string, 
 			g.render(w, 403, maintenancePage{Error: "请使用系统所有者会话或恢复凭据"})
 			return
 		}
-		req := Request{ID: r.PostForm.Get("id"), Action: action, Target: r.PostForm.Get("target"), Expected: r.PostForm.Get("expected"),
-			Confirm: r.PostForm.Get("confirm"), Actor: actor}
+		req := Request{
+			ID: r.PostForm.Get("id"), Action: action, Target: r.PostForm.Get("target"), Expected: r.PostForm.Get("expected"),
+			Confirm: r.PostForm.Get("confirm"), Offline: source == "offline" || action == "rollback" || action == "restore", Actor: actor,
+		}
 		job, err := g.worker.Submit(r.Context(), req)
 		if err != nil {
 			g.render(w, 409, maintenancePage{Error: err.Error()})

@@ -279,7 +279,7 @@ test('F355–357：工作区创建与改名移动回收刷新，其他页面仍�
     name: '改名后目录',
     expectedRevision: child.contentRevision,
   });
-  await page.getByRole('button', { name: '刷新', exact: true }).click();
+  await fileCollectionAction(page, '刷新');
   await expect(tree(page).getByText('改名后目录', { exact: true })).toBeVisible();
   await expect(tree(page).getByText(child.name, { exact: true })).toHaveCount(0);
   await mutate(page, '/' + child.id, 'PATCH', {
@@ -420,3 +420,4 @@ test('F345/357：目录树导航保留同一真实上传及原目标', async ({ 
     release?.();
   }
 });
+import { fileCollectionAction } from './reading-fixture';

@@ -354,7 +354,7 @@ test('逐行批量链接逐项报错、自动命名、筛选与批量清理保�
   await page.getByLabel('搜索任务名称或来源站点', { exact: true }).fill(filename);
   await page.getByRole('button', { name: '搜索', exact: true }).click();
   await expect(page.locator('[data-download-id]')).toHaveCount(1);
-  await row.locator('[data-slot="checkbox-content"]').click();
+  await row.getByRole('checkbox').press('Space');
   await expect(row.getByRole('checkbox')).toBeChecked();
   await page.getByRole('button', { name: '清理所选记录', exact: true }).click();
   await page
@@ -442,7 +442,7 @@ test('不可靠前缀显式从头下载、真实进度和批量暂停继续取�
     )
     .toBe(true);
   for (const row of rows) {
-    await row.locator('[data-slot="checkbox-content"]').click();
+    await row.getByRole('checkbox').press('Space');
   }
   await page.getByRole('button', { name: '暂停所选', exact: true }).click();
   await expect
@@ -452,7 +452,7 @@ test('不可靠前缀显式从头下载、真实进度和批量暂停继续取�
     })
     .toEqual([true, true]);
   for (const row of rows) {
-    await row.locator('[data-slot="checkbox-content"]').click();
+    await row.getByRole('checkbox').press('Space');
   }
   await page.getByRole('button', { name: '继续所选', exact: true }).click();
   await expect
@@ -462,7 +462,7 @@ test('不可靠前缀显式从头下载、真实进度和批量暂停继续取�
     })
     .toEqual([false, false]);
   for (const row of rows) {
-    await row.locator('[data-slot="checkbox-content"]').click();
+    await row.getByRole('checkbox').press('Space');
   }
   await page.getByRole('button', { name: '取消所选', exact: true }).click();
   await page

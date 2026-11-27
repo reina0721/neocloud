@@ -1,5 +1,5 @@
-import type { PDFReaderLimits } from '@clouddrive/surface/files';
-export const pdfProtocolVersion = 3;
+import type { PDFReaderLimits, PdfViewPosition } from '@clouddrive/surface/files';
+export const pdfProtocolVersion = 5;
 export const pdfWorkerReadyKind = 'clouddrive-pdf-worker-ready';
 export const pdfThumbnailPageSize = 8;
 export const pdfPasswordMaxLength = 1024;
@@ -13,6 +13,14 @@ const pdfStampTypes = new Set(['image/png', 'image/jpeg', 'image/webp']);
 const pdfEditorModes = ['none', 'text', 'highlight', 'ink', 'stamp'] as const;
 export type PdfEditorMode = (typeof pdfEditorModes)[number];
 export type PdfTheme = 'light' | 'dark';
+export type PdfFit = 'page-fit' | 'page-width';
+export type PdfOpenView = Readonly<{
+  presentation: 'preview' | 'workspace';
+  fit: PdfFit;
+  initialPosition?: PdfViewPosition;
+}>;
+export const isPdfFit = (value: unknown): value is PdfFit =>
+  value === 'page-fit' || value === 'page-width';
 export type PdfFailure = 'invalid' | 'limit' | 'worker' | 'timeout' | 'unavailable';
 export type PdfOutline = Readonly<{
   id: string;
@@ -24,6 +32,7 @@ export type PdfReaderState = Readonly<{
   page: number;
   pages: number;
   scale: number;
+  automaticFit: boolean;
   rotation: number;
   rendered: boolean;
   matchesCurrent: number;
@@ -43,6 +52,7 @@ export const emptyPdfState: PdfReaderState = {
   page: 1,
   pages: 0,
   scale: 1,
+  automaticFit: true,
   rotation: 0,
   rendered: false,
   matchesCurrent: 0,
@@ -60,7 +70,7 @@ export const emptyPdfState: PdfReaderState = {
 };
 export type PdfCommand =
   | { kind: 'page'; page: number }
-  | { kind: 'scale'; scale: number | 'page-fit' | 'page-width' }
+  | { kind: 'scale'; scale: number | PdfFit }
   | { kind: 'rotate'; direction: -1 | 1 }
   | {
       kind: 'find';
@@ -89,6 +99,7 @@ export type PdfOpen = {
   bytes: ArrayBuffer;
   locale: string;
   theme: PdfTheme;
+  view: PdfOpenView;
 };
 export type PdfRequest = PdfCommand & { nonce: string; id: number };
 export type PdfEvent =
@@ -112,6 +123,11 @@ const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 const positive = (value: unknown) =>
   typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+const manualScale = (value: unknown) =>
+  typeof value === 'number' &&
+  Number.isFinite(value) &&
+  value >= pdfMinScale &&
+  value <= pdfMaxScale;
 const kinds = new Set([
   'page',
   'scale',
@@ -143,14 +159,7 @@ export function isPdfCommand(value: unknown): value is PdfRequest {
     case 'thumbnail':
       return positive(value.page);
     case 'scale':
-      return (
-        value.scale === 'page-fit' ||
-        value.scale === 'page-width' ||
-        (typeof value.scale === 'number' &&
-          Number.isFinite(value.scale) &&
-          value.scale >= pdfMinScale &&
-          value.scale <= pdfMaxScale)
-      );
+      return isPdfFit(value.scale) || manualScale(value.scale);
     case 'rotate':
     case 'history':
       return value.direction === -1 || value.direction === 1;
@@ -192,7 +201,18 @@ export function isPdfOpen(value: unknown): value is PdfOpen {
     !record(value.limits) ||
     typeof value.locale !== 'string' ||
     value.locale.length > 20 ||
-    (value.theme !== 'light' && value.theme !== 'dark')
+    (value.theme !== 'light' && value.theme !== 'dark') ||
+    !record(value.view) ||
+    (value.view.presentation !== 'preview' && value.view.presentation !== 'workspace') ||
+    !isPdfFit(value.view.fit)
+  )
+    return false;
+  const position = value.view.initialPosition;
+  if (
+    position !== undefined &&
+    (!record(position) ||
+      !positive(position.page) ||
+      (position.scale !== undefined && !manualScale(position.scale)))
   )
     return false;
   const fields = [
@@ -227,6 +247,7 @@ export function isPdfReaderState(value: unknown): value is PdfReaderState {
     typeof value.rotation === 'number' &&
     value.rotation % 90 === 0 &&
     [
+      'automaticFit',
       'rendered',
       'searchPending',
       'modified',

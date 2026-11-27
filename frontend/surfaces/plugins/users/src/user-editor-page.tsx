@@ -5,8 +5,12 @@ import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
 import { useIdentityPort, IdentityError } from '@clouddrive/surface/identity/runtime';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import { IdentityQueryState, IdentityModeNotice } from '../../../src/identity/query-state';
+import { readUserListContext } from './user-list-context';
 import { UserForm } from '../../../src/identity/user-form';
-export function UserEditorPage({ id }: Readonly<{ id?: string }>) {
+export function UserEditorPage({
+  id,
+  listContext = null,
+}: Readonly<{ id?: string; listContext?: string | null }>) {
   const { t } = useFrontendTranslation();
   const port = useIdentityPort();
   const mode = id === undefined ? 'create' : 'edit';
@@ -29,7 +33,11 @@ export function UserEditorPage({ id }: Readonly<{ id?: string }>) {
         eyebrow={t('users.eyebrow')}
         title={t(`users.${mode === 'create' ? 'create' : 'edit'}`)}
         description={t(`users.${mode}Description`)}
-        actions={<RouteLink target={route('users')}>{t('users.back')}</RouteLink>}
+        actions={
+          <RouteLink target={route('users', {}, { query: readUserListContext(listContext) })}>
+            {t('users.back')}
+          </RouteLink>
+        }
       />
       <IdentityModeNotice mode={port.mode} />
       {query.error || !query.data ? (

@@ -12,6 +12,7 @@ const { values } = parseArgs({
     goarch: { type: "string" },
     "go-executable": { type: "string", default: "go" },
     "from-module": { type: "boolean", default: false },
+    "managed-host": { type: "boolean", default: false },
   },
 });
 assert.ok(values.output, "需要 --output");
@@ -19,7 +20,10 @@ assert.ok(["linux", "windows", "darwin"].includes(values.goos), "不支持的 GO
 assert.ok(["amd64", "arm64"].includes(values.goarch), "不支持的 GOARCH");
 const output = resolve(values.output);
 const go = values["go-executable"];
-const args = ["save", "./cmd/app", "--save_path=" + output];
+const packages = values["managed-host"]
+  ? ["./cmd/app", "./cmd/clouddrive-host"]
+  : ["./cmd/app"];
+const args = ["save", ...packages, "--save_path=" + output];
 let command = "go-licenses";
 if (values["from-module"]) {
   const tools = await readFile(new URL("./tool-versions.env", import.meta.url), "utf8");

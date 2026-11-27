@@ -15,24 +15,18 @@
 
 项目处于 **0.x 迭代阶段**，正式交付及版本变更以 [GitHub Releases](https://github.com/reina0721/neocloud/releases) 为准。BT 面向受信节点；无共享挂载的远程下载代理、脱离分享链接的跨账号挂载共享尚未实现；外部 Office 服务需要单独联调。部分 Reference 页面仅用于演示和确定性验证。完整边界见[项目范围](docs/repository-scope.md)。
 
-## 下载部署
+## 安装与部署
 
-Release 提供 Linux amd64/arm64 配套 Docker 离线镜像包。目标机需要 Docker、Compose 插件与标准 Linux 工具，无需 Go、Node 或源码编译。安装器从 GitHub 下载产物后导入本地 Docker。
+以下指南以 [v0.3.3 正式版](https://github.com/reina0721/neocloud/releases/tag/v0.3.3) 为例，从安装依赖写到首次设置和日常维护。
 
-```bash
-curl -fL --proto '=https' --proto-redir '=https' \
-  https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
-bash install.sh install --dir "$HOME/clouddrive" --bind 127.0.0.1
-```
+| 部署方式 | 系统与架构 | 目标机需要 | 默认 Web 端口 |
+| --- | --- | --- | --- |
+| [原生整包](docs/operations/backend-archive.md#运行原生-go-与-web-整包) | Windows amd64、Linux amd64/arm64 | 签名整包和 Cosign，网页由 Go 宿主提供 | `8080` |
+| [Docker 正式版](docs/operations/clouddrive-deployment.md#release-下载版安装与升级) · [离线安装](docs/operations/clouddrive-deployment.md#自动化与离线安装) | Linux amd64/arm64 | Docker Engine 和 Compose，镜像从 GitHub Release 归档导入 | `4173` |
+| [Docker 源码构建](docs/operations/clouddrive-deployment.md#从源码部署) | Linux amd64/arm64 | Git、Docker Engine、Compose 和构建所需的网络访问 | `4180` |
+| [无 Docker 源码部署](docs/operations/clouddrive-deployment.md#构建与进程) | Windows amd64、Linux amd64/arm64 | 构建用 Git、Go 和 Node，运行打包后的 Web Host 用 Node | `4173` |
 
-上例监听服务器的 `127.0.0.1:4173`。在服务器上打开 `http://127.0.0.1:4173/setup`，使用 `~/clouddrive/.control/setup-token` 的令牌创建管理员。SQLite、文件和传输暂存保存在 `~/clouddrive/data/`。外网访问、TLS 和反向代理由部署方配置。
-
-```bash
-~/clouddrive/install.sh check-update  # 检查正式版
-~/clouddrive/install.sh upgrade       # 备份并升级
-```
-
-升级前阅读目标版本说明并核验备份。Release 包含签名维护工具时，可启用同址网页运维，在 `/maintenance` 检查更新、备份、升级和恢复。具体条件见[网页运维说明](docs/operations/clouddrive-deployment.md#网页运维)。安装选项、签名与校验、数据位置、HTTP/TLS 和故障恢复见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。Release 中的 Windows/Linux amd64 Go 归档仅包含后端，完整网页需要独立 Web Host。
+首次启动后，访问所选入口的 `/setup`，使用该实例的设置令牌创建管理员。服务器只监听回环地址时，可用 SSH 转发完成设置，再配置对外访问。[远程访问与 HTTPS](docs/operations/clouddrive-deployment.md#远程访问与-https)
 
 ## 源码开发
 
@@ -46,17 +40,17 @@ node scripts/dev.mjs
 
 启动完成后按终端提示进入登录页或首次设置页。新实例的设置令牌默认位于本地忽略目录 `.data/dev/setup-token`。启动前自动使用 pnpm **10.22.0** 按锁文件同步前端依赖，随后准备配置、迁移数据库并检查服务就绪。Ctrl+C 停止其拥有的服务。隔离真实预览使用 `node scripts/dev.mjs --preview`。已有数据库与文件须保留，不作为可随意清空的测试夹具。Windows 命令、完整前置与排障见[本地开发](docs/getting-started/local-development.md)。
 
-使用 `node scripts/dev.mjs --acceptance` 在全新 SQLite 上运行真实浏览器验收。使用 `node scripts/build.mjs` 生成包含 Go 和 Web Host 的本机包，产物在 `dist/native/`。见[构建与部署](docs/operations/clouddrive-deployment.md#构建与进程)。
+使用 `node scripts/dev.mjs --acceptance` 在全新 SQLite 上运行真实浏览器验收。
 
 ## 结构与验证
 
-前后端同仓发布、分进程运行；浏览器通过 Web Host 同源代理访问 Go API，后端共用 IAM、数据库和 Storage。
+前后端同仓发布。原生整包由 Go 宿主同源提供静态页面和 Go API。本地开发由 Next.js 提供热刷新，Go 服务单独运行。业务共享同一套 IAM、数据库和 Storage。
 
 ```mermaid
 flowchart LR
-    Browser[浏览器] --> Web[Next.js Web Host :4173]
-    Web --> API[Go API :8080]
-    Web --> Management[Go management :9090]
+    Browser[浏览器] --> Web[Go 宿主]
+    Web --> Static[静态 Web]
+    Web --> API[当前版本 Go API]
     API --> Database[(数据库)]
     API --> Storage[(文件存储)]
 ```

@@ -13,6 +13,7 @@ import {
 } from '../../../src/files/file-applications';
 import type { TextRequest } from './text-dialog';
 import type { DrawioRequest } from './drawio-dialog';
+import type { VideoPlaybackHandoff } from '../../../src/files/runtime';
 
 export const archiveFile = (entry: FileEntry) =>
   entry.kind === 'file' &&
@@ -57,6 +58,8 @@ export type MediaReaderSession = {
   entry: FileEntry;
   maxBytes: number;
   videoPlaylist?: true;
+  videoHandoff?: VideoPlaybackHandoff;
+  openImageEditor?: boolean;
   savedImageVersion?: boolean;
   album?: { entries: readonly FileEntry[]; index: number };
 };
@@ -66,7 +69,7 @@ export type FileReaderSession =
   | ({ kind: 'selecting'; scope: string; visible: boolean } & FileApplicationPicker)
   | { kind: 'text'; request: TextRequest; maxBytes: number }
   | { kind: 'drawio'; request: DrawioRequest; maxBytes: number }
-  | ({ kind: 'pdf' } & Pick<FileDocumentProps, 'entry' | 'limits'>)
+  | ({ kind: 'pdf' } & Pick<FileDocumentProps, 'entry' | 'limits' | 'initialPosition'>)
   | { kind: 'epub'; entry: FileEntry }
   | { kind: 'archive'; entry: FileEntry }
   | MediaReaderSession
@@ -105,6 +108,16 @@ export function readerApplications(
         (app.platform === 'all' || app.platform === device),
     ),
   };
+}
+
+export function defaultReaderApplication({ choice, web }: ReturnType<typeof readerApplications>) {
+  const external =
+    web.find((app) => app.id === choice.defaultApp) ??
+    (web.length === 1 && choice.options.length === 0 ? web[0] : undefined);
+  return (
+    external ??
+    (web.length ? choice.options.find((id) => id === choice.defaultApp) : choice.automatic)
+  );
 }
 
 export function makeReaderSession(

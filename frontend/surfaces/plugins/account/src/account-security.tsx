@@ -109,12 +109,14 @@ export function AccountSecurity({ canChangePassword }: Readonly<{ canChangePassw
   return (
     <>
       <Section
-        appearance="outlined"
+        appearance="embedded"
+        density="compact"
         title={t('account.security')}
         description={t(canChangePassword ? 'account.passwordImpact' : 'identityProduct.readonly')}
+        contentInset={canChangePassword}
       >
         {canChangePassword ? (
-          <div className="grid min-w-0 gap-4 p-5">
+          <div className="grid min-w-0 gap-4">
             <IdentityMutationError error={passwordError} />
             <FoundationForm
               form={form}
@@ -193,8 +195,10 @@ export function AccountSecurity({ canChangePassword }: Readonly<{ canChangePassw
         ) : null}
       </Section>
       <Section
-        appearance="outlined"
+        appearance="embedded"
+        density="compact"
         title={t('account.sessions')}
+        contentInset
         action={
           <div className="flex flex-wrap items-center gap-2">
             <IconAction
@@ -219,7 +223,7 @@ export function AccountSecurity({ canChangePassword }: Readonly<{ canChangePassw
           </div>
         }
       >
-        <div className="grid min-w-0 gap-4 p-5 sm:p-6">
+        <div className="grid min-w-0 gap-3">
           <IdentityMutationError error={error} />
           {sessions && !sessions.some((session) => !session.current) ? (
             <p className="text-sm text-ink-muted">{t('account.noOtherSessions')}</p>
@@ -231,7 +235,7 @@ export function AccountSecurity({ canChangePassword }: Readonly<{ canChangePassw
               {sessions.map((session) => (
                 <li
                   key={session.id}
-                  className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0 flex-1 grid gap-1">
                     <div className="flex items-center gap-2">
