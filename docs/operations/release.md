@@ -53,7 +53,7 @@ Linux 使用 `scripts/install-tools.sh` 与 `scripts/release-local.sh`。工具�
 
 ## 原生 Go 托管包
 
-正式版同时提供 Windows amd64、Linux amd64、Linux arm64 的托管 ZIP。每包包含稳定宿主、Go 业务进程、平台与源码清单。GitHub Workflow 发版时读取上一 NeoCloud 托管正式版的 tag 与 commit，并将它们写入本版的已签名兼容清单。v0.4.0 是首个 NeoCloud 托管版，清单无前序版本。
+正式版同时提供 Windows amd64、Linux amd64、Linux arm64 的托管 ZIP。每包包含稳定宿主、Go 业务进程、平台与源码清单。GitHub Workflow 发版时读取上一 NeoCloud 托管正式版的 tag 与 commit，并将它们写入本版的已签名兼容清单。首个公开的 NeoCloud 托管版没有前序版本。
 
 同一发布还提供对应的 `_managed-full.zip`，包含同一提交产出的真实静态 Web。签名绑定静态文件清单、构建标识和 Go 版本。整包在目标平台直接运行，验收确认主机无需启动 Node 或容器。[原生整包使用说明](backend-archive.md#运行原生-go-与-web-整包)
 

@@ -12,13 +12,14 @@ import (
 	"github.com/reina0721/neocloud/pkg/clock"
 	"github.com/reina0721/neocloud/pkg/database"
 	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
+	"github.com/reina0721/neocloud/pkg/testkit"
 	"gorm.io/gorm"
 )
 
 func entryPathFixture(t testing.TB, ctx context.Context, entries int) *Repository {
 	t.Helper()
 	cfg := database.DefaultConfig()
-	cfg.Driver, cfg.DSN = database.DriverSQLite, filepath.Join(t.TempDir(), "paths.db")
+	cfg.Driver, cfg.DSN = database.DriverSQLite, filepath.Join(testkit.PrivateTempDir(t), "paths.db")
 	migrate, err := dbmigrate.New(ctx, dbmigrate.Config{Database: cfg, LockTimeout: 5 * time.Second}, filesmigration.Set())
 	if err != nil {
 		t.Fatal(err)

@@ -1,6 +1,6 @@
 # NeoCloud 安装与部署
 
-本手册适用于 NeoCloud v0.4.0 及后续版本。更早发行版的数据和配置应保留在原实例。安装 NeoCloud 时选择独立目录、数据位置和空闲端口。
+本手册覆盖 `main` 源码部署和 NeoCloud 下载版。使用下载版前，确认目标版本已公开发布，且 Assets 列有目标平台的 NeoCloud 安装包和配套校验附件。只有 Git 标签、自动生成的源码压缩包或旧品牌发行版时，请从源码部署。原 CloudDrive 发行版的数据和配置应保留在原实例。安装 NeoCloud 时选择独立目录、数据位置和空闲端口。[GitHub Releases](https://github.com/reina0721/neocloud/releases)
 
 选择与目标机匹配的入口。Windows 和 Linux 可运行[原生整包](backend-archive.md#运行原生-go-与-web-整包)，也可[从源码构建 Go 与 Node 本机包](#构建与进程)。Linux 服务器可用 [Docker Release 安装脚本](#release-下载版安装与升级)下载配套包、将附件复制到[离线目标机](#自动化与离线安装)，或在本机[构建 Docker 镜像](#从源码部署)。
 
@@ -45,10 +45,10 @@ docker buildx version
 在准备好[系统依赖](#安装-docker-与系统依赖)的 Linux 服务器上构建。首次构建需要访问 Docker Hub、Google Container Registry、Go 模块源和 npm 源，以获取基础镜像和依赖。Go、Node.js 与 pnpm 在构建容器中运行。
 
 ```bash
-git clone --branch v0.4.0 https://github.com/reina0721/neocloud.git
-cd neocloud
-bash scripts/deploy-docker.sh plan
-bash scripts/deploy-docker.sh up
+git clone --branch main https://github.com/reina0721/neocloud.git &&
+  cd neocloud &&
+  bash scripts/deploy-docker.sh plan &&
+  bash scripts/deploy-docker.sh up
 ```
 
 执行 `plan` 可在部署前核对计算出的路径、名称和端口。`up` 会检查实际资源冲突，再构建镜像。使用默认配置时，资源如下。
@@ -136,17 +136,27 @@ bash scripts/deploy-docker.sh up --config ./deploy.env
 
 下载版支持 Linux amd64、arm64，使用 SQLite 和本地文件存储。先完成[系统依赖](#安装-docker-与系统依赖)安装。安装脚本需要本机 Docker Unix socket、Compose 2.20 或更新版本、当前账户的 Docker 权限，以及可执行的 Cosign。发布验证使用 Cosign 2.6.5，可通过 `NEOCLOUD_COSIGN` 指定工具路径。在线方式从 GitHub Releases 下载并验签，离线方式使用单独准备的可信根校验同一套归档。两种方式均无需目标机安装 Go、Node.js 或 pnpm。安装前检查实例和数据盘、临时解包目录（默认 `/tmp`，可通过 `TMPDIR` 调整）以及 Docker 存储目录的可用空间。安装器会暂存下载归档和解包后的 `images.tar`，Docker 导入后还需要镜像空间。可通过 `docker info --format '{{.DockerRootDir}}'` 查看 Docker 存储目录。[Cosign 安装](https://docs.sigstore.dev/cosign/system_config/installation/)
 
-### 安装当前正式版
+### 安装指定正式版
 
-在部署账号的 Linux 终端下载脚本并查看选项，再安装 v0.4.0。本例绑定回环地址并显式使用 `4180`。安装器默认目录为 `~/neocloud`，默认端口为 `4173`。
+在目标正式版的 Assets 中确认有 `install.sh`、目标架构的 `neocloud_<tag>_linux_<arch>_docker.tar.gz`、`checksums.txt` 和 `checksums.txt.sigstore.json`。附件齐全后，在部署账号的 Bash 终端输入该正式标签，下载脚本。附件尚未齐全时，请[从源码部署](#从源码部署)。[GitHub Releases](https://github.com/reina0721/neocloud/releases)
 
 ```bash
-curl -fsSL --proto '=https' --proto-redir '=https' \
-  https://github.com/reina0721/neocloud/releases/download/v0.4.0/install.sh -o install.sh
-bash install.sh --help
-bash install.sh install --version v0.4.0 --dir "$HOME/neocloud" --bind 127.0.0.1 --port 4180
-"$HOME/neocloud/install.sh" status
-curl -fsS http://127.0.0.1:4180/api/console/v1/auth/registration-policy
+installer=
+read -r -p '输入已确认附件齐全的 NeoCloud 正式标签：' tag &&
+  [[ $tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] &&
+  installer_dir=$(mktemp -d) &&
+  curl -fsSL --proto '=https' --proto-redir '=https' \
+    "https://github.com/reina0721/neocloud/releases/download/$tag/install.sh" -o "$installer_dir/install.sh" &&
+  installer="$installer_dir/install.sh"
+```
+
+下载成功后，在同一 Bash 会话中运行脚本，安装时使用同一标签。下载失败时 `installer` 为空，以下命令会停止。本例绑定回环地址并显式使用 `4180`。安装器默认目录为 `~/neocloud`，默认端口为 `4173`。
+
+```bash
+bash "${installer:?请先成功下载安装脚本}" --help &&
+  bash "$installer" install --version "$tag" --dir "$HOME/neocloud" --bind 127.0.0.1 --port 4180 &&
+  "$HOME/neocloud/install.sh" status &&
+  curl -fsS http://127.0.0.1:4180/api/console/v1/auth/registration-policy
 ```
 
 在服务器打开 `http://127.0.0.1:4180/setup`，或按[远程访问](#ssh-隧道与局域网访问)从自己的电脑访问。运行 `cat "$HOME/neocloud/.control/setup-token"` 读取令牌，在设置页创建管理员。令牌文件权限为 `0600`，应仅交给负责初始化的管理员。创建管理员后登录并上传一个小文件，运行 `"$HOME/neocloud/install.sh" restart`，再登录确认可以下载原文件。
@@ -172,7 +182,7 @@ curl -fsS http://127.0.0.1:4180/api/console/v1/auth/registration-policy
 | `--public-url ORIGIN` | 空 | 浏览器使用的可选公开地址，例如 `https://drive.example.com`。只接受 HTTP(S) 根 Origin，省略路径、尾斜杠、查询、片段及凭据 |
 | `--allow-origin ORIGIN` | 无额外 Origin | 单次允许一个精确的跨域 Origin，可重复，支持最多 32 项 Origin 配置（包含显式公开地址）。同源网页通常省略 |
 | `--allow-http` | 无 HTTPS 公开地址时允许 HTTP | 显式使用 HTTP Cookie 模式。公网 HTTPS 部署填 HTTPS 地址并省略此参数 |
-| `--version TAG` | 在线取最新正式版，离线读 `version.txt` | 固定版本，例如 `v0.4.0`。自动化可将下载地址和参数锁定在同一个 tag |
+| `--version TAG` | 在线按 GitHub 的最新发布标签解析，离线读 `version.txt` | 在线安装显式指定已确认附件齐全的 NeoCloud 标签，下载地址与此参数使用同一标签 |
 | `--release-dir DIR` | 在线下载 | 读取目标机已有的 Release 附件，启用本地安装或更新路径。参见[离线安装](#自动化与离线安装) |
 | `--trust-dir DIR` | 实例已保存的信任目录 | 指定独立准备的 Sigstore 信任目录。首次签名离线安装需显式提供 |
 | `--wait-timeout SECONDS` | `120` | 安装器等待启动就绪的秒数，范围 5–600 |
@@ -182,35 +192,36 @@ curl -fsS http://127.0.0.1:4180/api/console/v1/auth/registration-policy
 
 ### 自定义实例与安装检查
 
-`v0.4.0` 的归档已带有 `INSTANCE_LAYOUT=1`。以下使用由部署账户拥有的路径，也可指定已授权的 `/opt/`、`/mnt/` 专用目录。
+自定义实例需要归档声明 `INSTANCE_LAYOUT=1`。可在上述下载成功后，用下列命令替换默认安装步骤，沿用同一 Bash 会话中的 `installer` 和 `tag`。以下使用由部署账户拥有的路径，也可指定已授权的 `/opt/`、`/mnt/` 专用目录。
 
 ```bash
-bash install.sh plan --check --version v0.4.0 --name cloud-main --dir "$HOME/neocloud-main" \
-  --data-dir "$HOME/cloud-data/cloud-main" --bind 127.0.0.1 --port 44180
-bash install.sh install --version v0.4.0 --name cloud-main --dir "$HOME/neocloud-main" \
-  --data-dir "$HOME/cloud-data/cloud-main" --bind 127.0.0.1 --port 44180
+bash "${installer:?请先成功下载安装脚本}" plan --check --version "$tag" --name cloud-main --dir "$HOME/neocloud-main" \
+  --data-dir "$HOME/cloud-data/cloud-main" --bind 127.0.0.1 --port 44180 &&
+  bash "$installer" install --version "$tag" --name cloud-main --dir "$HOME/neocloud-main" \
+    --data-dir "$HOME/cloud-data/cloud-main" --bind 127.0.0.1 --port 44180
 ```
 
 本例在 `http://127.0.0.1:44180/setup` 设置第二个实例，令牌位于 `~/neocloud-main/.control/setup-token`。项目名以小写字母或数字开头，最多 40 个字符，可含小写字母、数字、下划线和短横线。上例创建 `cloud-main-backend-1`、`cloud-main-web-1`、`cloud-main_default` 和名称保留卷 `cloud-main-instance`。该卷在容器停止后仍保留实例名称。相同版本和架构的实例共用镜像。
 
 首次安装使用可创建或为空的专用数据目录。独立数据盘使用挂载点下的子目录。若 `/mnt/data` 已挂载，可用 `sudo install -d -m 0700 -o "$USER" -g "$(id -gn)" /mnt/data/cloud-main` 创建专用空目录，并将两个命令的 `--data-dir` 都改成 `/mnt/data/cloud-main`。数据目录不能是挂载点本身、安装目录或安装目录的上级。项目名与解析后的数据位置在安装后固定，升级沿用此实例的真实路径。第二个实例需要独立的安装目录、数据路径、项目名和空闲端口。
 
-`plan` 显示名称、路径与端口映射，无需连接 Docker 或写入安装目录。使用 `--version` 或带有 `version.txt` 的 `--release-dir` 时可离线预览，默认会在线解析最新版本。`plan --check` 额外通过本机 Docker 和 `ss` 检查项目名、数据目录和端口冲突。若曾显式传入不同的安装参数，请按状态输出中的实际实例与路径管理。
+`plan` 显示名称、路径与端口映射，无需连接 Docker 或写入安装目录。使用 `--version` 或带有 `version.txt` 的 `--release-dir` 时可离线预览。`plan --check` 额外通过本机 Docker 和 `ss` 检查项目名、数据目录和端口冲突。若曾显式传入不同的安装参数，请按状态输出中的实际实例与路径管理。
 
 ### 安装向导
 
-下载脚本后直接运行 `bash install.sh`。向导询问安装目录、监听地址、端口和是否启用网页运维。新安装默认 `~/neocloud`、`0.0.0.0:4173`，局域网访问按[下方说明](#ssh-隧道与局域网访问)设置。安装器检查附件摘要和镜像身份，导入两张配套镜像，迁移数据库后启动并检查就绪。没有交互终端时使用 `install` 或 `--yes`。
+脚本下载成功后，可将默认安装步骤替换为 `bash "${installer:?请先成功下载安装脚本}" --version "$tag"`。向导询问安装目录、监听地址、端口和是否启用网页运维。新安装默认 `~/neocloud`、`0.0.0.0:4173`，局域网访问按[下方说明](#ssh-隧道与局域网访问)设置。安装器检查附件摘要和镜像身份，导入两张配套镜像，迁移数据库后启动并检查就绪。没有交互终端时使用 `install` 或 `--yes`。
 
 ### 自动化与离线安装
 
-上一节的 `install --version v0.4.0` 可用于自动化。要自动取最新正式版，可从 [latest](https://github.com/reina0721/neocloud/releases/latest/download/install.sh) 下载安装脚本并省略 `--version`。断网目标机使用以下离线流程。
+在线自动化使用目标正式标签构造脚本下载 URL，并将同一标签传给 `install --version`。断网目标机使用以下流程。先确认公开 Release 的 Assets 中列齐下载清单中的文件，并在下载和安装时输入同一正式标签。[GitHub Releases](https://github.com/reina0721/neocloud/releases)
 
 1. 在目标机运行 `docker info --format '{{.OSType}}/{{.Architecture}}'` 确认架构。到可信的联网工作站安装 [Cosign](https://docs.sigstore.dev/cosign/system_config/installation/)，此示例使用项目发布工具的 `v2.6.5`。在联网的 Linux 工作站运行以下命令，将 `arch` 改为目标架构。准备目录应位于实例目录之外。
 
    ```bash
    (
      set -euo pipefail
-     tag=v0.4.0
+     read -r -p '输入已确认附件齐全的 NeoCloud 正式标签：' tag
+     [[ $tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
      arch=amd64
      prepare="$PWD/neocloud-offline"
      release_base="https://github.com/reina0721/neocloud/releases/download/$tag"
@@ -233,7 +244,8 @@ bash install.sh install --version v0.4.0 --name cloud-main --dir "$HOME/neocloud
    ```bash
    (
      set -euo pipefail
-     tag=v0.4.0
+     read -r -p '输入下载附件时使用的 NeoCloud 正式标签：' tag
+     [[ $tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
      arch=amd64
      assets="$HOME/neocloud-offline/release"
      trust="$HOME/neocloud-offline/sigstore-trust"
@@ -250,8 +262,8 @@ bash install.sh install --version v0.4.0 --name cloud-main --dir "$HOME/neocloud
      done
      bash "$assets/install.sh" install --dir "$HOME/neocloud" --bind 127.0.0.1 --port 4180 \
        --version "$tag" --release-dir "$assets" --trust-dir "$trust"
+     "$HOME/neocloud/install.sh" status
    )
-   "$HOME/neocloud/install.sh" status
    ```
 
 安装器再次校验签名、文件摘要、架构与归档，导入镜像并迁移数据库。带 `OFFLINE_MAINTENANCE=1` 的正式版会把信任材料和验证后的发布包保存到实例，供[离线检查与升级](#离线检查与升级)使用。首次设置地址、令牌位置与在线安装相同。
@@ -266,9 +278,6 @@ bash install.sh install --version v0.4.0 --name cloud-main --dir "$HOME/neocloud
 ~/neocloud/install.sh logs --tail 100
 ~/neocloud/install.sh logs -f
 ~/neocloud/install.sh check-update
-~/neocloud/install.sh upgrade         # update 是同义命令
-# 当前版本更旧时，也可指定正式升级目标。
-~/neocloud/install.sh upgrade --version v0.4.0
 ~/neocloud/install.sh backup
 ~/neocloud/install.sh stop
 ~/neocloud/install.sh start
@@ -276,6 +285,8 @@ bash install.sh install --version v0.4.0 --name cloud-main --dir "$HOME/neocloud
 ```
 
 `restart` 会应用修改后的配置并检查就绪状态。启用新版维护工具后，应用升级和宿主维护工具更新分别执行。相同版本不会重复迁移。重复安装不重建已有实例，目标目录非空且无实例标记时拒绝接管。不同实例使用独立 Compose project、配置和数据目录。
+
+在线升级已有 NeoCloud 实例时，确认目标正式版比当前版本新且配套附件齐全，再用 `~/neocloud/install.sh upgrade --version "$tag"`，其中 `tag` 是已确认的正式标签。`update` 是同义命令。[GitHub Releases](https://github.com/reina0721/neocloud/releases)
 
 #### 离线检查与升级
 
@@ -358,7 +369,7 @@ Web Host 校验外部 Host/Origin，并向 Go 转发内部同源请求；额外�
 发布附件包含同版本、同架构的 `neocloud-maintenance_…` 后，Linux systemd 上的安装器托管实例可以启用。网页运维需要 Docker Compose 2.24.4 或更新版本，以便单独替换 Web 发布端口。宿主机需能访问本机 Docker，安装账户需有对应权限，启用时需要 sudo 或 root。安装 [发布验证所用的 cosign](release.md#docker-下载产物)，并让安装账户可以在 PATH 找到它。
 
 ```bash
-# 已有实例先用旧管理脚本升级到配套的正式版。
+# 已有 NeoCloud 实例先升级到提供配套维护工具的正式版。
 ~/neocloud/install.sh enable-web-management
 # 新实例可在向导选择启用，或给 install 子命令加 --enable-web-management。
 ```
@@ -485,14 +496,19 @@ export PATH="$tool_dir/go/bin:$tool_dir/node/bin:$PATH"
 
 将上述两个归档路径替换为实际下载的文件。运行 Web Host 的账号也需要能找到 Node 24。需要持续使用时，将对应的 `bin` 路径写入该账号的 shell 配置或进程管理配置。
 
-在 Windows PowerShell 或 Linux Bash 中核对版本后构建。如果 PowerShell 执行策略拦截 `npm.ps1`，用 `npm.cmd --version` 检查。脚本通过 npx 调用固定的 pnpm 10.22.0，按锁文件安装依赖并生成契约。首次构建需要访问 Go 模块源和 npm registry。
+在 Windows PowerShell 或 Linux Bash 中核对版本后从 `main` 构建。如果 PowerShell 执行策略拦截 `npm.ps1`，用 `npm.cmd --version` 检查。脚本通过 npx 调用固定的 pnpm 10.22.0，按锁文件安装依赖并生成契约。首次构建需要访问 Go 模块源和 npm registry。
 
 ```text
 git --version
 go version
 node --version
 npm --version
-git clone --branch v0.4.0 https://github.com/reina0721/neocloud.git
+git clone --branch main https://github.com/reina0721/neocloud.git
+```
+
+克隆成功后进入新建的源码目录，开始构建。
+
+```text
 cd neocloud
 node scripts/build.mjs
 ```

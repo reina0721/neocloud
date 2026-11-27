@@ -17,6 +17,7 @@ import (
 	migrationconfig "github.com/reina0721/neocloud/internal/module/migration/binding/config"
 	"github.com/reina0721/neocloud/pkg/database"
 	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestOnlineMigrationKeepsOldVersionCompatible(t *testing.T) {
@@ -33,7 +34,7 @@ func TestOnlineMigrationKeepsOldVersionCompatible(t *testing.T) {
 			cfg := database.DefaultConfig()
 			cfg.Driver = dialect.name
 			if dialect.dsnEnv == "" {
-				cfg.DSN = filepath.Join(t.TempDir(), "online.db")
+				cfg.DSN = filepath.Join(testkit.PrivateTempDir(t), "online.db")
 			} else {
 				cfg.DSN = os.Getenv(dialect.dsnEnv)
 				if cfg.DSN == "" {
@@ -165,7 +166,7 @@ func onlineDigest(body string) string { return fmt.Sprintf("%x", sha256.Sum256([
 
 func assertSQLiteOnlineBackup(t *testing.T, cfg database.Config, table string) {
 	t.Helper()
-	path, err := dbmigrate.BackupOnline(t.Context(), cfg, t.TempDir())
+	path, err := dbmigrate.BackupOnline(t.Context(), cfg, testkit.PrivateTempDir(t))
 	if err != nil {
 		t.Fatalf("SQLite online backup: %v", err)
 	}

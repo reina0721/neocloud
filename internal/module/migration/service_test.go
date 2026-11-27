@@ -14,6 +14,7 @@ import (
 	todomigration "github.com/reina0721/neocloud/internal/module/todo/binding/migration"
 	"github.com/reina0721/neocloud/pkg/database"
 	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestConfiguredServerMigrations(t *testing.T) {
@@ -44,7 +45,7 @@ func TestConfiguredServerMigrations(t *testing.T) {
 }
 
 func TestSQLiteMigrationFreshAndIdempotent(t *testing.T) {
-	databasePath := filepath.Join(t.TempDir(), "migration.db")
+	databasePath := filepath.Join(testkit.PrivateTempDir(t), "migration.db")
 	config := database.DefaultConfig()
 	config.Driver, config.DSN = database.DriverSQLite, databasePath
 	service := newService(t, config)
@@ -89,7 +90,10 @@ func TestSQLiteMigrationFreshAndIdempotent(t *testing.T) {
 }
 
 func TestSQLiteRetiredBaselineIsRejectedBeforeRunnerWrites(t *testing.T) {
-	databasePath := filepath.Join(t.TempDir(), "legacy.db")
+	databasePath := filepath.Join(testkit.PrivateTempDir(t), "legacy.db")
+	if err := os.WriteFile(databasePath, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
 	connection := openSQLite(t, databasePath)
 	if _, err := connection.ExecContext(t.Context(), "CREATE TABLE schema_migrations (version INTEGER NOT NULL, dirty BOOLEAN NOT NULL)"); err != nil {
 		t.Fatal(err)

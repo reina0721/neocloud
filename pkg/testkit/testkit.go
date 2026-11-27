@@ -28,8 +28,8 @@ func TempConfigFile(t *testing.T, content string) string {
 }
 
 // PrivateTempDir 创建仅当前用户可访问的测试目录，适用于 SQLite 等私有数据夹具。
-// testing.T.TempDir 不保证最终子目录的访问模式，本函数不依赖进程 umask。
-func PrivateTempDir(t *testing.T) string {
+// testing.TB.TempDir 不保证最终子目录的访问模式，本函数不依赖进程 umask。
+func PrivateTempDir(t testing.TB) string {
 	t.Helper()
 	directory, err := os.MkdirTemp(t.TempDir(), "private-")
 	if err != nil {

@@ -2,7 +2,7 @@
 
 支持文件管理、分享协作与媒体阅读的自托管文件工作区。适合希望自行管理文件、账号权限和部署环境的个人与团队。
 
-[下载正式版](https://github.com/reina0721/neocloud/releases/latest) · [使用手册](docs/README.md) · [贡献指南](CONTRIBUTING.md) · [获取帮助](SUPPORT.md) · [报告安全问题](SECURITY.md)
+[发布记录](https://github.com/reina0721/neocloud/releases) · [使用手册](docs/README.md) · [贡献指南](CONTRIBUTING.md) · [获取帮助](SUPPORT.md) · [报告安全问题](SECURITY.md)
 
 ## 可以做什么
 
@@ -17,16 +17,16 @@
 
 ## 安装与部署
 
-以下指南以 `v0.4.0` 的发布格式为例，从安装依赖写到首次设置和日常维护。发布包以 [GitHub Releases](https://github.com/reina0721/neocloud/releases) 上的公开标签为准。
+选择下载版前，确认目标版本已公开发布，且 Assets 列有目标平台的 `neocloud` 安装包和配套校验附件。只有 Git 标签、自动生成的源码压缩包或旧品牌发行版时，请选择下表的源码部署方式，可直接从 `main` 构建。[GitHub Releases](https://github.com/reina0721/neocloud/releases)
 
-从 v0.4.0 起，安装和升级使用 NeoCloud 格式。更早的发行版请保留原实例和备份，为 NeoCloud 选择独立安装目录和数据位置。
+原 CloudDrive 发行版请保留原实例和备份，为 NeoCloud 选择独立安装目录和数据位置。
 
 | 部署方式 | 系统与架构 | 目标机需要 | 默认 Web 端口 |
 | --- | --- | --- | --- |
-| [原生整包](docs/operations/backend-archive.md#运行原生-go-与-web-整包) | Windows amd64、Linux amd64/arm64 | 签名整包和 Cosign，网页由 Go 宿主提供 | `8080` |
-| [Docker 正式版](docs/operations/neocloud-deployment.md#release-下载版安装与升级) · [离线安装](docs/operations/neocloud-deployment.md#自动化与离线安装) | Linux amd64/arm64 | Docker Engine、Compose 和 Cosign，镜像从 GitHub Release 归档导入 | `4173` |
 | [Docker 源码构建](docs/operations/neocloud-deployment.md#从源码部署) | Linux amd64/arm64 | Git、Docker Engine、Compose 和构建所需的网络访问 | `4180` |
 | [无 Docker 源码部署](docs/operations/neocloud-deployment.md#构建与进程) | Windows amd64、Linux amd64/arm64 | 构建用 Git、Go 和 Node，运行打包后的 Web Host 用 Node | `4173` |
+| [原生整包](docs/operations/backend-archive.md#运行原生-go-与-web-整包) | Windows amd64、Linux amd64/arm64 | 签名整包和 Cosign，网页由 Go 宿主提供 | `8080` |
+| [Docker 正式版](docs/operations/neocloud-deployment.md#release-下载版安装与升级) · [离线安装](docs/operations/neocloud-deployment.md#自动化与离线安装) | Linux amd64/arm64 | Docker Engine、Compose 和 Cosign，镜像从 GitHub Release 归档导入 | `4173` |
 
 首次启动后，访问所选入口的 `/setup`，使用该实例的设置令牌创建管理员。服务器只监听回环地址时，可用 SSH 转发完成设置，再配置对外访问。[远程访问与 HTTPS](docs/operations/neocloud-deployment.md#远程访问与-https)
 

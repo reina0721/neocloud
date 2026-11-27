@@ -1,26 +1,29 @@
 # NeoCloud 原生部署与独立 Go 后端
 
-GitHub 正式版提供三类原生包。部署完整文件工作区请选择 `_managed-full.zip`，由 Go 宿主提供网页、API 和 WebDAV，目标机无需 Docker、Go、Node.js 或 pnpm。`_managed-go.zip` 适合有独立 Web Host 的托管后端。其余 Go 归档包含独立后端、示例配置、语言资源和 OpenAPI。[GitHub 正式发布](https://github.com/reina0721/neocloud/releases/latest)
+使用下载版前，确认目标版本已公开发布，且 Assets 列有目标平台的 `neocloud` 原生包和配套校验附件。只有 Git 标签、自动生成的源码压缩包或旧品牌发行版时，请[从 `main` 构建 Go 与 Node 本机包](neocloud-deployment.md#构建与进程)。[GitHub Releases](https://github.com/reina0721/neocloud/releases)
+
+部署完整文件工作区请选择 `_managed-full.zip`，由 Go 宿主提供网页、API 和 WebDAV，目标机无需 Docker、Go、Node.js 或 pnpm。`_managed-go.zip` 适合有独立 Web Host 的托管后端。其余 Go 归档包含独立后端、示例配置、语言资源和 OpenAPI。
 
 ## 运行原生 Go 与 Web 整包
 
-示例固定为 `v0.4.0`，适用于按 NeoCloud 格式初始化的实例。安装前从 Sigstore 获取对应平台的 Cosign 2.6.5 或验证兼容的更新版本，加入 `PATH` 后执行 `cosign version` 确认可用。下载 ZIP 和校验附件时使用同一个正式标签。先验证校验清单的签名，再核对 ZIP 的 SHA-256，最后解包运行。已有 NeoCloud 实例可以使用[更新、备份与恢复](#更新与备份恢复)。[Cosign 安装说明](https://docs.sigstore.dev/cosign/system_config/installation/)
+从目标正式版的 Assets 确认有下表所示的目标平台 ZIP、`checksums.txt` 和 `checksums.txt.sigstore.json`。运行示例时输入该正式标签，ZIP、校验附件与签名身份均使用此标签。安装前从 Sigstore 获取对应平台的 Cosign 2.6.5 或验证兼容的更新版本，加入 `PATH` 后执行 `cosign version` 确认可用。先验证校验清单的签名，再核对 ZIP 的 SHA-256，最后解包运行。已有 NeoCloud 实例可以使用[更新、备份与恢复](#更新与备份恢复)。[Cosign 安装说明](https://docs.sigstore.dev/cosign/system_config/installation/)
 
-| 目标机 | v0.4.0 整包 |
+| 目标机 | 整包文件名 |
 | --- | --- |
-| Windows amd64 | `neocloud_v0.4.0_windows_amd64_managed-full.zip` |
-| Linux amd64（`x86_64`） | `neocloud_v0.4.0_linux_amd64_managed-full.zip` |
-| Linux arm64（`aarch64`） | `neocloud_v0.4.0_linux_arm64_managed-full.zip` |
+| Windows amd64 | `neocloud_<tag>_windows_amd64_managed-full.zip` |
+| Linux amd64（`x86_64`） | `neocloud_<tag>_linux_amd64_managed-full.zip` |
+| Linux arm64（`aarch64`） | `neocloud_<tag>_linux_arm64_managed-full.zip` |
 
 ### Linux Bash
 
-需要 Bash、curl、unzip、sha256sum 和系统常用工具。用计划运行服务的普通账号执行。示例将下载附件放在 `~/neocloud-native-assets/v0.4.0/`，程序、配置和数据放在 `~/neocloud-native/`。
+需要 Bash、curl、unzip、sha256sum 和系统常用工具。用计划运行服务的普通账号执行。示例将下载附件放在 `~/neocloud-native-assets/<tag>/`，程序、配置和数据放在 `~/neocloud-native/`。
 
 ```bash
 (
   set -euo pipefail
   umask 077
-  tag=v0.4.0
+  read -r -p '输入已确认附件齐全的 NeoCloud 正式标签：' tag
+  [[ $tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
   case "$(uname -m)" in
     x86_64) arch=amd64 ;;
     aarch64|arm64) arch=arm64 ;;
@@ -61,7 +64,8 @@ GitHub 正式版提供三类原生包。部署完整文件工作区请选择 `_m
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
-    $tag = 'v0.4.0'
+    $tag = Read-Host '输入已确认附件齐全的 NeoCloud 正式标签'
+    if ($tag -cnotmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw '请使用 vX.Y.Z 格式的正式标签' }
     $zip = "neocloud_${tag}_windows_amd64_managed-full.zip"
     $assets = Join-Path $env:LOCALAPPDATA "NeoCloud-assets\$tag"
     $root = Join-Path $env:LOCALAPPDATA 'NeoCloud-native'
@@ -120,7 +124,7 @@ GitHub 正式版提供三类原生包。部署完整文件工作区请选择 `_m
 
 在另一终端访问 `http://127.0.0.1:9090/readyz` 检查就绪，访问同一端口的 `/build` 核对实际版本。前台运行时按 Ctrl+C 停止。以后从实例目录运行 `./neocloud-host --root .`，Windows 使用 `.\neocloud-host.exe --root .`。宿主用 Cosign 复核 `.native-upgrade/` 中缓存的当前版本。若继续使用本机 HTTP，在 `config.yaml` 把 `iam.local.allowInsecureHTTP` 改为 `true`，让以后直接启动和系统服务也使用相同的 Cookie 设置。首次登录后上传一个小文件，完成配置并重启，确认可重新登录且下载内容与原文件一致。远程浏览器、公开地址和 HTTPS 反代按同一入口配置，管理端口保持回环监听。[远程访问与 HTTPS](https://github.com/reina0721/neocloud/blob/main/docs/operations/neocloud-deployment.md#远程访问与-https)
 
-首次已经生成配置和令牌、但下载或启动失败时，排除故障后从原目录重试。重新把 `.data/setup-token` 的内容注入 `NEOCLOUD_APP_IAM__LOCAL__SETUPTOKEN`。迁移已经完成时可直接运行前文的 `--full --root … --initial v0.4.0` 启动命令。存在迁移错误时先核对迁移状态。[迁移与回滚](https://github.com/reina0721/neocloud/blob/main/docs/operations/migration-and-rollback.md)
+首次已经生成配置和令牌、但下载或启动失败时，排除故障后从原目录重试。重新把 `.data/setup-token` 的内容注入 `NEOCLOUD_APP_IAM__LOCAL__SETUPTOKEN`。迁移已经完成时可直接运行前文的 `--full --root … --initial …` 启动命令，沿用下载时选择的正式标签。存在迁移错误时先核对迁移状态。[迁移与回滚](https://github.com/reina0721/neocloud/blob/main/docs/operations/migration-and-rollback.md)
 
 ### 启动参数与接管
 
@@ -225,15 +229,15 @@ try {
 }
 ```
 
-在离线目标机沿用对应平台安装步骤，从下载后的签名验证开始。给 `cosign verify-blob` 增加 `--offline --trusted-root <信任目录中的 trusted_root.json>`，验证成功后核对 ZIP、解包、配置并执行首次迁移。将首次启动命令改成下列形式，使用各目录实际地址。
+在离线目标机沿用对应平台安装步骤，从下载后的签名验证开始。给 `cosign verify-blob` 增加 `--offline --trusted-root <信任目录中的 trusted_root.json>`，验证成功后核对 ZIP、解包、配置并执行首次迁移。将首次启动命令改成下列形式，使用各目录实际地址，并把 `tag` 设置为校验附件时使用的正式标签。
 
 ```bash
-./neocloud-host --full --root . --initial v0.4.0 \
+./neocloud-host --full --root . --initial "${tag:?请设置已验证附件对应的正式标签}" \
   --release-dir /mnt/transfer/release --trust-dir /mnt/transfer/trust
 ```
 
 ```powershell
-.\neocloud-host.exe --full --root . --initial v0.4.0 `
+.\neocloud-host.exe --full --root . --initial $tag `
     --release-dir 'D:\transfer\release' --trust-dir 'D:\transfer\trust'
 ```
 
@@ -264,7 +268,7 @@ Windows PowerShell 使用 `Copy-Item config.example.yaml config.yaml` 复制配�
 
 ## 使用原生托管版自动下载和换版
 
-正式版附件名为 `neocloud_<tag>_<os>_<arch>_managed-go.zip`，覆盖 Windows amd64、Linux amd64 与 Linux arm64。从已验签的附件取得 `neocloud-host` 和 `neocloud`，将宿主放在稳定的程序目录。实例根目录继续保存 `config.yaml`、语言资源和既有相对数据路径。新实例按上面的步骤初始化并执行首次迁移，已有实例继续使用原配置和数据。
+已公开发布的目标版本提供对应平台的 `neocloud_<tag>_<os>_<arch>_managed-go.zip`、`checksums.txt` 和 `checksums.txt.sigstore.json` 后，可以部署原生托管版。支持 Windows amd64、Linux amd64 与 Linux arm64。从已验签的附件取得 `neocloud-host` 和 `neocloud`，将宿主放在稳定的程序目录。实例根目录继续保存 `config.yaml`、语言资源和既有相对数据路径。新实例按上面的步骤初始化并执行首次迁移，已有实例继续使用原配置和数据。
 
 首次切换到托管运行时，先正常停止独立 Go 服务并释放原 API 和管理端口。用原服务账号启动宿主，沿用实例原有环境变量。后续服务启动可以省略 `--initial`，由宿主读回上次提交的版本。
 

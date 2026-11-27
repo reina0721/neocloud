@@ -96,14 +96,7 @@ release:
 
     NeoCloud 安装器识别 `neocloud` 命名的签名附件。更早发行版请保留原实例和备份，并为 NeoCloud 选择独立的安装目录和数据位置。
 
-    Linux amd64 / arm64 可用 Docker 安装包，目标机需要 Docker、Compose 和 Cosign。下例只监听服务器本机，访问 http://127.0.0.1:4173/setup，使用 ~/neocloud/.control/setup-token 的令牌创建管理员。持久数据位于 ~/neocloud/data/。
-
-    ```bash
-    curl -fL --proto '=https' --proto-redir '=https' https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
-    bash install.sh install --dir "$HOME/neocloud" --bind 127.0.0.1
-    ~/neocloud/install.sh check-update
-    ~/neocloud/install.sh upgrade
-    ```
+    Linux amd64 / arm64 可用 Docker 安装包，目标机需要 Docker、Compose 和 Cosign。确认本页附件中有 install.sh、对应架构的 Docker 归档以及签名校验清单，再按下方部署手册安装，下载与安装使用同一个发布标签。
 
     支持启用同址网页运维，在 /maintenance 检查更新、完整备份、升级、回退和恢复。
 

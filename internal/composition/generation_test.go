@@ -769,6 +769,9 @@ func prepareTodoSchema(t *testing.T, path string) {
 	cfg := pkgdatabase.DefaultConfig()
 	cfg.Driver = pkgdatabase.DriverSQLite
 	cfg.DSN = filepath.ToSlash(path)
+	if err := pkgdatabase.PrepareLocalFile(t.Context(), &cfg); err != nil {
+		t.Fatalf("prepare fixture SQLite file: %v", err)
+	}
 	for _, set := range []dbmigrate.Set{filesmigration.Set(), consolemigration.Set(), authmigration.Set(), iammigration.Set(), navigationmigration.Set(), organizationmigration.Set(), migrationbinding.Set()} {
 		runner, err := dbmigrate.New(t.Context(), dbmigrate.Config{Database: cfg, LockTimeout: 5 * time.Second}, set)
 		if err != nil {
