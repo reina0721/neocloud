@@ -6,8 +6,8 @@
 
 ## 运行路径
 
-1. [构建与容器](build-and-container.md)：本地构建、跨平台构建、容器验证和 CI 证据边界。
-   [独立 Go 后端归档](backend-archive.md)说明下载版的运行入口、配置与资源边界。
+1. [安装与部署](clouddrive-deployment.md)：选择部署方式，准备依赖并完成安装、首次设置、访问配置和日常管理。
+   发布附件见[原生整包与后端归档](backend-archive.md)，构建和测试见[构建与容器](build-and-container.md)。
 2. [数据库迁移与回滚](migration-and-rollback.md)：迁移状态、前滚、回滚、dirty 处理和生产约束。
 3. [本地候选与正式发布](release.md)：本地候选、发布约束、Release 证据和不允许冒充的门禁。
 4. [复制为独立项目](copying.md)：模板复制后的身份、配置、Git 历史和验证要求。

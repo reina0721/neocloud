@@ -15,37 +15,18 @@
 
 项目处于 **0.x 迭代阶段**，正式交付及版本变更以 [GitHub Releases](https://github.com/reina0721/neocloud/releases) 为准。BT 面向受信节点；无共享挂载的远程下载代理、脱离分享链接的跨账号挂载共享尚未实现；外部 Office 服务需要单独联调。部分 Reference 页面仅用于演示和确定性验证。完整边界见[项目范围](docs/repository-scope.md)。
 
-## Linux + Docker 部署
+## 安装与部署
 
-在安装了 Docker Engine 和 Compose 插件（≥ 2.20）的 Linux amd64 或 arm64 服务器上，执行一条命令安装 GitHub 正式版。安装位置、监听地址和端口直接通过参数指定。
+以下指南以 [v0.3.3 正式版](https://github.com/reina0721/neocloud/releases/tag/v0.3.3) 为例，从安装依赖写到首次设置和日常维护。
 
-```bash
-(set -o pipefail; curl -fsSL --proto '=https' --proto-redir '=https' \
-  https://github.com/reina0721/neocloud/releases/latest/download/install.sh | \
-  bash -s -- install --dir "$HOME/clouddrive" --bind 0.0.0.0 --port 4180)
-```
+| 部署方式 | 系统与架构 | 目标机需要 | 默认 Web 端口 |
+| --- | --- | --- | --- |
+| [原生整包](docs/operations/backend-archive.md#运行原生-go-与-web-整包) | Windows amd64、Linux amd64/arm64 | 签名整包和 Cosign，网页由 Go 宿主提供 | `8080` |
+| [Docker 正式版](docs/operations/clouddrive-deployment.md#release-下载版安装与升级) · [离线安装](docs/operations/clouddrive-deployment.md#自动化与离线安装) | Linux amd64/arm64 | Docker Engine 和 Compose，镜像从 GitHub Release 归档导入 | `4173` |
+| [Docker 源码构建](docs/operations/clouddrive-deployment.md#从源码部署) | Linux amd64/arm64 | Git、Docker Engine、Compose 和构建所需的网络访问 | `4180` |
+| [无 Docker 源码部署](docs/operations/clouddrive-deployment.md#构建与进程) | Windows amd64、Linux amd64/arm64 | 构建用 Git、Go 和 Node，运行打包后的 Web Host 用 Node | `4173` |
 
-打开 `http://服务器IP:4180/setup`，使用 `~/clouddrive/.control/setup-token` 的令牌创建管理员。SQLite、文件和传输暂存保存在 `~/clouddrive/data/`。示例显式使用 `4180`，现有正式安装器省略端口时使用 `4173`。
-
-支持自定义布局的下一版发布后，可在同一条命令指定 Compose 项目和数据盘目录。上面的命令适用于已发布的 `v0.2.2`。
-
-```bash
-(set -o pipefail; curl -fsSL --proto '=https' --proto-redir '=https' \
-  https://github.com/reina0721/neocloud/releases/latest/download/install.sh | \
-  bash -s -- install --name cloud-main --dir /opt/clouddrive \
-    --data-dir /mnt/data/cloud-main --bind 0.0.0.0 --port 4180)
-```
-
-要在下载镜像前核对项目名、数据目录和端口，把 `install` 换成 `plan --check`。检查与安装需要本机 Docker 和 iproute2。见[自定义实例与安装检查](docs/operations/clouddrive-deployment.md#自定义实例与安装检查)。
-
-```bash
-~/clouddrive/install.sh check-update  # 检查正式版
-~/clouddrive/install.sh upgrade       # 备份并升级
-```
-
-固定版本、HTTPS 反代和手动备份见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。支持离线维护的新 Release 可在断网主机使用签名包完成[检查、升级、回退和恢复](docs/operations/clouddrive-deployment.md#离线检查与升级)。本地源码构建见[源码部署](docs/operations/clouddrive-deployment.md#从源码部署)。
-
-在 Windows 或 Linux 上可直接运行 [Go 与 Web 原生整包](docs/operations/backend-archive.md#运行原生-go-与-web-整包)。Go 提供网页、API 和 WebDAV，系统所有者可在后台成对升级或回退签名正式版。
+首次启动后，访问所选入口的 `/setup`，使用该实例的设置令牌创建管理员。服务器只监听回环地址时，可用 SSH 转发完成设置，再配置对外访问。[远程访问与 HTTPS](docs/operations/clouddrive-deployment.md#远程访问与-https)
 
 ## 源码开发
 
@@ -59,7 +40,7 @@ node scripts/dev.mjs
 
 启动完成后按终端提示进入登录页或首次设置页。新实例的设置令牌默认位于本地忽略目录 `.data/dev/setup-token`。启动前自动使用 pnpm **10.22.0** 按锁文件同步前端依赖，随后准备配置、迁移数据库并检查服务就绪。Ctrl+C 停止其拥有的服务。隔离真实预览使用 `node scripts/dev.mjs --preview`。已有数据库与文件须保留，不作为可随意清空的测试夹具。Windows 命令、完整前置与排障见[本地开发](docs/getting-started/local-development.md)。
 
-使用 `node scripts/dev.mjs --acceptance` 在全新 SQLite 上运行真实浏览器验收。使用 `node scripts/build.mjs` 生成包含 Go 和 Web Host 的本机包，产物在 `dist/native/`。见[构建与部署](docs/operations/clouddrive-deployment.md#构建与进程)。
+使用 `node scripts/dev.mjs --acceptance` 在全新 SQLite 上运行真实浏览器验收。
 
 ## 结构与验证
 
