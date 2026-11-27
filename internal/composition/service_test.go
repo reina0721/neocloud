@@ -20,6 +20,7 @@ import (
 	"github.com/reina0721/neocloud/pkg/idgen"
 	"github.com/reina0721/neocloud/pkg/logger"
 	"github.com/reina0721/neocloud/pkg/supervisor"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestApplicationRouterRateLimitModesAndGenerationLocalState(t *testing.T) {
@@ -99,7 +100,7 @@ func TestApplicationRouterCORSPreflightDoesNotConsumeRateToken(t *testing.T) {
 }
 
 func TestExampleConfigSatisfiesApplicationBindings(t *testing.T) {
-	temporary := t.TempDir()
+	temporary := testkit.PrivateTempDir(t)
 	databasePath := filepath.Join(temporary, "example.db")
 	prepareTodoSchema(t, databasePath)
 	payload, err := os.ReadFile(filepath.Join("..", "..", "config.example.yaml"))
