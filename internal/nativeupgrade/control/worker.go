@@ -8,6 +8,8 @@ const (
 	// #nosec G101 -- 固定值是私有 HTTP 头名称，认证值由宿主运行时生成。
 	TokenHeader  = "X-CloudDrive-Native-Token"
 	RemoteHeader = "X-CloudDrive-Native-Remote"
+	WebHeader    = "X-CloudDrive-Native-Web"
+	SchemeHeader = "X-CloudDrive-Native-Scheme"
 	Protocol     = 1
 )
 

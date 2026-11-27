@@ -6,7 +6,7 @@
  * **取消不改变路由/标签/进度**；导航结果仍由既有导航事务层（navigation-lifecycle）
  * complete/cancel/fail 收敛——本模块只加前置询问。
  *
- * 刷新/关闭：仅当存在未提交输入（dirty）时注册 beforeunload（原生提示；接受平台限制，
+ * 刷新/关闭：存在未提交输入或正在提交时通过 beforeunload 提醒（原生提示；接受平台限制，
  * 配合草稿恢复兜底，不承诺覆盖全部关闭场景）。
  */
 import { shouldProceedWithNavigation, getCurrentResolvedHref } from './navigation-lifecycle';
@@ -132,17 +132,18 @@ export function resetLeaveConfirmEnabledForTest(): void {
 }
 
 /* ------------------------------------------------------------------ */
-/* beforeunload（仅 dirty 时注册原生提醒）                               */
+/* beforeunload（待保存或正在提交时触发原生提醒）                         */
 /* ------------------------------------------------------------------ */
 
 function onBeforeUnload(event: BeforeUnloadEvent): void {
-  if (!isAnyDirty()) return;
+  // 版本不匹配时 Next 会使用整页导航，提交中的请求也需要留出完成的机会。
+  if (![...sources.values()].some((source) => source.isSubmitting?.() || source.isDirty())) return;
   event.preventDefault();
   // 现代浏览器需 returnValue 以显示原生离开确认。
   event.returnValue = '';
 }
 
-/** 安装 beforeunload 守卫；返回卸载函数。仅 dirty 时提示，接受平台限制。 */
+/** 安装 beforeunload 守卫；待保存或正在提交时提示，接受平台限制。 */
 export function installBeforeUnloadGuard(): () => void {
   window.addEventListener('beforeunload', onBeforeUnload);
   return () => window.removeEventListener('beforeunload', onBeforeUnload);

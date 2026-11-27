@@ -106,6 +106,8 @@ func (h *Handler) Present(ctx context.Context, err error) error {
 	switch {
 	case errors.Is(err, model.ErrShareForbidden):
 		status, code = http.StatusForbidden, "files_share_forbidden"
+	case errors.Is(err, service.ErrWebPreviewOriginDenied):
+		status, code = http.StatusForbidden, "files_web_preview_origin_denied"
 	case errors.Is(err, service.ErrTorrentNode), errors.Is(err, service.ErrTorrentBinding), errors.Is(err, service.ErrTorrentProtocol), errors.Is(err, service.ErrTorrentJobMissing):
 		status, code = http.StatusServiceUnavailable, "files_offline_node_unavailable"
 	case errors.Is(err, service.ErrTorrentMetadata), errors.Is(err, service.ErrTorrentUnsupported):

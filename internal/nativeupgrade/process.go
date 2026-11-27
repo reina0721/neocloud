@@ -25,10 +25,20 @@ type child struct {
 	token    string
 	prepared control.Response
 	routes   [2]http.Handler
+	web      *webSite
+	webProxy http.Handler
+	source   string
 	stopTree func() error
 }
 
 func launch(ctx context.Context, root string, target deployment.NativeTarget, plan json.RawMessage, candidate bool) (*child, error) {
+	site, err := prepareWebSite(target.WebDirectory, target.WebID)
+	if err != nil {
+		return nil, err
+	}
+	if target.Manifest.Profile == deployment.NativeFull && site == nil {
+		return nil, errors.New("整包缺少静态 Web")
+	}
 	// #nosec G204 -- 入口来自已验签的固定资产文件，参数为进程私有协议标记。
 	cmd := exec.Command(target.Executable, control.WorkerArgument)
 	cmd.Dir = root
@@ -52,7 +62,7 @@ func launch(ctx context.Context, root string, target deployment.NativeTarget, pl
 	stopTree = sync.OnceValue(stopTree)
 	replies := make(chan control.Response, 4)
 	done := make(chan struct{})
-	c := &child{cmd: cmd, input: input, replies: replies, done: done, token: deployment.RandomID() + deployment.RandomID(), stopTree: stopTree}
+	c := &child{cmd: cmd, input: input, replies: replies, done: done, token: deployment.RandomID() + deployment.RandomID(), stopTree: stopTree, web: site, source: target.Manifest.FromVersion}
 	go func() {
 		defer close(done)
 		defer close(replies)
@@ -145,6 +155,9 @@ func (c *child) activate(ctx context.Context) error {
 		return errors.New("接管进程的私有地址或版本不符")
 	}
 	c.routes = [2]http.Handler{newProxy(response.BusinessAddr, c.token), newProxy(response.ManagementAddr, c.token)}
+	if c.web != nil {
+		c.webProxy = proxyWorker(response.BusinessAddr, c.token, true)
+	}
 	return nil
 }
 

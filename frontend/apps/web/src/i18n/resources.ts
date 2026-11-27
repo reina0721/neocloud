@@ -34,6 +34,8 @@ export const resources = {
         desktopNotificationDenied: '通知权限已被拒绝。可在浏览器地址栏的站点设置中允许通知后重试。',
         desktopNotificationUnsupported: '当前浏览器不支持桌面通知。',
         leaveConfirmTitle: '离开当前页面？',
+        webBuildUpdateTitle: '网页已更新',
+        webBuildUpdateDescription: '请保存正在编辑的内容，然后刷新页面载入新版本。',
       },
       overview: {
         title: '工作台',
@@ -96,6 +98,8 @@ export const resources = {
           'Notification permission was denied. Allow notifications for this site in the address bar, then retry.',
         desktopNotificationUnsupported: 'This browser does not support desktop notifications.',
         leaveConfirmTitle: 'Leave this page?',
+        webBuildUpdateTitle: 'The web app was updated',
+        webBuildUpdateDescription: 'Save your work, then reload the page to use the new version.',
       },
       overview: {
         title: 'Workbench',

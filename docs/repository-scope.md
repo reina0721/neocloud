@@ -6,7 +6,7 @@
 
 文件入口为 `/home`，管理入口为 `/workspace`。私有文件与身份、权限、组织、导航、字典、通知、工作台、运维及 API 工作台共用现有 IAM、数据库和 Storage。具体文件能力、预算与未实现项以[文件管理说明](operations/file-management.md)为 authority，不用历史功能计数代替当前行为。
 
-Next.js 4173 与 Go 8080/9090 分进程运行，默认真实 Cookie 会话与同源 API 代理。原生 `/api/v1` 保留；`/api/console/v1` 投影复用业务能力，不建立第二套认证授权。完整启动与部署见[本地开发](getting-started/local-development.md)和[部署说明](operations/clouddrive-deployment.md)。
+原生整包由 Go 宿主同源提供静态页面与业务 API。本地开发保留 Next.js 4180 与 Go 双进程，使用相同的 Cookie 会话与同源接口。原生 `/api/v1` 保留，`/api/console/v1` 投影复用业务能力。见[本地开发](getting-started/local-development.md)和[原生整包](operations/backend-archive.md#运行原生-go-与-web-整包)。
 
 当前包含持久上传、WebDAV、私有版本、HTTP/BT 下载、ZIP/7Z、PDF 与媒体应用、文件权限和分享协作。BT 面向受信节点；无共享挂载的远程下载代理、脱离分享链接的跨账号挂载共享仍不在已实现范围。WOPI 的发现与编辑已有宿主和协议适配，真实外部 Office 服务仍须单独联调，不能由本地模拟通过推定兼容。客户端密码遮蔽不构成服务端授权边界。
 

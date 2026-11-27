@@ -82,6 +82,7 @@ var ErrUnknownPermission = httpbinding.ErrUnknownPermission
 var ErrInvalidQuery = httpbinding.ErrInvalidQuery
 
 const Prefix = httpbinding.Prefix
+const ReleaseCatalogPath = httpbinding.ReleaseCatalogPath
 const NativePrefix = httpbinding.NativePrefix
 const NativeTargetPrefix = httpbinding.NativeTargetPrefix
 const SessionListActive = httpbinding.SessionListActive
@@ -107,6 +108,7 @@ type Dependencies struct {
 	Todos           TodoOperations
 	Navigation      NavigationOperations
 	DeploymentOwner func(context.Context, string) (bool, error)
+	ReleaseCatalog  http.Handler
 }
 
 func New(dependencies Dependencies) (*Handler, error) {
@@ -114,7 +116,7 @@ func New(dependencies Dependencies) (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	return httpbinding.New(httpbinding.Dependencies{Cookies: dependencies.Cookies, Data: store, IAM: dependencies.IAM, CookieName: dependencies.CookieName, Native: dependencies.Native, Origins: dependencies.Origins, SiteOrigins: dependencies.SiteOrigins, Logger: dependencies.Logger, Relay: dependencies.Relay, Executor: dependencies.Executor, Authenticate: dependencies.Authenticate, Todos: dependencies.Todos, Navigation: dependencies.Navigation, Runtime: dependencies.Runtime, DeploymentOwner: dependencies.DeploymentOwner})
+	return httpbinding.New(httpbinding.Dependencies{Cookies: dependencies.Cookies, Data: store, IAM: dependencies.IAM, CookieName: dependencies.CookieName, Native: dependencies.Native, Origins: dependencies.Origins, SiteOrigins: dependencies.SiteOrigins, Logger: dependencies.Logger, Relay: dependencies.Relay, Executor: dependencies.Executor, Authenticate: dependencies.Authenticate, Todos: dependencies.Todos, Navigation: dependencies.Navigation, Runtime: dependencies.Runtime, DeploymentOwner: dependencies.DeploymentOwner, ReleaseCatalog: dependencies.ReleaseCatalog})
 }
 func DefaultRelayPolicy() RelayPolicy { return httpbinding.DefaultRelayPolicy() }
 func WithSession(r *http.Request, value Session) *http.Request {

@@ -37,6 +37,10 @@ func verifyWebFilePreview(t *testing.T, admin, observer *consoleTestClient) {
 		t.Fatal("网页应用名称或目标没有规范化")
 	}
 	observer.request(t, "GET", applications, nil, 403)
+	readiness := applications + "/" + appID + "/web-preview-readiness"
+	if result := observer.request(t, "GET", readiness, nil, 200); result["status"] != "allowed" {
+		t.Fatalf("configured web preview readiness: %#v", result)
+	}
 	active := observer.request(t, "GET", applications+"/active", nil, 200)
 	if item := active["webItems"].([]any)[0].(map[string]any); item["urlTemplate"] != nil || item["origin"] != origin || active["revision"] != nil {
 		t.Fatal("活动策略不应公开 URL 模板或修订")
@@ -63,7 +67,7 @@ func verifyWebFilePreview(t *testing.T, admin, observer *consoleTestClient) {
 		!strings.HasPrefix(headers.Get("Content-Disposition"), "attachment") {
 		t.Fatal("授权内容、允许来源、范围或响应保护错误")
 	}
-	_, headers = publicFileContentRequest(t, base+token, "HEAD", http.Header{"Origin": {"https://elsewhere.example.test"}}, 200)
+	_, headers = publicFileContentRequest(t, base+token, "HEAD", http.Header{"Origin": {"https://elsewhere.example.test"}}, 404)
 	if headers.Get("Access-Control-Allow-Origin") != "" {
 		t.Fatal("其他站点获得浏览器跨域读取权限")
 	}
@@ -77,10 +81,22 @@ func verifyWebFilePreview(t *testing.T, admin, observer *consoleTestClient) {
 	app["enabled"] = false
 	update["defaults"] = []any{}
 	saved = admin.request(t, "PUT", applications, update, 200)
+	if result := admin.request(t, "GET", readiness, nil, 200); result["status"] != "unavailable" {
+		t.Fatalf("disabled web preview readiness: %#v", result)
+	}
 	admin.request(t, "POST", endpoint, grant, 404)
 	publicFileContentRequest(t, base+newToken, "GET", nil, 404)
 	update["revision"] = saved["revision"]
 	app["enabled"], app["maxBytes"] = true, 1
-	admin.request(t, "PUT", applications, update, 200)
+	saved = admin.request(t, "PUT", applications, update, 200)
 	admin.request(t, "POST", endpoint, grant, 413)
+	update["revision"] = saved["revision"]
+	const deniedOrigin = "https://disallowed-viewer.example.test"
+	app["urlTemplate"], app["maxBytes"] = deniedOrigin+"/read?file={$src}", 100
+	admin.request(t, "PUT", applications, update, 200)
+	if result := admin.request(t, "GET", readiness, nil, 200); result["status"] != "denied" {
+		t.Fatalf("unconfigured web preview readiness: %#v", result)
+	}
+	grant["origin"] = deniedOrigin
+	admin.request(t, "POST", endpoint, grant, 403)
 }

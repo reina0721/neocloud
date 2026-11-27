@@ -46,7 +46,7 @@
 
 使用“添加网页应用”设置 HTTPS 模板、扩展名、平台、图标及大小上限。最大文件大小填写字节数，0 表示不限。兼容同一后缀的网页应用可参与默认打开方式。文件所有者看到接收站点并确认后，站点可用五分钟有效的地址读取当前版本。阅读器可在页面内显示，拒绝嵌入的服务可改用新标签。远端阅读器需要能够访问 clouddrive 的网页地址。当前支持模板查询值中的文件地址、名称及主题。
 
-普通网页阅读器的精确 HTTPS Origin 必须加入 Web Host 的 `CLOUDDRIVE_ALLOWED_ORIGINS` JSON 数组。Compose 使用 `ALLOWED_ORIGINS`。应用表会提示已启用阅读器的部署状态。文件打开时先检查该状态，未获准的站点不会收到临时地址。可以在同一文件使用已启用且兼容格式的内置阅读器。WOPI 通过其协议独立校验。
+普通网页阅读器的精确 HTTPS Origin 必须加入 Go 的 `http.cors.allowedOrigins`（环境变量 `APP_HTTP__CORS__ALLOWEDORIGINS`，值为 JSON 数组）。Docker Compose 的 `ALLOWED_ORIGINS` 同时配置 Go 和 Web Host。单独启动 Next Web Host 时，其 `CLOUDDRIVE_ALLOWED_ORIGINS` 须包含相同的阅读器来源。应用表会提示已启用阅读器的部署状态。Go 在签发和读取临时地址时复查来源策略。未获准时可选用已启用且兼容格式的内置阅读器。WOPI 通过其协议独立校验。
 
 使用“添加 WOPI 应用”检查自托管文档服务的 HTTPS 发现地址。确认可用格式后应用到草稿，再统一保存。发现结果包含与发现地址同源的查看动作及对应的可用编辑动作。应用可改名、限制格式与平台、设为兼容格式默认项或停用。服务端按既有来源网络策略访问发现地址，文档服务需能回调 clouddrive 的 `/wopi/files`。部署代理的访问日志应排除回调查询中的访问令牌。
 
@@ -229,7 +229,7 @@ Storage 通过租约内的可寻址流读写内容，local/S3-compatible 都有�
 
 既有 Windows `Start-FilePreview.ps1` 仍使用 `.data/file-preview/` 与 `.data/preview-access.json`。浏览器配置优先读取新预览资料，缺少时兼容既有资料；可用 `CLOUDDRIVE_FILE_TEST_ACCESS` 明确指定文件。配置和阅读器用例共用一个入口，校验回环 HTTP 地址，不再绑定某次测试使用的端口。凭据、Cookie、截图与 trace 留在忽略目录；trace 可能包含会话信息，不提交或公开分享。
 
-完整浏览器验收为每批准备独立数据库和存储，接受预览资料中的 `publicationOrigin` 和 `offlineSourceAllowed` 声明。需要对照账户的用例只在本例共享或切换明确的夹具账户。网页阅读器验收需要两个回环 HTTPS Origin，使用 `CLOUDDRIVE_TEST_WEB_HTTPS_ORIGIN` 指定 Web 发布入口，使用 `CLOUDDRIVE_TEST_WEB_PREVIEW_ORIGIN` 指定能通过浏览器跨域请求读取回调正文的阅读器。将阅读器 Origin 加入 Web Host 白名单后执行 `file-applications.spec.ts`。设置 `CLOUDDRIVE_TEST_WEB_PREVIEW_EXPIRY=1` 可等待实际五分钟票据到期。
+完整浏览器验收为每批准备独立数据库和存储，接受预览资料中的 `publicationOrigin` 和 `offlineSourceAllowed` 声明。需要对照账户的用例只在本例共享或切换明确的夹具账户。网页阅读器验收需要两个回环 HTTPS Origin，使用 `CLOUDDRIVE_TEST_WEB_HTTPS_ORIGIN` 指定 Web 发布入口，使用 `CLOUDDRIVE_TEST_WEB_PREVIEW_ORIGIN` 指定能通过浏览器跨域请求读取回调正文的阅读器。按上文配置精确的阅读器 Origin 后执行 `file-applications.spec.ts`。设置 `CLOUDDRIVE_TEST_WEB_PREVIEW_EXPIRY=1` 可等待实际五分钟票据到期。
 
 按改动选择真实链路；模拟和拦截式失败场景不能代替真实服务：
 

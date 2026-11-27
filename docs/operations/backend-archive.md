@@ -2,7 +2,23 @@
 
 此说明随 Go 下载归档交付。归档包含后端程序、示例配置、默认语言资源、OpenAPI、来源及许可。Next.js Web Host 需要单独部署。
 
-需要完整文件工作区时，优先使用 [GitHub Release 的 Docker 安装包](https://github.com/reina0721/neocloud/releases/latest)。源码与贡献方式见 [CloudDrive 仓库](https://github.com/reina0721/neocloud)。
+需要完整文件工作区时，使用下文的原生 Go + Web 整包。源码与贡献方式见 [CloudDrive 仓库](https://github.com/reina0721/neocloud)。
+
+## 运行原生 Go 与 Web 整包
+
+从正式发布下载并校验 `clouddrive_<tag>_<os>_<arch>_managed-full.zip`。支持 Windows amd64、Linux amd64 和 Linux arm64。解包中的 Go 宿主提供网页、API 和 WebDAV，运行时无需 Node.js 或 pnpm。在线获取新包需要 `cosign` 初始化 Sigstore 信任，也可提供单独准备的离线信任目录。已缓存版本可离线重启或回退。
+
+先按下文准备示例配置、数据目录和首次迁移，再用解包得到的稳定宿主启动同一实例。已有数据沿用原配置和路径。
+
+```bash
+./clouddrive-host --full --root /srv/clouddrive --initial "vX.Y.Z"
+```
+
+网页默认使用 `http.addr`。若原生网站已使用独立公开地址，在首次启动加 `--web-addr 127.0.0.1:4180`（按实际监听地址填写）。API 和 management 的原地址保留。使用 HTTPS 反向代理时，将 `files.connections.publicOrigin` 配置为公开 HTTPS Origin，并在 HTTP 受信代理列表明确列出反代地址。仅供本机使用的 HTTP 实例可显式设置 `iam.local.allowInsecureHTTP: true`。
+
+接管前可在原服务运行时以相同账号执行 `--prepare-full --root /srv/clouddrive --initial <正式版标签>`，提前缓存签名整包并列出数据库、应用和监听的只读检查结果。原端口由独立 Web/Go 占用时，在维护窗口释放端口再启动。已由旧 Go 宿主管理的实例首次使用 `--adopt-full`。目标必须精确声明当前 Go 版本和提交，且无迁移步骤。接管后恢复启动只需传 `--root`。
+
+后台「系统更新」允许系统所有者检查版本、升级、取消和回退。整包的一次更新同时切换 Go 和 Web。兼容回退保留数据库扩展与已确认写入。数据库恢复点仍由运维显式恢复。
 
 ## 运行后端
 

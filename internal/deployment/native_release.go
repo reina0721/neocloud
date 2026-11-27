@@ -25,42 +25,64 @@ import (
 )
 
 const (
-	nativeManifestFile = "manifest.json"
-	nativeTrustFile    = "trusted_root.json"
-	nativePackageLimit = 192 << 20
-	nativeBinaryLimit  = 128 << 20
-	NativeHostProtocol = 1
+	nativeManifestFile     = "manifest.json"
+	nativeTrustFile        = "trusted_root.json"
+	nativePackageLimit     = 192 << 20
+	nativeBinaryLimit      = 128 << 20
+	NativeHostProtocol     = 1
+	NativeFullHostProtocol = 2
 )
 
 var nativeCommit = regexp.MustCompile(`^[a-f0-9]{40}$`)
 
+// NativeProfile selects a distinct signed package and local version store.
+type NativeProfile string
+
+const (
+	NativeGo   NativeProfile = "managed-go"
+	NativeFull NativeProfile = "managed-full"
+)
+
 // NativeManifest binds the worker to a platform and the managed-host protocol.
 // Migration descriptors are opaque to deployment and interpreted by the application.
 type NativeManifest struct {
-	Version      string                     `json:"version"`
-	Commit       string                     `json:"commit"`
-	OS           string                     `json:"os"`
-	Arch         string                     `json:"arch"`
-	HostProtocol int                        `json:"hostProtocol"`
-	FromVersion  string                     `json:"fromVersion,omitempty"`
-	FromCommit   string                     `json:"fromCommit,omitempty"`
-	OnlinePlans  map[string]json.RawMessage `json:"onlinePlans,omitempty"`
+	Version            string                     `json:"version"`
+	Commit             string                     `json:"commit"`
+	OS                 string                     `json:"os"`
+	Arch               string                     `json:"arch"`
+	HostProtocol       int                        `json:"hostProtocol"`
+	Profile            NativeProfile              `json:"profile,omitempty"`
+	WebID              string                     `json:"webId,omitempty"`
+	WebInventorySHA256 string                     `json:"webInventorySha256,omitempty"`
+	FromVersion        string                     `json:"fromVersion,omitempty"`
+	FromCommit         string                     `json:"fromCommit,omitempty"`
+	OnlinePlans        map[string]json.RawMessage `json:"onlinePlans,omitempty"`
 }
 
 type NativeTarget struct {
-	Manifest   NativeManifest
-	Directory  string
-	Executable string
+	Manifest       NativeManifest
+	Directory      string
+	Executable     string
+	HostExecutable string
+	WebDirectory   string
+	WebID          string
 }
 
 func nativeAssetName(version, goos, arch string) (string, error) {
+	return nativeAssetNameFor(version, goos, arch, NativeGo)
+}
+
+func nativeAssetNameFor(version, goos, arch string, profile NativeProfile) (string, error) {
+	if profile != NativeGo && profile != NativeFull {
+		return "", errors.New("不支持的原生发布包类型")
+	}
 	if !versionPattern.MatchString(version) {
 		return "", errors.New("原生升级需要明确的正式版本号")
 	}
 	if !(goos == "windows" && arch == "amd64" || goos == "linux" && (arch == "amd64" || arch == "arm64")) {
 		return "", fmt.Errorf("不支持的托管原生平台 %s/%s", goos, arch)
 	}
-	return fmt.Sprintf("clouddrive_%s_%s_%s_managed-go.zip", version, goos, arch), nil
+	return fmt.Sprintf("clouddrive_%s_%s_%s_%s.zip", version, goos, arch, profile), nil
 }
 
 func nativeExecutables(goos string) [2]string {
@@ -70,12 +92,16 @@ func nativeExecutables(goos string) [2]string {
 	return [2]string{"clouddrive", "clouddrive-host"}
 }
 
-func (m NativeManifest) validate(version, goos, arch string) error {
+func (m NativeManifest) validate(version, goos, arch string, profile NativeProfile) error {
 	if m.Version != version || m.OS != goos || m.Arch != arch || !nativeCommit.MatchString(m.Commit) {
 		return errors.New("原生发布清单版本、提交或平台不匹配")
 	}
-	if m.HostProtocol != NativeHostProtocol {
-		return fmt.Errorf("原生发布要求宿主协议 %d，当前支持 %d", m.HostProtocol, NativeHostProtocol)
+	if profile == NativeFull {
+		if m.Profile != NativeFull || m.HostProtocol != NativeFullHostProtocol || m.WebID != m.Commit || !nativeDigest.MatchString(m.WebInventorySHA256) {
+			return errors.New("整包清单的宿主协议或 Web 构建身份不匹配")
+		}
+	} else if (m.Profile != "" && m.Profile != NativeGo) || m.HostProtocol != NativeHostProtocol || m.WebID != "" || m.WebInventorySHA256 != "" {
+		return errors.New("Go 后端包清单的宿主协议或包类型不匹配")
 	}
 	if m.FromVersion != "" || m.FromCommit != "" || len(m.OnlinePlans) > 0 {
 		if !newer(m.Version, m.FromVersion) || !nativeCommit.MatchString(m.FromCommit) {
@@ -96,7 +122,12 @@ func (m NativeManifest) validate(version, goos, arch string) error {
 // NativeCandidates discovers published stable releases for the running platform.
 // Discovery only identifies candidate tags; callers must authenticate each staged manifest.
 func (s *Releases) NativeCandidates(ctx context.Context, current string) ([]string, error) {
-	if _, err := nativeAssetName(current, runtime.GOOS, runtime.GOARCH); err != nil {
+	return s.NativeCandidatesFor(ctx, current, NativeGo)
+}
+
+// NativeCandidatesFor discovers newer stable releases for one package profile.
+func (s *Releases) NativeCandidatesFor(ctx context.Context, current string, profile NativeProfile) ([]string, error) {
+	if _, err := nativeAssetNameFor(current, runtime.GOOS, runtime.GOARCH, profile); err != nil {
 		return nil, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
@@ -114,7 +145,7 @@ func (s *Releases) NativeCandidates(ctx context.Context, current string) ([]stri
 			if release.Draft || release.Prerelease || !newer(release.Tag, current) || seen[release.Tag] {
 				continue
 			}
-			asset, err := nativeAssetName(release.Tag, runtime.GOOS, runtime.GOARCH)
+			asset, err := nativeAssetNameFor(release.Tag, runtime.GOOS, runtime.GOARCH, profile)
 			if err != nil {
 				return nil, err
 			}
@@ -168,7 +199,12 @@ func (s *Releases) readNativeReleasePage(ctx context.Context, address string) ([
 // StageNative fetches an exact GitHub Release and publishes a per-version directory
 // after signature, archive and executable checks finish in private staging.
 func (s *Releases) StageNative(ctx context.Context, versionsRoot, version string) (NativeTarget, error) {
-	return stageNative(ctx, versionsRoot, version, func(stage *os.Root, asset string) (signedOfflineRelease, error) {
+	return s.StageNativeFor(ctx, versionsRoot, version, NativeGo)
+}
+
+// StageNativeFor verifies and stages one package profile from GitHub Releases.
+func (s *Releases) StageNativeFor(ctx context.Context, versionsRoot, version string, profile NativeProfile) (NativeTarget, error) {
+	return stageNative(ctx, versionsRoot, version, profile, func(stage *os.Root, asset string) (signedOfflineRelease, error) {
 		for _, name := range []string{offlineChecksums, offlineBundle} {
 			if err := s.download(ctx, stage.Name(), version, name, offlineSmallFile); err != nil {
 				return signedOfflineRelease{}, err
@@ -182,7 +218,7 @@ func (s *Releases) StageNative(ctx context.Context, versionsRoot, version string
 		if err != nil {
 			return signedOfflineRelease{}, err
 		}
-		if err = s.download(ctx, stage.Name(), version, asset, nativePackageLimit); err != nil {
+		if err = s.download(ctx, stage.Name(), version, asset, nativePackageLimitFor(profile)); err != nil {
 			return signedOfflineRelease{}, err
 		}
 		for _, name := range []string{offlineChecksums, offlineBundle, asset} {
@@ -201,7 +237,12 @@ func (s *Releases) StageNative(ctx context.Context, versionsRoot, version string
 // ImportNative prepares a local formal release using operator-provisioned,
 // independently obtained Sigstore trust, for initial install or offline staging.
 func ImportNative(ctx context.Context, versionsRoot, releaseDir, trustDir, version string) (NativeTarget, error) {
-	return stageNative(ctx, versionsRoot, version, func(stage *os.Root, asset string) (signedOfflineRelease, error) {
+	return ImportNativeFor(ctx, versionsRoot, releaseDir, trustDir, version, NativeGo)
+}
+
+// ImportNativeFor stages a local signed package against separately provisioned trust.
+func ImportNativeFor(ctx context.Context, versionsRoot, releaseDir, trustDir, version string, profile NativeProfile) (NativeTarget, error) {
+	return stageNative(ctx, versionsRoot, version, profile, func(stage *os.Root, asset string) (signedOfflineRelease, error) {
 		source, trust, err := offlineInputs(releaseDir, trustDir)
 		if err != nil {
 			return signedOfflineRelease{}, err
@@ -220,12 +261,13 @@ func ImportNative(ctx context.Context, versionsRoot, releaseDir, trustDir, versi
 		if err != nil {
 			return signedOfflineRelease{}, err
 		}
-		input, err := openOfflineFile(source, asset, nativePackageLimit)
+		limit := nativePackageLimitFor(profile)
+		input, err := openOfflineFile(source, asset, limit)
 		if err != nil {
 			return signedOfflineRelease{}, err
 		}
 		defer input.Close()
-		if err = writeNativeFile(stage, asset, &contextReader{ctx: ctx, Reader: input}, nativePackageLimit, 0600); err != nil {
+		if err = writeNativeFile(stage, asset, &contextReader{ctx: ctx, Reader: input}, limit, 0600); err != nil {
 			return signedOfflineRelease{}, err
 		}
 		return release, nil
@@ -240,18 +282,19 @@ func verifyAndStoreNativeTrust(ctx context.Context, stage *os.Root, version stri
 	return release, writeNativeFile(stage, nativeTrustFile, bytes.NewReader(root), offlineSmallFile, 0600)
 }
 
-func stageNative(ctx context.Context, versionsRoot, version string, acquire func(*os.Root, string) (signedOfflineRelease, error)) (NativeTarget, error) {
-	asset, err := nativeAssetName(version, runtime.GOOS, runtime.GOARCH)
+func stageNative(ctx context.Context, versionsRoot, version string, profile NativeProfile, acquire func(*os.Root, string) (signedOfflineRelease, error)) (NativeTarget, error) {
+	asset, err := nativeAssetNameFor(version, runtime.GOOS, runtime.GOARCH, profile)
 	if err != nil {
 		return NativeTarget{}, err
 	}
-	if versionsRoot == "" {
-		return NativeTarget{}, errors.New("缺少原生版本目录")
-	}
-	if err = os.MkdirAll(versionsRoot, 0700); err != nil {
+	view, err := NativeCacheDirectory(versionsRoot, profile)
+	if err != nil {
 		return NativeTarget{}, err
 	}
-	store, err := openOfflineDir(versionsRoot)
+	if err = os.MkdirAll(view, 0700); err != nil {
+		return NativeTarget{}, err
+	}
+	store, err := openOfflineDir(view)
 	if err != nil {
 		return NativeTarget{}, err
 	}
@@ -268,7 +311,7 @@ func stageNative(ctx context.Context, versionsRoot, version string, acquire func
 		return NativeTarget{}, errors.Join(err, ErrBusy)
 	}
 	if _, err = store.Lstat(version); err == nil {
-		return loadNative(ctx, store, version, asset)
+		return loadNative(ctx, store, version, asset, profile)
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return NativeTarget{}, err
 	}
@@ -286,7 +329,7 @@ func stageNative(ctx context.Context, versionsRoot, version string, acquire func
 	if err != nil {
 		return NativeTarget{}, err
 	}
-	manifest, err := unpackNativeTarget(ctx, stage, release, asset, true)
+	manifest, err := unpackNativeTarget(ctx, stage, release, asset, profile, true)
 	if err != nil {
 		return NativeTarget{}, err
 	}
@@ -302,19 +345,28 @@ func stageNative(ctx context.Context, versionsRoot, version string, acquire func
 // LoadNative rechecks retained local assets using the independently obtained
 // trust root. A host restart does not need to fetch GitHub or TUF again.
 func LoadNative(ctx context.Context, versionsRoot, version string) (NativeTarget, error) {
-	asset, err := nativeAssetName(version, runtime.GOOS, runtime.GOARCH)
+	return LoadNativeFor(ctx, versionsRoot, version, NativeGo)
+}
+
+// LoadNativeFor verifies a cached package without reaching GitHub or TUF.
+func LoadNativeFor(ctx context.Context, versionsRoot, version string, profile NativeProfile) (NativeTarget, error) {
+	asset, err := nativeAssetNameFor(version, runtime.GOOS, runtime.GOARCH, profile)
 	if err != nil {
 		return NativeTarget{}, err
 	}
-	store, err := openOfflineDir(versionsRoot)
+	view, err := NativeCacheDirectory(versionsRoot, profile)
+	if err != nil {
+		return NativeTarget{}, err
+	}
+	store, err := openOfflineDir(view)
 	if err != nil {
 		return NativeTarget{}, err
 	}
 	defer store.Close()
-	return loadNative(ctx, store, version, asset)
+	return loadNative(ctx, store, version, asset, profile)
 }
 
-func loadNative(ctx context.Context, store *os.Root, version, asset string) (NativeTarget, error) {
+func loadNative(ctx context.Context, store *os.Root, version, asset string, profile NativeProfile) (NativeTarget, error) {
 	info, err := store.Lstat(version)
 	if err != nil {
 		return NativeTarget{}, err
@@ -335,7 +387,7 @@ func loadNative(ctx context.Context, store *os.Root, version, asset string) (Nat
 	if err != nil {
 		return NativeTarget{}, err
 	}
-	manifest, err := unpackNativeTarget(ctx, stage, release, asset, false)
+	manifest, err := unpackNativeTarget(ctx, stage, release, asset, profile, false)
 	if err != nil {
 		return NativeTarget{}, err
 	}
@@ -344,7 +396,13 @@ func loadNative(ctx context.Context, store *os.Root, version, asset string) (Nat
 
 func nativeTarget(store *os.Root, manifest NativeManifest) NativeTarget {
 	dir := filepath.Join(store.Name(), manifest.Version)
-	return NativeTarget{Manifest: manifest, Directory: dir, Executable: filepath.Join(dir, nativeExecutables(manifest.OS)[0])}
+	names := nativeExecutables(manifest.OS)
+	target := NativeTarget{Manifest: manifest, Directory: dir, Executable: filepath.Join(dir, names[0]), HostExecutable: filepath.Join(dir, names[1])}
+	if manifest.Profile == NativeFull {
+		target.WebDirectory = filepath.Join(dir, nativeWebDirectory)
+		target.WebID = manifest.WebID
+	}
+	return target
 }
 
 func nativeTrustedRoot(ctx context.Context, stage string) ([]byte, error) {
@@ -385,17 +443,17 @@ func withoutTUFOverrides(env []string) []string {
 	return filtered
 }
 
-func unpackNativeTarget(ctx context.Context, stage *os.Root, release signedOfflineRelease, asset string, create bool) (NativeManifest, error) {
-	file, err := release.openVerified(ctx, stage, asset, nativePackageLimit)
+func unpackNativeTarget(ctx context.Context, stage *os.Root, release signedOfflineRelease, asset string, profile NativeProfile, create bool) (NativeManifest, error) {
+	file, err := release.openVerified(ctx, stage, asset, nativePackageLimitFor(profile))
 	if err != nil {
 		return NativeManifest{}, err
 	}
 	defer file.Close()
-	manifest, entries, err := inspectNativeFile(file, release.version, runtime.GOOS, runtime.GOARCH)
+	manifest, entries, err := inspectNativeFileFor(file, release.version, runtime.GOOS, runtime.GOARCH, profile)
 	if err != nil {
 		return NativeManifest{}, err
 	}
-	for _, entry := range entries {
+	for _, entry := range entries[:3] {
 		if err := handleNativeEntry(ctx, stage, entry, create); err != nil {
 			return NativeManifest{}, err
 		}
@@ -411,13 +469,27 @@ func unpackNativeTarget(ctx context.Context, stage *os.Root, release signedOffli
 			}
 		}
 	}
+	if profile == NativeFull {
+		web, err := inspectNativeWeb(manifest, entries[3:])
+		if err != nil {
+			return NativeManifest{}, err
+		}
+		if err := web.prepare(ctx, stage, create); err != nil {
+			return NativeManifest{}, err
+		}
+	}
 	return manifest, nil
 }
 
 // InspectNativeArchive checks the archive layout and manifest for release CI.
 // It does not authenticate the archive. StageNative and LoadNative verify its signed digest.
 func InspectNativeArchive(archive, version, goos, arch string) (NativeManifest, error) {
-	if _, err := nativeAssetName(version, goos, arch); err != nil {
+	return InspectNativeArchiveFor(archive, version, goos, arch, NativeGo)
+}
+
+// InspectNativeArchiveFor checks one profile locally before its release is signed.
+func InspectNativeArchiveFor(archive, version, goos, arch string, profile NativeProfile) (NativeManifest, error) {
+	if _, err := nativeAssetNameFor(version, goos, arch, profile); err != nil {
 		return NativeManifest{}, err
 	}
 	// #nosec G304 -- CLI caller provides a local build artifact, not a download URL.
@@ -426,11 +498,11 @@ func InspectNativeArchive(archive, version, goos, arch string) (NativeManifest, 
 		return NativeManifest{}, err
 	}
 	defer file.Close()
-	manifest, entries, err := inspectNativeFile(file, version, goos, arch)
+	manifest, entries, err := inspectNativeFileFor(file, version, goos, arch, profile)
 	if err != nil {
 		return NativeManifest{}, err
 	}
-	for index, entry := range entries[1:] {
+	for index, entry := range entries[1:3] {
 		binary, err := entry.Open()
 		if err != nil {
 			return NativeManifest{}, err
@@ -440,6 +512,15 @@ func InspectNativeArchive(archive, version, goos, arch string) (NativeManifest, 
 			return NativeManifest{}, errors.Join(err, fmt.Errorf("原生二进制长度不符：%s", entry.Name))
 		}
 		if err = verifyNativeBinary(bytes.NewReader(data), manifest, index); err != nil {
+			return NativeManifest{}, err
+		}
+	}
+	if profile == NativeFull {
+		web, err := inspectNativeWeb(manifest, entries[3:])
+		if err != nil {
+			return NativeManifest{}, err
+		}
+		if err := web.verifyArchive(); err != nil {
 			return NativeManifest{}, err
 		}
 	}
@@ -464,24 +545,34 @@ func verifyNativeBinary(input io.ReaderAt, manifest NativeManifest, index int) e
 }
 
 func inspectNativeFile(file *os.File, version, goos, arch string) (NativeManifest, []*zip.File, error) {
+	return inspectNativeFileFor(file, version, goos, arch, NativeGo)
+}
+
+func inspectNativeFileFor(file *os.File, version, goos, arch string, profile NativeProfile) (NativeManifest, []*zip.File, error) {
 	info, err := file.Stat()
 	if err != nil {
 		return NativeManifest{}, nil, err
 	}
-	if !info.Mode().IsRegular() || info.Size() < 1 || info.Size() > nativePackageLimit {
+	if !info.Mode().IsRegular() || info.Size() < 1 || info.Size() > nativePackageLimitFor(profile) {
 		return NativeManifest{}, nil, errors.New("原生发布包的文件类型或大小无效")
 	}
 	archive, err := zip.NewReader(file, info.Size())
 	if err != nil {
 		return NativeManifest{}, nil, err
 	}
-	if len(archive.File) > 4096 {
+	entryLimit := 4096
+	if profile == NativeFull {
+		entryLimit = nativeFullEntryLimit
+	}
+	if len(archive.File) > entryLimit {
 		return NativeManifest{}, nil, errors.New("原生发布包条目过多")
 	}
 	names := nativeExecutables(goos)
 	required := []string{nativeManifestFile, names[0], names[1]}
 	found := make(map[string]*zip.File, len(required))
 	seen := make(map[string]bool, len(archive.File))
+	var fullEntries []*zip.File
+	var fullSize uint64
 	for _, entry := range archive.File {
 		name := strings.TrimSuffix(entry.Name, "/")
 		fold := strings.ToLower(name)
@@ -489,6 +580,18 @@ func inspectNativeFile(file *os.File, version, goos, arch string) (NativeManifes
 			return NativeManifest{}, nil, fmt.Errorf("原生发布包的条目无效：%q", entry.Name)
 		}
 		seen[fold] = true
+		if profile == NativeFull {
+			if !portableNativePath(name) {
+				return NativeManifest{}, nil, fmt.Errorf("整包的文件路径不能跨平台使用：%q", name)
+			}
+			if entry.UncompressedSize64 > nativeFullExpandedLimit-fullSize {
+				return NativeManifest{}, nil, errors.New("整包解压后的大小超出限制")
+			}
+			fullSize += entry.UncompressedSize64
+			if belongsToNativeWeb(name) {
+				fullEntries = append(fullEntries, entry)
+			}
+		}
 		for _, expected := range required {
 			if name != expected {
 				continue
@@ -507,9 +610,9 @@ func inspectNativeFile(file *os.File, version, goos, arch string) (NativeManifes
 	}
 	manifest, err := decodeNativeManifest(found[nativeManifestFile])
 	if err == nil {
-		err = manifest.validate(version, goos, arch)
+		err = manifest.validate(version, goos, arch, profile)
 	}
-	return manifest, []*zip.File{found[nativeManifestFile], found[names[0]], found[names[1]]}, err
+	return manifest, append([]*zip.File{found[nativeManifestFile], found[names[0]], found[names[1]]}, fullEntries...), err
 }
 
 func nativeEntryLimit(name string) int64 {

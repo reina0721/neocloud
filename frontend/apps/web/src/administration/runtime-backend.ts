@@ -1,6 +1,8 @@
 import type { z } from 'zod';
 import {
   RuntimeReadError,
+  nativeUpdateJobSchema,
+  nativeUpdateStatusSchema,
   releaseCatalogSchema,
   runtimeBuildSchema,
   runtimeDiagnosticsSchema,
@@ -49,6 +51,8 @@ export function createRuntimePort(
 ): RuntimePort {
   const transport = createJsonClient('/management', request);
   const releaseTransport = createJsonClient('/api/host/v1/releases', request);
+  const consoleTransport = createJsonClient('/api/console/v1', request);
+  const nativeUpdatePath = '/deployment/native-update';
   const owned = <T>(operation: () => Promise<T>, signal?: AbortSignal) =>
     readRuntimeInformation(operation, currentUserId, signal);
   function parse<T>(schema: z.ZodType<T>, value: unknown): T {
@@ -76,6 +80,38 @@ export function createRuntimePort(
     return parse(schema, value);
   };
   return {
+    nativeUpdate: (signal) =>
+      owned(async () => {
+        try {
+          return {
+            kind: 'available',
+            status: parse(
+              nativeUpdateStatusSchema,
+              await consoleTransport(nativeUpdatePath, signal ? { signal } : {}),
+            ),
+          } as const;
+        } catch (error) {
+          if (error instanceof ApiError && error.code === 'http') {
+            if (error.status === 404) return { kind: 'unavailable' } as const;
+            if (error.status === 403) return { kind: 'owner-required' } as const;
+          }
+          throw error;
+        }
+      }, signal),
+    startNativeUpdate: (action) =>
+      owned(async () =>
+        parse(
+          nativeUpdateJobSchema,
+          await consoleTransport(nativeUpdatePath + '/jobs', {
+            method: 'POST',
+            body: { action },
+          }),
+        ),
+      ),
+    cancelNativeUpdate: () =>
+      owned(async () => {
+        await consoleTransport(nativeUpdatePath + '/cancel', { method: 'POST' });
+      }),
     maintenanceAccess: (signal) =>
       owned(async () => {
         const options = { cache: 'no-store' as const, ...(signal ? { signal } : {}) };

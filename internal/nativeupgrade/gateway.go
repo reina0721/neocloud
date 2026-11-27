@@ -16,6 +16,8 @@ import (
 const handoffBudget = 5 * time.Second
 const pendingLimit = 128
 
+type gatewayRoutes [3]http.Handler
+
 // gateway 只负责准入。已送往业务进程的请求不会在换版时被重放。
 type gateway struct {
 	mu      sync.Mutex
@@ -23,7 +25,7 @@ type gateway struct {
 	pending int
 	resume  chan struct{}
 	idle    chan struct{}
-	routes  [2]http.Handler
+	routes  gatewayRoutes
 }
 
 func (g *gateway) handler(index int) http.Handler {
@@ -105,7 +107,7 @@ func (g *gateway) drain(ctx context.Context) error {
 	}
 }
 
-func (g *gateway) open(routes [2]http.Handler) {
+func (g *gateway) open(routes gatewayRoutes) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.routes = routes
@@ -116,6 +118,10 @@ func (g *gateway) open(routes [2]http.Handler) {
 }
 
 func newProxy(addr, token string) http.Handler {
+	return proxyWorker(addr, token, false)
+}
+
+func proxyWorker(addr, token string, full bool) http.Handler {
 	upstream := &url.URL{Scheme: "http", Host: addr}
 	return &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
@@ -128,6 +134,14 @@ func newProxy(addr, token string) http.Handler {
 			}
 			r.Out.Header.Set(control.RemoteHeader, r.In.RemoteAddr)
 			r.Out.Header.Set(control.TokenHeader, token)
+			r.Out.Header.Del(control.WebHeader)
+			r.Out.Header.Del(control.SchemeHeader)
+			if full {
+				r.Out.Header.Set(control.WebHeader, "1")
+				if r.In.TLS != nil {
+					r.Out.Header.Set(control.SchemeHeader, "https")
+				}
+			}
 		},
 		ErrorHandler: func(w http.ResponseWriter, _ *http.Request, _ error) {
 			w.Header().Set("Retry-After", "1")

@@ -112,6 +112,15 @@ func (m *managedService) handler(next http.Handler, management bool) http.Handle
 			r.RemoteAddr = forwarded
 		}
 		r.Header.Del(control.RemoteHeader)
+		if !management && r.Header.Get(control.WebHeader) == "1" {
+			scheme := "http"
+			if r.Header.Get(control.SchemeHeader) == "https" {
+				scheme = "https"
+			}
+			r = withNativeBrowserScheme(r, scheme)
+		}
+		r.Header.Del(control.WebHeader)
+		r.Header.Del(control.SchemeHeader)
 		next.ServeHTTP(w, r)
 	})
 }

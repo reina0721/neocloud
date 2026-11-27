@@ -56,6 +56,8 @@ clouddrive 发布包含 Go 与独立 Next 服务。Go archive 不内置前端，
 
 正式版同时提供 Windows amd64、Linux amd64、Linux arm64 的托管 ZIP。每包包含稳定宿主、Go 业务进程、平台与源码清单。GitHub Workflow 发版时读取上一托管正式版的 tag 与 commit，并将它们写入本版的已签名兼容清单。第一个托管版可以没有前序版本。
 
+同一发布还提供对应的 `_managed-full.zip`，包含同一提交产出的真实静态 Web。签名绑定静态文件清单、构建标识和 Go 版本。整包在目标平台直接运行，验收确认主机无需启动 Node 或容器。[原生整包使用说明](backend-archive.md#运行原生-go-与-web-整包)
+
 若本版包含在线迁移，在同一提交提供 `.github/managed-go-migrations.json`。其中 `fromVersion` 与 `fromCommit` 对应上一托管构建，`onlinePlans` 按 SQLite、PostgreSQL、MySQL 对应的驱动名声明迁移步骤。每一步必须绑定现有模块 SQL 的 SHA-256、连续版本和批准的增量操作。下一版应删除已发布的声明，或按新的前序版本提供新声明。更新器会核对实际内嵌 SQL、当前数据库版本及旧版兼容性。需要停机的迁移按单独的运维流程交付。[在线迁移与回滚](migration-and-rollback.md)
 
 发布门禁运行真实原生 Go 子进程，Windows 覆盖 SQLite，Linux 两种 CPU 架构覆盖三种数据库。附件与各自的 SPDX SBOM 纳入正式签名清单。正式发布后，流水线另从空缓存下载 GitHub 正式附件，并验证本地缓存可独立读回。[原生托管版使用说明](backend-archive.md#使用原生托管版自动下载和换版)

@@ -56,6 +56,9 @@ export function createLazyAdministrationPort(
     confirmArchive: async (id) => (await load()).confirmArchive(id),
     runtime: {
       maintenanceAccess: async (signal) => (await load()).runtime.maintenanceAccess(signal),
+      nativeUpdate: async (signal) => (await load()).runtime.nativeUpdate(signal),
+      startNativeUpdate: async (action) => (await load()).runtime.startNativeUpdate(action),
+      cancelNativeUpdate: async () => (await load()).runtime.cancelNativeUpdate(),
       probe: async (...args) => (await load()).runtime.probe(...args),
       build: async (...args) => (await load()).runtime.build(...args),
       latestRelease: async (signal) => (await load()).runtime.latestRelease(signal),

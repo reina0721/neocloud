@@ -3,9 +3,29 @@
 package deployment
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 )
+
+func syncNativeWeb(root *os.Root, directories []string) error {
+	// Child directory entries must reach disk before their parent and the
+	// containing version directory are published.
+	for index := len(directories) - 1; index >= 0; index-- {
+		if err := syncNativeRelativeDirectory(root, directories[index]); err != nil {
+			return err
+		}
+	}
+	return syncNativeRelativeDirectory(root, ".")
+}
+
+func syncNativeRelativeDirectory(root *os.Root, name string) error {
+	dir, err := root.Open(name)
+	if err != nil {
+		return err
+	}
+	return errors.Join(dir.Sync(), dir.Close())
+}
 
 func publishNativeDirectory(store *os.Root, stageName, version string) error {
 	if err := syncDirectory(filepath.Join(store.Name(), stageName)); err != nil {

@@ -36,7 +36,7 @@ func TestWebPreviewRejectsExpiredAuthenticatedGrant(t *testing.T) {
 	}
 	for range 2 {
 		token := base64.RawURLEncoding.EncodeToString(sealed)
-		if err := service.DownloadTo(t.Context(), token, use); !errors.Is(err, model.ErrMissing) {
+		if err := service.DownloadTo(t.Context(), token, "", use); !errors.Is(err, model.ErrMissing) {
 			t.Fatalf("授权错误 = %v", err)
 		}
 		sealed[0] ^= 1

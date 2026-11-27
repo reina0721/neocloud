@@ -55,8 +55,10 @@ export function requiredAssets(tag) {
     `clouddrive_${version}_linux_amd64.tar.gz`,
     `clouddrive_${version}_windows_amd64.zip`,
   ];
-  const managedArchives = [["windows", "amd64"], ["linux", "amd64"], ["linux", "arm64"]].map(
-    ([os, arch]) => `clouddrive_${tag}_${os}_${arch}_managed-go.zip`,
+  const managedArchives = [["windows", "amd64"], ["linux", "amd64"], ["linux", "arm64"]].flatMap(
+    ([os, arch]) => ["managed-go", "managed-full"].map(
+      (profile) => `clouddrive_${tag}_${os}_${arch}_${profile}.zip`,
+    ),
   );
   return [
     ...goArchives,

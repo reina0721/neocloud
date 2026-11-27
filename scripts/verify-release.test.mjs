@@ -182,6 +182,7 @@ test("缺少自定义布局能力的草稿产物不能发布", async (t) => {
 });
 for (const missing of [
   "checksums.txt.sigstore.json",
+  "clouddrive_v0.1.0_windows_amd64_managed-full.zip",
   `clouddrive_${tag}_linux_arm64_docker.tar.gz`,
 ]) {
   test("缺少必要附件必须阻止发布：" + missing, async (t) => {

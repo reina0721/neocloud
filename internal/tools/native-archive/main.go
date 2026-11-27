@@ -29,6 +29,7 @@ func main() {
 	offline := flag.String("stage-offline", "", "从本地已签名发布包验签并导入验证目录")
 	releaseDir := flag.String("release-dir", "", "已签名发布包目录")
 	trustDir := flag.String("trust-dir", "", "独立获取的 Sigstore 离线信任目录")
+	profile := flag.String("profile", string(deployment.NativeGo), "托管发布类型（managed-go 或 managed-full）")
 	version := flag.String("version", "", "托管发布的正式版本")
 	commit := flag.String("commit", "", "托管发布的源码提交")
 	goos := flag.String("os", "", "托管发布的目标系统")
@@ -40,19 +41,20 @@ func main() {
 		os.Exit(2)
 	}
 	var err error
+	releaseProfile := deployment.NativeProfile(*profile)
 	switch {
 	case *online != "":
-		err = stageRelease(*online, "", "", *version, *commit)
+		err = stageRelease(*online, "", "", *version, *commit, releaseProfile)
 	case *offline != "":
-		err = stageRelease(*offline, *releaseDir, *trustDir, *version, *commit)
+		err = stageRelease(*offline, *releaseDir, *trustDir, *version, *commit, releaseProfile)
 	case *verify != "":
-		err = verifyManagedArchive(*verify, *version, *commit, *goos, *arch)
+		err = verifyManagedArchive(*verify, *version, *commit, *goos, *arch, releaseProfile)
 	case *managed:
 		err = writeArchive(*output, func(writer *zip.Writer) error {
 			return addTree(writer, *work, "", nil)
 		})
 		if err == nil {
-			err = verifyManagedArchive(*output, *version, *commit, *goos, *arch)
+			err = verifyManagedArchive(*output, *version, *commit, *goos, *arch, releaseProfile)
 		}
 	default:
 		err = createArchive(*output, *work, *web)
@@ -63,15 +65,15 @@ func main() {
 	}
 }
 
-func stageRelease(directory, releaseDir, trustDir, version, commit string) error {
+func stageRelease(directory, releaseDir, trustDir, version, commit string, profile deployment.NativeProfile) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
 	defer cancel()
 	var target deployment.NativeTarget
 	var err error
 	if releaseDir == "" {
-		target, err = deployment.NewReleases().StageNative(ctx, directory, version)
+		target, err = deployment.NewReleases().StageNativeFor(ctx, directory, version, profile)
 	} else {
-		target, err = deployment.ImportNative(ctx, directory, releaseDir, trustDir, version)
+		target, err = deployment.ImportNativeFor(ctx, directory, releaseDir, trustDir, version, profile)
 	}
 	if err != nil {
 		return err
@@ -79,12 +81,12 @@ func stageRelease(directory, releaseDir, trustDir, version, commit string) error
 	if target.Manifest.Commit != commit {
 		return errors.New("原生发布包源码提交与发布版本不一致")
 	}
-	_, err = deployment.LoadNative(ctx, directory, version)
+	_, err = deployment.LoadNativeFor(ctx, directory, version, profile)
 	return err
 }
 
-func verifyManagedArchive(archive, version, commit, goos, arch string) error {
-	manifest, err := deployment.InspectNativeArchive(archive, version, goos, arch)
+func verifyManagedArchive(archive, version, commit, goos, arch string, profile deployment.NativeProfile) error {
+	manifest, err := deployment.InspectNativeArchiveFor(archive, version, goos, arch, profile)
 	if err != nil {
 		return err
 	}

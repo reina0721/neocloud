@@ -26,6 +26,7 @@ func TestFilesystemSettingsApplyAfterRestart(t *testing.T) {
 	setupToken, password := generate(), generate()
 	config := generationConfig(directory, 120, 32<<20, filepath.Join(directory, "filesystem.db"))
 	config = strings.Replace(config, "mode: development-anonymous", "mode: session", 1)
+	config = strings.Replace(config, "http:\n", "http:\n  cors:\n    allowedOrigins: [https://viewer.example.test]\n", 1)
 	config = strings.Replace(config, "files:\n", "files:\n  maxTextBytes: 64\n  maxBatchEntries: 10\n", 1)
 	writeGenerationConfig(t, configPath, "iam:\n  local:\n    setupToken: "+setupToken+"\n"+config)
 	coordinator, _ := newGenerationTestCoordinator(t, configPath)

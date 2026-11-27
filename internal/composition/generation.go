@@ -10,6 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/reina0721/clouddrive/internal/deployment"
 	"github.com/reina0721/clouddrive/internal/kernel"
 	kernelalerting "github.com/reina0721/clouddrive/internal/kernel/app/alerting"
 	cacheapp "github.com/reina0721/clouddrive/internal/kernel/app/cache"
@@ -529,13 +530,13 @@ func (f *applicationGenerationFactory) Prepare(
 	if err != nil {
 		return abort(err)
 	}
-	consoleHandler, err := console.New(console.Dependencies{Runtime: generation.consoleRuntime, DeploymentOwner: (consoleIAMPort{generation.iamModule.Service}).deploymentOwner, IAM: consoleIAMPort{generation.iamModule.Service}, CookieName: generation.iamModule.SessionCookieName(), Cookies: generation.iamModule.Cookies, Native: httptransport.IsolatedRoutes(apiRoutes), Origins: httpConfig.CORS.AllowedOrigins, SiteOrigins: consoleConfig.SiteOrigins, Database: databaseAccess, Logger: generation.logger.value(), Relay: consoleConfig.Relay, Executor: generation.execution.value(), Authenticate: consoleAuthenticate(generation.authModule.SessionSource.AuthenticateRequest), Todos: consoleTodoPort{generation.module.Operations}, Navigation: consoleNavigationPort{generation.navigationModule.Operations}})
+	consoleHandler, err := console.New(console.Dependencies{Runtime: generation.consoleRuntime, DeploymentOwner: (consoleIAMPort{generation.iamModule.Service}).deploymentOwner, IAM: consoleIAMPort{generation.iamModule.Service}, CookieName: generation.iamModule.SessionCookieName(), Cookies: generation.iamModule.Cookies, Native: httptransport.IsolatedRoutes(apiRoutes), Origins: httpConfig.CORS.AllowedOrigins, SiteOrigins: consoleConfig.SiteOrigins, Database: databaseAccess, Logger: generation.logger.value(), Relay: consoleConfig.Relay, Executor: generation.execution.value(), Authenticate: consoleAuthenticate(generation.authModule.SessionSource.AuthenticateRequest), Todos: consoleTodoPort{generation.module.Operations}, Navigation: consoleNavigationPort{generation.navigationModule.Operations}, ReleaseCatalog: http.HandlerFunc(deployment.NewReleases().ServeReleaseCatalog)})
 	if err != nil {
 		return abort(err)
 	}
 	nativeRoutes := apiRoutes
 	apiRoutes = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, console.Prefix+"/") {
+		if strings.HasPrefix(r.URL.Path, console.Prefix+"/") || r.URL.Path == console.ReleaseCatalogPath {
 			consoleHandler.ServeHTTP(w, r)
 			return
 		}
@@ -610,7 +611,11 @@ func (f *applicationGenerationFactory) Prepare(
 	business := generation.trackRequests(observedAPIRouter)
 	management := generation.opsModule.ManagementHTTP
 	if f.managed != nil {
-		business = f.managed.handler(business, false)
+		ingress, err := newBrowserIngress(filesPolicy.Connections.PublicOrigin, httpConfig)
+		if err != nil {
+			return abort(err)
+		}
+		business = f.managed.handler(ingress.wrap(business), false)
 		management = f.managed.handler(management, true)
 	}
 	generation.server, err = httpx.NewServer(&httpConfig, business)

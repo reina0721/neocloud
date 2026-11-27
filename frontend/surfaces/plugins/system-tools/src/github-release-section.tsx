@@ -75,8 +75,14 @@ function ReleaseDetails({ release }: { release: ReleaseCatalog }) {
                   {asset.name}
                 </a>
                 <span className="text-ink-muted">{formatFileBytes(asset.sizeBytes)}</span>
-                {asset.kind === 'windows-backend' ? (
-                  <span className="text-ink-muted">{t('systemUpdate.release.windowsBackend')}</span>
+                {asset.kind !== 'other' ? (
+                  <span className="text-ink-muted">
+                    {t(
+                      asset.kind === 'windows-backend'
+                        ? 'systemUpdate.release.windowsBackend'
+                        : 'systemUpdate.release.managedFull',
+                    )}
+                  </span>
                 ) : null}
               </li>
             ))}

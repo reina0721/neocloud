@@ -22,7 +22,7 @@ const ConfirmDialog = lazy(() =>
  * - 绑定全局偏好：settings 操作偏好「离开未保存内容时提醒」（confirmLeave）关闭时
  *   不询问（产品强制底线仍保留：confirmLeave 只关"询问"不关 beforeunload 兜底草稿；
  *   高风险的既有输入确认不受影响）；
- * - 订阅 dirty 状态：出现 dirty source 时安装 beforeunload 守卫（仅未提交输入时注册）；
+ * - 安装 beforeunload 守卫，在待保存或正在提交时提示；
  * - 取消 → 不改路由/标签/进度（proceedAfterLeaveConfirm 返回 false，不 begin）。
  */
 export function LeaveConfirmationGuard({ children }: Readonly<{ children: ReactNode }>) {
@@ -59,7 +59,7 @@ export function LeaveConfirmationGuard({ children }: Readonly<{ children: ReactN
     };
   }, []);
 
-  // beforeunload 守卫：仅 dirty 时提示；安装/卸载随 dirty 状态。
+  // 浏览器刷新、窗口关闭与版本切换共用整页离开守卫。
   useEffect(() => {
     return installBeforeUnloadGuard();
   }, []);

@@ -13,6 +13,7 @@ import {
 import { useProductAccess } from '../../../src/identity/use-access';
 import { NavigationIcon } from '../../../src/navigation-icon-presentation';
 import { GitHubReleaseSection } from './github-release-section';
+import { NativeUpdateControls } from './native-update-controls';
 import { systemUpdateMessages } from './system-update-messages';
 import { useCatalogRequest } from './use-catalog-request';
 
@@ -20,13 +21,26 @@ function UpdateDetails() {
   const { t } = useFrontendTranslation();
   const { runtime } = useRequiredAdministration();
   const environment = useSystemUpdateEnvironment();
+  const native = useCatalogRequest(runtime.nativeUpdate, !environment);
+  const nativeAccess = native.result && 'value' in native.result ? native.result.value : null;
   const readStatus = useCallback(
     async (signal: AbortSignal) => environment ?? runtime.maintenanceAccess(signal),
     [environment, runtime],
   );
-  const status = useCatalogRequest(readStatus);
+  const status = useCatalogRequest(
+    readStatus,
+    Boolean(environment) || nativeAccess?.kind === 'unavailable',
+  );
   const build = useCatalogRequest(runtime.build);
-  const access = status.result && 'value' in status.result ? status.result.value : null;
+  const access =
+    nativeAccess?.kind === 'owner-required'
+      ? 'owner-required'
+      : status.result && 'value' in status.result
+        ? status.result.value
+        : null;
+  if (nativeAccess?.kind === 'available') {
+    return <NativeUpdateControls initial={nativeAccess.status} runtime={runtime} />;
+  }
   return (
     <>
       <Section title={t('systemUpdate.version')} density="compact" contentInset>
@@ -59,7 +73,7 @@ function UpdateDetails() {
               <p role="status" className="text-ink-muted">
                 {access
                   ? t(`systemUpdate.status.${access}`)
-                  : status.result
+                  : status.result || (native.result && 'error' in native.result)
                     ? t('systemUpdate.statusUnavailable')
                     : t('administration.loading')}
               </p>
@@ -69,8 +83,16 @@ function UpdateDetails() {
                     {t(`systemUpdate.${action}`)}
                   </Action>
                 ))}
-                {status.result && 'error' in status.result ? (
-                  <Action variant="quiet" size="sm" onPress={status.refresh}>
+                {(status.result && 'error' in status.result) ||
+                (native.result && 'error' in native.result) ? (
+                  <Action
+                    variant="quiet"
+                    size="sm"
+                    onPress={() => {
+                      if (native.result && 'error' in native.result) native.refresh();
+                      else status.refresh();
+                    }}
+                  >
                     {t('administration.retry')}
                   </Action>
                 ) : null}

@@ -2,8 +2,9 @@ import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { createRequire } from 'node:module';
-import { dirname, resolve, join, sep } from 'node:path';
+import { dirname, isAbsolute, resolve, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 import ts from 'typescript';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const source = join(root, 'apps/web/src/files/pdf');
@@ -13,7 +14,10 @@ const vendor = dirname(require.resolve('pdfjs-dist/package.json'));
 const pkg = JSON.parse(await readFile(join(vendor, 'package.json'), 'utf8'));
 if (pkg.version !== config.version)
   throw new Error('PDF SDK version does not match declared assets');
-const generated = join(root, 'apps/web/public/file-viewers/pdf');
+const { values } = parseArgs({ options: { 'public-dir': { type: 'string' } } });
+const publicDir = values['public-dir'] ?? join(root, 'apps/web/public');
+if (!isAbsolute(publicDir)) throw new Error('--public-dir must be absolute');
+const generated = join(publicDir, 'file-viewers/pdf');
 const targetName = config.version + '-p' + config.protocolVersion;
 const target = resolve(generated, targetName);
 if (

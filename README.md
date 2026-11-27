@@ -45,7 +45,7 @@
 
 固定版本、HTTPS 反代和手动备份见[安装与升级](docs/operations/clouddrive-deployment.md#release-下载版安装与升级)。支持离线维护的新 Release 可在断网主机使用签名包完成[检查、升级、回退和恢复](docs/operations/clouddrive-deployment.md#离线检查与升级)。本地源码构建见[源码部署](docs/operations/clouddrive-deployment.md#从源码部署)。
 
-独立部署 Go 后端时，可使用 [Windows 和 Linux 原生托管包](docs/operations/backend-archive.md#使用原生托管版自动下载和换版)，在原业务和管理端口下载并切换已验签的 GitHub 正式版。
+在 Windows 或 Linux 上可直接运行 [Go 与 Web 原生整包](docs/operations/backend-archive.md#运行原生-go-与-web-整包)。Go 提供网页、API 和 WebDAV，系统所有者可在后台成对升级或回退签名正式版。
 
 ## 源码开发
 
@@ -63,13 +63,13 @@ node scripts/dev.mjs
 
 ## 结构与验证
 
-前后端同仓发布、分进程运行；浏览器通过 Web Host 同源代理访问 Go API，后端共用 IAM、数据库和 Storage。
+前后端同仓发布。原生整包由 Go 宿主同源提供静态页面和 Go API。本地开发由 Next.js 提供热刷新，Go 服务单独运行。业务共享同一套 IAM、数据库和 Storage。
 
 ```mermaid
 flowchart LR
-    Browser[浏览器] --> Web[Next.js Web Host :4173]
-    Web --> API[Go API :8080]
-    Web --> Management[Go management :9090]
+    Browser[浏览器] --> Web[Go 宿主]
+    Web --> Static[静态 Web]
+    Web --> API[当前版本 Go API]
     API --> Database[(数据库)]
     API --> Storage[(文件存储)]
 ```

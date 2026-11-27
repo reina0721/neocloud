@@ -46,6 +46,8 @@ func TestNativeCandidatesFiltersPublishedPlatformAssetsAndSorts(t *testing.T) {
 	page[4] = release("v0.1.9", "uploaded")
 	page[5] = release("v0.15.0", "uploaded")
 	page[5].Assets[0].Name = "install.sh"
+	page[6] = release("v0.8.0", "uploaded")
+	page[6].Assets[0].Name = strings.Replace(page[6].Assets[0].Name, "_managed-go.zip", "_managed-full.zip", 1)
 	var calls int
 	client := &Releases{http: &http.Client{Transport: nativeReleaseRoundTrip(func(request *http.Request) (*http.Response, error) {
 		calls++
@@ -70,6 +72,10 @@ func TestNativeCandidatesFiltersPublishedPlatformAssetsAndSorts(t *testing.T) {
 	got, err := client.NativeCandidates(t.Context(), current)
 	if err != nil || !reflect.DeepEqual(got, []string{"v0.10.0", "v0.9.0"}) || calls != 2 {
 		t.Fatalf("候选：%v 请求数：%d 错误：%v", got, calls, err)
+	}
+	got, err = client.NativeCandidatesFor(t.Context(), current, NativeFull)
+	if err != nil || !reflect.DeepEqual(got, []string{"v0.8.0"}) {
+		t.Fatalf("整包候选混入其他发布类型：%v，%v", got, err)
 	}
 }
 

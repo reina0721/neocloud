@@ -22,6 +22,16 @@ type jobRequest struct {
 	Target string `json:"target,omitempty"`
 }
 
+func validJobRequest(request jobRequest) bool {
+	return (request.Action == "apply" || request.Action == "rollback") &&
+		(request.Target == "" || request.Action == "apply" && stableTag.MatchString(request.Target))
+}
+
+func (h *host) cancellableLocked() bool {
+	return h.cancel != nil && h.state.Job != nil && h.state.Job.EndedAt == nil &&
+		h.state.Job.Phase != "handoff" && h.state.Job.Phase != "committed"
+}
+
 func (h *host) controlHandler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /status", func(w http.ResponseWriter, _ *http.Request) {
@@ -47,8 +57,7 @@ func (h *host) controlHandler() http.Handler {
 	})
 	mux.HandleFunc("POST /jobs", func(w http.ResponseWriter, r *http.Request) {
 		var request jobRequest
-		if !decode(w, r, &request) || (request.Action != "apply" && request.Action != "rollback") ||
-			(request.Target != "" && (request.Action != "apply" || !stableTag.MatchString(request.Target))) {
+		if !decode(w, r, &request) || !validJobRequest(request) {
 			respond(w, http.StatusBadRequest, "无效的更新操作或正式版本")
 			return
 		}
@@ -62,7 +71,7 @@ func (h *host) controlHandler() http.Handler {
 	mux.HandleFunc("POST /cancel", func(w http.ResponseWriter, _ *http.Request) {
 		h.mu.Lock()
 		defer h.mu.Unlock()
-		if h.cancel == nil || h.state.Job == nil || h.state.Job.EndedAt != nil || h.state.Job.Phase == "handoff" || h.state.Job.Phase == "committed" {
+		if !h.cancellableLocked() {
 			respond(w, http.StatusConflict, "当前没有可以取消的更新任务")
 			return
 		}
@@ -294,19 +303,19 @@ func (h *host) switchWorker(ctx context.Context, old, candidate *child, action s
 	cutover, cancel := context.WithTimeout(h.ctx, handoffBudget)
 	defer cancel()
 	if err := h.front.drain(cutover); err != nil {
-		h.front.open(old.routes)
+		h.openWorker(old)
 		return fmt.Errorf("在途请求未能及时排空，已保留旧版本: %w", err)
 	}
 	deadline, _ := cutover.Deadline()
 	quiesce := time.Until(deadline) - 250*time.Millisecond
 	if quiesce < time.Millisecond {
-		h.front.open(old.routes)
+		h.openWorker(old)
 		return errors.New("交接预算已用尽，旧版继续服务")
 	}
 	if response, err := old.call(cutover, control.Request{Action: "quiesce", TimeoutMS: quiesce.Milliseconds()}, "quiescent"); err != nil {
 		// An explicit rejection means the worker kept or reopened its own admission.
 		if response.Error != "" && response.Phase == "active" {
-			h.front.open(old.routes)
+			h.openWorker(old)
 			return err
 		}
 		return errors.Join(err, h.recoverCurrent())
@@ -328,10 +337,11 @@ func (h *host) switchWorker(ctx context.Context, old, candidate *child, action s
 		return h.recoverUncommittedCandidate(candidate, err)
 	}
 	h.worker = candidate
+	h.previousWeb = old.web
 	if _, err := candidate.call(cutover, control.Request{Action: "publish"}, "active"); err != nil {
 		return errors.Join(err, old.exit(), h.recoverCurrent())
 	}
-	h.front.open(candidate.routes)
+	h.openWorker(candidate)
 	return old.exit()
 }
 

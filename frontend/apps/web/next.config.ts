@@ -6,6 +6,7 @@ import { loadWebConfig } from '@clouddrive/config/node';
 
 const config = loadWebConfig({ cwd: import.meta.dirname });
 const deploymentMode = config.deploymentMode;
+const staticBuildId = process.env.NEXT_PUBLIC_CLOUDDRIVE_WEB_BUILD_ID;
 
 export default function nextConfig(phase: string): NextConfig {
   return {
@@ -23,27 +24,32 @@ export default function nextConfig(phase: string): NextConfig {
     // Trace workspace dependencies into a relocatable runtime, not the whole repo.
     outputFileTracingRoot: resolve(import.meta.dirname, '../..'),
     output: deploymentMode === 'server' ? 'standalone' : 'export',
-    headers() {
-      return Promise.resolve([
-        {
-          source: '/home/:path*',
-          headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
-        },
-        {
-          source: '/file-viewers/pdf/:path*',
-          headers: [
-            {
-              key: 'Content-Security-Policy',
-              value:
-                "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
-            },
-            { key: 'Referrer-Policy', value: 'no-referrer' },
-            { key: 'X-Content-Type-Options', value: 'nosniff' },
-            { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
-          ],
-        },
-      ]);
-    },
+    ...(deploymentMode === 'server'
+      ? {
+          headers: () =>
+            Promise.resolve([
+              {
+                source: '/home/:path*',
+                headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+              },
+              {
+                source: '/file-viewers/pdf/:path*',
+                headers: [
+                  {
+                    key: 'Content-Security-Policy',
+                    value:
+                      "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
+                  },
+                  { key: 'Referrer-Policy', value: 'no-referrer' },
+                  { key: 'X-Content-Type-Options', value: 'nosniff' },
+                  { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+                ],
+              },
+            ]),
+        }
+      : staticBuildId
+        ? { deploymentId: staticBuildId }
+        : {}),
     transpilePackages: [
       '@clouddrive/config',
       '@clouddrive/core',

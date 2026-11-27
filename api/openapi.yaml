@@ -6400,6 +6400,18 @@ components:
         - newTab
         - token
       type: object
+    WebFilePreviewReadinessOutputBody:
+      additionalProperties: false
+      properties:
+        status:
+          enum:
+            - allowed
+            - denied
+            - unavailable
+          type: string
+      required:
+        - status
+      type: object
     WebFilePreviewRequest:
       additionalProperties: false
       properties:
@@ -8466,6 +8478,34 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WOPIDiscoveryDraft"
+          description: OK
+        default:
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Error
+      security:
+        - webuiSession: []
+      tags:
+        - Files
+  /api/v1/files/applications/{applicationId}/web-preview-readiness:
+    get:
+      operationId: files.applications.web-readiness
+      parameters:
+        - in: path
+          name: applicationId
+          required: true
+          schema:
+            maxLength: 64
+            pattern: ^[a-z0-9-]+$
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebFilePreviewReadinessOutputBody"
           description: OK
         default:
           content:

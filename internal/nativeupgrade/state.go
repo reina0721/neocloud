@@ -32,9 +32,18 @@ type State struct {
 	Transition string    `json:"transition,omitempty"` // 已授权、可能已开始在线迁移的目标。
 	Checkpoint string    `json:"checkpoint,omitempty"`
 	Job        *Job      `json:"job,omitempty"`
+	Profile    string    `json:"profile,omitempty"`
+	WebAddress string    `json:"webAddress,omitempty"`
 }
 
 type journal struct{ db *sql.DB }
+
+// A full instance uses a versioned envelope. Legacy hosts cannot read it as
+// a Go-only selection and accidentally start the former backend.
+type fullState struct {
+	Format int   `json:"format"`
+	State  State `json:"state"`
+}
 
 func openJournal(ctx context.Context, path string) (*journal, State, error) {
 	path = filepath.ToSlash(path)
@@ -73,13 +82,29 @@ func (j *journal) load(ctx context.Context) (State, error) {
 		return State{}, fmt.Errorf("无效的原生升级记录: %w", err)
 	}
 	if state.Current == "" {
+		var full fullState
+		if err := json.Unmarshal(data, &full); err != nil {
+			return State{}, fmt.Errorf("无效的原生整包记录: %w", err)
+		}
+		if full.Format != 2 || full.State.Profile != fullProfile {
+			return State{}, errors.New("无法识别原生整包升级记录格式")
+		}
+		state = full.State
+	} else if state.Profile != "" {
+		return State{}, errors.New("原生升级记录使用了不兼容的交付类型")
+	}
+	if state.Current == "" {
 		return State{}, errors.New("原生升级记录缺少当前版本")
 	}
 	return state, nil
 }
 
 func (j *journal) save(ctx context.Context, state State) error {
-	data, err := json.Marshal(state)
+	var value any = state
+	if state.Profile == fullProfile {
+		value = fullState{Format: 2, State: state}
+	}
+	data, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}

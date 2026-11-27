@@ -174,7 +174,7 @@ func New(deps Dependencies) (Module, error) {
 	if err != nil {
 		return Module{}, err
 	}
-	boundary.WebFilePreviews, err = service.NewWebFilePreviews(useCases, boundary.FileApplications, deps.ShareAuthority, repository, deps.ConnectionPolicy)
+	boundary.WebFilePreviews, err = service.NewWebFilePreviews(useCases, boundary.FileApplications, deps.ShareAuthority, repository, deps.ConnectionPolicy, deps.PublicOrigins)
 	if err != nil {
 		return Module{}, err
 	}

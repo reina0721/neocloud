@@ -1,11 +1,14 @@
 // 托管 Go 发布包与现有独立 Go / Docker 归档使用不同的附件名。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
+import { copyFile, cp, lstat, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { bundleLicenses } from "../frontend/tooling/bundle-licenses.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const { values } = parseArgs({
@@ -17,6 +20,8 @@ const { values } = parseArgs({
     out: { type: "string" },
     "base-version": { type: "string" },
     "base-commit": { type: "string" },
+    "web-dir": { type: "string" },
+    "web-licenses-dir": { type: "string" },
   },
 });
 const { version, commit, os, arch, out } = values;
@@ -27,6 +32,7 @@ assert.match(
 assert.match(commit ?? "", /^[0-9a-f]{40}$/);
 assert.ok(["windows/amd64", "linux/amd64", "linux/arm64"].includes(`${os}/${arch}`));
 assert.ok(out, "缺少 --out");
+assert.ok(!values["web-licenses-dir"] || values["web-dir"], "Web 许可目录需要同时指定 --web-dir");
 assert.equal(
   execFileSync("git", ["rev-parse", "HEAD"], {
     cwd: root,
@@ -70,6 +76,7 @@ const suffix = os === "windows" ? ".exe" : "";
 const binaryName = "clouddrive" + suffix;
 const hostName = "clouddrive-host" + suffix;
 const manifest = { version, commit, os, arch, hostProtocol: 1, ...migration };
+const profile = values["web-dir"] ? "managed-full" : "managed-go";
 const content = [
   "LICENSE",
   "NOTICE",
@@ -86,6 +93,54 @@ const buildFlags = [
   `-X=main.buildTime=${buildTime}`,
   "-X=main.buildDirty=false",
 ].join(" ");
+
+async function copyStaticFiles(source, target, inventory, prefix = "") {
+  for (const entry of await readdir(source, { withFileTypes: true })) {
+    const item = join(source, entry.name);
+    const destination = join(target, entry.name);
+    const path = prefix + entry.name;
+    if (entry.isDirectory()) {
+      await copyStaticFiles(item, destination, inventory, path + "/");
+    } else {
+      assert.ok(entry.isFile(), `Web 导出包含非普通文件：${path}`);
+      await mkdir(target, { recursive: true });
+      await copyFile(item, destination);
+      const hash = createHash("sha256");
+      let size = 0;
+      for await (const content of createReadStream(destination)) {
+        hash.update(content);
+        size += content.length;
+      }
+      inventory.push({ path, size, sha256: hash.digest("hex") });
+    }
+  }
+}
+
+async function includeStaticWeb() {
+  const source = resolve(values["web-dir"]);
+  assert.ok((await lstat(source)).isDirectory(), "Web 导出目录必须是实际目录");
+  const identity = JSON.parse(await readFile(join(source, "web-build.json"), "utf8"));
+  assert.deepEqual(identity, { buildId: commit }, "静态 Web 与当前 Go 发布提交不一致");
+  const inventory = [];
+  await copyStaticFiles(source, join(work, "web"), inventory);
+  inventory.sort((a, b) => a.path.localeCompare(b.path, "en"));
+  const index = JSON.stringify(inventory) + "\n";
+  await writeFile(join(work, "web-files.json"), index, { flag: "wx" });
+  const licenses = join(work, "third-party", "node");
+  if (values["web-licenses-dir"]) {
+    const prepared = resolve(values["web-licenses-dir"]);
+    const list = JSON.parse(await readFile(join(prepared, "inventory.json"), "utf8"));
+    assert.ok(Array.isArray(list) && list.length > 0, "缺少 Web 依赖许可清单");
+    await cp(prepared, licenses, { recursive: true, errorOnExist: true });
+  } else {
+    await mkdir(licenses, { recursive: true });
+    await bundleLicenses(join(root, "frontend"), licenses);
+  }
+  Object.assign(manifest, {
+    profile, hostProtocol: 2, webId: commit,
+    webInventorySha256: createHash("sha256").update(index).digest("hex"),
+  });
+}
 
 try {
   await mkdir(output, { recursive: true });
@@ -117,15 +172,17 @@ try {
     await mkdir(dirname(join(work, file)), { recursive: true });
     await copyFile(join(root, file), join(work, file));
   }
+  if (profile === "managed-full") await includeStaticWeb();
   await copyFile(join(root, "docs/operations/backend-archive.md"), join(work, "README.md"));
   await writeFile(join(work, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n", {
     flag: "wx",
   });
-  const archive = join(output, `clouddrive_${version}_${os}_${arch}_managed-go.zip`);
+  const archive = join(output, `clouddrive_${version}_${os}_${arch}_${profile}.zip`);
   execFileSync(
     "go",
     [
       "run", "./internal/tools/native-archive", "--managed", "--output", archive,
+      "--profile", profile,
       "--work", work, "--version", version, "--commit", commit, "--os", os, "--arch", arch,
     ],
     { cwd: root, stdio: "inherit" },

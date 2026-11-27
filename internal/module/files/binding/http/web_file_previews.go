@@ -28,7 +28,33 @@ type webFilePreviewContentInput struct {
 	Token string `path:"token"`
 }
 
+type webFilePreviewReadinessInput struct {
+	Application service.FileApplicationID `path:"applicationId" maxLength:"64" pattern:"^[a-z0-9-]+$"`
+}
+
+type webFilePreviewReadinessOutput struct {
+	Body struct {
+		Status string `json:"status" enum:"allowed,denied,unavailable"`
+	}
+}
+
 func registerWebFilePreviews(api huma.API, h *handler.Handler, operation func(string, string, string, string, bool) huma.Operation) {
+	readiness := operation("files.applications.web-readiness", http.MethodGet, "/applications/{applicationId}/web-preview-readiness", string(permission.Read), false)
+	readiness.Middlewares = append(readiness.Middlewares, sharingHeaders)
+	huma.Register(api, readiness, func(ctx context.Context, input *webFilePreviewReadinessInput) (*webFilePreviewReadinessOutput, error) {
+		status, err := h.WebFilePreviews.Readiness(ctx, input.Application)
+		if err != nil {
+			if ctx.Err() != nil {
+				return nil, h.Present(ctx, ctx.Err())
+			}
+			// The preflight is a deployment hint. Keep the built-in reader usable on failure.
+			_ = h.Present(ctx, err)
+			status = "unavailable"
+		}
+		output := &webFilePreviewReadinessOutput{}
+		output.Body.Status = status
+		return output, nil
+	})
 	launch := operation("files.applications.web-launch", http.MethodPost, "/{id}/web-preview", string(permission.Read), true)
 	launch.Middlewares = append(launch.Middlewares, sharingHeaders)
 	huma.Register(api, launch, func(ctx context.Context, input *webFilePreviewInput) (*webFilePreviewOutput, error) {
@@ -63,7 +89,7 @@ func registerWebFilePreviewContent(api huma.API, h *handler.Handler, id, method 
 			writer.Header().Del("Access-Control-Allow-Origin")
 			writer.Header().Add("Vary", "Origin")
 			contentResponse(ctx, h, func(ctx context.Context, use func(model.Entry, io.ReadSeeker) error) error {
-				return h.WebFilePreviews.DownloadTo(ctx, input.Token, func(entry model.Entry, reader io.ReadSeeker, origin string) error {
+				return h.WebFilePreviews.DownloadTo(ctx, input.Token, request.Header.Get("Origin"), func(entry model.Entry, reader io.ReadSeeker, origin string) error {
 					if request.Header.Get("Origin") == origin {
 						writer.Header().Set("Access-Control-Allow-Origin", origin)
 						writer.Header().Set("Access-Control-Expose-Headers", "Content-Range, ETag")

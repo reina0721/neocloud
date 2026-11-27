@@ -54,7 +54,7 @@ const port = (value, fallback) => {
     throw new Error("端口须为 1024–65535 的整数。");
   return number;
 };
-const webPort = port(values["web-port"], values.acceptance ? 4185 : values.preview ? 4180 : 4173);
+const webPort = port(values["web-port"], values.acceptance ? 4185 : 4180);
 const apiPort = port(values["api-port"], values.acceptance ? 8088 : values.preview ? 8120 : 8080);
 const managementPort = port(
   values["management-port"],
@@ -65,6 +65,22 @@ if (new Set([webPort, apiPort, managementPort]).size !== 3)
 const acceptanceRoot = join(repo, ".data", "acceptance");
 let data = values.acceptance ? acceptanceRoot : join(repo, ".data", values["legacy-preview"] ? "file-preview" : values.preview ? "preview" : "dev");
 const base = `http://127.0.0.1:${webPort}`;
+const viewerOrigins = JSON.parse(process.env.CLOUDDRIVE_ALLOWED_ORIGINS ?? "[]");
+if (
+  !Array.isArray(viewerOrigins) ||
+  !viewerOrigins.every((value) => {
+    if (typeof value !== "string") return false;
+    try {
+      const origin = new URL(value);
+      return ["http:", "https:"].includes(origin.protocol) && origin.origin === value;
+    } catch {
+      return false;
+    }
+  })
+)
+  throw new Error("CLOUDDRIVE_ALLOWED_ORIGINS 须为精确 HTTP(S) Origin 的 JSON 数组。");
+const allowedOrigins = JSON.stringify([...new Set([base, ...viewerOrigins])]);
+
 const backend = `http://127.0.0.1:${apiPort}`;
 const children = new Set();
 const logFiles = [];
@@ -296,7 +312,7 @@ try {
     APP_IAM__LOCAL__SETUPTOKEN: setupToken,
     APP_HTTP__ADDR: `127.0.0.1:${apiPort}`,
     APP_MANAGEMENT__ADDR: `127.0.0.1:${managementPort}`,
-    APP_HTTP__CORS__ALLOWEDORIGINS: JSON.stringify([base]),
+    APP_HTTP__CORS__ALLOWEDORIGINS: allowedOrigins,
   };
   const backendOptions = {
     cwd: workdir,
@@ -366,6 +382,7 @@ try {
         WEB_HOST: "127.0.0.1",
         WEB_PORT: String(webPort),
         CLOUDDRIVE_BACKEND_URL: backend,
+        CLOUDDRIVE_ALLOWED_ORIGINS: allowedOrigins,
         NEXT_DIST_DIR: values.acceptance ? `.next/acceptance-${webPort}` : values["legacy-preview"] ? ".next/file-preview" : values.preview ? ".next/preview" : ".next",
         ...(values.webpack
           ? { CLOUDDRIVE_DEV_BUNDLER: "webpack", WATCHPACK_POLLING: "true" }

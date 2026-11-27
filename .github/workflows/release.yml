@@ -135,9 +135,46 @@ jobs:
           path: dist/docker/
           compression-level: 0
 
+  managed-static-web:
+    name: Build static Web for native packages
+    needs: release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        if: ${{ !contains(github.ref_name, '-') }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: ${{ !contains(github.ref_name, '-') }}
+        with:
+          node-version: 24.11.1
+      - name: Build one static Web release tree and its third-party notices
+        if: ${{ !contains(github.ref_name, '-') }}
+        shell: bash
+        run: |
+          npm install --global pnpm@10.22.0
+          pnpm --dir frontend install --frozen-lockfile
+          node scripts/build-static-web.mjs --output "$RUNNER_TEMP/managed-static/web" --commit "$GITHUB_SHA"
+          node --input-type=module - "$RUNNER_TEMP/managed-static/licenses" <<'NODE'
+          import { mkdir } from 'node:fs/promises';
+          import { resolve } from 'node:path';
+          import { bundleLicenses } from './frontend/tooling/bundle-licenses.mjs';
+          const output = process.argv[2];
+          await mkdir(output, { recursive: true });
+          await bundleLicenses(resolve('frontend'), output);
+          NODE
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: ${{ !contains(github.ref_name, '-') }}
+        with:
+          name: managed-static-web
+          path: ${{ runner.temp }}/managed-static/
+          include-hidden-files: true
+          if-no-files-found: error
+          compression-level: 0
+
   managed-go-bundles:
     name: Managed Go release / ${{ matrix.os }}-${{ matrix.arch }}
-    needs: release
+    needs: [release, managed-static-web]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -161,7 +198,12 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24.11.1
-      - name: Package managed Go and generate an SPDX SBOM
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        if: ${{ !contains(github.ref_name, '-') }}
+        with:
+          name: managed-static-web
+          path: ${{ runner.temp }}/managed-static
+      - name: Package both managed native profiles and generate SPDX SBOMs
         if: ${{ !contains(github.ref_name, '-') }}
         env:
           TARGET_OS: ${{ matrix.os }}
@@ -184,8 +226,13 @@ jobs:
           fi
           node scripts/build-managed-go-release.mjs --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" \
             --os "$TARGET_OS" --arch "$TARGET_ARCH" --out dist/managed-go "${source_args[@]}"
-          archive="dist/managed-go/clouddrive_${GITHUB_REF_NAME}_${TARGET_OS}_${TARGET_ARCH}_managed-go.zip"
-          syft "file:$archive" --output "spdx-json=$archive.spdx.json"
+          node scripts/build-managed-go-release.mjs --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" \
+            --os "$TARGET_OS" --arch "$TARGET_ARCH" --out dist/managed-go "${source_args[@]}" \
+            --web-dir "$RUNNER_TEMP/managed-static/web" --web-licenses-dir "$RUNNER_TEMP/managed-static/licenses"
+          for profile in managed-go managed-full; do
+            archive="dist/managed-go/clouddrive_${GITHUB_REF_NAME}_${TARGET_OS}_${TARGET_ARCH}_${profile}.zip"
+            syft "file:$archive" --output "spdx-json=$archive.spdx.json"
+          done
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: ${{ !contains(github.ref_name, '-') }}
         with:
@@ -227,7 +274,7 @@ jobs:
           sha256sum --check "checksums-arm64.txt"
           sha256sum -- clouddrive_*_docker.tar.gz clouddrive-maintenance_* install.sh version.txt *.spdx.json >> ../complete/checksums.txt
           if [[ "$GITHUB_REF_NAME" != *-* ]]; then
-            (cd ../managed-go && sha256sum -- *_managed-go.zip *_managed-go.zip.spdx.json) >> ../complete/checksums.txt
+            (cd ../managed-go && sha256sum -- *_managed-go.zip *_managed-full.zip *_managed-go.zip.spdx.json *_managed-full.zip.spdx.json) >> ../complete/checksums.txt
           fi
           LC_ALL=C sort -u -k2 ../complete/checksums.txt -o ../complete/checksums.txt
       - name: Sign final checksum set
@@ -246,7 +293,8 @@ jobs:
           gh release upload "${GITHUB_REF_NAME}" dist/docker/clouddrive_*_docker.tar.gz dist/docker/install.sh \
             dist/docker/version.txt dist/docker/*.spdx.json dist/docker/clouddrive-maintenance_* dist/complete/checksums.txt dist/complete/checksums.txt.sigstore.json --clobber
           if [[ "$GITHUB_REF_NAME" != *-* ]]; then
-            gh release upload "${GITHUB_REF_NAME}" dist/managed-go/*_managed-go.zip dist/managed-go/*_managed-go.zip.spdx.json --clobber
+            gh release upload "${GITHUB_REF_NAME}" dist/managed-go/*_managed-go.zip dist/managed-go/*_managed-full.zip \
+              dist/managed-go/*_managed-go.zip.spdx.json dist/managed-go/*_managed-full.zip.spdx.json --clobber
           fi
 
   docker-acceptance:
@@ -505,9 +553,64 @@ jobs:
       - name: Exercise native processes and SQLite on Windows
         run: go test -count=1 -p=1 ./internal/nativeupgrade ./internal/deployment ./internal/module/migration
 
+  managed-full-acceptance:
+    name: Signed native full draft / ${{ matrix.os }}-${{ matrix.arch }}
+    needs: attach-docker
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            arch: amd64
+            runner: windows-2025
+          - os: linux
+            arch: amd64
+            runner: ubuntu-24.04
+          - os: linux
+            arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version-file: go.mod
+      - name: Boot the signed full package on its target platform
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_OS: ${{ matrix.os }}
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $root = Join-Path $env:RUNNER_TEMP 'native-full-draft'
+          $tools = Join-Path $root 'tools'
+          $release = Join-Path $root 'release'
+          $trust = Join-Path $root 'trust'
+          New-Item -ItemType Directory -Path $tools, $release, $trust | Out-Null
+          $asset = "clouddrive_${env:GITHUB_REF_NAME}_${env:TARGET_OS}_${env:TARGET_ARCH}_managed-full.zip"
+          gh release download $env:GITHUB_REF_NAME --dir $release --pattern $asset --pattern checksums.txt --pattern checksums.txt.sigstore.json
+          $env:GOBIN = $tools
+          go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
+          $env:TUF_ROOT = Join-Path $root 'tuf'
+          Remove-Item Env:TUF_ROOT_JSON, Env:TUF_MIRROR -ErrorAction SilentlyContinue
+          $cosign = Join-Path $tools ($IsWindows ? 'cosign.exe' : 'cosign')
+          & $cosign initialize --mirror https://tuf-repo-cdn.sigstore.dev
+          Copy-Item -LiteralPath (Join-Path $env:TUF_ROOT 'tuf-repo-cdn.sigstore.dev/targets/trusted_root.json') -Destination $trust
+          $env:CLOUDDRIVE_TEST_NATIVE_RELEASE_DIR = $release
+          $env:CLOUDDRIVE_TEST_NATIVE_TRUST_DIR = $trust
+          $env:CLOUDDRIVE_TEST_NATIVE_TAG = $env:GITHUB_REF_NAME
+          $env:CLOUDDRIVE_TEST_NATIVE_COMMIT = $env:GITHUB_SHA
+          go test -count=1 -v ./internal/nativeupgrade -run '^TestSignedFullReleaseBoot$'
+
   publish:
     name: Verify and publish stable release
-    needs: [maintenance-acceptance, managed-go-acceptance-linux, managed-go-acceptance-windows]
+    needs: [maintenance-acceptance, managed-go-acceptance-linux, managed-go-acceptance-windows, managed-full-acceptance]
     if: ${{ !contains(github.ref_name, '-') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -541,9 +644,11 @@ jobs:
           for target in windows/amd64 linux/amd64 linux/arm64; do
             os=${target%/*}
             arch=${target#*/}
-            archive="${RUNNER_TEMP}/release-assets/clouddrive_${GITHUB_REF_NAME}_${os}_${arch}_managed-go.zip"
-            go run ./internal/tools/native-archive --verify-managed "$archive" \
-              --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" --os "$os" --arch "$arch"
+            for profile in managed-go managed-full; do
+              archive="${RUNNER_TEMP}/release-assets/clouddrive_${GITHUB_REF_NAME}_${os}_${arch}_${profile}.zip"
+              go run ./internal/tools/native-archive --profile "$profile" --verify-managed "$archive" \
+                --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" --os "$os" --arch "$arch"
+            done
           done
           GOBIN="${RUNNER_TEMP}/release-tools" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
           "${RUNNER_TEMP}/release-tools/cosign" verify-blob \
@@ -573,15 +678,18 @@ jobs:
             sleep 5
           done
           cmp -- "${RUNNER_TEMP}/release-assets/install.sh" "${RUNNER_TEMP}/public-install.sh"
-          native_verified=false
-          for attempt in {1..6}; do
-            # 每轮独立缓存，实际走宿主使用的 GitHub 下载、验签、解包和本地回读路径。
-            if go run ./internal/tools/native-archive --stage-online "${RUNNER_TEMP}/verified-native-${attempt}" \
-              --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA"; then
-              native_verified=true
-              break
-            fi
-            sleep 5
+          for profile in managed-go managed-full; do
+            native_verified=false
+            for attempt in {1..6}; do
+              # 每轮独立缓存，实际走宿主使用的 GitHub 下载、验签、解包和本地回读路径。
+              if go run ./internal/tools/native-archive --profile "$profile" \
+                --stage-online "${RUNNER_TEMP}/verified-native-${profile}-${attempt}" \
+                --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA"; then
+                native_verified=true
+                break
+              fi
+              sleep 5
+            done
+            test "$native_verified" = true
           done
-          test "$native_verified" = true
           echo "正式版：https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}" >> "${GITHUB_STEP_SUMMARY}"
