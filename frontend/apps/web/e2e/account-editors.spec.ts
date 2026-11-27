@@ -40,9 +40,7 @@ test('Inline profile and password each retain navigation protection and clear/re
   const name = page.getByLabel('姓名', { exact: true });
   const password = page.getByLabel('当前密码', { exact: true });
   await name.fill('Unsaved profile');
-  const destination = page
-    .getByRole('navigation', { name: '主导航' })
-    .getByRole('link', { name: '用户管理', exact: true });
+  const destination = page.getByRole('link', { name: '返回我的文件', exact: true });
   await destination.click();
   await expect(page.getByRole('alertdialog')).toBeVisible();
   await page.getByRole('alertdialog').getByRole('button', { name: '取消', exact: true }).click();
@@ -58,7 +56,7 @@ test('Inline profile and password each retain navigation protection and clear/re
   await destination.click();
   await expect(page.getByRole('alertdialog')).toBeVisible();
   await page.getByRole('alertdialog').getByRole('button', { name: '离开', exact: true }).click();
-  await expect(page).toHaveURL(/\/users$/);
+  await expect(page).toHaveURL(/\/home$/);
   await page.goto('/account');
   await expect(password).toHaveValue('');
 });

@@ -1,7 +1,5 @@
-import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { resolve } from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './preview-test';
 import AxeBuilder from '@axe-core/playwright';
 import { siteProfileAPI } from './site-profile-api';
 import { readPreviewAccess } from './reading-fixture';
@@ -37,7 +35,7 @@ test('站点信息保存后应用到文件区、访客登录注册和公开分�
   await page.getByLabel('密码', { exact: true }).fill(account.password);
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await expect(
-    page.getByRole('heading', { name: '注册策略', exact: true, level: 1 }),
+    page.getByRole('heading', { name: '注册策略', exact: true, level: 2 }),
   ).toBeVisible();
   await page.getByRole('link', { name: '站点信息', exact: true }).click();
   await expect(page.getByRole('heading', { name: '参数设置', exact: true })).toBeVisible();
@@ -187,15 +185,14 @@ test('站点信息保存后应用到文件区、访客登录注册和公开分�
 });
 
 test('站点地址管理、别名分享、快捷方式和直链走真实发布地址', async ({ page, request }, info) => {
-  const accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
-  const primary = process.env.CLOUDDRIVE_TEST_PUBLICATION_ORIGIN;
-  test.skip(!accessPath || !primary, '需要在隔离 QA 登记第二个站点地址。');
-  const account = JSON.parse(
-    (await readFile(resolve(__dirname, accessPath!), 'utf8')).replace(/^\uFEFF/, ''),
-  ) as { url: string; username: string; password: string };
-  const local = new URL(account.url).origin;
-  expect(local).toBe('http://127.0.0.1:4194');
-  expect(primary).toBe('http://localhost:4194');
+  const account = readPreviewAccess();
+  const primary = account.publicationOrigin;
+  test.skip(!primary, '需要在隔离 QA 登记第二个站点地址。');
+  const local = account.origin;
+  const alias = new URL(primary!);
+  expect(alias.hostname).toBe('localhost');
+  expect(alias.port).toBe(new URL(local).port);
+  expect(alias.origin).toBe(primary);
   await page.goto('/login?returnTo=%2Fsystem-settings%2Fsite');
   await page.getByLabel('邮箱', { exact: true }).fill(account.username);
   await page.getByLabel('密码', { exact: true }).fill(account.password);
@@ -289,10 +286,8 @@ test('站点地址管理、别名分享、快捷方式和直链走真实发布�
     const direct = page.getByRole('dialog', { name: '获取直链', exact: true });
     await direct.getByRole('button', { name: '生成直链', exact: true }).click();
     const address = direct.getByRole('link');
-    await expect(address).toHaveAttribute(
-      'href',
-      new RegExp('^http://localhost:4194/api/v1/file-direct-links/'),
-    );
+    await expect(address).toHaveAttribute('href', /\/api\/v1\/file-direct-links\//);
+    expect(new URL((await address.getAttribute('href'))!).origin).toBe(primary);
     const actual = await request.get((await address.getAttribute('href'))! + '?download=true');
     expect(actual.status()).toBe(200);
     expect(await actual.text()).toBe('站点地址真实回调');

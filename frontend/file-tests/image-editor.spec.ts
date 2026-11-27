@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
@@ -31,7 +31,7 @@ async function createWorkspace(page: Page, prefix = 'image-editor-') {
   }, prefix);
   await page.goto('/home?parent=' + parentId);
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '列表', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '列表', exact: true }).click();
   return parentId;
 }
 

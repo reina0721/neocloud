@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
+import { assertPreviewOrigin } from './reading-fixture';
+import { test, expect, type Page } from './preview-test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
@@ -14,7 +15,7 @@ async function login(page: Page) {
   const access = JSON.parse(
     (await readFile(process.env.CLOUDDRIVE_FILE_TEST_ACCESS, 'utf8')).replace(/^\uFEFF/, ''),
   ) as { url: string; username: string; password: string };
-  if (new URL(access.url).origin !== 'http://127.0.0.1:4194') throw Error('只允许隔离QA');
+  assertPreviewOrigin(access.url);
   await page.goto('/login?returnTo=%2Fhome');
   await page.getByLabel('邮箱', { exact: true }).fill(access.username);
   await page.getByLabel('密码', { exact: true }).fill(access.password);

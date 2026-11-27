@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { inflateRawSync } from 'node:zlib';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './preview-test';
 import { openReadingFixtureFolder, readPreviewAccess } from './reading-fixture';
 import { drawioEndpoint } from '../surfaces/plugins/files/src/drawio-protocol';
 

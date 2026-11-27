@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -130,7 +130,7 @@ test('分页、列表列偏好、目录优先及当前页键盘范围选择', as
     });
   await page.goto('/home?parent=' + folder.id);
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '列表', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '列表', exact: true }).click();
   await expect(entries(page)).toHaveCount(50);
   await page.getByRole('checkbox', { name: '选择本页全部项目', exact: true }).press('Space');
   await expect(page.getByText('已选择 50 项', { exact: true })).toBeVisible();
@@ -304,7 +304,7 @@ test('分页、列表列偏好、目录优先及当前页键盘范围选择', as
   await page.goto(searchURL);
   await expect(entries(page)).toHaveCount(50);
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '网格', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '网格', exact: true }).click();
   await expect(page.locator('[data-file-content]').getByRole('table')).toHaveCount(0);
   await loadMore.scrollIntoViewIfNeeded();
   await expect(entries(page)).toHaveCount(54);
@@ -314,7 +314,7 @@ test('分页、列表列偏好、目录优先及当前页键盘范围选择', as
     animations: 'disabled',
   });
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '列表', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '列表', exact: true }).click();
   await expect(page.locator('[data-file-content]').getByRole('table')).toHaveCount(1);
 
   await page.goto('/home?parent=' + folder.id + '&page=2');

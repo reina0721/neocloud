@@ -1,6 +1,6 @@
 import { shareMenuAction } from './share-actions';
-import { readPreviewAccess } from './reading-fixture';
-import { test, expect, type Page, type Locator } from '@playwright/test';
+import { allowsOfflineFixture, readPreviewAccess } from './reading-fixture';
+import { test, expect, type Page, type Locator } from './preview-test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
@@ -79,10 +79,20 @@ async function select(page: Page, label: string, option: string, scope: Page | L
 async function zone(page: Page, value: string, dateFormat = 'YYYY-MM-DD') {
   await page.goto('/settings/locale');
   const field = page.getByRole('combobox', { name: '时区', exact: true });
-  await field.fill(value === 'auto' ? '自动' : value);
-  await page
-    .getByRole('option', { name: value === 'auto' ? '自动（跟随系统）' : value, exact: true })
-    .click();
+  await expect(field).toBeEnabled();
+  const selected =
+    value === 'Asia/Katmandu'
+      ? await page.evaluate(() => {
+          const zones = Intl.supportedValuesOf('timeZone');
+          return zones.includes('Asia/Katmandu') ? 'Asia/Katmandu' : 'Asia/Kathmandu';
+        })
+      : value;
+  const label = selected === 'auto' ? '自动（跟随系统）' : selected;
+  if ((await field.inputValue()) !== label) {
+    await field.click();
+    await field.fill(selected === 'auto' ? '自动' : selected);
+    await page.getByRole('option', { name: label, exact: true }).click();
+  }
   await select(page, '日期格式', dateFormat);
   await page
     .getByRole('radiogroup', { name: '时间格式', exact: true })
@@ -91,13 +101,18 @@ async function zone(page: Page, value: string, dateFormat = 'YYYY-MM-DD') {
   const seconds = page.getByRole('switch', { name: '显示秒', exact: true });
   if (!(await seconds.isChecked())) await seconds.press('Space');
   await expect
-    .poll(async () => {
-      const response = await page.request.get('/api/console/v1/native/iam/self/preferences');
-      if (!response.ok()) return response.status();
-      const preferences = (await response.json()) as { timeZone: string };
-      return preferences.timeZone;
-    })
-    .toBe(value === 'auto' ? '' : value);
+    .poll(() =>
+      page.evaluate(async () => {
+        const response = await fetch('/api/console/v1/native/iam/self/preferences', {
+          cache: 'no-store',
+        });
+        if (!response.ok) return response.status;
+        const preferences = (await response.json()) as { timeZone: string };
+        return preferences.timeZone;
+      }),
+    )
+    .toBe(selected === 'auto' ? '' : selected);
+  return selected;
 }
 // 此夹具只比较三个无DST的固定偏移区，用独立算术验证数据流，不调用生产格式化器。
 const fixtureOffsetMinutes: Readonly<Record<string, number>> = {
@@ -170,7 +185,7 @@ test('F361–367：真实文件时间随区域设置变化、列表列与属性�
   await page.goto('/home?parent=' + root.id);
   const row = page.locator('[data-file-item="' + file.id + '"]');
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '列表', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '列表', exact: true }).click();
   await page.getByRole('button', { name: '视图', exact: true }).click();
   await page.getByRole('menuitem', { name: '视图选项', exact: true }).click();
   const options = page.getByRole('dialog', { name: '视图选项', exact: true });
@@ -185,7 +200,7 @@ test('F361–367：真实文件时间随区域设置变化、列表列与属性�
     row.getByRole('cell').filter({ hasText: date(file.createdAt, 'Pacific/Kiritimati') }),
   ).toHaveCount(2);
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '网格', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '网格', exact: true }).click();
   await expect(row.locator('p[title]')).toHaveAttribute(
     'title',
     full(changed.updatedAt, 'Pacific/Kiritimati'),
@@ -197,7 +212,7 @@ test('F361–367：真实文件时间随区域设置变化、列表列与属性�
   await details.getByRole('button', { name: '关闭', exact: true }).click();
   await zone(page, 'Pacific/Honolulu');
   await page.goto('/home?parent=' + root.id);
-  await expect(row.locator('p[title]')).toHaveText(date(changed.updatedAt, 'Pacific/Honolulu'));
+  await expect(row.locator('p[title]')).toContainText(date(changed.updatedAt, 'Pacific/Honolulu'));
   const trashed = await api<Entry>(page, '/' + file.id + '/trash', 'POST');
   if (!trashed.trashedAt) throw new Error('真实回收时间缺失');
   await page.goto('/home?trash=true');
@@ -252,8 +267,7 @@ test('F368–372：真实版本、分享列表/详情和WebDAV连接采用同一
 });
 
 test('F373/374：真实下载详情和持久传输会话的到期时间', async ({ page }) => {
-  if (process.env.CLOUDDRIVE_FILE_TEST_OFFLINE_SOURCE_ALLOWED !== '1')
-    throw new Error('需要隔离QA的本地来源授权');
+  if (!allowsOfflineFixture()) throw new Error('需要隔离QA的本地来源授权');
   await login(page);
   const { root } = await fixture(page);
   const created = await api<{ items: { task?: { id: string }; id?: string }[] }>(
@@ -318,13 +332,13 @@ test('F373/374：真实下载详情和持久传输会话的到期时间', async 
 test('F375/376：自定义分享真实保存转换后的时刻，编辑保持原秒精度', async ({ page }, info) => {
   await login(page);
   const { root, file } = await fixture(page);
-  await zone(page, 'Asia/Katmandu');
+  const selected = await zone(page, 'Asia/Katmandu');
   await page.goto('/home?parent=' + root.id);
   const dialog = await customShare(page, file);
   const tomorrow = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString().slice(0, 10);
   await calendarDate(dialog, tomorrow);
   await dialog.getByLabel('到期时间', { exact: true }).fill('18:30');
-  await expect(dialog).toContainText('输入时区：Asia/Katmandu');
+  await expect(dialog).toContainText('输入时区：' + selected);
   const expected = tomorrow + 'T12:45:00.000Z';
   await expect(dialog.getByRole('status')).toContainText(expected);
   const response = page.waitForResponse(

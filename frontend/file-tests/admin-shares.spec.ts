@@ -1,7 +1,8 @@
+import { assertPreviewOrigin } from './reading-fixture';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './preview-test';
 
 type Access = { url: string; username: string; password: string };
 type Share = { id: string; token: string };
@@ -45,7 +46,7 @@ test('跨账号分享筛选、计数详情与窄屏批量撤销', async ({ page,
   test.skip(!adminPath || !memberPath, '仅在隔离 QA 验证管理撤销。');
   const [admin, member] = await Promise.all([readAccess(adminPath!), readAccess(memberPath!)]);
   const origin = new URL(admin.url).origin;
-  expect(origin).toBe('http://127.0.0.1:4194');
+  assertPreviewOrigin(origin);
   expect(new URL(member.url).origin).toBe(origin);
   const memberContext = await browser.newContext({ locale: 'zh-CN' });
   try {

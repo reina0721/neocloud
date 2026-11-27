@@ -1,7 +1,8 @@
+import { assertPreviewOrigin } from './reading-fixture';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 
 type SettingsResponse = {
   revision: number;
@@ -22,7 +23,7 @@ test('管理文件系统参数可校验、保存、刷新和恢复继承', async
   const admin = await readAccess(accessPath!);
   const member = await readAccess(memberPath!);
   const origin = new URL(admin.url).origin;
-  expect(origin).toBe('http://127.0.0.1:4194');
+  assertPreviewOrigin(origin);
   expect(new URL(member.url).origin).toBe(origin);
   const login = async (tab: typeof page, account: typeof admin) => {
     await tab.goto(origin + '/login?returnTo=%2Fworkspace');

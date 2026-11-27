@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 import { readPreviewAccess } from './reading-fixture';
 
 type Definition = { key: string; name: string; kind: string };

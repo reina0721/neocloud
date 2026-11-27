@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './preview-test';
 import AxeBuilder from '@axe-core/playwright';
 import type { StoragePolicy, StorageNameRulesView } from '../surfaces/src/files/storage-policy';
 import { readPreviewAccess } from './reading-fixture';

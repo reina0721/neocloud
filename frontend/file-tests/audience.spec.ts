@@ -1,6 +1,6 @@
 import { shareMenuAction } from './share-actions';
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, type Page, type Locator } from '@playwright/test';
+import { test, expect, type Page, type Locator } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -152,7 +152,7 @@ test('F281–289：UI创建禁止匿名、精确账号能力和真实登录返�
   const f = await fixture(page);
   // 根目录有分页，通过真实搜索定位本次目录，避免依赖第一页的排序位置。
   await page.getByRole('searchbox', { name: '搜索文件', exact: true }).fill(String(f.root.name));
-  await page.getByRole('button', { name: '搜索文件', exact: true }).click();
+  await page.getByRole('searchbox', { name: '搜索文件', exact: true }).press('Enter');
   await page.getByRole('button', { name: String(f.root.name) + ' 的操作', exact: true }).click();
   await page.getByRole('menuitem', { name: '分享', exact: true }).click();
   const create = page.getByRole('dialog', { name: '分享', exact: true });

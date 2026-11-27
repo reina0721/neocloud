@@ -4,6 +4,7 @@ import { useFrontendTranslation } from '@clouddrive/i18n';
 import { supportedTimeZones } from '@clouddrive/i18n/format';
 import type { PreferencesPort } from '@clouddrive/plugin-framework/preferences';
 import type { Preferences } from '@clouddrive/surface/preferences-model';
+import { useDesktopNotificationSettings } from '@clouddrive/surface/administration/runtime';
 import {
   validatePreferences,
   IDLE_LOCK_MINUTES,
@@ -713,6 +714,7 @@ export function LocaleRegionSection({ ctx }: Readonly<{ ctx: Ctx }>) {
 
 export function NotificationsSection({ ctx }: Readonly<{ ctx: Ctx }>) {
   const { t } = useFrontendTranslation();
+  const desktop = useDesktopNotificationSettings();
   const n = ctx.prefs.notifications;
   return (
     <>
@@ -743,14 +745,17 @@ export function NotificationsSection({ ctx }: Readonly<{ ctx: Ctx }>) {
           '',
         )}
         {switchRow(ctx, 'notifications', 'sound', n.sound, t('settings.notifications.sound'), '')}
-        {switchRow(
-          ctx,
-          'notifications',
-          'desktopNotifications',
-          n.desktopNotifications,
-          t('settings.notifications.desktopNotifications'),
-          '',
-        )}
+        <SwitchField
+          label={t('settings.notifications.desktopNotifications')}
+          description=""
+          checked={n.desktopNotifications}
+          disabled={!desktop || desktop.pending}
+          onCheckedChange={(enabled) =>
+            desktop?.setEnabled(enabled, (desktopNotifications) => {
+              ctx.port.updateCategory('notifications', { desktopNotifications });
+            })
+          }
+        />
       </SectionShell>
       <SectionShell title={t('settings.groups.feedback')}>
         {switchRow(

@@ -13,6 +13,7 @@ import {
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import {
   fileApplicationDevice,
+  type FileApplicationID,
   type FileApplicationPolicy,
 } from '../../../src/files/file-applications';
 import { FilesError, type FileEntry, type FilesPort } from '../../../src/files/model';
@@ -291,27 +292,39 @@ export function ReaderWorkspace({
     );
   }
 
-  function openReader(entry: FileEntry, application: string, session: OpenReaderSession) {
+  function openReader(
+    entry: FileEntry,
+    application: string,
+    session: OpenReaderSession,
+    replacing?: string,
+  ) {
     const bookmark = { fileId: entry.id, application };
     const key = readerKey(bookmark);
     const existing = files.find((item) => readerKey(item.bookmark) === key);
-    if (!existing && files.length >= limit) {
+    if (!existing && !replacing && files.length >= limit) {
       setMessage(t('files.viewer.limit'));
       return;
     }
-    if (!existing?.session)
-      setFiles((current) => [
-        ...current.filter((item) => readerKey(item.bookmark) !== key),
-        {
-          bookmark,
-          entry,
-          session,
-          closeSequence: 0,
-          draftState: 'clean',
-          ...(session.kind === 'web' ? { applicationLabel: session.application.name } : {}),
-        },
-      ]);
-    show(bookmark, false, entry.id);
+    if (replacing || !existing?.session)
+      setFiles((current) => {
+        const retained = replacing
+          ? current.filter((item) => readerKey(item.bookmark) !== replacing)
+          : current;
+        if (retained.some((item) => readerKey(item.bookmark) === key && item.session))
+          return retained;
+        return [
+          ...retained.filter((item) => readerKey(item.bookmark) !== key),
+          {
+            bookmark,
+            entry,
+            session,
+            closeSequence: 0,
+            draftState: 'clean',
+            ...(session.kind === 'web' ? { applicationLabel: session.application.name } : {}),
+          },
+        ];
+      });
+    show(bookmark, Boolean(replacing), entry.id);
   }
 
   const patch = useCallback((key: string, update: (item: OpenFile) => OpenFile) => {
@@ -444,6 +457,7 @@ export function ReaderWorkspace({
       />
       {files.map((item) => {
         if (!item.session || !item.entry) return null;
+        const entry = item.entry;
         const key = readerKey(item.bookmark);
         const presentation = active === key ? 'reader' : mini === key ? 'mini' : 'parked';
         return (
@@ -451,7 +465,7 @@ export function ReaderWorkspace({
             key={key}
             item={item}
             session={item.session}
-            entry={item.entry}
+            entry={entry}
             presentation={presentation}
             miniVisible={mediaOpen && mediaFront === 'video'}
             persistence={persistence}
@@ -477,6 +491,9 @@ export function ReaderWorkspace({
               show(item.bookmark);
             }}
             close={() => finish(key)}
+            replaceWithBuiltIn={(application, session) =>
+              openReader(entry, application, session, key)
+            }
             onChanged={() => refresh((value) => value + 1)}
             onMoveImage={(next) => moveImage(item, next)}
             notify={setMessage}
@@ -507,6 +524,7 @@ function MountedReader({
   openFolder,
   restore,
   close,
+  replaceWithBuiltIn,
   onChanged,
   onMoveImage,
   notify,
@@ -523,6 +541,7 @@ function MountedReader({
   openFolder: () => void;
   restore: () => void;
   close: () => void;
+  replaceWithBuiltIn: (application: FileApplicationID, session: OpenReaderSession) => void;
   onChanged: () => void;
   onMoveImage: (next: MediaReaderSession) => void;
   notify: (message: string) => void;
@@ -598,6 +617,7 @@ function MountedReader({
         <FileReader
           session={session}
           close={close}
+          replaceWithBuiltIn={replaceWithBuiltIn}
           download={download}
           changed={onChanged}
           saved={onChanged}

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 import { readPreviewAccess } from './reading-fixture';
 
 test('双因素认证区分设置材料和恢复码，并保留失败确认中的材料', async ({ page }, info) => {

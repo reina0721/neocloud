@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './preview-test';
 import AxeBuilder from '@axe-core/playwright';
 import { readPreviewAccess } from './reading-fixture';
 
@@ -191,8 +191,22 @@ test('用户资料编辑只读取用户，创建页仍要求角色目录', async
     await expect(name).toHaveValue(`已更新-${suffix}`);
     expect(catalogRequests).toEqual([]);
 
-    await visitor.goto('/users');
-    await expect(visitor.getByRole('row', { name: new RegExp(`已更新-${suffix}`) })).toBeVisible();
+    const back = visitor.getByRole('link', { name: '返回用户列表', exact: true });
+    await name.fill(`未提交-${suffix}`);
+    await back.click();
+    const confirm = visitor.getByRole('alertdialog', { name: '离开当前页面？', exact: true });
+    await confirm.getByRole('button', { name: '取消', exact: true }).click();
+    await expect(name).toHaveValue(`未提交-${suffix}`);
+    await back.press('Enter');
+    await confirm.getByRole('button', { name: '离开', exact: true }).click();
+    await expect(visitor).toHaveURL(/\/users$/);
+    const row = visitor.getByRole('row', { name: new RegExp(`已更新-${suffix}`) });
+    await expect(row).toBeVisible();
+    await row.getByRole('link', { name: `已更新-${suffix}`, exact: true }).click();
+    await visitor.getByRole('link', { name: '编辑用户', exact: true }).click();
+    await expect(name).toHaveValue(`已更新-${suffix}`);
+    await back.click();
+    await expect(visitor).toHaveURL(/\/users$/);
     await expect(visitor.locator('main a[href="/users/create"]')).toHaveCount(0);
     await visitor.goto('/users/create');
     await expect(

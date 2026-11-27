@@ -1,5 +1,5 @@
 import { shareMenuAction } from './share-actions';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './preview-test';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -61,7 +61,7 @@ test.beforeEach(async ({ page }) => {
   await page.getByRole('button', { name: '登录', exact: true }).click();
   await expect(page).toHaveURL(/\/home$/);
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '列表', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '列表', exact: true }).click();
 });
 
 test('文本与 Markdown、双窗口编辑冲突、独立副本、右键菜单、快捷键和真实 ZIP', async ({
@@ -362,7 +362,7 @@ test('目录层级上传与复制、图片画廊、真实音视频播放和剪�
     ),
   ).toBe(true);
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '画廊', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '画廊', exact: true }).click();
   await expect(page.getByRole('img', { name: 'image.png', exact: true })).toBeVisible();
   await expect(page.getByRole('img', { name: 'unsafe.png', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'unsafe.png', exact: true }).click();
@@ -464,7 +464,7 @@ test('目录层级上传与复制、图片画廊、真实音视频播放和剪�
   await expect(page.getByRole('button', { name: pasted, exact: true })).toBeVisible();
   await page.goto('/home?parent=' + workspace.id);
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '列表', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '列表', exact: true }).click();
   await fileAction(page, folder, '复制');
   await page.getByRole('dialog').getByLabel('名称', { exact: true }).fill(copy);
   await page.getByRole('dialog').getByRole('button', { name: workspace.name, exact: true }).click();

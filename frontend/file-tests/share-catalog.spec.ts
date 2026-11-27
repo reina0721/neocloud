@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { expect, test, type Page, type Locator } from '@playwright/test';
+import { expect, test, type Page, type Locator } from './preview-test';
 import AxeBuilder from '@axe-core/playwright';
 import { readPreviewAccess } from './reading-fixture';
 import { shareMenuAction } from './share-actions';
@@ -126,7 +126,9 @@ test('分享列表按状态组织动作，复制失败保留记录，暂停与�
   await expect(page.locator('[data-share-id]')).toHaveCount(4);
   await page.getByRole('heading', { name: '我的分享', exact: true }).click();
   await page.keyboard.press('/');
-  await expect(page.getByRole('searchbox')).toBeFocused();
+  await expect(
+    page.getByRole('searchbox', { name: '搜索标题或原文件名', exact: true }),
+  ).toBeFocused();
   await expect(page.locator('[data-file-workspace-search]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: '新建', exact: true })).toBeVisible();
   await expect(active.getByRole('button', { name: '复制链接', exact: true })).toBeVisible();
@@ -206,7 +208,9 @@ test('检索分页保留在地址中，刷新与返回可恢复，空结果不�
   await expect(page.locator('[data-share-id]')).toHaveCount(3);
   await page.reload();
   await expect(page.locator('[data-share-id]')).toHaveCount(3);
-  await expect(page.getByRole('searchbox')).toHaveValue(f.prefix);
+  await expect(
+    page.getByRole('searchbox', { name: '搜索标题或原文件名', exact: true }),
+  ).toHaveValue(f.prefix);
   await page
     .getByRole('navigation', { name: '分享分页', exact: true })
     .getByRole('button', { name: '上一页', exact: true })

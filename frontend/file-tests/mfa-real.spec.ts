@@ -1,5 +1,5 @@
 import { createHmac, randomUUID } from 'node:crypto';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './preview-test';
 import { readPreviewAccess } from './reading-fixture';
 
 test.use({ actionTimeout: 15_000 });
@@ -89,6 +89,20 @@ test('独立账户完成真实 TOTP 绑定、恢复码登录和解除绑定', as
     status: 'active',
   })) as { user: { id: string } };
   const context = await browser.newContext({ baseURL: access.origin, locale: 'zh-CN' });
+  const policyPath = '/system/password-policy';
+  const policy = await page.evaluate(async (path) => {
+    const response = await fetch('/api/console/v1' + path);
+    if (!response.ok) throw new Error(`Password policy fixture HTTP ${response.status}`);
+    return (await response.json()) as {
+      minLength: number;
+      maxLength: number;
+      requireComplexity: boolean;
+      version: number;
+      overridden: boolean;
+    };
+  }, policyPath);
+  let policyVersion: number | undefined;
+  const errors: unknown[] = [];
   try {
     const member = await context.newPage();
     await login(member, email, password);
@@ -131,7 +145,13 @@ test('独立账户完成真实 TOTP 绑定、恢复码登录和解除绑定', as
     await disable.getByLabel('动态验证码或恢复码', { exact: true }).fill(recoveryCodes[1]!);
     await disable.getByRole('button', { name: '确认', exact: true }).click();
     await expect(member.getByRole('button', { name: '绑定认证器', exact: true })).toBeVisible();
-    // The browser permits HTTP-valid input; the deployment owns password strength.
+    const updatedPolicy = (await write(page, policyPath, 'PUT', {
+      minLength: 16,
+      maxLength: Math.max(16, policy.maxLength),
+      requireComplexity: policy.requireComplexity,
+      version: policy.version,
+    })) as { version: number };
+    policyVersion = updatedPolicy.version;
     await member.goto('/account');
     await member.getByLabel('当前密码', { exact: true }).fill(password);
     await member.getByLabel('新密码', { exact: true }).fill('Policy12!abc');
@@ -142,19 +162,48 @@ test('独立账户完成真实 TOTP 绑定、恢复码登录和解除绑定', as
     await member.getByRole('button', { name: '修改密码', exact: true }).click();
     expect((await rejected).status()).toBe(422);
     await expect(member.getByLabel('新密码', { exact: true })).toHaveValue('Policy12!abc');
-  } finally {
-    await write(page, `/native/iam/accounts/${created.user.id}/status`, 'PATCH', {
-      status: 'disabled',
-    });
-    const disabled = await page.evaluate(async (email) => {
-      const response = await fetch(
-        '/api/console/v1/native/iam/accounts?query=' + encodeURIComponent(email),
-      );
-      if (!response.ok) throw new Error('Fixture cleanup verification failed');
-      return (await response.json()) as { items: { status: string }[] };
-    }, email);
-    expect(disabled.items).toHaveLength(1);
-    expect(disabled.items[0]?.status).toBe('disabled');
-    await context.close();
+    const replacement = 'VfA!' + randomUUID();
+    await member.getByLabel('当前密码', { exact: true }).fill(password);
+    await member.getByLabel('新密码', { exact: true }).fill(replacement);
+    const changed = member.waitForResponse(
+      (response) =>
+        response.url().endsWith('/auth/password') && response.request().method() === 'POST',
+    );
+    await member.getByRole('button', { name: '修改密码', exact: true }).click();
+    expect((await changed).status()).toBe(204);
+    await login(member, email, replacement);
+    await expect(member).toHaveURL(/\/account\/security$/);
+    await expect(member.getByRole('button', { name: '绑定认证器', exact: true })).toBeVisible();
+  } catch (error) {
+    errors.push(error);
   }
+  const cleanup = await Promise.allSettled([
+    context.close(),
+    (async () => {
+      if (policyVersion === undefined) return;
+      const { minLength, maxLength, requireComplexity, overridden } = policy;
+      await write(page, policyPath, overridden ? 'PUT' : 'DELETE', {
+        version: policyVersion,
+        ...(overridden ? { minLength, maxLength, requireComplexity } : {}),
+      });
+    })(),
+    (async () => {
+      await write(page, `/native/iam/accounts/${created.user.id}/status`, 'PATCH', {
+        status: 'disabled',
+      });
+      const disabled = await page.evaluate(async (email) => {
+        const response = await fetch(
+          '/api/console/v1/native/iam/accounts?query=' + encodeURIComponent(email),
+        );
+        if (!response.ok) throw new Error('Fixture cleanup verification failed');
+        return (await response.json()) as { items: { status: string }[] };
+      }, email);
+      expect(disabled.items).toHaveLength(1);
+      expect(disabled.items[0]?.status).toBe('disabled');
+    })(),
+  ]);
+  for (const result of cleanup)
+    if (result.status === 'rejected') errors.push(result.reason as unknown);
+  if (errors.length === 1) throw errors[0];
+  if (errors.length) throw new AggregateError(errors, 'MFA test or cleanup failed');
 });

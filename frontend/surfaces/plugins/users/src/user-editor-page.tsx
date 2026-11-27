@@ -29,11 +29,7 @@ export function UserEditorPage({ id }: Readonly<{ id?: string }>) {
         eyebrow={t('users.eyebrow')}
         title={t(`users.${mode === 'create' ? 'create' : 'edit'}`)}
         description={t(`users.${mode}Description`)}
-        actions={
-          <RouteLink target={id ? route('users.detail', {}, { query: { id } }) : route('users')}>
-            {t('users.back')}
-          </RouteLink>
-        }
+        actions={<RouteLink target={route('users')}>{t('users.back')}</RouteLink>}
       />
       <IdentityModeNotice mode={port.mode} />
       {query.error || !query.data ? (

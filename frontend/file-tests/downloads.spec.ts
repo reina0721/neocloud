@@ -1,4 +1,5 @@
-import { test, expect, type Locator, type Page, type Route } from '@playwright/test';
+import { allowsOfflineFixture } from './reading-fixture';
+import { test, expect, type Locator, type Page, type Route } from './preview-test';
 import { createServer, type Server } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -7,7 +8,7 @@ import AxeBuilder from '@axe-core/playwright';
 
 test.use({ actionTimeout: 15_000 });
 test.skip(
-  process.env.CLOUDDRIVE_FILE_TEST_OFFLINE_SOURCE_ALLOWED !== '1',
+  !allowsOfflineFixture(),
   '需要隔离测试库与仅用于夹具的127.0.0.1/32来源授权；不修改普通预览的公网来源策略。',
 );
 let source: Server;

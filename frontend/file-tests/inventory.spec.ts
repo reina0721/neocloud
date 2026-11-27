@@ -1,7 +1,8 @@
+import { assertPreviewOrigin } from './reading-fixture';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './preview-test';
 
 async function login(page: Page, account: { username: string; password: string }) {
   await page.goto('/login?returnTo=%2Fworkspace');
@@ -27,7 +28,7 @@ test('管理清单隔离权限、过滤和窄屏详情', async ({ page, browser 
   );
   const origin = new URL(member.url).origin;
   expect(member.purpose).toBe('direct-links-fixture');
-  expect(origin).toBe('http://127.0.0.1:4194');
+  assertPreviewOrigin(origin);
   expect(new URL(admin.url).origin).toBe(origin);
   await login(page, member);
   await expect(page.getByRole('link', { name: '文件清单', exact: true })).toHaveCount(0);

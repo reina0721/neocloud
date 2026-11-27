@@ -1,7 +1,8 @@
+import { assertPreviewOrigin } from './reading-fixture';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './preview-test';
 
 async function login(page: Page, account: { username: string; password: string }) {
   await page.goto('/login?returnTo=%2Fworkspace');
@@ -27,7 +28,7 @@ test('文件 Blob 按对象显示真实引用并保护管理入口', async ({ pa
   );
   const origin = new URL(member.url).origin;
   expect(member.purpose).toBe('direct-links-fixture');
-  expect(origin).toBe('http://127.0.0.1:4194');
+  assertPreviewOrigin(origin);
   expect(new URL(admin.url).origin).toBe(origin);
   await login(page, member);
   await expect(page.getByRole('link', { name: '文件 Blob', exact: true })).toHaveCount(0);

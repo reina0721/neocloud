@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, test, type Locator } from './preview-test';
 import { openReadingFixtureFolder, readPreviewAccess } from './reading-fixture';
 
 test.use({ actionTimeout: 15_000 });

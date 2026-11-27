@@ -83,7 +83,7 @@ for (const category of [
         await expectAccessible(page);
         if (expanded) {
           const navigation = page.getByRole('button', {
-            name: 'Categories and search',
+            name: 'Open personal menu',
             exact: true,
           });
           await expect(navigation).toBeVisible();

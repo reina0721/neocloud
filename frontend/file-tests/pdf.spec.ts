@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { openReadingFixtureFolder } from './reading-fixture';
@@ -135,6 +135,7 @@ test('阅读内容在窄屏、侧栏和查找打开时保持可用，键盘能�
 test('F278：真实加密PDF密码错误后重试', async ({ page }) => {
   const d = await upload(page, fixture('encrypted.pdf'));
   await expect(d.getByText('此PDF需要密码。', { exact: true })).toBeVisible();
+  await showTools(d);
   await expect(d.getByRole('button', { name: '图片标注', exact: true })).toBeDisabled();
   await d.getByLabel('PDF密码（不保存）', { exact: true }).fill('wrong');
   await d.getByRole('button', { name: '打开文档', exact: true }).click();
@@ -148,7 +149,14 @@ test('拒绝超过受控页数的真实PDF', async ({ page }) => {
   const d = await upload(page, fixture('over-pages.pdf'));
   await expect(d.getByRole('alert')).toContainText('超过阅读限制');
 });
+async function showTools(d: ReturnType<Page['getByRole']>) {
+  const trigger = d.getByRole('button', { name: '编辑与导出工具', exact: true });
+  if ((await trigger.isVisible()) && (await trigger.getAttribute('aria-expanded')) !== 'true') {
+    await trigger.click();
+  }
+}
 async function choose(page: Page, d: ReturnType<Page['getByRole']>, menu: string, item: string) {
+  await showTools(d);
   await d.getByRole('button', { name: menu, exact: true }).click();
   await page.getByRole('menuitem', { name: item, exact: true }).click();
   if (menu === '标注工具') {
@@ -276,6 +284,7 @@ test('PDF 本机图片标注可跨页编辑、缩放、撤销并导出真实副�
   const stamps = (index: number) => pageAt(index).locator('.stampEditor');
   const { png, jpeg, webp, wide } = await stampFixtures(page);
   const sample = Buffer.from(png, 'base64');
+  await showTools(d);
   await expect(button('图片标注')).toBeEnabled();
   await choose(page, d, '缩放与显示', '适合整页');
   const canceled = page.waitForEvent('filechooser');
@@ -411,6 +420,7 @@ test('PDF 图片读取可取消，窗口导入有界，窄屏英文仍可使用'
   const button = (label: string) => d.getByRole('button', { name: label, exact: true });
   const { png } = await stampFixtures(page);
   const sample = Buffer.from(png, 'base64');
+  await showTools(d);
   await expect(button('图片标注')).toBeEnabled();
   type StampProbe = { closed: number; release?: () => void };
   await page.evaluate(() => {

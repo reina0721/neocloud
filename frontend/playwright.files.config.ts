@@ -13,6 +13,7 @@ export default defineConfig({
     baseURL: access.origin,
     browserName: 'chromium',
     locale: 'zh-CN',
+    ignoreHTTPSErrors: Boolean(process.env.CLOUDDRIVE_TEST_WEB_HTTPS_ORIGIN),
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },

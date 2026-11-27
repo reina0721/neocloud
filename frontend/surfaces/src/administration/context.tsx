@@ -27,6 +27,15 @@ export function useAccountNotificationSettings() {
   return useContext(AccountNotificationSettingsContext);
 }
 
+export const DesktopNotificationSettingsContext = createContext<{
+  pending: boolean;
+  setEnabled: (enabled: boolean, save: (enabled: boolean) => void) => void;
+} | null>(null);
+
+export function useDesktopNotificationSettings() {
+  return useContext(DesktopNotificationSettingsContext);
+}
+
 export function AdministrationProvider({
   port,
   children,

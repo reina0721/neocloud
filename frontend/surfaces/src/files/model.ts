@@ -52,6 +52,7 @@ import type {
   FileApplicationView,
   WebFileApplicationItem,
   WebFilePreview,
+  WebPreviewReadiness,
   WOPIDiscovery,
 } from './file-applications';
 import type { EpubBook, EpubEntry, EpubReadingPort } from './epub-contract';
@@ -262,6 +263,7 @@ export type FilesPort = Readonly<{
   readFileApplications(signal: AbortSignal): Promise<FileApplicationView>;
   saveFileApplications(input: FileApplicationSettings): Promise<FileApplicationView>;
   readActiveFileApplications(signal: AbortSignal): Promise<FileApplicationPolicy>;
+  checkWebFilePreview?(application: string, signal: AbortSignal): Promise<WebPreviewReadiness>;
   launchWebFilePreview(
     entry: FileEntry,
     application: WebFileApplicationItem,

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 import { epubFixture } from '../apps/web/src/test/epub-fixture';
 import { openReadingFixtureFolder, readPreviewAccess } from './reading-fixture';
 

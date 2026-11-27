@@ -1,7 +1,8 @@
+import { assertPreviewOrigin } from './reading-fixture';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './preview-test';
 
 type Access = { url: string; username: string; password: string };
 type Job = { id: string; state: string; resultEntryId: string };
@@ -99,7 +100,7 @@ test('管理员过滤并清理成员的终态归档任务，保留发布文件',
     JSON.parse((await readFile(resolve(__dirname, path), 'utf8')).replace(/^\uFEFF/, '')) as Access;
   const [admin, member] = await Promise.all([readAccess(adminPath!), readAccess(memberPath!)]);
   const origin = new URL(admin.url).origin;
-  expect(origin).toBe('http://127.0.0.1:4194');
+  assertPreviewOrigin(origin);
   expect(new URL(member.url).origin).toBe(origin);
   const memberContext = await browser.newContext({ locale: 'zh-CN' });
   try {
@@ -196,7 +197,7 @@ test('管理员可以筛选调度器生成的系统维护记录', async ({ page 
   const account = JSON.parse(
     (await readFile(resolve(__dirname, accessPath!), 'utf8')).replace(/^\uFEFF/, ''),
   ) as Access;
-  expect(new URL(account.url).origin).toBe('http://127.0.0.1:4194');
+  assertPreviewOrigin(account.url);
   await login(page, account, '/system-tools/tasks');
   let run: MaintenanceList['items'][number] | undefined;
   await expect

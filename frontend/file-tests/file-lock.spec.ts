@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 import AxeBuilder from '@axe-core/playwright';
 import { readPreviewAccess } from './reading-fixture';
 

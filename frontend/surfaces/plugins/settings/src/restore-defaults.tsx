@@ -11,14 +11,13 @@ import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
  * - `RestoreCategoryButton`：恢复单分类（ConfirmDialog，只影响该分类）。
  * 只恢复偏好；不触碰账号/业务数据、收藏、最近、通知、草稿与已保存筛选方案
  * （resetCategory/resetAll 由 Host Port 保证只写偏好 store）。
- * 恢复失败（PersistResult 非 ok）经 onResult 上报（设置页统一呈现 notSaved）。
+ * 恢复动作由设置壳执行与登记，失败后可重试同一动作。
  */
 type Props = {
-  /** 恢复结果上报给父级（设置页统一呈现失败/重试）。 */
-  onResult?: (result: PersistResult) => void;
+  persist: (apply: () => PersistResult) => PersistResult;
 };
 
-export function RestoreAllButton({ onResult }: Props) {
+export function RestoreAllButton({ persist }: Props) {
   const { t } = useFrontendTranslation();
   const port = usePreferencesPort<Preferences>();
   return (
@@ -31,8 +30,7 @@ export function RestoreAllButton({ onResult }: Props) {
       title={t('settings.restoreAllTitle')}
       triggerLabel={t('settings.restoreAll')}
       onConfirm={() => {
-        const result = port.resetAll();
-        onResult?.(result);
+        persist(() => port.resetAll());
       }}
     />
   );
@@ -41,7 +39,7 @@ export function RestoreAllButton({ onResult }: Props) {
 export function RestoreCategoryButton({
   category,
   categoryLabel,
-  onResult,
+  persist,
 }: Props & { category: keyof Preferences; categoryLabel: string }) {
   const { t } = useFrontendTranslation();
   const port = usePreferencesPort<Preferences>();
@@ -55,8 +53,7 @@ export function RestoreCategoryButton({
       title={t('settings.restoreCategoryTitle', { category: categoryLabel })}
       triggerLabel={t('settings.restoreCategory')}
       onConfirm={() => {
-        const result = port.resetCategory(category);
-        onResult?.(result);
+        persist(() => port.resetCategory(category));
       }}
     />
   );

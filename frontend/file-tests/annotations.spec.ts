@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -239,7 +239,8 @@ test('批量标签冲突不部分写入，标签与属性组合检索可恢复',
       .click({ modifiers: ['Control'] });
   };
   await select();
-  await page.getByRole('button', { name: '批量添加标签', exact: true }).click();
+  await page.getByRole('button', { name: '更多操作', exact: true }).click();
+  await page.getByRole('menuitem', { name: '批量添加标签', exact: true }).click();
   let dialog = page.getByRole('dialog');
   await dialog.getByRole('button', { name: '添加标签', exact: true }).click();
   await dialog.getByLabel('标签 1 名称', { exact: true }).fill(shared);
@@ -268,7 +269,8 @@ test('批量标签冲突不部分写入，标签与属性组合检索可恢复',
     .click();
   await expect(page.getByText('已选择 2 项', { exact: true })).toHaveCount(0);
   await select();
-  await page.getByRole('button', { name: '批量添加标签', exact: true }).click();
+  await page.getByRole('button', { name: '更多操作', exact: true }).click();
+  await page.getByRole('menuitem', { name: '批量添加标签', exact: true }).click();
   dialog = page.getByRole('dialog');
   await dialog.getByRole('button', { name: '添加标签', exact: true }).click();
   await dialog.getByLabel('标签 1 名称', { exact: true }).fill(shared);
@@ -285,7 +287,8 @@ test('批量标签冲突不部分写入，标签与属性组合检索可恢复',
   };
   expect(annotation.tags.some((tag) => tag.name === '并发-' + value.suffix)).toBe(true);
   await select();
-  await page.getByRole('button', { name: '批量移除标签', exact: true }).click();
+  await page.getByRole('button', { name: '更多操作', exact: true }).click();
+  await page.getByRole('menuitem', { name: '批量移除标签', exact: true }).click();
   dialog = page.getByRole('dialog');
   await dialog.getByLabel('标签名称', { exact: true }).fill(shared);
   await dialog.getByLabel('标签名称', { exact: true }).press('Enter');
@@ -403,7 +406,7 @@ test('副本与回收保留整理信息，画廊按本屏加载且可批量整�
   if (!image) throw Error('Missing real uploaded image');
   await writeAnnotations(page, image.id, [{ name: tag, color }], [], '📷');
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '画廊', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '画廊', exact: true }).click();
   await expect(
     row(page, image.id).getByRole('button', {
       name: '按标签 ' + tag + ' 查看全部自有文件',
@@ -415,7 +418,8 @@ test('副本与回收保留整理信息，画廊按本屏加载且可批量整�
   await page
     .getByRole('button', { name: image.name, exact: true })
     .click({ modifiers: ['Control'] });
-  await page.getByRole('button', { name: '批量添加标签', exact: true }).click();
+  await page.getByRole('button', { name: '更多操作', exact: true }).click();
+  await page.getByRole('menuitem', { name: '批量添加标签', exact: true }).click();
   dialog = page.getByRole('dialog');
   await dialog.getByRole('button', { name: '添加标签', exact: true }).click();
   await dialog.getByLabel('标签 1 名称', { exact: true }).fill('画廊-' + value.suffix);
@@ -448,7 +452,8 @@ test('副本与回收保留整理信息，画廊按本屏加载且可批量整�
   await page
     .getByRole('button', { name: image.name, exact: true })
     .click({ modifiers: ['Control'] });
-  await expect(page.getByRole('button', { name: '批量添加标签', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: '更多操作', exact: true }).click();
+  await expect(page.getByRole('menuitem', { name: '批量添加标签', exact: true })).toBeDisabled();
   await page.unroute('**/native/files/annotations/summaries**');
   await page
     .getByRole('toolbar', { name: value.name, exact: true })

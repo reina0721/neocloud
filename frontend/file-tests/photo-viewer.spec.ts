@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 import { openReadingFixtureFolder, readPreviewAccess } from './reading-fixture';
 
 type Tag = readonly [id: number, type: number, count: number, value: Buffer];
@@ -115,7 +115,7 @@ test('同目录切图、真实 EXIF、定位隐私和窄屏照片查看', async 
   await expect(page).toHaveURL(/\/home$/);
   await openReadingFixtureFolder(page, '照片验收-');
   await page.getByRole('button', { name: '视图', exact: true }).click();
-  await page.getByRole('menuitem', { name: '列表', exact: true }).click();
+  await page.getByRole('menuitemradio', { name: '列表', exact: true }).click();
   const [jpeg, png] = await page.evaluate(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 320;

@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
+import { assertPreviewOrigin } from './reading-fixture';
+import { test, expect, type Page } from './preview-test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFile } from 'node:fs/promises';
 
@@ -9,7 +10,7 @@ async function access(path = process.env.CLOUDDRIVE_FILE_TEST_ACCESS) {
     username: string;
     password: string;
   };
-  if (new URL(value.url).origin !== 'http://127.0.0.1:4194') throw Error('只允许隔离QA');
+  assertPreviewOrigin(value.url);
   return value;
 }
 async function login(page: Page, path?: string) {

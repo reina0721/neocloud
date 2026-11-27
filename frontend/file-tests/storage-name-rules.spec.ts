@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './preview-test';
 import type { StorageNameRulesView } from '../surfaces/src/files/storage-policy';
 import { loginStorage, storageRequest, storageSection } from './storage-fixture';
 

@@ -368,6 +368,7 @@ export function EpubDialog({
                 label={paged ? labels.scroll : labels.pages}
                 size="sm"
                 tooltip
+                tooltipPlacement="bottom"
                 active={paged}
                 onPress={() => reading.configure({ layout: paged ? 'scroll' : 'pages' })}
               >

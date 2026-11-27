@@ -1730,7 +1730,7 @@ export function FilesPage({
                 aria-label={preferences.view === 'list' ? title : undefined}
                 className={
                   preferences.view === 'grid'
-                    ? 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+                    ? 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'
                     : 'flex flex-col divide-y divide-border'
                 }
               >
