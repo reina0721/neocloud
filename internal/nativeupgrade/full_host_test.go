@@ -268,11 +268,16 @@ func fullTestRoot(t *testing.T) (string, [2]string, string) {
 			}
 		}
 	}
-	root, err := os.MkdirTemp("", "cduf-")
+	temporaryRoot, err := os.MkdirTemp("", "cduf-")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = os.RemoveAll(root) })
+	t.Cleanup(func() { _ = os.RemoveAll(temporaryRoot) })
+	// Windows runner 的临时目录可能使用 8.3 短路径。
+	root, err := canonicalRoot(temporaryRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
 	addresses := [2]string{unusedAddress(t), unusedAddress(t)}
 	t.Setenv("APP_HTTP__ADDR", addresses[0])
 	t.Setenv("APP_MANAGEMENT__ADDR", addresses[1])
