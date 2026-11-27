@@ -70,6 +70,7 @@ jobs:
       - name: Build draft release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
           GORELEASER_PREVIOUS_TAG: ${{ steps.source.outputs.previous-stable }}
         run: |
           if [[ "$GITHUB_REF_NAME" == *-* ]]; then

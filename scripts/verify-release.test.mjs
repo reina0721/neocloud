@@ -62,6 +62,8 @@ test("正式 tag 先验证源码，再构建和检查实际附件", async () => 
   assert.equal([...release.matchAll(/\bsign-blob\b/g)].length, 1);
   assert.equal([...release.matchAll(/\bgo test\b/g)].length, 2);
   assert.match(release, /Verify annotated tag[^\n]*[\s\S]+go test -p 2 \.\/\.\.\. -count=1\n[ \t]+node --test[^\n]+scripts\/verify-release\.test\.mjs[^\n]*\n[\s\S]+Build draft release/);
+  const draftBuild = /- name: Build draft release\n([\s\S]+?)(?=\n      - name:)/.exec(release)?.[1];
+  assert.match(draftBuild ?? "", /^\s+GORELEASER_CURRENT_TAG: \$\{\{ github\.ref_name \}\}$/m);
   assert.match(release, /go test[^\n]+TestSignedFullReleaseBoot/);
   assert.match(release, /\$env:NEOCLOUD_COSIGN = \$cosign[\s\S]+go test[^\n]+TestSignedFullReleaseBoot/);
   assert.equal([...release.matchAll(/test-docker-release\.mjs/g)].length, 2);
