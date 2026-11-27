@@ -194,12 +194,8 @@ func TestSignedFullReleaseBoot(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if err := cmd.Process.Kill(); err != nil && !errors.Is(err, os.ErrProcessDone) {
-			t.Error(err)
-		}
-		_ = cmd.Wait()
-	})
+	// testing 在 Cleanup 前取消 t.Context，由 CommandContext 终止进程。
+	t.Cleanup(func() { _ = cmd.Wait() })
 	awaitVersion(t, addresses[1], version)
 	verifyFullStaticResponse(t, site, "/login", nil, http.StatusOK, "<html")
 	verifyFullStaticResponse(t, site, "/home", nil, http.StatusOK, "<html")
