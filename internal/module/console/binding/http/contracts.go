@@ -20,6 +20,7 @@ type IdentityAccess interface {
 	ChangePassword(context.Context, string, string, string) error
 	VerifySessionPassword(context.Context, string, string) error
 	Registration(context.Context) (RegistrationSettings, error)
+	RegistrationWithRoleOptions(context.Context) (RegistrationSettings, []RegistrationRoleOption, error)
 	UpdateRegistration(context.Context, RegistrationSettings) error
 	CreateConsoleAccount(context.Context, string, string, string, []string, string, bool) (Account, error)
 	ListAccounts(context.Context, int, int, AccountFilter) (AccountList, error)
@@ -103,6 +104,21 @@ type RegistrationSettings struct {
 	Version       uint64    `json:"version"`
 	UpdatedAt     time.Time `json:"updatedAt"`
 }
+type RegistrationRoleOption struct {
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	PermissionKeys []string `json:"permissionKeys"`
+	Eligible       bool     `json:"eligible"`
+	Reason         string   `json:"reason,omitempty"`
+}
+type RegistrationRoleError struct {
+	Reason string
+	Cause  error
+}
+
+func (e *RegistrationRoleError) Error() string { return e.Cause.Error() }
+func (e *RegistrationRoleError) Unwrap() error { return e.Cause }
+
 type SessionInfo struct {
 	IDHash                                                  string
 	CreatedAt, LastSeenAt, IdleExpiresAt, AbsoluteExpiresAt time.Time

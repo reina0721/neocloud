@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -265,6 +266,7 @@ func TestConsoleSQLiteDataIsolationAndRestart(t *testing.T) {
 	owner.request(t, "PATCH", "/users/"+ownerID+"/status", map[string]any{"version": ownerVersion, "status": "disabled"}, 409)
 	owner.request(t, "PATCH", "/native/iam/self/profile", map[string]any{"expectedVersion": ownerVersion, "nickname": "Owner nickname", "bio": "Verified profile", "birthDate": "2000-01-02"}, 200)
 
+	verifyConsoleRegistrationRoleOptions(t, owner)
 	role := owner.request(t, "POST", "/roles", map[string]any{"name": "Registered member", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	roleID := role["id"].(string)
 	owner.request(t, "PUT", "/native/iam/roles/"+roleID+"/permissions", map[string]any{"expectedRoleVersion": 1, "permissionKeys": []string{"iam:account:self:read", "iam:account:self:profile:write", "iam:account:self:password:write", "iam:account:self:preferences:read", "iam:account:self:preferences:write", "iam:account:self:archive", "console:workbench:read", "todos:read"}}, 200)
@@ -396,4 +398,101 @@ func TestConsoleSQLiteDataIsolationAndRestart(t *testing.T) {
 	member.request(t, "POST", "/native/iam/self/archive/confirm", map[string]any{"confirmationId": confirmation["confirmationId"]}, 204)
 	member.request(t, "GET", "/auth/session", nil, 401)
 	member.request(t, "POST", "/auth/login", map[string]any{"email": "member@clouddrive.test", "password": "replacement-password-long"}, 403)
+}
+
+func verifyConsoleRegistrationRoleOptions(t *testing.T, owner *consoleTestClient) {
+	t.Helper()
+	const route = "/system/registration"
+	const optionsRoute = route + "?include=roleOptions"
+	anonymous := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
+	anonymous.request(t, "GET", optionsRoute, nil, http.StatusUnauthorized)
+	plain := owner.request(t, "GET", route, nil, http.StatusOK)
+	if _, exists := plain["roleOptions"]; exists {
+		t.Fatal("普通注册设置读取不应带角色选项")
+	}
+	settings := plain["settings"].(map[string]any)
+	role := owner.request(t, "POST", "/roles", map[string]any{
+		"name": "Registration permissions fixture", "permissions": []string{},
+	}, http.StatusOK)["role"].(map[string]any)
+	roleID := role["id"].(string)
+	permissionsRoute := "/native/iam/roles/" + roleID + "/permissions"
+	option := func() map[string]any {
+		t.Helper()
+		for _, value := range owner.request(t, "GET", optionsRoute, nil, http.StatusOK)["roleOptions"].([]any) {
+			candidate := value.(map[string]any)
+			if candidate["id"] == roleID {
+				return candidate
+			}
+		}
+		t.Fatal("注册设置缺少测试角色选项")
+		return nil
+	}
+	update := func(roleID string, enabled bool, status int, reason string) {
+		t.Helper()
+		result := owner.request(t, "PATCH", route, map[string]any{
+			"enabled": enabled, "defaultRoleId": roleID, "version": settings["version"],
+		}, status)
+		if status == http.StatusOK {
+			settings = result["settings"].(map[string]any)
+			if _, exists := result["roleOptions"]; exists || settings["enabled"] != enabled || settings["defaultRoleId"] != roleID {
+				t.Fatalf("注册设置保存回执不正确：%v", result)
+			}
+			return
+		}
+		if issue := result["error"].(map[string]any); issue["reason"] != reason {
+			t.Fatalf("注册默认角色拒绝原因 = %v，预期 %q", issue, reason)
+		}
+	}
+	if empty := option(); empty["eligible"] != true || len(empty["permissionKeys"].([]any)) != 0 {
+		t.Fatalf("无授权角色资格不正确：%v", empty)
+	}
+	owner.request(t, "PUT", permissionsRoute, map[string]any{
+		"expectedRoleVersion": role["version"], "permissionKeys": []string{"files:read", "files:write"},
+	}, http.StatusOK)
+	if restricted := option(); restricted["eligible"] != false || restricted["reason"] != "restricted-permissions" ||
+		!slices.Equal(restricted["permissionKeys"].([]any), []any{"files:read", "files:write"}) {
+		t.Fatalf("受限角色未报告真实权限和资格：%v", restricted)
+	}
+	update(roleID, true, http.StatusConflict, "restricted-permissions")
+	update("missing-registration-role", true, http.StatusNotFound, "missing-role")
+	rolePermissions := owner.request(t, "GET", permissionsRoute, nil, http.StatusOK)
+	owner.request(t, "PUT", permissionsRoute, map[string]any{
+		"expectedRoleVersion": rolePermissions["roleVersion"], "permissionKeys": []string{"files:read"},
+	}, http.StatusOK)
+	if allowed := option(); allowed["eligible"] != true || allowed["reason"] != nil ||
+		!slices.Equal(allowed["permissionKeys"].([]any), []any{"files:read"}) {
+		t.Fatalf("权限调整后角色未变为可选：%v", allowed)
+	}
+	update(roleID, true, http.StatusOK, "")
+	public := anonymous.request(t, "GET", "/auth/registration-policy", nil, http.StatusOK)
+	if len(public) != 1 || public["enabled"] != true {
+		t.Fatalf("匿名注册策略出现额外信息：%v", public)
+	}
+	member := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
+	member.request(t, "GET", "/auth/csrf", nil, http.StatusOK)
+	registration := map[string]string{
+		"name": "File reader", "email": "registration-reader@clouddrive.test", "password": "registration-password-long",
+	}
+	member.request(t, "POST", "/auth/register", registration, http.StatusOK)
+	member.request(t, "GET", optionsRoute, nil, http.StatusForbidden)
+	access := member.request(t, "GET", "/auth/access", nil, http.StatusOK)["nativePermissions"].([]any)
+	if !slices.Contains(access, "files:read") || slices.Contains(access, "files:write") {
+		t.Fatalf("注册成员权限与角色不一致：%v", access)
+	}
+	member.request(t, "GET", "/native/files", nil, http.StatusOK)
+	member.request(t, "POST", "/native/files/folders", map[string]string{"parentId": "", "name": "Forbidden"}, http.StatusForbidden)
+
+	owner.request(t, "POST", "/native/iam/roles/"+roleID+"/archive", nil, http.StatusNoContent)
+	if inactive := option(); inactive["eligible"] != false || inactive["reason"] != "inactive-role" {
+		t.Fatalf("已配置的归档角色缺少失效状态：%v", inactive)
+	}
+	anonymous.request(t, "GET", "/auth/csrf", nil, http.StatusOK)
+	registration["email"] = "registration-blocked@clouddrive.test"
+	blocked := anonymous.request(t, "POST", "/auth/register", registration, http.StatusForbidden)["error"].(map[string]any)
+	if blocked["code"] != "forbidden" || blocked["reason"] != nil {
+		t.Fatalf("匿名注册暴露内部角色拒绝原因：%v", blocked)
+	}
+	update(roleID, false, http.StatusOK, "")
+	update(roleID, true, http.StatusConflict, "inactive-role")
+	update("", false, http.StatusOK, "")
 }

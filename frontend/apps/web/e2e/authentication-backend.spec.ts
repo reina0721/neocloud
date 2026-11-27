@@ -203,6 +203,23 @@ test('Backend registration reports pending/success and failed logout keeps all p
             }
           : { status: 401 },
       );
+    else if (path === '/api/auth/access' && authenticated)
+      await route.fulfill({
+        json: {
+          user: {
+            id: 'new-backend',
+            name: 'New Backend',
+            email: 'new-backend@example.test',
+            status: 'active',
+            roleIds: ['member'],
+            version: 1,
+            createdAt: '2026-10-12T00:00:00.000Z',
+            updatedAt: '2026-10-12T00:00:00.000Z',
+          },
+          permissions: ['account.update'],
+          nativePermissions: ['files:read', 'files:write'],
+        },
+      });
     else if (path === '/api/auth/register') {
       await registration;
       authenticated = true;
@@ -231,6 +248,7 @@ test('Backend registration reports pending/success and failed logout keeps all p
   await expect(page.getByRole('textbox', { name: '姓名', exact: true })).toBeDisabled();
   completeRegistration?.();
   await expect(page.getByText('账户已创建', { exact: true })).toBeVisible();
+  await expect(page.getByText('此账号已开通文件读取和写入权限，可以继续。')).toBeVisible();
   await page.getByRole('button', { name: '开始使用', exact: true }).click();
   // 后端模式的 / 还会重定向到 /home；必须等待最终工作区，避免点击中间页面的账号菜单。
   await expect(page).toHaveURL(/\/home$/);
@@ -245,4 +263,67 @@ test('Backend registration reports pending/success and failed logout keeps all p
   rejectLogout = false;
   await page.getByRole('button', { name: '重试', exact: true }).click();
   await expect(page).toHaveURL(/\/login\?returnTo=/);
+});
+
+test('Registration keeps the requested destination and distinguishes unavailable, missing and read-only file grants', async ({
+  page,
+  context,
+}) => {
+  const user = { id: 'new-member', name: 'New Member', email: 'new-member@example.test' };
+  let registered = false;
+  let nativePermissions: string[] | undefined;
+  await context.route('**/api/auth/**', async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/api/auth/csrf') return route.fulfill({ json: { token: 'register-csrf' } });
+    if (path === '/api/auth/registration-policy') return route.fulfill({ json: { enabled: true } });
+    if (path === '/api/auth/session')
+      return route.fulfill(
+        registered ? { json: { user, expiresAt: Date.now() + 60_000 } } : { status: 401 },
+      );
+    if (path === '/api/auth/register') {
+      registered = true;
+      return route.fulfill({ status: 204 });
+    }
+    if (path === '/api/auth/access')
+      return route.fulfill(
+        nativePermissions
+          ? {
+              json: {
+                user: {
+                  ...user,
+                  status: 'active',
+                  roleIds: ['member'],
+                  version: 1,
+                  createdAt: '2026-10-12T00:00:00.000Z',
+                  updatedAt: '2026-10-12T00:00:00.000Z',
+                },
+                permissions: ['account.update'],
+                nativePermissions,
+              },
+            }
+          : { status: 503 },
+      );
+    return route.fulfill({ status: 404 });
+  });
+  const destination = '/share?source=signup#token=sample-fragment';
+  await page.goto(
+    '/register?returnTo=%2Fshare%3Fsource%3Dsignup#returnFragment=token%3Dsample-fragment',
+  );
+  await page.getByRole('textbox', { name: '姓名', exact: true }).fill(user.name);
+  await page.getByRole('textbox', { name: '邮箱', exact: true }).fill(user.email);
+  await page.getByLabel('密码', { exact: true }).fill('BackendRegister2026!');
+  await page.getByLabel('确认密码', { exact: true }).fill('BackendRegister2026!');
+  await page.getByRole('button', { name: '创建账户', exact: true }).click();
+  await expect(page.getByText('账户已创建', { exact: true })).toBeVisible();
+  await expect(page.getByText('暂时无法确认文件权限。你可以重新读取或继续。')).toBeVisible();
+  nativePermissions = [];
+  await page.getByRole('button', { name: '重新读取权限', exact: true }).click();
+  await expect(page.getByText('请联系此站点的管理员，为此账号开通文件访问权限。')).toBeVisible();
+  nativePermissions = ['files:read'];
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect(
+    page.getByText('此账号可以查看文件。如需上传或分享，请联系管理员开通文件写入权限。'),
+  ).toBeVisible();
+  await page.getByRole('button', { name: '开始使用', exact: true }).click();
+  await expect(page).toHaveURL(e2eBackendBaseUrl + destination);
 });

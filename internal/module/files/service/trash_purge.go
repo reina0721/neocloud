@@ -15,8 +15,9 @@ import (
 type TrashPurgeScope string
 
 const (
-	TrashPurgeSelection TrashPurgeScope = "selection"
-	TrashPurgeAll       TrashPurgeScope = "all"
+	TrashPurgeSelection  TrashPurgeScope = "selection"
+	TrashPurgeAll        TrashPurgeScope = "all"
+	MaxTrashPurgeEntries                 = 10_000
 )
 
 type TrashPurgeSelectionInput struct {
@@ -32,28 +33,27 @@ type TrashPurgePreview struct {
 }
 
 type TrashPurgeRepository interface {
-	ReadBounded(context.Context, string, int) ([]model.Entry, error)
-	RemoveTrash(context.Context, string, int, func([]model.Entry) ([]string, error)) error
+	ReadTrashTargets(context.Context, string, []string, int) ([]model.Entry, error)
+	RemoveTrashTargets(context.Context, string, []string, int, func([]model.Entry) ([]string, error)) error
 }
 
 type TrashPurge struct {
 	repository TrashPurgeRepository
-	treeLimit  int
 	batchLimit int
 }
 
 func NewTrashPurge(repository TrashPurgeRepository, policy Policy) (*TrashPurge, error) {
-	if repository == nil || policy.SearchTreeEntries < 1 || policy.SearchTreeEntries > DefaultSearchTreeEntries || policy.MaxBatchEntries < 1 || policy.MaxBatchEntries > DefaultMaxBatchEntries {
+	if repository == nil || policy.MaxBatchEntries < 1 || policy.MaxBatchEntries > DefaultMaxBatchEntries {
 		return nil, fmt.Errorf("trash purge dependencies or budgets are invalid")
 	}
-	return &TrashPurge{repository: repository, treeLimit: policy.SearchTreeEntries, batchLimit: policy.MaxBatchEntries}, nil
+	return &TrashPurge{repository: repository, batchLimit: policy.MaxBatchEntries}, nil
 }
 
 func (s *TrashPurge) Preview(ctx context.Context, owner string, input TrashPurgeSelectionInput) (TrashPurgePreview, error) {
 	if err := s.validate(input); err != nil {
 		return TrashPurgePreview{}, err
 	}
-	entries, err := s.repository.ReadBounded(ctx, owner, s.treeLimit)
+	entries, err := s.repository.ReadTrashTargets(ctx, owner, input.IDs, MaxTrashPurgeEntries)
 	if err != nil {
 		return TrashPurgePreview{}, err
 	}
@@ -72,7 +72,7 @@ func (s *TrashPurge) Confirm(ctx context.Context, owner string, input TrashPurge
 		return TrashPurgePreview{}, model.ErrInvalid
 	}
 	var result TrashPurgePreview
-	err := s.repository.RemoveTrash(ctx, owner, s.treeLimit, func(entries []model.Entry) ([]string, error) {
+	err := s.repository.RemoveTrashTargets(ctx, owner, input.IDs, MaxTrashPurgeEntries, func(entries []model.Entry) ([]string, error) {
 		preview, ids, err := planTrashPurge(ctx, owner, input, entries)
 		if err != nil {
 			return nil, err

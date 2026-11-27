@@ -184,7 +184,7 @@ func newTestService(t *testing.T, policy Policy) (*Service, *memoryRepository, *
 	t.Helper()
 	repository := &memoryRepository{}
 	content := &memoryContent{objects: map[string][]byte{}}
-	service, err := New(repository, content, clock.System(), idgen.UUID(), unicodename.Normalizer{}, policy)
+	service, err := New(repository, nil, content, clock.System(), idgen.UUID(), unicodename.Normalizer{}, policy)
 	if err != nil {
 		t.Fatal(err)
 	}

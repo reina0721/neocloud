@@ -53,6 +53,27 @@ it('submits credentials once while authentication is pending', async () => {
   expect(await pending).toBe(true);
 });
 
+it('keeps registration guidance active during same-account session revalidation', async () => {
+  const adapter = service();
+  const controller = createAuthController(adapter, vi.fn());
+  expect(
+    await controller.getState().register({
+      name: session.user.name,
+      email: session.user.email,
+      password: 'transient',
+    }),
+  ).toBe(true);
+  await controller.getState().restore();
+  expect(controller.getState().authenticatedFrom).toBe('register');
+  adapter.restore = () => Promise.resolve(null);
+  await controller.getState().restore();
+  expect(controller.getState()).toMatchObject({
+    authenticatedFrom: null,
+    endReason: 'expired',
+    status: 'anonymous',
+  });
+});
+
 it('never resurrects a user from an old restore after expiry', async () => {
   const adapter = service();
   let finish: ((value: AuthSession) => void) | undefined;

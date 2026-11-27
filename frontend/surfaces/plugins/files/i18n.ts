@@ -185,6 +185,9 @@ const zh = {
     impact: '将删除 {{entries}} 项（{{roots}} 个回收项，含子项），释放 {{bytes}} 账户空间。',
     storageHint: '此操作释放账户配额。底层内容对象由存储保留。',
     changed: '回收站内容已经变化，请重新核对删除范围。',
+    allOverBudget: '回收站条目太多。请关闭此对话框，选取较少的项目分批永久删除。',
+    selectionOverBudget:
+      '所选范围内条目太多。请减少选择。如果单个目录仍然超限，请先恢复该目录，再分批移入回收站。',
     recheck: '重新核对',
     done: '已永久删除 {{entries}} 项，释放 {{bytes}} 账户空间。',
   },
@@ -451,6 +454,10 @@ const en: typeof zh = {
       'Delete {{entries}} items ({{roots}} trash entries and their contents) and free {{bytes}} of account space.',
     storageHint: 'This frees account quota. Storage retains the underlying content objects.',
     changed: 'Trash has changed. Review the deletion scope again.',
+    allOverBudget:
+      'There are too many items in the trash. Close this dialog and select smaller groups to delete permanently.',
+    selectionOverBudget:
+      'Too many items are selected. Select fewer items. If a single folder is too large, restore it and move its contents to the trash in smaller groups.',
     recheck: 'Review again',
     done: 'Permanently deleted {{entries}} items and freed {{bytes}} of account space.',
   },

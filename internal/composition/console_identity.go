@@ -103,8 +103,27 @@ func (port consoleIAMPort) Registration(ctx context.Context) (console.Registrati
 	value, err := port.service.Registration(ctx)
 	return console.RegistrationSettings(value), consoleError(err)
 }
+func (port consoleIAMPort) RegistrationWithRoleOptions(ctx context.Context) (console.RegistrationSettings, []console.RegistrationRoleOption, error) {
+	settings, roles, err := port.service.RegistrationWithRoleOptions(ctx)
+	if err != nil {
+		return console.RegistrationSettings{}, nil, consoleError(err)
+	}
+	options := make([]console.RegistrationRoleOption, len(roles))
+	for i, role := range roles {
+		options[i] = console.RegistrationRoleOption{
+			ID: role.ID, Name: role.Name, PermissionKeys: role.PermissionKeys,
+			Eligible: role.Ineligible == "", Reason: string(role.Ineligible),
+		}
+	}
+	return console.RegistrationSettings(settings), options, nil
+}
 func (port consoleIAMPort) UpdateRegistration(ctx context.Context, value console.RegistrationSettings) error {
-	return consoleError(port.service.UpdateRegistration(ctx, iamrepo.RegistrationSettings(value)))
+	err := port.service.UpdateRegistration(ctx, iamrepo.RegistrationSettings(value))
+	var roleError *iamservice.RegistrationRoleError
+	if errors.As(err, &roleError) {
+		return &console.RegistrationRoleError{Reason: string(roleError.Reason), Cause: consoleError(err)}
+	}
+	return consoleError(err)
 }
 func (port consoleIAMPort) CreateConsoleAccount(ctx context.Context, email, name, password string, roles []string, status string, public bool) (console.Account, error) {
 	value, err := port.service.CreateConsoleAccount(ctx, email, name, password, roles, iammodel.AccountStatus(status), public)

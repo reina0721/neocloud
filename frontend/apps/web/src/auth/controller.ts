@@ -85,8 +85,9 @@ export function createAuthController(
       authenticatedFrom: null,
       endReason: null,
       restore: async () => {
-        if (get().busy) return;
-        const hadSession = Boolean(get().session);
+        const previous = get();
+        if (previous.busy) return;
+        const hadSession = Boolean(previous.session);
         const current = ++revision;
         set({
           busy: true,
@@ -96,8 +97,15 @@ export function createAuthController(
         });
         try {
           const session = await service.restore();
-          if (current === revision)
-            commit(session, session ? 'restore' : null, !session && hadSession ? 'expired' : null);
+          if (current !== revision) return;
+          const sameRegistration =
+            previous.authenticatedFrom === 'register' &&
+            session?.user.id === previous.session?.user.id;
+          commit(
+            session,
+            session ? (sameRegistration ? 'register' : 'restore') : null,
+            !session && hadSession ? 'expired' : null,
+          );
         } catch (error) {
           if (current !== revision) return;
           set({

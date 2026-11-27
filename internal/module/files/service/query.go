@@ -372,11 +372,39 @@ func (s *Service) List(ctx context.Context, owner string, input Query) (Listing,
 	if err := s.prepareWorkspacePagination(owner, input, &q); err != nil {
 		return Listing{}, err
 	}
+	if s.directory != nil && q.isDirectoryListing() {
+		return s.listDirectory(ctx, owner, q)
+	}
 	entries, err := s.repo.ReadBounded(ctx, owner, s.policy.SearchTreeEntries)
 	if err != nil {
 		return Listing{}, err
 	}
 	return s.listEntries(ctx, entries, q)
+}
+
+func (s *Service) newListing(usedBytes int64) Listing {
+	return Listing{
+		PDFReader: s.policy.PDFReader.Limits(s.policy.MaxMediaBytes), Items: []model.Entry{}, Breadcrumbs: []model.Entry{},
+		UsedBytes: usedBytes, QuotaBytes: s.policy.QuotaBytes, MaxFileBytes: s.policy.MaxFileBytes,
+		ConcurrentUploads: s.policy.ConcurrentUploads, MaxTextBytes: s.policy.MaxTextBytes,
+		MaxArchiveBytes: s.policy.MaxArchiveBytes, MaxBatchEntries: s.policy.MaxBatchEntries,
+		MaxThumbnailBytes: s.policy.MaxThumbnailBytes, MaxMediaBytes: s.policy.MaxMediaBytes,
+		MaxGalleryEntries: s.policy.MaxGalleryEntries, DefaultPageSize: DefaultListPageSize, MaxPageSize: MaxListPageSize,
+		SearchTreeEntries: s.policy.SearchTreeEntries, MaxKeywords: MaxQueryKeywords, MaxExtensions: MaxQueryExtensions,
+		AnnotationSummaries: []AnnotationSummary{}, AnnotationLimits: s.annotationLimits(),
+	}
+}
+
+func (s *Service) setListingPageLimits(result *Listing, q Query) {
+	if q.Pagination != "" {
+		result.MaxPageSize = s.policy.WorkspaceMaxPageSize
+		result.DefaultPageSize = min(result.MaxPageSize, result.DefaultPageSize)
+	}
+	if q.PageSize > 0 {
+		for _, entry := range result.Items {
+			result.AnnotationSummaries = append(result.AnnotationSummaries, annotationSummary(entry))
+		}
+	}
 }
 
 // listEntries 在已校验的同一快照上排序、筛选和分页，供私有与受控分享共同使用。
@@ -385,9 +413,7 @@ func (s *Service) listEntries(ctx context.Context, entries []model.Entry, q Quer
 	if err != nil {
 		return Listing{}, err
 	}
-	result := Listing{PDFReader: s.policy.PDFReader.Limits(s.policy.MaxMediaBytes), Items: []model.Entry{}, Breadcrumbs: []model.Entry{}, UsedBytes: model.Used(entries), QuotaBytes: s.policy.QuotaBytes, MaxFileBytes: s.policy.MaxFileBytes, ConcurrentUploads: s.policy.ConcurrentUploads, MaxTextBytes: s.policy.MaxTextBytes, MaxArchiveBytes: s.policy.MaxArchiveBytes, MaxBatchEntries: s.policy.MaxBatchEntries, MaxThumbnailBytes: s.policy.MaxThumbnailBytes, MaxMediaBytes: s.policy.MaxMediaBytes, MaxGalleryEntries: s.policy.MaxGalleryEntries, DefaultPageSize: DefaultListPageSize, MaxPageSize: MaxListPageSize, SearchTreeEntries: s.policy.SearchTreeEntries, MaxKeywords: MaxQueryKeywords, MaxExtensions: MaxQueryExtensions}
-	result.AnnotationSummaries = []AnnotationSummary{}
-	result.AnnotationLimits = s.annotationLimits()
+	result := s.newListing(model.Used(entries))
 	if q.ParentID != "" {
 		parent, exists := tree.entries[q.ParentID]
 		if !exists || parent.Kind != model.Folder {
@@ -488,10 +514,6 @@ func (s *Service) listEntries(ctx context.Context, entries []model.Entry, q Quer
 		return Listing{}, err
 	}
 	result.Total = len(result.Items)
-	if q.Pagination != "" {
-		result.MaxPageSize = s.policy.WorkspaceMaxPageSize
-		result.DefaultPageSize = min(result.MaxPageSize, result.DefaultPageSize)
-	}
 	if q.cursorOwner != "" {
 		if err := result.applyCursor(q); err != nil {
 			return Listing{}, err
@@ -506,10 +528,6 @@ func (s *Service) listEntries(ctx context.Context, entries []model.Entry, q Quer
 			result.Items = result.Items[start:min(start+q.PageSize, result.Total)]
 		}
 	}
-	if q.PageSize > 0 {
-		for _, entry := range result.Items {
-			result.AnnotationSummaries = append(result.AnnotationSummaries, annotationSummary(entry))
-		}
-	}
+	s.setListingPageLimits(&result, q)
 	return result, nil
 }

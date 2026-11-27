@@ -78,6 +78,10 @@ func blobCreatedTime(value string) (time.Time, error) {
 
 // blobReferenceCTE 把历史 JSON 转成关系行，仅持久化在源文件记录中的关联参与统计。
 func blobReferenceCTE(driver, key string) (string, []any, error) {
+	return blobReferenceCTEForOwner(driver, key, "")
+}
+
+func blobReferenceCTEForOwner(driver, key, owner string) (string, []any, error) {
 	var historyJoin, historyKey, historySize, historyRevision string
 	switch driver {
 	case "sqlite":
@@ -98,17 +102,22 @@ func blobReferenceCTE(driver, key string) (string, []any, error) {
 		return "", nil, fmt.Errorf("unsupported blob catalog database dialect")
 	}
 	currentFilter, historyFilter := "f.kind = ? AND f.object_key <> ''", "f.kind = ? AND "+historyKey+" <> ''"
-	args := []any{model.File, model.File}
+	currentArgs, historyArgs := []any{model.File}, []any{model.File}
 	if key != "" {
 		currentFilter += " AND f.object_key = ?"
 		historyFilter += " AND " + historyKey + " = ?"
-		args = []any{model.File, key, model.File, key}
+		currentArgs, historyArgs = append(currentArgs, key), append(historyArgs, key)
+	}
+	if owner != "" {
+		currentFilter += " AND f.owner_id = ?"
+		historyFilter += " AND f.owner_id = ?"
+		currentArgs, historyArgs = append(currentArgs, owner), append(historyArgs, owner)
 	}
 	const entryColumns = "f.id AS file_id, f.owner_id, f.name, f.created_at AS file_created, CASE WHEN f.trashed_at IS NULL THEN 0 ELSE 1 END AS is_trashed"
 	cte := "WITH blob_refs AS (SELECT f.object_key, f.size_bytes, f.content_revision AS revision, 1 AS is_current, " + entryColumns +
 		" FROM files_entries AS f WHERE " + currentFilter + " UNION ALL SELECT " + historyKey + ", " + historySize + ", " + historyRevision +
 		", 0, " + entryColumns + " FROM files_entries AS f " + historyJoin + " WHERE " + historyFilter + ")"
-	return cte, args, nil
+	return cte, append(currentArgs, historyArgs...), nil
 }
 
 func blobOrdering(query service.BlobQuery) (string, error) {

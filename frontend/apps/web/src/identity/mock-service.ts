@@ -11,6 +11,7 @@ import {
   readNotificationsSchema,
   type AuditRecord,
   type DirectoryRole,
+  type RegistrationRoleOption,
   updateUserSchema,
   userQuerySchema,
   roleIdsSchema,
@@ -28,6 +29,21 @@ export type IdentityOperations = Omit<
   IdentityPort,
   'mode' | 'currentUserId' | 'getRevision' | 'subscribe'
 >;
+function registrationRoleReason(
+  role: DirectoryRole,
+  permissions: readonly IdentityPermission[],
+): RegistrationRoleOption['reason'] {
+  if (role.id === 'administrator') return 'protected-role';
+  if (
+    role.permissions.some(
+      (permission) =>
+        !permissions.includes(permission) ||
+        registrationRestrictedPermissions.some((restricted) => restricted === permission),
+    )
+  )
+    return 'restricted-permissions';
+}
+
 function actor(database: MockDatabase, id: string | null, permission?: IdentityPermission) {
   const user = database.users.find((candidate) => candidate.id === id);
   if (
@@ -358,6 +374,23 @@ export function createMockIdentityService(currentUserId: () => string | null): I
       actor(database, currentUserId(), 'settings.read');
       return database.registrationSettings;
     },
+    registrationConfiguration: async () => {
+      const database = await readMockDatabase();
+      const access = actor(database, currentUserId(), 'settings.read');
+      return {
+        settings: database.registrationSettings,
+        roleOptions: database.roles.map((role) => {
+          const reason = registrationRoleReason(role, access.permissions);
+          return {
+            id: role.id,
+            name: role.name,
+            permissionKeys: role.permissions,
+            eligible: reason === undefined,
+            ...(reason ? { reason } : {}),
+          };
+        }),
+      };
+    },
     updateRegistrationSettings: async (input) => {
       const parsed = registrationSettingsInputSchema.safeParse(input);
       if (!parsed.success) throw new IdentityError('validation');
@@ -365,16 +398,16 @@ export function createMockIdentityService(currentUserId: () => string | null): I
         const access = actor(database, currentUserId(), 'settings.update');
         if (database.registrationSettings.version !== parsed.data.version)
           throw new IdentityError('conflict', 'stale-version');
-        const role = database.roles.find((candidate) => candidate.id === parsed.data.defaultRoleId);
+        const { defaultRoleId, enabled } = parsed.data;
+        if (enabled && !defaultRoleId) throw new IdentityError('validation');
         if (
-          !role ||
-          role.permissions.some(
-            (permission) =>
-              !access.permissions.includes(permission) ||
-              registrationRestrictedPermissions.some((restricted) => restricted === permission),
-          )
-        )
-          throw new IdentityError('validation');
+          defaultRoleId &&
+          (enabled || defaultRoleId !== database.registrationSettings.defaultRoleId)
+        ) {
+          const role = database.roles.find((candidate) => candidate.id === defaultRoleId);
+          const reason = role ? registrationRoleReason(role, access.permissions) : 'missing-role';
+          if (reason) throw new IdentityError('validation', reason);
+        }
         const settings = {
           ...parsed.data,
           version: parsed.data.version + 1,

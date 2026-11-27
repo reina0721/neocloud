@@ -93,7 +93,7 @@ func New(deps Dependencies) (Module, error) {
 	if err != nil {
 		return Module{}, err
 	}
-	useCases, err := service.New(repository, deps.Content, deps.Clock, deps.IDs, unicodename.Normalizer{}, deps.Policy)
+	useCases, err := service.New(repository, repository, deps.Content, deps.Clock, deps.IDs, unicodename.Normalizer{}, deps.Policy)
 	if err != nil {
 		return Module{}, err
 	}

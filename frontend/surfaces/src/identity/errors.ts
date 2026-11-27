@@ -33,6 +33,9 @@ export type IdentityErrorReason =
   | 'stale-version'
   | 'protected-user'
   | 'protected-role'
+  | 'inactive-role'
+  | 'missing-role'
+  | 'restricted-permissions'
   | 'role-catalog-required'
   | 'last-administrator';
 export class IdentityError extends Error {

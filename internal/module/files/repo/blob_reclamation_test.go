@@ -122,7 +122,7 @@ func TestPublishedBlobReclamation(t *testing.T) {
 	}
 	purge := func(value model.Entry) {
 		t.Helper()
-		if err := repository.RemoveTrash(ctx, value.OwnerID, 100, func([]model.Entry) ([]string, error) {
+		if err := repository.RemoveTrashTargets(ctx, value.OwnerID, []string{value.ID}, 100, func([]model.Entry) ([]string, error) {
 			return []string{value.ID}, nil
 		}); err != nil {
 			t.Fatal(err)

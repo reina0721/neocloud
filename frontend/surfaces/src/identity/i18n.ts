@@ -59,6 +59,9 @@ export const identityI18n = {
       reasons: {
         'duplicate-role': '此角色名称已存在。',
         'protected-role': '系统角色不可编辑。',
+        'inactive-role': '此角色已停用或归档。',
+        'missing-role': '此角色已不存在。',
+        'restricted-permissions': '此角色含有公开注册不可分配的权限。',
         'duplicate-email': '该邮箱已被使用，请修改邮箱。',
         'stale-version': '记录已被其他操作修改，请重新读取后再保存。',
         'protected-user': '自身状态与角色受到保护。',
@@ -133,6 +136,10 @@ export const identityI18n = {
       reasons: {
         'duplicate-role': 'A role with this name already exists.',
         'protected-role': 'System roles cannot be edited.',
+        'inactive-role': 'This role is inactive or archived.',
+        'missing-role': 'This role no longer exists.',
+        'restricted-permissions':
+          'This role includes permissions that public registration cannot grant.',
         'duplicate-email': 'This email is already in use. Choose another email.',
         'stale-version': 'Another operation changed this record. Reload before saving.',
         'protected-user': 'Your own status and roles are protected.',

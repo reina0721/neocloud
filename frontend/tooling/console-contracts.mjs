@@ -248,8 +248,14 @@ add(
   'GET',
   '/system/registration',
   null,
-  identity.registrationSettingsResponseSchema,
+  identity.registrationConfigurationSchema.partial({ roleOptions: true }),
   'console:settings:read',
+  200,
+  z.object({
+    include: z
+      .literal('roleOptions')
+      .describe('Include default-role options when allowed to read the role catalog.'),
+  }),
 );
 add(
   'PATCH',

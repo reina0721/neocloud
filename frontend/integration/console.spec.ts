@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { verifyFilesOverflow } from './files-overflow';
+import { verifyRegistrationPolicy } from './registration-policy';
 
 test('empty SQLite setup, real business writes, protected native pages and logout', async ({
   browser,
   page,
 }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   const token = process.env.CLOUDDRIVE_TEST_SETUP_TOKEN;
   const password = process.env.CLOUDDRIVE_TEST_PASSWORD;
   const apiUrl = process.env.CLOUDDRIVE_TEST_API_URL ?? 'http://127.0.0.1:8088';
@@ -139,6 +141,8 @@ test('empty SQLite setup, real business writes, protected native pages and logou
       permissions: [{ key: 'files:read' }],
     });
   });
+  await test.step('公开注册发放实际的只读角色并保留浏览器返回地址', () =>
+    verifyRegistrationPolicy(page, browser));
   await page.goto('/workspace');
   await page.getByRole('button', { name: '添加待办', exact: true }).click();
   const todoDialog = page.getByRole('dialog', { name: '添加待办', exact: true });
@@ -367,6 +371,7 @@ test('empty SQLite setup, real business writes, protected native pages and logou
     return { accountId: identity.user.id, name: file.entry.name };
   }, owned.fileId);
   expect(afterReset).toEqual({ accountId: owned.accountId, name: '恢复验收文件夹' });
+  await test.step('文件条目超限后仍可浏览和清理', () => verifyFilesOverflow(page));
   const result = await page.evaluate(async () => {
     const csrf = (await fetch('/api/console/v1/auth/csrf').then((response) => response.json())) as {
       token: string;

@@ -3,14 +3,12 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
+
 	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	iampermission "github.com/reina0721/clouddrive/internal/module/iam/permission"
 	"github.com/reina0721/clouddrive/internal/module/iam/repo"
 	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
-	"strings"
 )
-
-var ErrRegistrationClosed = errors.New("public registration is disabled")
 
 // RequireConsolePermission 在每次任务执行前读取账号状态和当前权限。
 func (s *Service) RequireConsolePermission(ctx context.Context, id string, key permissioncatalog.Key) error {
@@ -29,13 +27,6 @@ func (s *Service) RequireConsolePermission(ctx context.Context, id string, key p
 		return ErrAccountDisabled
 	}
 	return nil
-}
-
-// Registration 返回服务端注册策略，调用方不能用前端配置取代它。
-func (s *Service) Registration(ctx context.Context) (repo.RegistrationSettings, error) {
-	var result repo.RegistrationSettings
-	err := s.store.Use(ctx, func(r *repo.Unit) error { var err error; result, err = r.Registration(ctx); return err })
-	return result, err
 }
 
 // WriteConsoleRole 原子更新名称与权限，防止分次写入留下半完成角色。
@@ -123,43 +114,6 @@ func (s *Service) WriteConsoleRole(ctx context.Context, id string, version uint6
 	return id, err
 }
 
-// UpdateRegistration 限制公开注册默认角色不能含管理权限或系统所有者身份。
-func (s *Service) UpdateRegistration(ctx context.Context, value repo.RegistrationSettings) error {
-	return s.store.WithinTx(ctx, func(txCtx context.Context, r *repo.Unit) error {
-		if value.DefaultRoleID != "" {
-			if err := s.registrationRole(txCtx, r, value.DefaultRoleID); err != nil {
-				return err
-			}
-		}
-		if value.Enabled && value.DefaultRoleID == "" {
-			return model.ErrInvalidID
-		}
-		value.UpdatedAt = s.clock.Now().UTC()
-		return r.UpdateRegistration(txCtx, value)
-	})
-}
-
-func (s *Service) registrationRole(ctx context.Context, r *repo.Unit, id string) error {
-	role, err := r.RoleByID(ctx, id)
-	if err != nil {
-		return err
-	}
-	if role.System || role.Archived || !role.Active {
-		return ErrImmutableOwner
-	}
-	permissions, err := r.ListRolePermissions(ctx, id, true)
-	if err != nil {
-		return err
-	}
-	for _, p := range permissions {
-		definition, ok := s.catalog.Lookup(permissioncatalog.Key(p.PermissionKey))
-		if !ok || (definition.Risk != "standard" && definition.Key != iampermission.SelfPasswordWrite && definition.Key != iampermission.SelfArchive) {
-			return ErrImmutableOwner
-		}
-	}
-	return nil
-}
-
 // CreateConsoleAccount 在同一事务创建凭据与角色；公开注册在事务内重读策略。
 func (s *Service) CreateConsoleAccount(ctx context.Context, username, name, password string, roleIDs []string, status model.AccountStatus, public bool) (model.Account, error) {
 	if status != model.AccountActive && status != model.AccountDisabled {
@@ -193,6 +147,10 @@ func (s *Service) CreateConsoleAccount(ctx context.Context, username, name, pass
 				return false, ErrRegistrationClosed
 			}
 			if e = s.registrationRole(txCtx, r, policy.DefaultRoleID); e != nil {
+				var roleError *RegistrationRoleError
+				if errors.As(e, &roleError) {
+					return false, errors.Join(ErrRegistrationClosed, e)
+				}
 				return false, e
 			}
 			roleIDs = []string{policy.DefaultRoleID}

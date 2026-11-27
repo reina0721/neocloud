@@ -12,7 +12,15 @@ export const pluginI18nResources = {
         enabled: '开放公开注册',
         enabledHint: '关闭后拒绝新的公开注册，已有账号仍可登录。',
         role: '注册账号默认角色',
-        roleHint: '仅可选择不含授权管理或系统写权限的角色，实际角色在提交注册时分配。',
+        roleHint: '选择新注册账号获得的角色。开启公开注册时必须选择可分配的角色。',
+        unsetRole: '未设置默认角色',
+        missingRole: '原默认角色（{{id}}）',
+        roleReasons: {
+          'protected-role': '受保护的系统角色不可通过公开注册分配。',
+          'inactive-role': '此角色已停用或归档。请为公开注册选择其他角色。',
+          'missing-role': '已保存的默认角色已不存在。请为公开注册选择其他角色。',
+          'restricted-permissions': '此角色含有公开注册不可分配的权限。',
+        },
         save: '保存策略',
         reset: '恢复已保存值',
         confirm: '确认注册策略变更',
@@ -97,7 +105,19 @@ export const pluginI18nResources = {
           'Disabling registration rejects new signups. Existing accounts can still sign in.',
         role: 'Default role for registered accounts',
         roleHint:
-          'Roles with grant-management or system-write permissions cannot be selected. The role is assigned when registration is submitted.',
+          'Choose the role assigned to new accounts. Public registration requires an eligible role.',
+        unsetRole: 'No default role',
+        missingRole: 'Previous default role ({{id}})',
+        roleReasons: {
+          'protected-role':
+            'Protected system roles cannot be assigned through public registration.',
+          'inactive-role':
+            'This role is inactive or archived. Choose another role for public registration.',
+          'missing-role':
+            'The saved default role no longer exists. Choose another role for public registration.',
+          'restricted-permissions':
+            'This role includes permissions that public registration cannot grant.',
+        },
         save: 'Save policy',
         reset: 'Restore saved values',
         confirm: 'Confirm registration policy changes',

@@ -168,6 +168,7 @@ export function FilesPage({
   navigate: routeNavigate,
 }: Props) {
   const filterKey = encodeFileFilters(filters);
+  const hasFilters = Boolean(search || category || filterKey);
   const reportAction = useFileActionFeedback(
     JSON.stringify([parent, category, trash, search, filterKey, page, cursor]),
   );
@@ -190,7 +191,10 @@ export function FilesPage({
   }>();
   const [loading, setLoading] = useState(true);
   const [navigating, setNavigating] = useState(false);
-  const [failure, setFailure] = useState('');
+  const [failure, setFailure] = useState<{
+    message: string;
+    recovery?: 'clear-filters' | 'list-view';
+  }>();
   const [notice, setNotice] = useState('');
   const [revision, setRevision] = useWorkspaceRevision();
   const [iconRules, setIconRules] = useState<readonly FileIconRule[]>([]);
@@ -267,6 +271,7 @@ export function FilesPage({
   const reload = useCallback(() => setRevision((value) => value + 1), [setRevision]);
   const firstPage = () =>
     navigate({ parent, category, trash: trash ? 'true' : '', search, filter: filterKey });
+  const clearFilters = () => navigate({ parent, ...(trash ? { trash: 'true' } : {}) });
   const preferenceReady = !!preferenceSnapshot || !!preferenceFailure;
   const cursorWaitingForPreferences = !!cursor && !preferenceReady;
   const gallery = preferences.view === 'gallery';
@@ -382,13 +387,13 @@ export function FilesPage({
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
-    setFailure('');
+    setFailure(undefined);
     setSelected([]);
     setSelectionAnchor('');
     setFocusedEntry('');
     if (queryInvalid) {
       setListingSnapshot(undefined);
-      setFailure(t('files.discovery.invalidLink'));
+      setFailure({ message: t('files.discovery.invalidLink') });
       setLoading(false);
       setNavigating(false);
       return () => controller.abort();
@@ -402,15 +407,27 @@ export function FilesPage({
       .catch((error: unknown) => {
         if (!controller.signal.aborted) {
           setListingSnapshot(undefined);
-          setFailure(
-            cursor && error instanceof FilesError && ['invalid', 'conflict'].includes(error.code)
-              ? chinese
-                ? '此翻页位置已失效，请从第一页重新浏览。'
-                : 'This page position has expired. Start again from the first page.'
-              : error instanceof FilesError && error.code === 'large'
-                ? t('files.discovery.budgetExceeded')
-                : errorText(error),
-          );
+          if (error instanceof FilesError && error.code === 'large' && (hasFilters || gallery)) {
+            setFailure({
+              message: t(
+                hasFilters
+                  ? 'files.discovery.budgetExceeded'
+                  : 'files.discovery.galleryBudgetExceeded',
+              ),
+              recovery: hasFilters ? 'clear-filters' : 'list-view',
+            });
+          } else {
+            setFailure({
+              message:
+                cursor &&
+                error instanceof FilesError &&
+                ['invalid', 'conflict'].includes(error.code)
+                  ? chinese
+                    ? '此翻页位置已失效，请从第一页重新浏览。'
+                    : 'This page position has expired. Start again from the first page.'
+                  : errorText(error),
+            });
+          }
         }
       })
       .finally(() => {
@@ -426,6 +443,8 @@ export function FilesPage({
     cursor,
     cursorWaitingForPreferences,
     queryInvalid,
+    hasFilters,
+    gallery,
     revision,
     errorText,
     chinese,
@@ -1637,7 +1656,7 @@ export function FilesPage({
             })
           }
         />
-        {cursor && failure && !loading ? (
+        {cursor && failure && !failure.recovery && !loading ? (
           <Action variant="secondary" onPress={firstPage}>
             {t('files.discovery.firstPage')}
           </Action>
@@ -1730,9 +1749,21 @@ export function FilesPage({
                 compact
                 icon={<Cloud />}
                 title={t('files.error')}
-                description={failure}
-                actionLabel={t('files.retry')}
-                onAction={reload}
+                description={failure.message}
+                actionLabel={t(
+                  failure.recovery === 'clear-filters'
+                    ? 'files.clearFileFilters'
+                    : failure.recovery === 'list-view'
+                      ? 'files.discovery.useList'
+                      : 'files.retry',
+                )}
+                onAction={
+                  failure.recovery === 'clear-filters'
+                    ? clearFilters
+                    : failure.recovery === 'list-view'
+                      ? () => applyPreferences({ ...preferences, view: 'list' })
+                      : reload
+                }
               />
             ) : !listing?.items.length ? (
               <div data-file-empty className="grid place-items-center py-2">
@@ -1759,7 +1790,7 @@ export function FilesPage({
                   {...(search || category || filterKey
                     ? {
                         actionLabel: t('files.clearFileFilters'),
-                        onAction: () => navigate({ parent, ...(trash ? { trash: 'true' } : {}) }),
+                        onAction: clearFilters,
                       }
                     : !trash
                       ? {

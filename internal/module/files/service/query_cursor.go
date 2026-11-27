@@ -111,17 +111,13 @@ func cursorToken(q Query, direction cursorDirection, entry model.Entry) (string,
 func (l *Listing) applyCursor(q Query) error {
 	start, end := 0, min(q.PageSize, l.Total)
 	if q.Cursor != "" {
-		directionText, tail, hasDirection := strings.Cut(q.Cursor, ".")
-		encodedID, digest, hasDigest := strings.Cut(tail, ".")
-		direction := cursorDirection(directionText)
-		id, idErr := base64.RawURLEncoding.DecodeString(encodedID)
-		if !hasDirection || !hasDigest || (direction != cursorNext && direction != cursorPrevious) ||
-			idErr != nil || len(id) == 0 || len(digest) != base64.RawURLEncoding.EncodedLen(sha256.Size) {
-			return model.ErrInvalid
+		direction, id, err := parseFileCursor(q.Cursor)
+		if err != nil {
+			return err
 		}
 		index := -1
 		for i := range l.Items {
-			if l.Items[i].ID == string(id) {
+			if l.Items[i].ID == id {
 				index = i
 				break
 			}
@@ -147,22 +143,41 @@ func (l *Listing) applyCursor(q Query) error {
 			return model.ErrConflict
 		}
 	}
+	l.Items = l.Items[start:end]
+	return l.setCursorPage(q, start)
+}
+
+func parseFileCursor(value string) (cursorDirection, string, error) {
+	directionText, tail, hasDirection := strings.Cut(value, ".")
+	encodedID, digest, hasDigest := strings.Cut(tail, ".")
+	direction := cursorDirection(directionText)
+	id, idErr := base64.RawURLEncoding.DecodeString(encodedID)
+	if !hasDirection || !hasDigest || (direction != cursorNext && direction != cursorPrevious) ||
+		idErr != nil || len(id) == 0 || len(digest) != base64.RawURLEncoding.EncodedLen(sha256.Size) {
+		return "", "", model.ErrInvalid
+	}
+	return direction, string(id), nil
+}
+
+func (l *Listing) setCursorPage(q Query, start int) error {
 	page := &FileCursorPage{}
+	if len(l.Items) == 0 && q.Cursor != "" {
+		return model.ErrConflict
+	}
 	if start > 0 {
-		token, err := cursorToken(q, cursorPrevious, l.Items[start])
+		token, err := cursorToken(q, cursorPrevious, l.Items[0])
 		if err != nil {
 			return err
 		}
 		page.Previous = token
 	}
-	if end < l.Total {
-		token, err := cursorToken(q, cursorNext, l.Items[end-1])
+	if start+len(l.Items) < l.Total {
+		token, err := cursorToken(q, cursorNext, l.Items[len(l.Items)-1])
 		if err != nil {
 			return err
 		}
 		page.Next = token
 	}
 	l.Page, l.PageSize, l.CursorPage = 1, q.PageSize, page
-	l.Items = l.Items[start:end]
 	return nil
 }

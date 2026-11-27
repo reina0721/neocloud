@@ -12,7 +12,7 @@ import type { TrashPurgePreview, TrashPurgeSelection } from '../../../src/files/
 type Feedback =
   | { state: 'loading' }
   | { state: 'ready'; preview: TrashPurgePreview }
-  | { state: 'failed'; message: string };
+  | { state: 'failed'; message: string; canRetry: boolean };
 
 export default function TrashPurgeDialog({
   selection,
@@ -29,6 +29,9 @@ export default function TrashPurgeDialog({
   const [attempt, setAttempt] = useState(0);
   const all = selection.scope === 'all';
   const title = t(all ? 'files.trashPurge.empty' : 'files.trashPurge.permanent');
+  const budgetMessage = t(
+    all ? 'files.trashPurge.allOverBudget' : 'files.trashPurge.selectionOverBudget',
+  );
   useEffect(() => {
     const controller = new AbortController();
     void files.previewTrashPurge(selection, controller.signal).then(
@@ -36,17 +39,17 @@ export default function TrashPurgeDialog({
         if (!controller.signal.aborted) setFeedback({ state: 'ready', preview });
       },
       (error: unknown) => {
-        if (!controller.signal.aborted)
-          setFeedback({
-            state: 'failed',
-            message: t(
-              'files.errors.' + (error instanceof FilesError ? error.code : 'unavailable'),
-            ),
-          });
+        if (controller.signal.aborted) return;
+        const code = error instanceof FilesError ? error.code : 'unavailable';
+        setFeedback({
+          state: 'failed',
+          message: code === 'large' ? budgetMessage : t('files.errors.' + code),
+          canRetry: code !== 'large',
+        });
       },
     );
     return () => controller.abort();
-  }, [files, selection, attempt, t]);
+  }, [files, selection, attempt, budgetMessage, t]);
 
   async function confirm() {
     if (feedback.state !== 'ready' || feedback.preview.entryCount === 0) return;
@@ -58,9 +61,12 @@ export default function TrashPurgeDialog({
       setFeedback({
         state: 'failed',
         message:
-          code === 'conflict' || code === 'missing'
-            ? t('files.trashPurge.changed')
-            : t('files.errors.' + code),
+          code === 'large'
+            ? budgetMessage
+            : code === 'conflict' || code === 'missing'
+              ? t('files.trashPurge.changed')
+              : t('files.errors.' + code),
+        canRetry: code !== 'large',
       });
       throw error;
     }
@@ -87,16 +93,18 @@ export default function TrashPurgeDialog({
           <p role="alert" className="text-sm text-danger">
             {feedback.message}
           </p>
-          <Action
-            size="sm"
-            variant="secondary"
-            onPress={() => {
-              setFeedback({ state: 'loading' });
-              setAttempt((value) => value + 1);
-            }}
-          >
-            {t('files.trashPurge.recheck')}
-          </Action>
+          {feedback.canRetry ? (
+            <Action
+              size="sm"
+              variant="secondary"
+              onPress={() => {
+                setFeedback({ state: 'loading' });
+                setAttempt((value) => value + 1);
+              }}
+            >
+              {t('files.trashPurge.recheck')}
+            </Action>
+          ) : null}
         </div>
       ) : null}
       {feedback.state === 'ready' ? (

@@ -111,23 +111,24 @@ type Content interface {
 }
 type NameNormalizer interface{ Normalize(string) string }
 type Service struct {
-	repo    Repository
-	content Content
-	clock   clock.Clock
-	ids     idgen.Generator
-	policy  Policy
-	slots   chan struct{}
-	names   NameNormalizer
+	repo      Repository
+	directory DirectoryRepository
+	content   Content
+	clock     clock.Clock
+	ids       idgen.Generator
+	policy    Policy
+	slots     chan struct{}
+	names     NameNormalizer
 }
 
-func New(repository Repository, content Content, clock clock.Clock, ids idgen.Generator, names NameNormalizer, policy Policy) (*Service, error) {
+func New(repository Repository, directory DirectoryRepository, content Content, clock clock.Clock, ids idgen.Generator, names NameNormalizer, policy Policy) (*Service, error) {
 	if repository == nil || content == nil || clock == nil || ids == nil || names == nil {
 		return nil, fmt.Errorf("files dependencies incomplete")
 	}
 	if err := policy.Validate(); err != nil {
 		return nil, err
 	}
-	return &Service{repo: repository, content: content, clock: clock, ids: ids, policy: policy, slots: make(chan struct{}, policy.ConcurrentUploads), names: names}, nil
+	return &Service{repo: repository, directory: directory, content: content, clock: clock, ids: ids, policy: policy, slots: make(chan struct{}, policy.ConcurrentUploads), names: names}, nil
 }
 
 func (s *Service) normalizedName(name string) (string, error) {

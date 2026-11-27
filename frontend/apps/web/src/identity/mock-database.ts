@@ -162,8 +162,7 @@ function parseDatabase(value: unknown): MockDatabase {
     new Set(users.map((user) => user.id)).size !== users.length ||
     new Set(users.map((user) => user.email)).size !== users.length ||
     new Set(accounts.map((account) => account.user.email)).size !== accounts.length ||
-    users.some((user) => user.roleIds.some((id) => !roles.some((role) => role.id === id))) ||
-    !roles.some((role) => role.id === parsed.data.registrationSettings.defaultRoleId)
+    users.some((user) => user.roleIds.some((id) => !roles.some((role) => role.id === id)))
   )
     throw new AuthError('protocol');
   return parsed.data;

@@ -50,6 +50,7 @@ export function AuthRuntime({ children }: Readonly<{ children: ReactNode }>) {
       if (!previous.busy || next.busy) return;
       if (
         (next.status === 'authenticated' &&
+          previous.status !== 'authenticated' &&
           (next.authenticatedFrom === 'login' || next.authenticatedFrom === 'register')) ||
         (next.status === 'anonymous' && next.endReason === 'logout')
       )

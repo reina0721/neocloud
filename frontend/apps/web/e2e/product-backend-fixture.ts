@@ -173,8 +173,23 @@ export async function installProductBackend(
     }
     if (path === '/auth/registration-policy')
       return reply({ enabled: registrationSettings.enabled });
-    if (path === '/system/registration' && method === 'GET')
-      return reply({ settings: registrationSettings });
+    if (path === '/system/registration' && method === 'GET') {
+      if (url.searchParams.get('include') !== 'roleOptions')
+        return reply({ settings: registrationSettings });
+      return reply({
+        settings: registrationSettings,
+        roleOptions: [
+          {
+            id: 'administrator',
+            name: 'Administrator',
+            permissionKeys: ['iam:role:write'],
+            eligible: false,
+            reason: 'protected-role',
+          },
+          { id: 'viewer', name: 'Viewer', permissionKeys: ['files:read'], eligible: true },
+        ],
+      });
+    }
     if (path === '/system/registration' && method === 'PATCH') {
       const parsed = registrationSettingsInputSchema.safeParse(body);
       if (!parsed.success) return error(422, 'validation');
@@ -188,7 +203,13 @@ export async function installProductBackend(
       }
       if (parsed.data.version !== registrationSettings.version)
         return error(409, 'conflict', 'stale-version');
-      if (parsed.data.defaultRoleId !== 'viewer') return error(422, 'validation');
+      if (
+        parsed.data.defaultRoleId !== 'viewer' &&
+        (parsed.data.enabled ||
+          (parsed.data.defaultRoleId !== '' &&
+            parsed.data.defaultRoleId !== registrationSettings.defaultRoleId))
+      )
+        return error(422, 'validation');
       registrationSettings = {
         ...parsed.data,
         version: registrationSettings.version + 1,
@@ -449,6 +470,9 @@ export async function installProductBackend(
     },
     rejectNextPolicyWrite: () => {
       policyConflict = true;
+    },
+    setRegistrationDefaultRole: (defaultRoleId: string) => {
+      registrationSettings = { ...registrationSettings, defaultRoleId };
     },
   };
 }

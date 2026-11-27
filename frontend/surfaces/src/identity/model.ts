@@ -146,6 +146,9 @@ export const errorEnvelopeSchema = z
             'stale-version',
             'protected-user',
             'protected-role',
+            'inactive-role',
+            'missing-role',
+            'restricted-permissions',
             'last-administrator',
           ])
           .optional(),
@@ -169,6 +172,7 @@ export interface IdentityPort {
   subscribe(listener: () => void): () => void;
   access(): Promise<IdentityAccess>;
   registrationSettings(): Promise<RegistrationSettings>;
+  registrationConfiguration(): Promise<RegistrationConfiguration>;
   updateRegistrationSettings(input: RegistrationSettingsInput): Promise<RegistrationSettings>;
   roles(selfOnly?: boolean): Promise<readonly DirectoryRole[]>;
   readRole(id: string): Promise<DirectoryRole>;
@@ -223,8 +227,25 @@ export const registrationSettingsInputSchema = registrationSettingsSchema.omit({
 export const registrationSettingsResponseSchema = z
   .object({ settings: registrationSettingsSchema })
   .strict();
+const registrationRoleOptionSchema = z
+  .object({
+    id: identifierSchema,
+    name: z.string().min(1).max(128),
+    permissionKeys: z.array(z.string().min(1)),
+    eligible: z.boolean(),
+    reason: z.enum(['protected-role', 'inactive-role', 'restricted-permissions']).optional(),
+  })
+  .strict()
+  .refine((option) => option.eligible === (option.reason === undefined));
+export const registrationConfigurationSchema = registrationSettingsResponseSchema.extend({
+  roleOptions: z
+    .array(registrationRoleOptionSchema)
+    .refine((items) => new Set(items.map((item) => item.id)).size === items.length),
+});
 export type RegistrationSettings = z.infer<typeof registrationSettingsSchema>;
 export type RegistrationSettingsInput = z.infer<typeof registrationSettingsInputSchema>;
+export type RegistrationConfiguration = z.infer<typeof registrationConfigurationSchema>;
+export type RegistrationRoleOption = z.infer<typeof registrationRoleOptionSchema>;
 export const roleResponseSchema = z.object({ role: roleSchema }).strict();
 
 export const auditRecordSchema = z

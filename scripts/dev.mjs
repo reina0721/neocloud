@@ -360,7 +360,11 @@ try {
   } else if (!isolated && !(await exists(configPath))) {
     await run(binary, ["config", "init"]);
   }
-  if (values.acceptance) environment.APP_CONSOLE__RELAY__ALLOWEDORIGINS = JSON.stringify([backend]);
+  if (values.acceptance) {
+    environment.APP_CONSOLE__RELAY__ALLOWEDORIGINS = JSON.stringify([backend]);
+    // 在隔离实例用少量文件覆盖搜索超限，保留正常目录和回收站操作。
+    environment.APP_FILES__SEARCH__TREEENTRIES = "12";
+  }
   await run(binary, ["db", "migrate", "up"], backendOptions);
   if (values.acceptance)
     await run(binary, ["iam", "password-policy", "show"], { cwd: workdir, baseEnv: backendOptions.baseEnv });

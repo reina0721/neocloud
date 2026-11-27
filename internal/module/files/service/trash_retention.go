@@ -23,7 +23,7 @@ type TrashRetentionRepository interface {
 	ReadTrashRetention(context.Context, string) (model.TrashRetention, error)
 	SaveTrashRetention(context.Context, string, model.TrashRetention) (model.TrashRetention, error)
 	FindDueTrash(context.Context, time.Time) ([]model.TrashExpiryCandidate, error)
-	RemoveTrash(context.Context, string, int, func([]model.Entry) ([]string, error)) error
+	RemoveTrashTargets(context.Context, string, []string, int, func([]model.Entry) ([]string, error)) error
 	DeferTrashExpiry(context.Context, string, []model.TrashExpiryCandidate, time.Time) error
 }
 
@@ -77,7 +77,11 @@ func (s *TrashRetention) Dispatch(ctx context.Context) error {
 
 func (s *TrashRetention) expireOwner(ctx context.Context, owner string, candidates []model.TrashExpiryCandidate, now time.Time) error {
 	var deferred []model.TrashExpiryCandidate
-	err := s.repository.RemoveTrash(ctx, owner, s.treeLimit, func(entries []model.Entry) ([]string, error) {
+	roots := make([]string, 0, len(candidates))
+	for _, candidate := range candidates {
+		roots = append(roots, candidate.ID)
+	}
+	err := s.repository.RemoveTrashTargets(ctx, owner, roots, s.treeLimit, func(entries []model.Entry) ([]string, error) {
 		tree, err := newTrashTree(owner, entries)
 		if err != nil {
 			return nil, err

@@ -2930,6 +2930,53 @@
         ]
       }
     },
+    "/api/console/v1/native/files/applications/{applicationId}/web-preview-readiness": {
+      "get": {
+        "operationId": "files.applications.web-readiness",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "applicationId",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "pattern": "^[a-z0-9-]+$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebFilePreviewReadinessOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "webuiSession": []
+          }
+        ],
+        "tags": [
+          "Files"
+        ]
+      }
+    },
     "/api/console/v1/native/files/archive": {
       "post": {
         "operationId": "files.archive",
@@ -22455,7 +22502,20 @@
             "ConsoleCookie": []
           }
         ],
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "roleOptions"
+              ],
+              "description": "Include default-role options when allowed to read the role catalog."
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",
@@ -22505,6 +22565,50 @@
                         "updatedAt"
                       ],
                       "additionalProperties": false
+                    },
+                    "roleOptions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100,
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128
+                          },
+                          "permissionKeys": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "eligible": {
+                            "type": "boolean"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "enum": [
+                              "protected-role",
+                              "inactive-role",
+                              "restricted-permissions"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "permissionKeys",
+                          "eligible"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -42080,6 +42184,23 @@
           "name",
           "newTab",
           "token"
+        ],
+        "type": "object"
+      },
+      "WebFilePreviewReadinessOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "allowed",
+              "denied",
+              "unavailable"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
         ],
         "type": "object"
       },

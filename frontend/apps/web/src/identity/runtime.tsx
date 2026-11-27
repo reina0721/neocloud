@@ -117,6 +117,7 @@ export function IdentityRuntime({ children }: Readonly<{ children: ReactNode }>)
       readAllNotifications: () => call((service) => service.readAllNotifications(), true, false),
       roles: (selfOnly) => call((service) => service.roles(selfOnly)),
       registrationSettings: () => call((service) => service.registrationSettings()),
+      registrationConfiguration: () => call((service) => service.registrationConfiguration()),
       updateRegistrationSettings: (input) =>
         call((service) => service.updateRegistrationSettings(input), true, false),
       readRole: (id) => call((service) => service.readRole(id)),

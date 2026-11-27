@@ -122,14 +122,79 @@ func TestAdvancedQueryHTTPOptionalBoundsOwnershipAndDatabaseBudget(t *testing.T)
 		t.Fatal("查询跨owner")
 	}
 	member.request(t, "GET", "/native/files?scope=tree&parent="+folder, nil, 404)
+	member.request(t, "GET", "/native/files?parent="+folder+"&pageSize=1", nil, 404)
 	owner.request(t, "POST", "/native/files/"+folder+"/trash", nil, 200)
 	requireIDs("scope=all&keywords=report")
 	owner.request(t, "POST", "/native/files/"+folder+"/restore", map[string]string{}, 200)
 	requireIDs("scope=tree&parent="+folder+"&keywords=report", alpha, beta)
 	owner.request(t, "PUT", "/native/iam/roles/"+roleID+"/permissions", map[string]any{"expectedRoleVersion": 2, "permissionKeys": []string{}}, 200)
 	member.request(t, "GET", "/native/files?scope=all", nil, 401)
-	for index := 0; index < 9; index++ {
-		owner.request(t, "POST", "/native/files/folders", map[string]string{"parentId": "", "name": fmt.Sprintf("预算%d", index)}, 200)
+	var extra []string
+	for index := 0; index < 11; index++ {
+		created := owner.request(t, "POST", "/native/files/folders", map[string]string{"parentId": "", "name": fmt.Sprintf("预算%02d", index)}, 200)
+		extra = append(extra, created["id"].(string))
 	}
-	owner.request(t, "GET", "/native/files?pageSize=1", nil, 413)
+	owner.request(t, "GET", "/native/files?scope=all&keywords=report&pageSize=1", nil, 413)
+	last := get("page=12&pageSize=1")
+	if last["total"] != float64(12) || last["usedBytes"] != float64(10) ||
+		last["items"].([]any)[0].(map[string]any)["id"] != extra[10] {
+		t.Fatal("账号检索超限时编号分页丢失条目或账号占用")
+	}
+	first := get("scope=folder&pagination=auto&sort=size&desc=true&foldersFirst=true&parent=" + folder + "&pageSize=1")
+	if first["items"].([]any)[0].(map[string]any)["id"] != nested ||
+		first["breadcrumbs"].([]any)[0].(map[string]any)["id"] != folder {
+		t.Fatal("账号检索超限时目录排序或面包屑错误")
+	}
+	cursor := first["cursorPage"].(map[string]any)["next"].(string)
+	rest := get("scope=folder&pagination=auto&sort=size&desc=true&foldersFirst=true&parent=" + folder + "&pageSize=1&cursor=" + url.QueryEscape(cursor))
+	if rest["items"].([]any)[0].(map[string]any)["id"] != alpha || rest["total"] != float64(2) {
+		t.Fatal("账号检索超限时游标无法继续浏览")
+	}
+	for _, id := range []string{extra[0], extra[1], extra[2], folder} {
+		owner.request(t, "POST", "/native/files/"+id+"/trash", nil, 200)
+	}
+	if trash := get("trash=true&pageSize=1"); trash["total"] != float64(4) || trash["usedBytes"] != float64(10) {
+		t.Fatal("账号检索超限时回收站分页范围或配额错误")
+	}
+	const purgePath = "/native/files/trash/purge"
+	preview := func(ids ...string) map[string]any {
+		return owner.request(t, "POST", purgePath+"-preview", map[string]any{"scope": "selection", "ids": ids}, 200)
+	}
+	confirm := func(stamp any, status int, ids ...string) {
+		owner.request(t, "POST", purgePath, map[string]any{"scope": "selection", "ids": ids, "snapshot": stamp}, status)
+	}
+	single := preview(extra[0])
+	confirm(single["snapshot"], 200, extra[0])
+	batch := preview(extra[1], extra[2])
+	if batch["entryCount"] != float64(2) {
+		t.Fatal("批量清理范围不正确")
+	}
+	confirm(batch["snapshot"], 200, extra[1], extra[2])
+	folderPreview := preview(folder)
+	if folderPreview["entryCount"] != float64(4) || folderPreview["bytes"] != float64(10) {
+		t.Fatal("清理预览未包含已回收目录的完整子树")
+	}
+	owner.request(t, "POST", "/native/files/"+folder+"/restore", map[string]string{}, 200)
+	confirm(folderPreview["snapshot"], 409, folder)
+	requireIDs("scope=tree&parent="+folder+"&keywords=report", alpha, beta)
+
+	owner.request(t, "POST", "/native/files/folders", map[string]string{"parentId": "", "name": "保留的独立目录"}, 200)
+	owner.request(t, "GET", "/native/files?scope=all&keywords=report&pageSize=1", nil, 413)
+	owner.request(t, "PUT", "/native/files/"+alpha+"/text", map[string]any{"expectedRevision": 1, "text": "new"}, 200)
+	if result := get("pageSize=1"); result["usedBytes"] != float64(13) {
+		t.Fatal("目录分页的逻辑占用未计算旧版本")
+	}
+	owner.request(t, "POST", "/native/files/"+folder+"/trash", nil, 200)
+	owner.request(t, "GET", "/native/files/inventory/"+beta, nil, 200)
+	folderPreview = preview(folder)
+	if folderPreview["entryCount"] != float64(4) || folderPreview["bytes"] != float64(13) {
+		t.Fatal("重新回收后的确认范围未包含后代与旧版本")
+	}
+	confirm(folderPreview["snapshot"], 200, folder)
+	for _, id := range []string{folder, nested, alpha, beta} {
+		owner.request(t, "GET", "/native/files/inventory/"+id, nil, 404)
+	}
+	if result := get("pageSize=1"); result["usedBytes"] != float64(0) || result["total"] != float64(9) {
+		t.Fatal("目录永久删除未释放完整逻辑占用或影响了无关目录")
+	}
 }

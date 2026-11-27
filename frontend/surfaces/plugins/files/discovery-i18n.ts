@@ -1,6 +1,8 @@
 export const zhDiscovery = {
   thumbnailBudget: '每页最多显示 {{count}} 张缩略图，其余显示类型图标。',
-  budgetExceeded: '当前账号的文件目录超过检索预算，暂时无法列出，请联系管理员处理。',
+  budgetExceeded: '账号条目过多，无法完成这次检索。清除筛选后可以继续浏览。',
+  galleryBudgetExceeded: '目录条目过多，无法一次载入图库。请切换到列表继续浏览。',
+  useList: '切换到列表',
   tooLong: '条件过长，请减少关键词后再搜索。',
   folderActions: '当前目录操作',
   advanced: '高级搜索',
@@ -60,7 +62,10 @@ export const zhDiscovery = {
 export const enDiscovery = {
   thumbnailBudget: 'Up to {{count}} thumbnails per page; other entries use type icons.',
   budgetExceeded:
-    'This account exceeds the metadata browsing budget. The folder cannot be listed; contact an administrator.',
+    'This account has too many items for this search. Clear the filters to keep browsing.',
+  galleryBudgetExceeded:
+    'This folder has too many items to load in the gallery. Switch to list view to keep browsing.',
+  useList: 'Switch to list',
   tooLong: 'Search conditions are too long. Reduce the keywords and try again.',
   folderActions: 'Current folder actions',
   advanced: 'Advanced search',

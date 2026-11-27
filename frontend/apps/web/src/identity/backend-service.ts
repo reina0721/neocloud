@@ -6,6 +6,7 @@ import {
   notificationResponseSchema,
   roleSummariesSchema,
   accessSchema,
+  registrationConfigurationSchema,
   registrationSettingsInputSchema,
   registrationSettingsResponseSchema,
   roleInputSchema,
@@ -190,6 +191,11 @@ export function createBackendIdentityService(
     registrationSettings: async () =>
       parseIdentity(registrationSettingsResponseSchema, await call('/system/registration'))
         .settings,
+    registrationConfiguration: async () =>
+      parseIdentity(
+        registrationConfigurationSchema,
+        await call('/system/registration?include=roleOptions'),
+      ),
     updateRegistrationSettings: async (input) => {
       const parsed = registrationSettingsInputSchema.safeParse(input);
       if (!parsed.success) throw new IdentityError('validation');

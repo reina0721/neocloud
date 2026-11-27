@@ -51,7 +51,11 @@ function contractRequest(service: IdentityOperations): typeof fetch {
     try {
       if (path === '/auth/access') return Response.json(await service.access());
       if (path === '/system/registration' && method === 'GET')
-        return Response.json({ settings: await service.registrationSettings() });
+        return Response.json(
+          url.searchParams.get('include') === 'roleOptions'
+            ? await service.registrationConfiguration()
+            : { settings: await service.registrationSettings() },
+        );
       if (path === '/system/registration' && method === 'PATCH') {
         const { registrationSettingsInputSchema } = await import('@clouddrive/surface/identity');
         return Response.json({
@@ -383,14 +387,20 @@ describe.each(['mock', 'backend'] as const)('%s identity contract', (mode) => {
   });
   it('rejects unauthorized policy changes and privileged registration roles', async () => {
     const api = service();
-    const initial = await api.registrationSettings();
+    const { settings: initial, roleOptions } = await api.registrationConfiguration();
+    expect(roleOptions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'administrator', eligible: false, reason: 'protected-role' }),
+        expect.objectContaining({ id: 'viewer', eligible: true }),
+      ]),
+    );
     await expect(
       api.updateRegistrationSettings({
         enabled: true,
         defaultRoleId: 'administrator',
         version: initial.version,
       }),
-    ).rejects.toMatchObject({ code: 'validation' });
+    ).rejects.toMatchObject({ code: 'validation', reason: 'protected-role' });
     const role = await api.createRole({
       name: 'Public reviewer',
       permissions: ['account.update', 'audit.read'],
@@ -409,6 +419,7 @@ describe.each(['mock', 'backend'] as const)('%s identity contract', (mode) => {
     ).rejects.toMatchObject({ code: 'conflict' });
     await switchOwner('mock-viewer');
     await expect(api.registrationSettings()).rejects.toMatchObject({ code: 'forbidden' });
+    await expect(api.registrationConfiguration()).rejects.toMatchObject({ code: 'forbidden' });
     await expect(
       api.updateRegistrationSettings({
         enabled: false,

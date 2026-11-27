@@ -9,6 +9,7 @@ import { Action } from '@clouddrive/ui-adapter/action';
 import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
 import { useFrontendTranslation } from '@clouddrive/i18n';
 import { useSiteProfile } from '@clouddrive/surface/administration/runtime';
+import { useProductAccess } from '@clouddrive/surface/identity/runtime';
 import { useAuth } from './context';
 import { AuthFrame } from './frame';
 import { LoginHelp } from './login-help';
@@ -23,6 +24,52 @@ import { AlertTriangle, CheckCircle2, Clock, Eye, EyeOff } from 'lucide-react';
 const DemoAccessPanel = lazy(() =>
   import('./demo-access').then(({ DemoAccessPanel }) => ({ default: DemoAccessPanel })),
 );
+
+function RegistrationSuccess({
+  message,
+  onContinue,
+  onRetry,
+}: Readonly<{ message: string; onContinue: () => void; onRetry?: () => void }>) {
+  const { t } = useFrontendTranslation();
+  return (
+    <div className="grid gap-3">
+      <AlertBanner
+        tone="success"
+        announcement="polite"
+        title={t('auth.registeredTitle')}
+        description={t(message)}
+        icon={<CheckCircle2 aria-hidden="true" className="size-4" />}
+      />
+      <Action fullWidth onPress={onContinue}>
+        {t('auth.continue')}
+      </Action>
+      {onRetry ? (
+        <Action variant="quiet" onPress={onRetry}>
+          {t('auth.registeredAccessRetry')}
+        </Action>
+      ) : null}
+    </div>
+  );
+}
+
+function RegisteredFileAccess({ onContinue }: Readonly<{ onContinue: () => void }>) {
+  const access = useProductAccess();
+  const permissions = access.data?.nativePermissions;
+  let message = 'auth.registeredAccessUnavailable';
+  if (access.loading) message = 'auth.registeredAccessLoading';
+  else if (permissions) {
+    if (!permissions.includes('files:read')) message = 'auth.registeredNeedsFileAccess';
+    else if (!permissions.includes('files:write')) message = 'auth.registeredReadOnly';
+    else message = 'auth.registeredFileAccess';
+  }
+  return (
+    <RegistrationSuccess
+      message={message}
+      onContinue={onContinue}
+      {...(!access.loading && !permissions ? { onRetry: access.reload } : {})}
+    />
+  );
+}
 
 export function AuthForm({ kind }: Readonly<{ kind: 'login' | 'register' | 'expired' }>) {
   const register = kind === 'register';
@@ -148,17 +195,14 @@ export function AuthForm({ kind }: Readonly<{ kind: 'login' | 'register' | 'expi
             ) : null}
           </div>
         ) : registered ? (
-          <div role="status" className="space-y-4">
-            <AlertBanner
-              tone="success"
-              title={t('auth.registeredTitle')}
-              description={t('auth.registeredDescription')}
-              icon={<CheckCircle2 aria-hidden="true" className="size-4" />}
+          authMode === 'backend' ? (
+            <RegisteredFileAccess onContinue={() => window.location.replace(destination())} />
+          ) : (
+            <RegistrationSuccess
+              message="auth.registeredSignedIn"
+              onContinue={() => window.location.replace(destination())}
             />
-            <Action fullWidth onPress={() => window.location.replace(destination())}>
-              {t('auth.continue')}
-            </Action>
-          </div>
+          )
         ) : (
           <FoundationForm
             form={form}
@@ -263,7 +307,7 @@ export function AuthForm({ kind }: Readonly<{ kind: 'login' | 'register' | 'expi
             />
           </Suspense>
         ) : null}
-        {register || availability === true ? (
+        {!registered && (register || availability === true) ? (
           <p className="text-sm text-ink-muted">
             {t(register ? 'auth.hasAccount' : 'auth.noAccount')}{' '}
             <Link

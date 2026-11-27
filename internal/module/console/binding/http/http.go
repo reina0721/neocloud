@@ -339,7 +339,11 @@ func (h *Handler) routes() {
 			problem(w, err)
 			return
 		}
-		reply(w, map[string]any{"user": u, "permissions": projectedPermissions(current(r).Identity.Permissions), "nativePermissions": current(r).Identity.Permissions})
+		nativeKeys := current(r).Identity.Permissions
+		if nativeKeys == nil {
+			nativeKeys = []permission.Key{}
+		}
+		reply(w, map[string]any{"user": u, "permissions": projectedPermissions(nativeKeys), "nativePermissions": nativeKeys})
 	})
 	h.mux.HandleFunc("POST "+Prefix+"/auth/sessions/revoke-others", h.revokeSession)
 	h.mux.HandleFunc("GET "+Prefix+"/auth/sessions", h.sessions)
@@ -542,12 +546,33 @@ func (h *Handler) registration(w http.ResponseWriter, r *http.Request) {
 	if !require(w, r, key) {
 		return
 	}
+	if r.Method == http.MethodGet && r.URL.Query().Get("include") == "roleOptions" {
+		if !require(w, r, "iam:role:read") {
+			return
+		}
+		settings, options, err := h.iam.RegistrationWithRoleOptions(r.Context())
+		if err != nil {
+			problem(w, err)
+			return
+		}
+		reply(w, map[string]any{"settings": settings, "roleOptions": options})
+		return
+	}
 	if r.Method == "PATCH" {
 		var body RegistrationSettings
 		if !decode(w, r, &body) {
 			return
 		}
 		if err := h.iam.UpdateRegistration(r.Context(), body); err != nil {
+			var roleError *RegistrationRoleError
+			if errors.As(err, &roleError) {
+				if errors.Is(err, database.ErrNotFound) {
+					failure(w, http.StatusNotFound, "not-found", roleError.Reason)
+				} else {
+					failure(w, http.StatusConflict, "conflict", roleError.Reason)
+				}
+				return
+			}
 			problem(w, err)
 			return
 		}
