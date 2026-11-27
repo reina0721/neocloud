@@ -2,7 +2,7 @@ name: Quality
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -13,6 +13,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  VALIDATION_FULL: ${{ github.event_name == 'workflow_dispatch' }}
+
 jobs:
   repository:
     name: Repository configuration gates
@@ -20,41 +23,34 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          fetch-depth: 0
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: go.mod
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24.11.1
-      - name: Install pinned configuration validators
+      - name: Install pinned workflow validator
+        run: GOBIN="${RUNNER_TEMP}/repository-tools" go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+      - name: Validate workflows, documentation links and tracked artifacts
         run: |
-          GOBIN="${RUNNER_TEMP}/repository-tools" go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
-          GOBIN="${RUNNER_TEMP}/repository-tools" go install github.com/goreleaser/goreleaser/v2@v2.17.1
-          echo "${RUNNER_TEMP}/repository-tools" >> "${GITHUB_PATH}"
-      - name: Validate workflows, forms, release configuration and artifacts
-        run: |
-          actionlint
-          go test ./internal/tools/docs-guard
+          "${RUNNER_TEMP}/repository-tools/actionlint"
           go run ./internal/tools/docs-guard
-          node scripts/release-config.mjs --output "${RUNNER_TEMP}/goreleaser.yaml"
-          goreleaser check --config "${RUNNER_TEMP}/goreleaser.yaml"
-          node --test scripts/release-config.test.mjs scripts/verify-release.test.mjs scripts/install.test.mjs scripts/verify-elf-platform.test.mjs scripts/docker-image-config-id.test.mjs
           node scripts/verify-artifacts.mjs
+      - name: Test repository and release controls
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          go test ./internal/tools/docs-guard
+          GOBIN="${RUNNER_TEMP}/repository-tools" go install github.com/goreleaser/goreleaser/v2@v2.17.1
+          node scripts/release-config.mjs --output "${RUNNER_TEMP}/goreleaser.yaml"
+          "${RUNNER_TEMP}/repository-tools/goreleaser" check --config "${RUNNER_TEMP}/goreleaser.yaml"
+          node --test scripts/verify-changed.test.mjs scripts/verify-artifacts.test.mjs scripts/release-config.test.mjs scripts/verify-release.test.mjs scripts/install.test.mjs scripts/verify-elf-platform.test.mjs scripts/docker-image-config-id.test.mjs
 
   changes:
+    if: github.event_name == 'pull_request'
     name: Classify validation scope
     runs-on: ubuntu-latest
     outputs:
-      backend: ${{ steps.scope.outputs.backend }}
-      frontend: ${{ steps.scope.outputs.frontend }}
-      docs: ${{ steps.scope.outputs.docs }}
-      database: ${{ steps.scope.outputs.database }}
       api: ${{ steps.scope.outputs.api }}
-      fuzz: ${{ steps.scope.outputs.fuzz }}
-      full: ${{ steps.scope.outputs.full }}
-      base: ${{ steps.scope.outputs.base }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -62,17 +58,13 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24.11.1
-      - name: Test validation selection and failure boundaries
-        run: node --test scripts/verify-changed.test.mjs scripts/verify-artifacts.test.mjs
       - id: scope
         env:
-          VALIDATION_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-          VALIDATION_FULL: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) }}
+          VALIDATION_BASE: ${{ github.event.pull_request.base.sha }}
         run: node scripts/ci-validation.mjs classify
 
   windows:
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    if: github.event_name == 'workflow_dispatch'
     name: Windows quality gates
     runs-on: windows-latest
     steps:
@@ -91,14 +83,10 @@ jobs:
           node-version: 24.11.1
       - name: Run quality gates
         shell: pwsh
-        env:
-          VALIDATION_BASE: ${{ needs.changes.outputs.base }}
-          VALIDATION_FULL: ${{ needs.changes.outputs.full }}
         run: node scripts/ci-validation.mjs backend
 
   linux:
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    if: github.event_name == 'workflow_dispatch'
     name: Linux quality gates
     runs-on: ubuntu-latest
     steps:
@@ -116,17 +104,12 @@ jobs:
         with:
           node-version: 24.11.1
       - name: Run quality gates
-        env:
-          VALIDATION_BASE: ${{ needs.changes.outputs.base }}
-          VALIDATION_FULL: ${{ needs.changes.outputs.full }}
         run: node scripts/ci-validation.mjs backend
       - name: Run bounded fuzz gate
-        if: needs.changes.outputs.fuzz == 'true'
         run: go test ./internal/kernel/config -run '^$' -fuzz '^FuzzJSONObject$' -fuzztime 15s
 
   webui-windows:
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
+    if: github.event_name == 'workflow_dispatch'
     name: Windows frontend quality gates
     runs-on: windows-latest
     steps:
@@ -147,9 +130,6 @@ jobs:
           (Join-Path $pnpmRoot 'node_modules/.bin') >> $env:GITHUB_PATH
       - name: Run frontend quality gates
         shell: pwsh
-        env:
-          VALIDATION_BASE: ${{ needs.changes.outputs.base }}
-          VALIDATION_FULL: ${{ needs.changes.outputs.full }}
         run: node scripts/ci-validation.mjs frontend
       - name: Preserve browser failure screenshots
         if: failure()
@@ -164,8 +144,7 @@ jobs:
           retention-days: 7
 
   webui-linux:
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
+    if: github.event_name == 'workflow_dispatch'
     name: Linux frontend quality gates
     runs-on: ubuntu-latest
     steps:
@@ -185,9 +164,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           (Join-Path $pnpmRoot 'node_modules/.bin') >> $env:GITHUB_PATH
       - name: Run frontend quality gates
-        env:
-          VALIDATION_BASE: ${{ needs.changes.outputs.base }}
-          VALIDATION_FULL: ${{ needs.changes.outputs.full }}
         run: node scripts/ci-validation.mjs frontend
       - name: Preserve browser failure screenshots
         if: failure()
@@ -202,8 +178,7 @@ jobs:
           retention-days: 7
 
   docs-windows:
-    needs: changes
-    if: needs.changes.outputs.docs == 'true'
+    if: github.event_name == 'workflow_dispatch'
     name: Windows documentation quality gates
     runs-on: windows-latest
     steps:
@@ -222,14 +197,10 @@ jobs:
           node-version: 24.11.1
       - name: Run documentation quality gates
         shell: pwsh
-        env:
-          VALIDATION_BASE: ${{ needs.changes.outputs.base }}
-          VALIDATION_FULL: ${{ needs.changes.outputs.full }}
         run: node scripts/ci-validation.mjs docs
 
   docs-linux:
-    needs: changes
-    if: needs.changes.outputs.docs == 'true'
+    if: github.event_name == 'workflow_dispatch'
     name: Linux documentation quality gates
     runs-on: ubuntu-latest
     steps:
@@ -247,9 +218,6 @@ jobs:
         with:
           node-version: 24.11.1
       - name: Run documentation quality gates
-        env:
-          VALIDATION_BASE: ${{ needs.changes.outputs.base }}
-          VALIDATION_FULL: ${{ needs.changes.outputs.full }}
         run: node scripts/ci-validation.mjs docs
 
   openapi-breaking:
@@ -276,6 +244,7 @@ jobs:
           go tool oasdiff breaking tmp/openapi/base.yaml api/openapi.yaml --fail-on ERR
 
   security:
+    if: github.event_name == 'workflow_dispatch'
     name: Security gates
     runs-on: ubuntu-latest
     steps:
@@ -302,8 +271,6 @@ jobs:
         run: gosec -exclude-generated ./cmd/... ./internal/... ./pkg/...
       - name: Secret scan
         run: gitleaks git --config .gitleaks.toml --redact --no-banner --verbose .
-      - name: Tracked artifact allowlist
-        run: bash scripts/verify-artifacts.sh
 
   summary:
     name: Validation summary

@@ -31,6 +31,10 @@ const { values } = parseArgs({
     faults: { type: "boolean", default: false },
     "network-host": { type: "string" },
     "legacy-entrypoint": { type: "boolean", default: false },
+    "artifact-smoke": { type: "boolean", default: false },
+    arch: { type: "string" },
+    commit: { type: "string" },
+    trace: { type: "string" },
   },
 });
 assert.ok(
@@ -42,6 +46,42 @@ assert.equal(
   Boolean(values["upgrade-version"]),
   "升级目录和版本必须一起提供",
 );
+const artifactSmoke = values["artifact-smoke"];
+assert.ok(
+  artifactSmoke || (!values.arch && !values.commit && !values.trace),
+  "--arch、--commit 和 --trace 用于 --artifact-smoke",
+);
+if (artifactSmoke) {
+  assert.ok(
+    ["amd64", "arm64"].includes(values.arch),
+    "产物冒烟必须指定 --arch amd64 或 arm64",
+  );
+  assert.match(
+    values.commit ?? "",
+    /^[a-f0-9]{40}$/,
+    "产物冒烟必须指定 --commit 完整源码提交",
+  );
+  assert.match(
+    values.version,
+    /^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$/,
+    "产物冒烟必须指定发布 tag",
+  );
+  assert.ok(
+    !values["upgrade-dir"] &&
+      !values["emulated-arch"] &&
+      !values["network-host"] &&
+      !values["legacy-entrypoint"] &&
+      !values.faults,
+    "产物冒烟只在原生架构执行一次签名包安装",
+  );
+  assert.equal(process.platform, "linux", "产物冒烟需要原生 Linux Docker 主机");
+  assert.ok(
+    process.env.CLOUDDRIVE_OFFLINE_TRUST_DIR,
+    "产物冒烟需要独立的 CLOUDDRIVE_OFFLINE_TRUST_DIR",
+  );
+}
+const smokeTracePath = values.trace ? resolve(values.trace) : undefined;
+if (smokeTracePath) await assert.rejects(lstat(smokeTracePath), { code: "ENOENT" });
 const source = resolve(values["release-dir"]);
 const networkHost = values["network-host"];
 assert.ok(
@@ -58,6 +98,11 @@ assert.ok(
   "--network-host 必须是当前机器的非回环 IPv4，不能用 localhost 冒充 HTTP 外部入口",
 );
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const dockerPath = spawnSync("sh", ["-c", "command -v docker"], {
+  encoding: "utf8",
+});
+assert.equal(dockerPath.status, 0, "Docker 验收需要可执行的 docker 命令");
+const docker = dockerPath.stdout.trim();
 const base = await mkdtemp(join(tmpdir(), "clouddrive-release-test-"));
 await writeFile(join(base, ".test-owner"), "clouddrive-release-fixture-v1", {
   mode: 0o600,
@@ -67,9 +112,6 @@ const bootstrap = join(base, "bootstrap.sh");
 await cp(join(projectRoot, "install.sh"), bootstrap);
 const bin = join(base, "bin");
 await mkdir(bin);
-const docker = spawnSync("sh", ["-c", "command -v docker"], {
-  encoding: "utf8",
-}).stdout.trim();
 const quote = (s) => "'" + s.replaceAll("'", "'\\''") + "'";
 const dockerArgs =
   process.env.CLOUDDRIVE_DOCKER_SUDO === "1"
@@ -390,7 +432,67 @@ async function storageSnapshot() {
   ]);
   return JSON.parse(result.stdout);
 }
-try {
+async function exerciseArtifactSmoke(trace) {
+  const platform = {
+    x86_64: "amd64", aarch64: "arm64", amd64: "amd64", arm64: "arm64",
+  };
+  const hostArch = { x64: "amd64", arm64: "arm64" }[process.arch];
+  const [os, daemonArch] = run("docker", [
+    "info", "--format", "{{.OSType}}|{{.Architecture}}",
+  ]).stdout.trim().split("|");
+  trace.platform = { os, hostArch, daemonArch };
+  assert.equal(hostArch, values.arch, "Node 运行平台与目标原生架构不符");
+  assert.equal(os, "linux", "Docker daemon 必须运行 Linux 容器");
+  assert.equal(platform[daemonArch], values.arch, "Docker daemon 与目标原生架构不符");
+
+  trace.phase = "install";
+  install(
+    "install", "--dir", root, "--bind", "127.0.0.1", "--port", String(port),
+    "--version", active, "--release-dir", source,
+  );
+  assert.equal((await readFile(join(root, ".control/current"), "utf8")).trim(), active);
+
+  trace.phase = "health";
+  const probe = async (path) => {
+    const response = await fetch(origin + path, {
+      signal: AbortSignal.timeout(10_000),
+      redirect: "error",
+    });
+    trace.http[path] = response.status;
+    assert.equal(response.status, 200, `${path} 未就绪`);
+    return response;
+  };
+  const page = await probe("/login");
+  assert.match(page.headers.get("Content-Type") ?? "", /^text\/html(?:;|$)/i);
+  assert.match(await page.text(), /<!doctype html>/i);
+  assert.equal((await (await probe("/management/readyz")).json()).status, "pass");
+  const build = await (await probe("/management/build")).json();
+  trace.runningBuild = { version: build.version, commit: build.commit, dirty: build.dirty };
+  assert.equal(build.version, active);
+  assert.equal(build.commit, values.commit);
+  assert.equal(build.dirty, false);
+
+  trace.phase = "image-identity";
+  for (const service of ["backend", "web"]) {
+    const container = compose(root, active, "ps", "--quiet", service).stdout.trim();
+    assert.match(container, /^[a-f0-9]{12,64}$/, `${service} 必须有且只有一个运行容器`);
+    const image = run("docker", ["container", "inspect", "--format", "{{.Image}}", container]).stdout.trim();
+    assert.match(image, /^sha256:[a-f0-9]{64}$/);
+    const format = [
+      "{{.Os}}",
+      "{{.Architecture}}",
+      '{{index .Config.Labels "org.opencontainers.image.version"}}',
+      '{{index .Config.Labels "org.opencontainers.image.revision"}}',
+      '{{index .Config.Labels "org.opencontainers.image.licenses"}}',
+    ].join("|");
+    const identity = run("docker", ["image", "inspect", "--format", format, image]).stdout.trim();
+    trace.images[service] = { id: image, identity };
+    assert.equal(identity, `linux|${values.arch}|${active}|${values.commit}|Apache-2.0`);
+  }
+  trace.phase = "ready";
+}
+
+async function exerciseFullRelease() {
   install(
     "install",
     "--dir",
@@ -943,7 +1045,9 @@ try {
   );
   if (values.keep) console.log("验收实例保留：" + base);
   ok = true;
-} finally {
+}
+
+async function cleanupFixture() {
   for (const item of additionalInstances) {
     try {
       compose(item.root, item.version, "down", "--remove-orphans");
@@ -953,8 +1057,11 @@ try {
   }
   if (!values.keep || !ok) {
     try {
-      compose(root, active, "down", "--remove-orphans");
-    } catch {
+      if (!artifactSmoke || (await validateSmokeProject())) {
+        compose(root, active, "down", "--remove-orphans");
+      }
+    } catch (error) {
+      if (artifactSmoke) throw error;
       /* 失败现场仍保留。 */
     }
   }
@@ -985,4 +1092,71 @@ try {
     ]);
     await rm(base, { recursive: true, force: true });
   } else if (!ok) console.error("已保留失败验收现场：" + base);
+}
+
+async function validateSmokeProject() {
+  assert.equal(
+    await readFile(join(base, ".test-owner"), "utf8"),
+    "clouddrive-release-fixture-v1",
+  );
+  const project = await readFile(join(root, ".control/project"), "utf8").catch((error) => {
+    if (error.code !== "ENOENT" || ok) throw error;
+    return "";
+  });
+  if (!project) return false;
+  const expected = "clouddrive-" + sha(await realpath(root)).slice(0, 12);
+  assert.equal(project.trim(), expected, "拒绝清理不属于本次验收的 Compose 项目");
+  return true;
+}
+
+async function runArtifactSmoke() {
+  const started = Date.now();
+  const trace = {
+    schema: "clouddrive-docker-artifact-smoke-v1",
+    version: active,
+    expectedArch: values.arch,
+    expectedCommit: values.commit,
+    phase: "platform",
+    http: {},
+    images: {},
+  };
+  const failures = [];
+  try {
+    await exerciseArtifactSmoke(trace);
+    ok = true;
+  } catch (error) {
+    failures.push(error);
+  }
+  try {
+    await cleanupFixture();
+    trace.fixture = ok && !values.keep ? "removed" : base;
+  } catch (error) {
+    failures.push(error);
+    trace.fixture = base;
+    trace.cleanup = "failed";
+  }
+  trace.result = failures.length ? "failed" : "passed";
+  trace.elapsedMs = Date.now() - started;
+  if (smokeTracePath) {
+    try {
+      await mkdir(dirname(smokeTracePath), { recursive: true });
+      await writeFile(smokeTracePath, JSON.stringify(trace, null, 2) + "\n", {
+        flag: "wx", mode: 0o600,
+      });
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  if (failures.length) throw new AggregateError(failures, "Docker 签名产物冒烟失败");
+  console.log(`Docker 签名产物冒烟通过：${active} linux/${values.arch} ${values.commit}。`);
+  if (values.keep) console.log("验收实例保留：" + base);
+}
+
+if (artifactSmoke) await runArtifactSmoke();
+else {
+  try {
+    await exerciseFullRelease();
+  } finally {
+    await cleanupFixture();
+  }
 }
