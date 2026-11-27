@@ -35,42 +35,26 @@ func TestExplicitHTTPCookiesKeepConsoleAndNativeAuthorization(t *testing.T) {
 			})
 			client := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 			client.request(t, "GET", "/auth/csrf", nil, 200)
-			client.request(t, "POST", "/auth/setup", map[string]any{"setupToken": "http-cookie-fixture", "email": "http-owner@clouddrive.test", "name": "HTTP Owner", "password": "http-cookie-owner-password"}, 200)
+			client.request(t, "POST", "/auth/setup", map[string]any{"setupToken": "http-cookie-fixture", "email": "http-owner@neocloud.test", "name": "HTTP Owner", "password": "http-cookie-owner-password"}, 200)
 			for name := range client.cookies {
 				if strings.HasPrefix(name, "__Host-") == insecure {
 					t.Fatalf("unexpected cookie name for HTTP=%v: %s", insecure, name)
 				}
 			}
-			original := client.request(t, "GET", "/auth/session", nil, 200)
+			client.request(t, "GET", "/auth/session", nil, 200)
 			policy := httpx.CookiePolicy{AllowInsecureHTTP: insecure}
 			cookieName := policy.Name(service.SessionCookieName)
-			legacySessionName := policy.Name(service.LegacySessionCookieName)
 			csrfName := policy.Name("__Host-neocloud_console_csrf")
-			legacyCSRFName := policy.Name("__Host-clouddrive_console_csrf")
-			if client.cookies[cookieName] == "" || client.cookies[csrfName] != client.csrf || client.cookies[legacySessionName] != "" || client.cookies[legacyCSRFName] != "" {
+			if client.cookies[cookieName] == "" || client.cookies[csrfName] != client.csrf || len(client.cookies) != 2 {
 				t.Fatal("首次登录没有使用 NeoCloud Cookie")
 			}
-			for name := range client.cookies {
-				if strings.HasSuffix(name, "clouddrive_native_csrf") {
-					t.Fatal("Console sign-in issued a native CSRF mirror")
-				}
-			}
 			preferences := map[string]any{"themeMode": "dark"}
-			old := &consoleTestClient{base: client.base, csrf: client.csrf, cookies: map[string]string{
-				legacySessionName: client.cookies[cookieName], legacyCSRFName: client.cookies[csrfName],
+			noncanonical := &consoleTestClient{base: client.base, csrf: client.csrf, cookies: map[string]string{
+				"other_iam_session": client.cookies[cookieName], "other_console_csrf": client.cookies[csrfName],
 			}}
-			old.request(t, "PATCH", "/native/iam/self/preferences", preferences, 200)
-			if restored := old.request(t, "GET", "/auth/session", nil, 200); restored["sessionId"] != original["sessionId"] || old.cookies[cookieName] != old.cookies[legacySessionName] {
-				t.Fatal("旧 Cookie 未恢复为同一个会话")
-			}
-			if csrf := old.request(t, "GET", "/auth/csrf", nil, 200); csrf["token"] != client.csrf || old.cookies[csrfName] != old.cookies[legacyCSRFName] {
-				t.Fatal("旧 CSRF Cookie 未沿用为 NeoCloud Cookie")
-			}
-			old.cookies[cookieName] = "invalid-canonical-session"
-			old.request(t, "GET", "/auth/session", nil, http.StatusUnauthorized)
-			old.cookies[cookieName] = client.cookies[cookieName]
-			old.cookies[csrfName] = "different-canonical-csrf"
-			old.request(t, "PATCH", "/native/iam/self/preferences", preferences, http.StatusForbidden)
+			noncanonical.request(t, "GET", "/auth/session", nil, http.StatusUnauthorized)
+			noncanonical.cookies[cookieName] = client.cookies[cookieName]
+			noncanonical.request(t, "PATCH", "/native/iam/self/preferences", preferences, http.StatusForbidden)
 
 			before := client.request(t, "GET", "/native/iam/session", nil, 200)
 			if token, ok := before["csrfToken"].(string); !ok || token == "" {
@@ -110,7 +94,7 @@ func TestExplicitHTTPCookiesKeepConsoleAndNativeAuthorization(t *testing.T) {
 			}
 			client.request(t, "PATCH", "/native/iam/self/preferences", preferences, 200)
 
-			login := (iamClient{address: raw.address}).roundTrip(t, http.MethodPost, "/api/v1/iam/login", `{"username":"http-owner@clouddrive.test","password":"http-cookie-owner-password"}`)
+			login := (iamClient{address: raw.address}).roundTrip(t, http.MethodPost, "/api/v1/iam/login", `{"username":"http-owner@neocloud.test","password":"http-cookie-owner-password"}`)
 			nativeSession, ok := strings.CutPrefix(login.cookie, cookieName+"=")
 			if login.code != http.StatusOK || !ok || nativeSession == "" {
 				t.Fatalf("native login did not issue a session cookie: %d", login.code)
@@ -125,7 +109,7 @@ func TestExplicitHTTPCookiesKeepConsoleAndNativeAuthorization(t *testing.T) {
 			}
 			logoutRequest.Header.Set("Origin", client.base)
 			logoutRequest.Header.Set("X-CSRF-Token", login.csrf)
-			logoutRequest.AddCookie(&http.Cookie{Name: legacySessionName, Value: nativeSession})
+			logoutRequest.AddCookie(&http.Cookie{Name: cookieName, Value: nativeSession})
 			logoutResponse, err := http.DefaultClient.Do(logoutRequest)
 			if err != nil {
 				t.Fatal(err)
@@ -135,15 +119,15 @@ func TestExplicitHTTPCookiesKeepConsoleAndNativeAuthorization(t *testing.T) {
 			for _, cookie := range logoutResponse.Cookies() {
 				cleared[cookie.Name] = cookie.MaxAge < 0 && cookie.HttpOnly && cookie.Secure != insecure
 			}
-			if logoutResponse.StatusCode != http.StatusNoContent || !cleared[cookieName] || !cleared[legacySessionName] {
-				t.Fatalf("原生注销未清除两种会话 Cookie，状态 %d", logoutResponse.StatusCode)
+			if logoutResponse.StatusCode != http.StatusNoContent || len(cleared) != 1 || !cleared[cookieName] {
+				t.Fatalf("原生注销未清除会话 Cookie，状态 %d", logoutResponse.StatusCode)
 			}
 			fromNative.request(t, "GET", "/auth/session", nil, http.StatusUnauthorized)
 
 			role := client.request(t, "POST", "/native/iam/roles", map[string]any{"code": "self-reader", "name": "Self reader", "description": ""}, 201)
 			roleID := role["id"].(string)
 			client.request(t, "PUT", "/native/iam/roles/"+roleID+"/permissions", map[string]any{"expectedRoleVersion": role["version"], "permissionKeys": []string{"iam:account:self:preferences:read"}}, 200)
-			credentials := map[string]any{"email": "reader@clouddrive.test", "password": "http-cookie-reader-password"}
+			credentials := map[string]any{"email": "reader@neocloud.test", "password": "http-cookie-reader-password"}
 			client.request(t, "POST", "/users", map[string]any{"email": credentials["email"], "password": credentials["password"], "name": "Reader", "roleIds": []string{roleID}, "status": "active"}, 200)
 			reader := &consoleTestClient{base: client.base, cookies: map[string]string{}}
 			reader.request(t, "GET", "/auth/csrf", nil, 200)
@@ -157,19 +141,15 @@ func TestExplicitHTTPCookiesKeepConsoleAndNativeAuthorization(t *testing.T) {
 			client.request(t, "POST", "/native/iam/self/password/verify", map[string]any{"password": "http-cookie-owner-password"}, 200)
 			client.request(t, "POST", "/native/iam/self/password/verify", map[string]any{"password": "http-cookie-owner-password"}, 403, map[string]string{"Origin": "http://untrusted.example:4173"})
 			client.request(t, "POST", "/native/iam/self/password/verify", map[string]any{"password": "http-cookie-owner-password"}, 403, map[string]string{"X-CSRF-Token": "invalid"})
-			legacyCookie := policy.Name("__Host-clouddrive_native_csrf")
-			client.cookies[legacyCookie] = "obsolete"
-			client.cookies[legacySessionName] = client.cookies[cookieName]
-			client.cookies[legacyCSRFName] = client.cookies[csrfName]
-			oldToken := client.cookies[legacySessionName]
+			oldToken := client.cookies[cookieName]
 			client.request(t, "POST", "/auth/logout", nil, 204)
-			for _, name := range []string{cookieName, legacySessionName, csrfName, legacyCSRFName, legacyCookie} {
+			for _, name := range []string{cookieName, csrfName} {
 				if client.cookies[name] != "" {
 					t.Fatalf("控制台注销未清除 Cookie %s", name)
 				}
 			}
 			client.request(t, "GET", "/auth/session", nil, 401)
-			client.cookies = map[string]string{legacySessionName: oldToken}
+			client.cookies = map[string]string{cookieName: oldToken}
 			client.request(t, "GET", "/auth/session", nil, 401)
 		})
 	}

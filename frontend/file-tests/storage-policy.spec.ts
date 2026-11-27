@@ -10,7 +10,7 @@ import {
 } from './storage-fixture';
 
 test('存储摘要显示真实用量，大小单位精确往返并保存待生效限额', async ({ page }, info) => {
-  test.skip(!process.env.CLOUDDRIVE_FILE_TEST_ACCESS, '写入只使用显式指定的隔离预览。');
+  test.skip(!process.env.NEOCLOUD_FILE_TEST_ACCESS, '写入只使用显式指定的隔离预览。');
   await page.setViewportSize({ width: 1440, height: 1000 });
   await loginStorage(page);
   const initial = await storageRequest<StoragePolicy>(page);

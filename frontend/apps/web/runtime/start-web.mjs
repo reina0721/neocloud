@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { configuredHttpOrigin } from './backend-proxy-rules.mjs';
 import { createWebIngress } from './web-ingress.mjs';
-import { readNeoCloudEnv } from './environment.mjs';
 
 const thisFile = fileURLToPath(import.meta.url);
 const loopback = '127.0.0.1';
@@ -45,12 +44,12 @@ export async function startWebHost() {
   if (!Number.isInteger(port) || port < 1 || port > 65_535)
     throw new Error('Invalid Web Host port');
   const backend = configuredHttpOrigin(
-    readNeoCloudEnv('BACKEND_URL') ??
-      readNeoCloudEnv('DEFAULT_BACKEND_URL') ??
+    process.env.NEOCLOUD_BACKEND_URL ??
+      process.env.NEOCLOUD_DEFAULT_BACKEND_URL ??
       'http://127.0.0.1:8080',
     'NEOCLOUD_BACKEND_URL',
   );
-  const origin = readNeoCloudEnv('PUBLIC_ORIGIN');
+  const origin = process.env.NEOCLOUD_PUBLIC_ORIGIN;
   const publicOrigin = origin ? configuredHttpOrigin(origin, 'NEOCLOUD_PUBLIC_ORIGIN') : undefined;
   const shutdown = new AbortController();
   const abort = () => shutdown.abort();

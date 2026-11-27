@@ -39,7 +39,7 @@ func TestAnnotationsHTTPPersistencePrivacyAndAtomicity(t *testing.T) {
 	}()
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "annotation-owner@clouddrive.test", "name": "整理验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "annotation-owner@neocloud.test", "name": "整理验收", "password": password}, 200)
 	root := owner.request(t, "POST", "/native/files/folders", map[string]string{"name": "整理根", "parentId": ""}, 200)["id"].(string)
 	file := owner.request(t, "POST", "/native/files/text", map[string]string{"name": "sample.txt", "parentId": root, "key": "annotation-http-file", "text": "original"}, 200)["id"].(string)
 	second := owner.request(t, "POST", "/native/files/text", map[string]string{"name": "second.txt", "parentId": root, "key": "annotation-http-second", "text": ""}, 200)["id"].(string)
@@ -115,10 +115,10 @@ func TestAnnotationsHTTPPersistencePrivacyAndAtomicity(t *testing.T) {
 	role := owner.request(t, "POST", "/roles", map[string]any{"name": "整理成员", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	roleID := role["id"].(string)
 	owner.request(t, "PUT", "/native/iam/roles/"+roleID+"/permissions", map[string]any{"expectedRoleVersion": 1, "permissionKeys": []string{"files:read", "files:write"}}, 200)
-	owner.request(t, "POST", "/users", map[string]any{"email": "annotation-member@clouddrive.test", "name": "整理成员", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
+	owner.request(t, "POST", "/users", map[string]any{"email": "annotation-member@neocloud.test", "name": "整理成员", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
 	member := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
 	member.request(t, "GET", "/auth/csrf", nil, 200)
-	member.request(t, "POST", "/auth/login", map[string]string{"email": "annotation-member@clouddrive.test", "password": password}, 200)
+	member.request(t, "POST", "/auth/login", map[string]string{"email": "annotation-member@neocloud.test", "password": password}, 200)
 	member.request(t, "GET", annotationPath(file), nil, 404)
 	member.request(t, "GET", "/native/files/annotations/summaries?ids="+file, nil, 404)
 	member.request(t, "PUT", annotationPath(file), map[string]any{"expectedRevision": 1, "tags": []any{}, "properties": []any{}, "emoji": "", "folderColor": ""}, 404)

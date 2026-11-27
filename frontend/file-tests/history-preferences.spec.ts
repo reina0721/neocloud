@@ -16,9 +16,9 @@ type Versions = {
 };
 test.use({ actionTimeout: 15000 });
 async function login(page: Page) {
-  if (!process.env.CLOUDDRIVE_FILE_TEST_ACCESS) throw Error('必须使用隔离文件账号');
+  if (!process.env.NEOCLOUD_FILE_TEST_ACCESS) throw Error('必须使用隔离文件账号');
   const access = JSON.parse(
-    (await readFile(process.env.CLOUDDRIVE_FILE_TEST_ACCESS, 'utf8')).replace(/^\uFEFF/, ''),
+    (await readFile(process.env.NEOCLOUD_FILE_TEST_ACCESS, 'utf8')).replace(/^\uFEFF/, ''),
   ) as { url: string; username: string; password: string };
   assertPreviewOrigin(access.url);
   await page.goto('/login?returnTo=%2Fhome');

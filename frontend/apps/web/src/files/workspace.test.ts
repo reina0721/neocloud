@@ -37,9 +37,9 @@ describe('文件工作区Host边界', () => {
   });
   it('损坏的侧栏记录不会静默覆盖文件视图偏好', () => {
     const runtime = fixture();
-    localStorage.setItem('clouddrive.files.sidebar.v1.workspace-one', '{"collapsed":true}');
+    localStorage.setItem('neocloud.files.sidebar.v1.workspace-one', '{"collapsed":true}');
     expect(() => runtime.port.loadSidebarPreferences()).toThrow();
-    expect(localStorage.getItem('clouddrive.files.view.v1.workspace-one')).toBe(null);
+    expect(localStorage.getItem('neocloud.files.view.v1.workspace-one')).toBe(null);
   });
   it('目录树拥有自己的按键，不把删除、改名或全选转给主文件列表', async () => {
     const runtime = fixture();

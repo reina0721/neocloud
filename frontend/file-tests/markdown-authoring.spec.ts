@@ -33,7 +33,7 @@ async function chooseImage(page: Page, dialog: Locator, name: string, buffer: Bu
 }
 
 test('Markdown 格式、撤销与同目录图片发布', async ({ page }, info) => {
-  const access = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
+  const access = process.env.NEOCLOUD_FILE_TEST_ACCESS;
   test.skip(!access, '使用隔离文件预览。');
   const account = JSON.parse((await readFile(access!, 'utf8')).replace(/^\uFEFF/, '')) as {
     username: string;

@@ -1,7 +1,6 @@
 package composition
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -18,28 +17,19 @@ import (
 // iamSessionAuthAdapter 是 IAM Session identity 到 Auth iam-rbac Principal
 // 的唯一装配适配器。
 type iamSessionAuthAdapter struct {
-	sessions         iam.SessionResolver
-	cookieName       string
-	legacyCookieName string
+	sessions   iam.SessionResolver
+	cookieName string
 }
 
-func newIAMSessionAuthAdapter(sessions iam.SessionResolver, cookieName, legacyCookieName string) (iamSessionAuthAdapter, error) {
-	if sessions == nil || cookieName == "" || legacyCookieName == "" {
-		return iamSessionAuthAdapter{}, fmt.Errorf("iam session resolver or cookie names are missing")
+func newIAMSessionAuthAdapter(sessions iam.SessionResolver, cookieName string) (iamSessionAuthAdapter, error) {
+	if sessions == nil || cookieName == "" {
+		return iamSessionAuthAdapter{}, fmt.Errorf("iam session resolver or cookie name is missing")
 	}
-	return iamSessionAuthAdapter{sessions: sessions, cookieName: cookieName, legacyCookieName: legacyCookieName}, nil
-}
-
-func (a iamSessionAuthAdapter) cookie(request *http.Request) (*http.Cookie, error) {
-	cookie, err := request.Cookie(a.cookieName)
-	if errors.Is(err, http.ErrNoCookie) {
-		return request.Cookie(a.legacyCookieName)
-	}
-	return cookie, err
+	return iamSessionAuthAdapter{sessions: sessions, cookieName: cookieName}, nil
 }
 
 func (a iamSessionAuthAdapter) AuthenticateRequest(request *http.Request) (*http.Request, error) {
-	cookie, err := a.cookie(request)
+	cookie, err := request.Cookie(a.cookieName)
 	if err != nil || cookie.Value == "" {
 		return nil, service.ErrSessionInvalid
 	}

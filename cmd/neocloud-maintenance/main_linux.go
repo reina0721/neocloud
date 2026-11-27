@@ -30,7 +30,7 @@ func main() {
 
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return errors.New("需要 enable、worker、gateway、client、local、rename、import-release 或 verify-release")
+		return errors.New("需要 enable、worker、gateway、client、local、import-release 或 verify-release")
 	}
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	root := flags.String("root", "", "安装目录")
@@ -40,7 +40,6 @@ func run(ctx context.Context, args []string) error {
 	trusted := flags.String("trusted-proxy", "", "代理 IP")
 	action := flags.String("action", "status", "操作")
 	target := flags.String("target", "", "版本或恢复点")
-	targetRoot := flags.String("target-root", "", "改名后的安装目录")
 	confirm := flags.String("confirm", "", "恢复点确认")
 	offline := flags.Bool("offline", false, "只使用已校验的本地发布包")
 	releaseDir := flags.String("release-dir", "", "离线发布资产目录")
@@ -64,17 +63,11 @@ func run(ctx context.Context, args []string) error {
 		return deployment.Enable(ctx, *root, *trusted, *cosign, *dockerHost)
 	}
 	if *cosign != "" {
-		if err := os.Setenv("CLOUDDRIVE_COSIGN", *cosign); err != nil {
+		if err := os.Setenv("NEOCLOUD_COSIGN", *cosign); err != nil {
 			return err
 		}
 	}
 	switch mode {
-	case "rename":
-		result, err := deployment.RenameDockerInstance(ctx, *action, *root, *target, *targetRoot, *dockerHost)
-		if err != nil {
-			return err
-		}
-		return json.NewEncoder(os.Stdout).Encode(result)
 	case "verify-release":
 		if *releaseDir == "" || *version == "" || *trustDir == "" {
 			return errors.New("验证离线发布包需要 --release-dir、--version 和 --trust-dir")

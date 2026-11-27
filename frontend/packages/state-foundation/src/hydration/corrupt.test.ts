@@ -9,7 +9,7 @@ type P = { value: string };
 
 describe('persist corrupt JSON 错误语义', () => {
   it('非法 JSON：onRehydrateStorage error 回调触发（不静默）', async () => {
-    window.localStorage.setItem('clouddrive.test.corrupt', '{bad-json');
+    window.localStorage.setItem('neocloud.test.corrupt', '{bad-json');
     let reported: unknown = 'not-called';
     const store = createPersistStore<S, P>(
       (set) => ({

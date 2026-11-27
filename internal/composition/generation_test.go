@@ -516,7 +516,7 @@ func TestServiceRuntimeReloadsInSameProcessAndStopsGracefully(t *testing.T) {
 		t.Fatalf("logging.New() error = %v", err)
 	}
 	application, err := New(Config{
-		Name: "clouddrive", Description: "runtime acceptance",
+		Name: "neocloud", Description: "runtime acceptance",
 		ConfigPath: configPath, EnvironmentPrefix: "GO_SCAFFOLD_RELOAD_ACCEPTANCE_", Logging: manager,
 	})
 	if err != nil {
@@ -571,7 +571,7 @@ func TestServiceRuntimeSeparatesBusinessAndManagementSurfaces(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	application, err := New(Config{Name: "clouddrive", Description: "management acceptance", ConfigPath: configPath, EnvironmentPrefix: "GO_SCAFFOLD_OPS_ACCEPTANCE_", Logging: manager})
+	application, err := New(Config{Name: "neocloud", Description: "management acceptance", ConfigPath: configPath, EnvironmentPrefix: "GO_SCAFFOLD_OPS_ACCEPTANCE_", Logging: manager})
 	if err != nil {
 		t.Fatal(err)
 	}

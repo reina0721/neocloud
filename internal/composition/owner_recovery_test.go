@@ -125,8 +125,8 @@ func newOwnerRecoveryTestExecutor(t *testing.T, configPath string) iamExecutor {
 	if err != nil {
 		t.Fatal(err)
 	}
-	application, err := New(Config{Name: "clouddrive", Description: "owner recovery test", ConfigPath: configPath,
-		EnvironmentPrefix: "CLOUDDRIVE_TEST_OWNER_RECOVERY_", Logging: manager})
+	application, err := New(Config{Name: "neocloud", Description: "owner recovery test", ConfigPath: configPath,
+		EnvironmentPrefix: "NEOCLOUD_TEST_OWNER_RECOVERY_", Logging: manager})
 	if err != nil {
 		t.Fatal(err)
 	}

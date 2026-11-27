@@ -11,8 +11,8 @@ vi.mock('../auth/frame', () => ({
 vi.mock('../auth/context', () => ({ useAuth: () => ({ expire: vi.fn() }) }));
 
 function renderPasswordChange(request: typeof fetch) {
-  vi.stubEnv('NEXT_PUBLIC_AUTH_MODE', 'backend');
-  vi.stubEnv('NEXT_PUBLIC_AUTH_API_BASE_URL', '/api/console/v1');
+  vi.stubEnv('NEXT_PUBLIC_NEOCLOUD_AUTH_MODE', 'backend');
+  vi.stubEnv('NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL', '/api/console/v1');
   vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => {
     if (input === '/api/console/v1/auth/setup-policy') {
       return Promise.resolve(

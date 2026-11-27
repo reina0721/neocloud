@@ -3,26 +3,21 @@ import { PHASE_DEVELOPMENT_SERVER } from 'next/constants';
 import { resolve } from 'node:path';
 
 import { loadWebConfig } from '@neocloud/config/node';
-import { compatibleEnv, readNeoCloudEnv } from './runtime/environment.mjs';
 
 const config = loadWebConfig({ cwd: import.meta.dirname });
 const deploymentMode = config.deploymentMode;
-const staticBuildId = compatibleEnv(
-  'NEXT_PUBLIC_NEOCLOUD_WEB_BUILD_ID',
-  process.env.NEXT_PUBLIC_NEOCLOUD_WEB_BUILD_ID,
-  process.env.NEXT_PUBLIC_CLOUDDRIVE_WEB_BUILD_ID,
-);
+const staticBuildId = process.env.NEXT_PUBLIC_NEOCLOUD_WEB_BUILD_ID;
 
 export default function nextConfig(phase: string): NextConfig {
   return {
     // 视觉验收只比较产品界面；普通开发仍保留 Next 开发指示器。
-    ...(readNeoCloudEnv('BROWSER_TEST') === '1' ? { devIndicators: false as const } : {}),
+    ...(process.env.NEOCLOUD_BROWSER_TEST === '1' ? { devIndicators: false as const } : {}),
     // 允许通过 127.0.0.1、localhost 访问 0.0.0.0 监听的开发服务器
     allowedDevOrigins: ['127.0.0.1', 'localhost'],
     experimental: {
       proxyClientMaxBodySize: '32mb',
       // 多个隔离生产目录不保留编译数据库；避免缓存压缩额外占用构建磁盘。
-      turbopackFileSystemCacheForBuild: readNeoCloudEnv('NATIVE_BUILD_CACHE') === '1',
+      turbopackFileSystemCacheForBuild: process.env.NEOCLOUD_NATIVE_BUILD_CACHE === '1',
     },
     // 浏览器验收使用独立构建目录，避免与普通开发或生产构建相互覆盖。
     distDir: config.distDir ?? (phase === PHASE_DEVELOPMENT_SERVER ? '.next' : 'dist'),

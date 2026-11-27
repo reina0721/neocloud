@@ -13,7 +13,7 @@
 ```go
 package requestid
 
-import "github.com/reina0721/clouddrive/pkg/idgen"
+import "github.com/reina0721/neocloud/pkg/idgen"
 
 type Factory struct {
 	generator idgen.Generator

@@ -50,16 +50,16 @@ func TestStoragePolicyUsageAndUploadRestart(t *testing.T) {
 	const policy = files + "/storage-policy"
 	admin := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	admin.request(t, "GET", "/auth/csrf", nil, 200)
-	admin.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "storage-admin@clouddrive.test", "name": "存储管理验收", "password": password}, 200)
+	admin.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "storage-admin@neocloud.test", "name": "存储管理验收", "password": password}, 200)
 	anonymous := &consoleTestClient{base: admin.base, cookies: map[string]string{}}
 	anonymous.request(t, "GET", policy+"/usage", nil, 401)
 	role := admin.request(t, "POST", "/roles", map[string]any{"name": "Storage observers", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	roleID := role["id"].(string)
 	admin.request(t, "PUT", "/native/iam/roles/"+roleID+"/permissions", map[string]any{"expectedRoleVersion": 1, "permissionKeys": []string{"files:storage-policy:read"}}, 200)
-	admin.request(t, "POST", "/users", map[string]any{"email": "storage-observer@clouddrive.test", "name": "存储观察员", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
+	admin.request(t, "POST", "/users", map[string]any{"email": "storage-observer@neocloud.test", "name": "存储观察员", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
 	observer := &consoleTestClient{base: admin.base, cookies: map[string]string{}}
 	observer.request(t, "GET", "/auth/csrf", nil, 200)
-	observer.request(t, "POST", "/auth/login", map[string]string{"email": "storage-observer@clouddrive.test", "password": password}, 200)
+	observer.request(t, "POST", "/auth/login", map[string]string{"email": "storage-observer@neocloud.test", "password": password}, 200)
 	observed := observer.request(t, "GET", policy, nil, 200)
 	if observed["backend"] != "local" || observed["canSave"] != false || observed["revision"] != float64(0) {
 		t.Fatalf("默认后端和读权限错误: %v", observed)

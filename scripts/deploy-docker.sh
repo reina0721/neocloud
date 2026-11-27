@@ -46,7 +46,6 @@ load_config() {
         declared_project=$value
         project=$value ;;
       INSTALL_DIR|DATA_DIR|WEB_BIND|WEB_PORT|PUBLIC_ORIGIN|ALLOW_INSECURE_HTTP|ALLOWED_ORIGINS) printf -v "$key" '%s' "$value" ;;
-      SETUP_TOKEN|CLOUDDRIVE_SOURCE_PROJECT) [[ $legacy == true ]] || fail "配置不应包含 $key" ;;
       *) fail "未知配置键：$key" ;;
     esac
   done < "$1"
@@ -67,8 +66,6 @@ resolve_path() {
   realpath -m -- "$path"
 }
 
-legacy=false
-legacy_state="$root/.data/docker"
 load_defaults
 if [[ -n $input_config ]]; then
   [[ -f $input_config ]] || fail "未找到配置文件：$input_config"
@@ -79,19 +76,11 @@ if [[ -n $requested_dir ]]; then
   state=$(resolve_path "$requested_dir" "$PWD")
 elif [[ -n $INSTALL_DIR ]]; then
   state=$(resolve_path "$INSTALL_DIR" "${input_config%/*}")
-elif [[ -f $legacy_state/runtime.env ]]; then
-  state=$legacy_state
 else
   state=$(resolve_path "${HOME:?}/neocloud-deploy" "$PWD")
-  previous_state=$(resolve_path "$HOME/clouddrive-deploy" "$PWD")
-  if [[ -f $previous_state/.control/instance || -f $previous_state/deploy.env ]]; then
-    [[ ! -f $state/.control/instance && ! -f $state/deploy.env ]] || fail '同时检测到旧版和新版源码部署，请通过 --dir 指定实例目录'
-    state=$previous_state
-  fi
 fi
 [[ $state != / ]] || fail '安装目录不能是 /'
-if [[ $state == "$legacy_state" && -f $state/runtime.env ]]; then legacy=true; fi
-if [[ $legacy == false && ( $state == "$root" || $state == "$root/"* ) ]]; then
+if [[ $state == "$root" || $state == "$root/"* ]]; then
   fail '请指定源码目录之外的安装目录，避免部署配置进入镜像构建上下文'
 fi
 
@@ -99,9 +88,7 @@ control="$state/.control"
 config="$state/deploy.env"
 token_file="$control/setup-token"
 new=false
-if [[ $legacy == true ]]; then
-  config="$state/runtime.env"
-elif [[ ! -f $control/instance ]]; then
+if [[ ! -f $control/instance ]]; then
   new=true
   if [[ -e $state ]]; then
     [[ -d $state ]] || fail "安装目录不是目录：$state"
@@ -116,11 +103,7 @@ fi
 
 owner=
 saved_data_dir=
-if [[ $legacy == true ]]; then
-  project=$(sed -n 's/^CLOUDDRIVE_SOURCE_PROJECT=//p' "$config")
-  [[ $project =~ ^clouddrive-source-[0-9a-f]{12}$ ]] || fail '旧实例项目标记无效'
-  owner="legacy-$project"
-elif [[ $new == false ]]; then
+if [[ $new == false ]]; then
   {
     read -r saved_project owner || fail '无法读取实例身份'
     IFS= read -r saved_data_dir || saved_data_dir=
@@ -154,8 +137,7 @@ fi
 unset COMPOSE_COMPATIBILITY
 export SETUP_TOKEN=
 export API_IMAGE="$project-api:local" WEB_IMAGE="$project-web:local"
-export CLOUDDRIVE_SOURCE_PROJECT="$project" WEB_BIND WEB_PORT PUBLIC_ORIGIN ALLOW_INSECURE_HTTP
-export NEOCLOUD_SOURCE_PROJECT="$project"
+export NEOCLOUD_SOURCE_PROJECT="$project" WEB_BIND WEB_PORT PUBLIC_ORIGIN ALLOW_INSECURE_HTTP
 export ALLOWED_ORIGINS
 volume="$project-data"
 access=$PUBLIC_ORIGIN
@@ -170,7 +152,7 @@ fi
 
 show_plan() {
   printf '源码目录：%s\n安装目录：%s\n部署配置：%s\n数据库备份：%s/backups\n' "$root" "$state" "$config" "$state"
-  if [[ $legacy == true ]]; then printf '首次设置令牌：%s\n' "$config"; else printf '首次设置令牌：%s\n' "$token_file"; fi
+  printf '首次设置令牌：%s\n' "$token_file"
   printf 'Compose 项目：%s\n容器：%s-backend-1、%s-web-1；临时迁移容器 %s-migrate\n' "$project" "$project" "$project" "$project"
   printf '镜像：%s、%s\n网络：%s_default\n' "$API_IMAGE" "$WEB_IMAGE" "$project"
   if [[ -n $data_dir ]]; then
@@ -185,7 +167,7 @@ if [[ $action == plan ]]; then show_plan; exit 0; fi
 
 read_token() {
   [[ $new == false ]] || fail '请先运行 bash scripts/deploy-docker.sh'
-  if [[ $legacy == true ]]; then sed -n 's/^SETUP_TOKEN=//p' "$config"; else cat -- "$token_file"; fi
+  cat -- "$token_file"
 }
 if [[ $action == token ]]; then read_token; exit 0; fi
 [[ $action == up || $new == false ]] || fail '请先运行 bash scripts/deploy-docker.sh'
@@ -200,7 +182,6 @@ if [[ -z $daemon || -n ${DOCKER_CONTEXT:-} ]]; then daemon=$(docker context insp
 [[ $daemon == unix://* ]] || fail '需要本机 Docker Unix socket，才能核对宿主机端口和数据路径'
 [[ $(docker info --format '{{.OSType}}') == linux ]] || fail '需要正在运行的 Linux Docker Engine'
 if [[ $new == true ]]; then owner=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n'); fi
-export CLOUDDRIVE_SOURCE_OWNER="$owner"
 export NEOCLOUD_SOURCE_OWNER="$owner"
 
 compose() {
@@ -211,9 +192,8 @@ compose() {
 assert_owner() {
   local kind=$1 name=$2 labels='.Labels' actual
   if [[ $kind == container || $kind == image ]]; then labels='.Config.Labels'; fi
-  actual=$(docker "$kind" inspect --format "{{with $labels}}{{index . \"io.clouddrive.source.instance\"}}|{{index . \"com.docker.compose.project\"}}{{end}}" "$name")
+  actual=$(docker "$kind" inspect --format "{{with $labels}}{{index . \"io.neocloud.source.instance\"}}|{{index . \"com.docker.compose.project\"}}{{end}}" "$name")
   if [[ ${actual%%|*} == "$owner" ]]; then return; fi
-  if [[ $legacy == true && $actual == "|$project" ]]; then return; fi
   fail "同名 Docker $kind 已被其他实例使用：$name。请使用独立目录并修改 COMPOSE_PROJECT_NAME。"
 }
 
@@ -252,7 +232,7 @@ check_names() {
 check_new_data_dir() {
   [[ -n $data_dir && $volume_exists == false ]] || return 0
   local owners entries
-  owners=$(docker volume ls --quiet --filter "label=io.clouddrive.source.data-directory=$data_dir")
+  owners=$(docker volume ls --quiet --filter "label=io.neocloud.source.data-directory=$data_dir")
   [[ -z $owners ]] || fail "数据目录已被其他卷使用：$data_dir（$owners）"
   if [[ -e $data_dir ]]; then
     [[ -d $data_dir ]] || fail "数据路径不是目录：$data_dir"
@@ -297,7 +277,6 @@ check_port() {
 
 lock_instance() {
   local lock="$control/deploy.lock"
-  if [[ $legacy == true ]]; then lock="$state/deploy.lock"; fi
   mkdir -p -- "$control"
   exec 9>"$lock"
   flock -n 9 || fail "实例正执行部署或停止：$state"
@@ -321,9 +300,9 @@ prepare_instance() {
     if [[ -n $data_dir ]]; then
       mkdir -p -- "$data_dir"
       options=(--driver local --opt type=none --opt o=bind --opt "device=$data_dir"
-        --label "io.clouddrive.source.data-directory=$data_dir")
+        --label "io.neocloud.source.data-directory=$data_dir")
     fi
-    docker volume create --label "io.clouddrive.source.instance=$owner" "${options[@]}" "$volume" >/dev/null
+    docker volume create --label "io.neocloud.source.instance=$owner" "${options[@]}" "$volume" >/dev/null
     assert_owner volume "$volume"
     check_data_volume
   fi
@@ -348,7 +327,7 @@ verify_data_directory() {
       const fs = require("node:fs");
       const [owner, mode] = process.argv.slice(1);
       const entries = fs.readdirSync("/data");
-      const marker = ".clouddrive-source-owner";
+      const marker = ".neocloud-source-owner";
       const path = `/data/${marker}`;
       if (entries.includes(marker)) {
         if (!fs.lstatSync(path).isFile() || fs.readFileSync(path, "utf8") !== owner) {
@@ -416,9 +395,8 @@ case $action in
     prepare_instance
     SETUP_TOKEN=$(read_token)
     [[ $SETUP_TOKEN =~ ^[a-f0-9]{64}$ ]] || fail '初始化令牌文件损坏'
-    CLOUDDRIVE_SOURCE_COMMIT=$(git -C "$root" rev-parse HEAD 2>/dev/null || printf unknown)
-    export SETUP_TOKEN CLOUDDRIVE_SOURCE_COMMIT
-    export NEOCLOUD_SOURCE_COMMIT="$CLOUDDRIVE_SOURCE_COMMIT"
+    NEOCLOUD_SOURCE_COMMIT=$(git -C "$root" rev-parse HEAD 2>/dev/null || printf unknown)
+    export SETUP_TOKEN NEOCLOUD_SOURCE_COMMIT
     compose build backend web
     verify_data_directory
     check_port

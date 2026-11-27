@@ -63,7 +63,7 @@ func TestRelayEnforcesTargetsBudgetsAndCancellation(t *testing.T) {
 		t.Fatal("private target allowed without explicit origin")
 	}
 	policy.AllowedOrigins = []string{upstream.URL}
-	input.Headers = map[string]string{"User-Agent": "clouddrive-test"}
+	input.Headers = map[string]string{"User-Agent": "neocloud-test"}
 	result := ExecuteRelay(t.Context(), input, policy)
 	if !result.OK || result.Response.Body != "real upstream" {
 		t.Fatalf("real relay=%+v", result)

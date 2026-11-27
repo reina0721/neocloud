@@ -92,7 +92,7 @@ describe('账户偏好同步', () => {
       },
       expect.any(AbortSignal),
     );
-    const stored = JSON.parse(window.localStorage.getItem('clouddrive.shell')!) as {
+    const stored = JSON.parse(window.localStorage.getItem('neocloud.shell')!) as {
       state: { preferences: Preferences };
     };
     expect(stored.state.preferences.appearance).toMatchObject({

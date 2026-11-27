@@ -4,8 +4,8 @@ import { expect, test } from '@playwright/test';
 async function resetPreferences(page: Page) {
   await page.goto('/settings');
   await page.evaluate(() => {
-    window.localStorage.removeItem('clouddrive.shell');
-    window.sessionStorage.removeItem('clouddrive.motion-inspector');
+    window.localStorage.removeItem('neocloud.shell');
+    window.sessionStorage.removeItem('neocloud.motion-inspector');
   });
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');

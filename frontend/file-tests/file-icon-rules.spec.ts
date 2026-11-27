@@ -31,7 +31,7 @@ async function api<T>(page: Page, path: string, method = 'GET', payload?: unknow
 }
 
 test('扩展名图标保存、主题渲染、外部图片失败回退与恢复内置', async ({ page }, info) => {
-  const accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
+  const accessPath = process.env.NEOCLOUD_FILE_TEST_ACCESS;
   test.skip(!accessPath, '文件图标配置只使用隔离预览。');
   const account = JSON.parse((await readFile(accessPath!, 'utf8')).replace(/^\uFEFF/, '')) as {
     username: string;

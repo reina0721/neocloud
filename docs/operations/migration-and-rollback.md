@@ -11,8 +11,8 @@
 5. 启动 Service；Service 只读检查兼容性，不执行 DDL。
 
 ```powershell
-./clouddrive.exe db migrate status
-./clouddrive.exe db migrate up
+./neocloud.exe db migrate status
+./neocloud.exe db migrate up
 ```
 
 `status` 和 `up` 都会在 one-shot operation 边界输出结构化日志：start 为 Debug，成功兼容完成为 Info，
@@ -48,7 +48,7 @@ CLI 输出 `sets[]`，每项保留 `moduleId`、`setName`、current/target/dirty
 
 ### 安装器托管实例
 
-安装了新版宿主维护工具的实例可从命令行或[网页运维](clouddrive-deployment.md#网页运维)回退与恢复。宿主机要保留当前和目标版本的本地镜像，或按[离线检查与升级](clouddrive-deployment.md#离线检查与升级)导入签名包。缺少镜像或验证失败时，任务在停服前结束。
+安装了新版宿主维护工具的实例可从命令行或[网页运维](neocloud-deployment.md#网页运维)回退与恢复。宿主机要保留当前和目标版本的本地镜像，或按[离线检查与升级](neocloud-deployment.md#离线检查与升级)导入签名包。缺少镜像或验证失败时，任务在停服前结束。
 
 1. `install.sh backup --full` 创建完整恢复点。记录返回的编号，使用 `install.sh status` 核对对应版本与时间。SQLite 单独备份仍按人工流程恢复。
 2. `install.sh rollback --offline` 验证上一版本的全部迁移集。兼容时保留当前 SQLite、用户文件和传输数据。

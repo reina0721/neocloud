@@ -190,7 +190,7 @@ function SetupFields({
               body: values,
               signal: controller.signal,
             });
-            if (!controller.signal.aborted) window.location.replace('/');
+            if (!controller.signal.aborted) window.location.replace('/home');
           } catch (error) {
             if (controller.signal.aborted) return;
             const outcome = setupFailure(error);

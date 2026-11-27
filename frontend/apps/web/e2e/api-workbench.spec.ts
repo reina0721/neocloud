@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { safeParseWorkspaceSnapshot } from '@neocloud/surface/api-workbench';
 
-const workspaceKey = 'clouddrive.api-workbench.workspace.v1';
+const workspaceKey = 'neocloud.api-workbench.workspace.v1';
 async function denyWorkspaceWrites(page: Page) {
   await page.evaluate((key) => {
     const setLocal = localStorage.setItem.bind(localStorage);

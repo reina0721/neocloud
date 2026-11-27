@@ -52,7 +52,7 @@ test('Windows sharing violations retry without replacing the atomic writer or hi
 });
 
 test('a no-op reconcile preserves the files observed by module watchers', async (t) => {
-  const root = await mkdtemp(join(tmpdir(), 'clouddrive-codegen-'));
+  const root = await mkdtemp(join(tmpdir(), 'neocloud-codegen-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const artifacts = [
     { path: join(root, 'composition', 'composition.ts'), content: 'export {};\n' },
@@ -66,7 +66,7 @@ test('a no-op reconcile preserves the files observed by module watchers', async 
 });
 
 test('independent generators publish complete modules while a reader is active', async (t) => {
-  const root = await mkdtemp(join(tmpdir(), 'clouddrive-codegen-'));
+  const root = await mkdtemp(join(tmpdir(), 'neocloud-codegen-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   const path = join(root, 'composition.ts');
   const texts = ['a', 'b', 'c'].map(

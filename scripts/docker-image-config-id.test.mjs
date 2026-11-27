@@ -24,7 +24,7 @@ async function fixture(
   await writeFile(join(root, path), corrupt ? bytes + " " : bytes);
   const entry = {
     Config: path,
-    RepoTags: ["clouddrive-api:v1.0.0-amd64"],
+    RepoTags: ["neocloud-api:v1.0.0-amd64"],
     Layers: [],
   };
   await writeFile(
@@ -40,7 +40,7 @@ for (const oci of [false, true]) {
   test(`读取 ${oci ? "OCI" : "传统 Docker"} 配置的稳定内容摘要`, async (t) => {
     const f = await fixture(t, { oci });
     assert.equal(
-      imageConfigId(f.archive, "clouddrive-api:v1.0.0-amd64", "amd64"),
+      imageConfigId(f.archive, "neocloud-api:v1.0.0-amd64", "amd64"),
       f.id,
     );
   });
@@ -48,12 +48,12 @@ for (const oci of [false, true]) {
 test("配置内容损坏、平台错误、引用缺失或重复均失败", async (t) => {
   const bad = await fixture(t, { corrupt: true });
   assert.throws(
-    () => imageConfigId(bad.archive, "clouddrive-api:v1.0.0-amd64", "amd64"),
+    () => imageConfigId(bad.archive, "neocloud-api:v1.0.0-amd64", "amd64"),
     /摘要不符/,
   );
   const valid = await fixture(t);
   assert.throws(
-    () => imageConfigId(valid.archive, "clouddrive-api:v1.0.0-amd64", "arm64"),
+    () => imageConfigId(valid.archive, "neocloud-api:v1.0.0-amd64", "arm64"),
     /唯一/,
   );
   assert.throws(
@@ -63,7 +63,7 @@ test("配置内容损坏、平台错误、引用缺失或重复均失败", async
   const repeated = await fixture(t, { duplicate: true });
   assert.throws(
     () =>
-      imageConfigId(repeated.archive, "clouddrive-api:v1.0.0-amd64", "amd64"),
+      imageConfigId(repeated.archive, "neocloud-api:v1.0.0-amd64", "amd64"),
     /唯一/,
   );
 });

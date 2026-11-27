@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 /** 清空偏好 + 设 toastDuration。 */
 async function setToastDuration(page: Page, duration: 'short' | 'long') {
   await page.goto('/settings/notifications');
-  await page.evaluate(() => window.localStorage.removeItem('clouddrive.shell'));
+  await page.evaluate(() => window.localStorage.removeItem('neocloud.shell'));
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   const group = page.getByRole('radiogroup', { name: '非关键成功提示时长' });

@@ -2,7 +2,6 @@
  * Namespace 策略 —— 所有 Persistent Store 的稳定命名空间。
  *
  * 默认策略为 `neocloud.<scope>.<store>`，省略 scope 时为 `neocloud.<store>`。
- * 浏览器存储适配处理旧版键和回退兼容。
  */
 import { formatPersistKey, type PersistNamespace } from '../contract/persist';
 

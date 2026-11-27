@@ -71,7 +71,7 @@ const GROUP_TONES = {
  * 明确边界：
  * - 用户名经 `useIdentityPort()`（Surface identity runtime）取得，不 import `apps/web`；
  * - 快捷入口用 symbolic `route()` + `RouteLink`，不写 raw href；
- * - 待办完成状态持久化在插件 store（`clouddrive.plugin.workspace` v1），
+ * - 待办完成状态持久化在插件 store（`neocloud.plugin.workspace` v1），
  *   完成数量实时反映到问候卡片统计；
  * - 页面内容全部是演示数据（与 analytics 相同的诚实性要求）。
  */

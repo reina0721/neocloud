@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from 'vitest';
 import { createBrowserMockRepository } from '../auth/mock-repository';
-const key = 'clouddrive.auth-mock';
+const key = 'neocloud.auth-mock';
 afterEach(() => window.localStorage.removeItem(key));
 
 it('reads fresh persisted identity after external writes and deletion', async () => {

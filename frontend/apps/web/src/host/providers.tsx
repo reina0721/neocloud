@@ -1,5 +1,4 @@
 'use client';
-import { removeProductStorage } from '@neocloud/state-foundation';
 
 import { MaterialThemeProvider } from '@neocloud/ui-adapter/theme-provider';
 import { useMotionPolicy } from '@neocloud/surface-foundation/motion-policy-context';
@@ -235,7 +234,7 @@ function RuntimeProviders({ children }: Readonly<{ children: ReactNode }>) {
                                     onAction={() => {
                                       // 恢复默认：清除损坏记录并重载（不触碰收藏/通知/草稿等
                                       // 独立 Store）。
-                                      removeProductStorage(window.localStorage, 'neocloud.shell');
+                                      window.localStorage.removeItem('neocloud.shell');
                                       window.location.reload();
                                     }}
                                     title={t('shell.hydrationIssueTitle')}

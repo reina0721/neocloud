@@ -1,6 +1,6 @@
 # 架构说明
 
-CloudDrive 围绕文件的保存、组织、获取与协作运行。账户、权限和管理能力服务于同一套文件与身份事实；浏览器体验、协议适配和内容存储各有明确的所有者。当前范围与尚未验证的能力见[项目范围](../repository-scope.md)，用户行为见[文件管理](../operations/file-management.md)。
+NeoCloud 围绕文件的保存、组织、获取与协作运行。账户、权限和管理能力服务于同一套文件与身份事实；浏览器体验、协议适配和内容存储各有明确的所有者。当前范围与尚未验证的能力见[项目范围](../repository-scope.md)，用户行为见[文件管理](../operations/file-management.md)。
 
 ## 当前运行结构
 
@@ -15,7 +15,7 @@ flowchart LR
   Modules --> Adapters[协议与受限任务适配]
 ```
 
-Web 与 Go 是两个独立进程。Web Host 拥有路由、浏览器资源和交互装配；Go 拥有会话、权限、业务事务、持久任务和存储。Next standalone 构建不绑定 Go 地址，运行时代理复用既有 API，不保存另一份认证或业务状态。部署、地址和代理限制以[部署说明](../operations/clouddrive-deployment.md)为准。
+Web 与 Go 是两个独立进程。Web Host 拥有路由、浏览器资源和交互装配；Go 拥有会话、权限、业务事务、持久任务和存储。Next standalone 构建不绑定 Go 地址，运行时代理复用既有 API，不保存另一份认证或业务状态。部署、地址和代理限制以[部署说明](../operations/neocloud-deployment.md)为准。
 
 `cmd/app` 只处理进程入口；`internal/composition` 显式连接底层能力和业务模块。模块通过 typed contribution 交给应用组合根，资源由 Kernel 装配与租约管理。业务用例依赖消费方需要的窄接口，不接收万能容器，也不通过包扫描或全局注册寻找依赖。
 

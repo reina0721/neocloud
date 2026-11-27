@@ -44,19 +44,19 @@ func TestFilesystemSettingsApplyAfterRestart(t *testing.T) {
 	defer stop()
 	admin := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	admin.request(t, "GET", "/auth/csrf", nil, 200)
-	admin.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setupToken, "email": "settings-admin@clouddrive.test", "name": "参数管理员", "password": password}, 200)
+	admin.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setupToken, "email": "settings-admin@neocloud.test", "name": "参数管理员", "password": password}, 200)
 	const files = "/native/files"
 	const endpoint = files + "/settings"
 	anonymous := &consoleTestClient{base: admin.base, cookies: map[string]string{}}
 	anonymous.request(t, "GET", endpoint, nil, 401)
 	role := admin.request(t, "POST", "/roles", map[string]any{"name": "Settings observer", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	roleID := role["id"].(string)
-	admin.request(t, "POST", "/users", map[string]any{"email": "settings-observer@clouddrive.test", "name": "参数观察员", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
+	admin.request(t, "POST", "/users", map[string]any{"email": "settings-observer@neocloud.test", "name": "参数观察员", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
 	observer := &consoleTestClient{base: admin.base, cookies: map[string]string{}}
 	loginObserver := func() {
 		t.Helper()
 		observer.request(t, "GET", "/auth/csrf", nil, 200)
-		observer.request(t, "POST", "/auth/login", map[string]string{"email": "settings-observer@clouddrive.test", "password": password}, 200)
+		observer.request(t, "POST", "/auth/login", map[string]string{"email": "settings-observer@neocloud.test", "password": password}, 200)
 	}
 	loginObserver()
 	observer.request(t, "GET", endpoint, nil, 403)

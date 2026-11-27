@@ -92,9 +92,11 @@ release:
   draft: true
   prerelease: auto
   header: |
-    CloudDrive 文件与管理工作区，采用 Material Design 组件，提供响应式文件管理、PDF 与媒体阅读，以及悬浮、底部面板和全屏音乐播放器。
+    NeoCloud 文件与管理工作区，采用 Material Design 组件，提供响应式文件管理、PDF 与媒体阅读，以及悬浮、底部面板和全屏音乐播放器。
 
-    Linux amd64 / arm64 推荐使用离线 Docker 安装包。目标机无需编译源码或访问镜像仓库。下例只监听服务器本机，访问 http://127.0.0.1:4173/setup，使用 ~/neocloud/.control/setup-token 的令牌创建管理员。持久数据位于 ~/neocloud/data/。
+    NeoCloud 安装器识别 `neocloud` 命名的签名附件。更早发行版请保留原实例和备份，并为 NeoCloud 选择独立的安装目录和数据位置。
+
+    Linux amd64 / arm64 可用 Docker 安装包，目标机需要 Docker、Compose 和 Cosign。下例只监听服务器本机，访问 http://127.0.0.1:4173/setup，使用 ~/neocloud/.control/setup-token 的令牌创建管理员。持久数据位于 ~/neocloud/data/。
 
     ```bash
     curl -fL --proto '=https' --proto-redir '=https' https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
@@ -103,8 +105,8 @@ release:
     ~/neocloud/install.sh upgrade
     ```
 
-    支持启用同址网页运维，在 /maintenance 检查更新、完整备份、升级、回退和恢复。已有实例应先按部署手册升级，再启用网页运维。
+    支持启用同址网页运维，在 /maintenance 检查更新、完整备份、升级、回退和恢复。
 
     Windows amd64、Linux amd64 与 Linux arm64 可下载 `managed-full` 原生整包。Go 宿主同源提供内置静态页面和业务 API。独立后端使用 Go 归档或可在线换版的 `managed-go` 包。正式发布包受 SHA-256 清单与 GitHub OIDC Sigstore 签名保护。
     [原生整包使用说明](https://github.com/reina0721/neocloud/blob/main/docs/operations/backend-archive.md#运行原生-go-与-web-整包)
-    [安装、升级与数据备份说明](https://github.com/reina0721/neocloud/blob/main/docs/operations/clouddrive-deployment.md#release-下载版安装与升级)
+    [安装、升级与数据备份说明](https://github.com/reina0721/neocloud/blob/main/docs/operations/neocloud-deployment.md#release-下载版安装与升级)

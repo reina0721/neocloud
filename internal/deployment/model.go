@@ -19,16 +19,15 @@ import (
 )
 
 const (
-	SocketDirectory   = "/run"
-	MaintenancePath   = "/maintenance"
-	OwnerPath         = "/api/console/v1/deployment/owner"
-	dockerRenameFence = "rename-in-progress"
+	SocketDirectory = "/run"
+	MaintenancePath = "/maintenance"
+	OwnerPath       = "/api/console/v1/deployment/owner"
 )
 
 var (
 	versionPattern = regexp.MustCompile(`^v(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})$`)
 	releasePattern = regexp.MustCompile(`^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$`)
-	projectPattern = regexp.MustCompile(`^(clouddrive|neocloud)-[a-f0-9]{12}$`)
+	projectPattern = regexp.MustCompile(`^neocloud-[a-f0-9]{12}$`)
 	idPattern      = regexp.MustCompile(`^[0-9a-f]{32}$`)
 )
 
@@ -151,14 +150,6 @@ func maintenanceProject(root string) (string, error) {
 		return "", errors.New("实例维护标记无效")
 	}
 	return name, nil
-}
-
-func requireNoDockerRename(root string) error {
-	_, err := os.Lstat(filepath.Join(root, ".control", dockerRenameFence))
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	return errors.Join(ErrRecovery, errors.New("实例名称迁移尚未完成，请先查询状态或回退"), err)
 }
 
 func ReadJSON(path string, value any) error {

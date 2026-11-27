@@ -46,16 +46,16 @@ func TestGlobalFilePropertyDefinitions(t *testing.T) {
 	const definitionsPath = files + "/property-definitions"
 	admin := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	admin.request(t, "GET", "/auth/csrf", nil, 200)
-	admin.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setupToken, "email": "properties-admin@clouddrive.test", "name": "属性管理员", "password": password}, 200)
+	admin.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setupToken, "email": "properties-admin@neocloud.test", "name": "属性管理员", "password": password}, 200)
 	role := admin.request(t, "POST", "/roles", map[string]any{"name": "File property member", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	rolePath := "/native/iam/roles/" + role["id"].(string) + "/permissions"
 	admin.request(t, "PUT", rolePath, map[string]any{"expectedRoleVersion": 1, "permissionKeys": []string{"files:read", "files:write"}}, 200)
-	admin.request(t, "POST", "/users", map[string]any{"email": "properties-member@clouddrive.test", "name": "文件属性成员", "password": password, "roleIds": []string{role["id"].(string)}, "status": "active"}, 200)
+	admin.request(t, "POST", "/users", map[string]any{"email": "properties-member@neocloud.test", "name": "文件属性成员", "password": password, "roleIds": []string{role["id"].(string)}, "status": "active"}, 200)
 	member := &consoleTestClient{base: admin.base, cookies: map[string]string{}}
 	login := func() {
 		t.Helper()
 		member.request(t, "GET", "/auth/csrf", nil, 200)
-		member.request(t, "POST", "/auth/login", map[string]string{"email": "properties-member@clouddrive.test", "password": password}, 200)
+		member.request(t, "POST", "/auth/login", map[string]string{"email": "properties-member@neocloud.test", "password": password}, 200)
 	}
 	login()
 	member.request(t, "GET", definitionsPath, nil, 403)

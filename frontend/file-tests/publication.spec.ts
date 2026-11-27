@@ -1,3 +1,4 @@
+import { readPreviewAccess } from './reading-fixture';
 import { test, expect } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -5,15 +6,7 @@ import { randomUUID } from 'node:crypto';
 
 test('发布临时繁忙自动恢复，耗尽后仍可手动完成且字节不重复', async ({ page }) => {
   const access = JSON.parse(
-    (
-      await readFile(
-        resolve(
-          __dirname,
-          process.env.CLOUDDRIVE_FILE_TEST_ACCESS ?? '../../.data/preview-access.json',
-        ),
-        'utf8',
-      )
-    ).replace(/^\uFEFF/, ''),
+    (await readFile(resolve(__dirname, readPreviewAccess().path), 'utf8')).replace(/^\uFEFF/, ''),
   ) as { username: string; password: string };
   await page.goto('/login?returnTo=%2Fhome');
   await page.getByLabel('邮箱', { exact: true }).fill(access.username);

@@ -3,18 +3,11 @@ import type {
   ReaderDraft,
   ReaderPersistence,
 } from '@neocloud/surface/files/runtime';
-import {
-  legacyStorageKey,
-  readProductStorage,
-  writeProductStorage,
-} from '@neocloud/state-foundation';
 import { registerDirtySource } from '../host/leave-confirm';
 import { downloadBlob } from './native-download';
 
 const databaseName = 'neocloud-file-readers';
-const legacyDatabaseName = legacyStorageKey(databaseName);
 const tabKey = 'neocloud-file-reader-tab';
-type ReaderStore = 'workspace' | 'draft';
 
 function requestResult<T>(request: IDBRequest<T>) {
   return new Promise<T>((resolve, reject) => {
@@ -23,8 +16,8 @@ function requestResult<T>(request: IDBRequest<T>) {
   });
 }
 
-function openDatabase(name: string) {
-  const request = indexedDB.open(name, 1);
+function openDatabase() {
+  const request = indexedDB.open(databaseName, 1);
   request.onupgradeneeded = () => {
     const db = request.result;
     db.createObjectStore('workspace');
@@ -34,12 +27,11 @@ function openDatabase(name: string) {
 }
 
 async function transaction<T>(
-  name: string,
-  store: ReaderStore,
+  store: 'workspace' | 'draft',
   mode: IDBTransactionMode,
   operation: (store: IDBObjectStore) => Promise<T>,
 ) {
-  const db = await openDatabase(name);
+  const db = await openDatabase();
   try {
     const tx = db.transaction(store, mode);
     const completed = new Promise<void>((resolve, reject) => {
@@ -51,35 +43,6 @@ async function transaction<T>(
   } finally {
     db.close();
   }
-}
-
-function storeEntry(name: string, store: ReaderStore, key: string, value: unknown) {
-  return transaction(name, store, 'readwrite', async (records) => {
-    if (value === undefined) await requestResult(records.delete(key));
-    else
-      await requestResult(records.keyPath === null ? records.put(value, key) : records.put(value));
-  });
-}
-
-async function mirrorEntry(store: ReaderStore, key: string, value: unknown) {
-  try {
-    await storeEntry(databaseName, store, key, value);
-  } catch {
-    // 旧库承接回退期间的读写。稍后从其最新记录重建镜像，保留实际已保存的草稿。
-  }
-}
-
-async function readEntry<T>(store: ReaderStore, key: string) {
-  const value = await transaction(legacyDatabaseName, store, 'readonly', (records) =>
-    requestResult(records.get(key) as IDBRequest<T | undefined>),
-  );
-  await mirrorEntry(store, key, value);
-  return value;
-}
-
-async function writeEntry(store: ReaderStore, key: string, value: unknown) {
-  await storeEntry(legacyDatabaseName, store, key, value);
-  await mirrorEntry(store, key, value);
 }
 
 function isBookmark(value: unknown): value is ReaderBookmark {
@@ -96,9 +59,9 @@ function isBookmark(value: unknown): value is ReaderBookmark {
 function readerTab() {
   const fresh = crypto.randomUUID();
   try {
-    const current = readProductStorage(sessionStorage, tabKey);
+    const current = sessionStorage.getItem(tabKey);
     if (current) return current;
-    writeProductStorage(sessionStorage, tabKey, fresh);
+    sessionStorage.setItem(tabKey, fresh);
   } catch {
     // 存储受限时仍可使用当前工作区。
   }
@@ -114,16 +77,25 @@ export function createReaderPersistence(account: string): ReaderPersistence {
   let workspaceWrite = Promise.resolve();
   return {
     async read() {
-      const value = await readEntry<unknown>('workspace', workspaceKey());
+      const value: unknown = await transaction('workspace', 'readonly', (store) =>
+        requestResult(store.get(workspaceKey())),
+      );
       return Array.isArray(value) ? value.filter(isBookmark).slice(0, 9) : [];
     },
     write(bookmarks) {
-      const write = workspaceWrite.then(() => writeEntry('workspace', workspaceKey(), bookmarks));
+      const write = workspaceWrite.then(async () => {
+        await transaction('workspace', 'readwrite', (store) =>
+          requestResult(store.put(bookmarks, workspaceKey())),
+        );
+      });
       workspaceWrite = write.catch(() => {});
       return write;
     },
     async hasDraft(fileId, application) {
-      return (await readEntry<ReaderDraft>('draft', draftKey(fileId, application))) !== undefined;
+      const count = await transaction('draft', 'readonly', (store) =>
+        requestResult(store.count(draftKey(fileId, application))),
+      );
+      return count > 0;
     },
     draft(fileId, application) {
       const key = () => draftKey(fileId, application);
@@ -136,13 +108,17 @@ export function createReaderPersistence(account: string): ReaderPersistence {
             message: () => message,
           }),
         async read() {
-          return readEntry<ReaderDraft>('draft', key());
+          return transaction('draft', 'readonly', (store) =>
+            requestResult(store.get(key()) as IDBRequest<ReaderDraft | undefined>),
+          );
         },
         async write(draft) {
-          await writeEntry('draft', key(), { ...draft, key: key() });
+          await transaction('draft', 'readwrite', (store) =>
+            requestResult(store.put({ ...draft, key: key() })),
+          );
         },
         async clear() {
-          await writeEntry('draft', key(), undefined);
+          await transaction('draft', 'readwrite', (store) => requestResult(store.delete(key())));
         },
       };
     },

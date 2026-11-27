@@ -9,8 +9,8 @@ import { parseArgs } from "node:util";
 // Credentials and acceptance data are local, private, and never part of the images.
 process.umask(0o077);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const state = join(root, ".data", "ui-production-control");
-const data = join(root, ".data", "ui-production");
+const state = join(root, ".data", "neocloud-ui-production-control");
+const data = join(root, ".data", "neocloud-ui-production");
 const { values } = parseArgs({
   options: {
     build: { type: "boolean", default: false },
@@ -19,7 +19,7 @@ const { values } = parseArgs({
 });
 if (values.help) {
   console.log(
-    "node scripts/deploy-ui-test.mjs [--build]\n构建/启动独立 Docker 生产测试环境，保留账号与数据。Docker 需要 sudo 时设置 CLOUDDRIVE_DOCKER_SUDO=1。",
+    "node scripts/deploy-ui-test.mjs [--build]\n构建/启动独立 Docker 生产测试环境，保留账号与数据。Docker 需要 sudo 时设置 NEOCLOUD_DOCKER_SUDO=1。",
   );
   process.exit(0);
 }
@@ -29,9 +29,9 @@ const port = (name, fallback) => {
     throw new Error(`${name}: 无效端口`);
   return n;
 };
-const webPort = port("CLOUDDRIVE_UI_WEB_PORT", 4194);
-const apiPort = port("CLOUDDRIVE_UI_API_PORT", 8130);
-const managementPort = port("CLOUDDRIVE_UI_MANAGEMENT_PORT", 9130);
+const webPort = port("NEOCLOUD_UI_WEB_PORT", 4194);
+const apiPort = port("NEOCLOUD_UI_API_PORT", 8130);
+const managementPort = port("NEOCLOUD_UI_MANAGEMENT_PORT", 9130);
 if (new Set([webPort, apiPort, managementPort]).size !== 3)
   throw new Error("三个端口必须不同");
 const origin = `http://127.0.0.1:${webPort}`;
@@ -57,7 +57,7 @@ function run(command, args) {
   });
 }
 function docker(args) {
-  return process.env.CLOUDDRIVE_DOCKER_SUDO === "1"
+  return process.env.NEOCLOUD_DOCKER_SUDO === "1"
     ? run("sudo", ["-n", "docker", ...args])
     : run("docker", args);
 }
@@ -87,13 +87,13 @@ try {
   let access;
   try {
     access = JSON.parse(await readFile(accessPath, "utf8"));
-    if (access.environment !== "clouddrive-docker-ui-test-v1")
+    if (access.environment !== "neocloud-docker-ui-test-v1")
       throw new Error("环境标识不符，已保留既有文件");
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
     access = {
-      environment: "clouddrive-docker-ui-test-v1",
-      username: "ui-preview@clouddrive.test",
+      environment: "neocloud-docker-ui-test-v1",
+      username: "ui-preview@neocloud.test",
       password: randomBytes(24).toString("base64url"),
       setupToken: randomBytes(32).toString("base64url"),
     };
@@ -107,11 +107,11 @@ try {
   await privateWrite(accessPath, JSON.stringify(access, null, 2) + "\n");
   await privateWrite(
     join(state, "backend.env"),
-    `APP_IAM__LOCAL__SETUPTOKEN=${access.setupToken}\nAPP_HTTP__CORS__ALLOWEDORIGINS=${JSON.stringify([origin, api])}\n`,
+    `NEOCLOUD_APP_IAM__LOCAL__SETUPTOKEN=${access.setupToken}\nNEOCLOUD_APP_HTTP__CORS__ALLOWEDORIGINS=${JSON.stringify([origin, api])}\n`,
   );
   await privateWrite(
     join(state, "compose.env"),
-    `CLOUDDRIVE_UI_WEB_PORT=${webPort}\nCLOUDDRIVE_UI_API_PORT=${apiPort}\nCLOUDDRIVE_UI_MANAGEMENT_PORT=${managementPort}\n`,
+    `NEOCLOUD_UI_WEB_PORT=${webPort}\nNEOCLOUD_UI_API_PORT=${apiPort}\nNEOCLOUD_UI_MANAGEMENT_PORT=${managementPort}\n`,
   );
   let created = false;
   try {

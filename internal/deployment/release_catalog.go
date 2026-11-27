@@ -105,16 +105,14 @@ func (s *Releases) readReleaseCatalog(ctx context.Context) (releaseCatalog, int,
 	}
 	version := strings.TrimPrefix(value.Tag, "v")
 	kinds := make(map[string]string)
-	for _, family := range releaseFamilies {
-		kinds[string(family)+"_"+version+"_windows_amd64.zip"] = "windows-backend"
-		kinds[string(family)+"_"+version+"_windows_arm64.zip"] = "windows-backend"
-		if name, err := family.nativeAsset(value.Tag, "windows", "amd64", NativeGo); err == nil {
-			kinds[name] = "windows-backend"
-		}
-		for _, platform := range []struct{ os, arch string }{{"windows", "amd64"}, {"linux", "amd64"}, {"linux", "arm64"}} {
-			if name, err := family.nativeAsset(value.Tag, platform.os, platform.arch, NativeFull); err == nil {
-				kinds[name] = "managed-full"
-			}
+	kinds["neocloud_"+version+"_windows_amd64.zip"] = "windows-backend"
+	kinds["neocloud_"+version+"_windows_arm64.zip"] = "windows-backend"
+	if name, err := nativeAssetNameFor(value.Tag, "windows", "amd64", NativeGo); err == nil {
+		kinds[name] = "windows-backend"
+	}
+	for _, platform := range []struct{ os, arch string }{{"windows", "amd64"}, {"linux", "amd64"}, {"linux", "arm64"}} {
+		if name, err := nativeAssetNameFor(value.Tag, platform.os, platform.arch, NativeFull); err == nil {
+			kinds[name] = "managed-full"
 		}
 	}
 	for _, item := range value.Assets {

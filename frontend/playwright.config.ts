@@ -23,7 +23,7 @@ function demoStorageState(origin: string) {
         origin,
         localStorage: [
           {
-            name: 'clouddrive.auth-mock',
+            name: 'neocloud.auth-mock',
             value: JSON.stringify({
               version: 1,
               state: {
@@ -36,7 +36,7 @@ function demoStorageState(origin: string) {
             }),
           },
           {
-            name: 'clouddrive.auth-owner',
+            name: 'neocloud.auth-owner',
             value: JSON.stringify({ version: 1, state: { userId: 'mock-demo' } }),
           },
         ],

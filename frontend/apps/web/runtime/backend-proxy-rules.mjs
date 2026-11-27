@@ -20,8 +20,8 @@ export function configuredHttpOrigin(value, name) {
 /** The upstream is server configuration; request paths must never choose its host. */
 export function backendDestination(
   requestUrl,
-  backend = readNeoCloudEnv('BACKEND_URL') ??
-    readNeoCloudEnv('DEFAULT_BACKEND_URL') ??
+  backend = process.env.NEOCLOUD_BACKEND_URL ??
+    process.env.NEOCLOUD_DEFAULT_BACKEND_URL ??
     'http://127.0.0.1:8080',
 ) {
   const destination = configuredHttpOrigin(backend, 'NEOCLOUD_BACKEND_URL');
@@ -33,7 +33,7 @@ export function backendDestination(
 
 export function isBackendOriginAllowed(
   origin,
-  allowedOrigins = readNeoCloudEnv('ALLOWED_ORIGINS') ?? '[]',
+  allowedOrigins = process.env.NEOCLOUD_ALLOWED_ORIGINS ?? '[]',
 ) {
   const allowed = JSON.parse(allowedOrigins);
   if (!Array.isArray(allowed) || !allowed.every((value) => typeof value === 'string'))
@@ -70,10 +70,7 @@ export function backendRequestHeaders(requestUrl, incoming, destination, allowed
   for (const name of ['forwarded', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port'])
     headers.delete(name);
   // Presentation metadata only: the backend uses this for displayed connection URLs, never auth.
-  headers.delete('x-neocloud-web-origin');
-  headers.delete('x-clouddrive-web-origin');
   headers.set('x-neocloud-web-origin', external.origin);
-  headers.set('x-clouddrive-web-origin', external.origin);
   const davDestination = incoming.get('destination');
   if ((request.pathname === '/dav' || request.pathname.startsWith('/dav/')) && davDestination) {
     const target = new URL(davDestination, external);
@@ -85,4 +82,3 @@ export function backendRequestHeaders(requestUrl, incoming, destination, allowed
   }
   return headers;
 }
-import { readNeoCloudEnv } from './environment.mjs';

@@ -13,7 +13,7 @@ import { artifactIssues, verifyArtifacts } from "./verify-artifacts.mjs";
 
 const fixture = "frontend/file-tests/fixtures/archives/browser.zip";
 function directory(t) {
-  const root = mkdtempSync(join(tmpdir(), "clouddrive-artifacts-"));
+  const root = mkdtempSync(join(tmpdir(), "neocloud-artifacts-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   return root;
 }

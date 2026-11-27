@@ -14,14 +14,14 @@
 
 ## 2. 配置字段与默认值
 
-| 环境变量 / 字段                 | 默认值    | 校验与说明                                                                                                     |
-| ------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------- |
-| `WEB_HOST`                      | `0.0.0.0` | 开发服务器监听地址。默认对局域网及容器环境开放；若需仅本机访问，可显式设置为 `127.0.0.1`。                     |
-| `WEB_PORT`（或 `PORT`）         | `4173`    | 服务端口，范围 1–65535。`WEB_PORT` 优先于 `PORT`。                                                             |
-| `WEB_DEPLOYMENT_MODE`           | `static`  | Host 部署模式：`static`（静态导出）、`static-enumerated`（静态枚举）或 `server`（Next SSR/API）。              |
-| `NEXT_PUBLIC_AUTH_MODE`         | `mock`    | 认证模式：`mock`（内置演示账号）或 `backend`（真实后端鉴权）。生产环境缺省报错。                               |
-| `NEXT_PUBLIC_AUTH_API_BASE_URL` | -         | `backend` 模式下后端 API 基础路径，必须为相对路径或合法的 HTTPS URL（本地开发允许 HTTP localhost/127.0.0.1）。 |
-| `NEXT_DIST_DIR`                 | -         | Next 构建产物输出目录覆盖（用于隔离开发缓存与 Playwright 测试运行）。                                          |
+| 环境变量 / 字段                          | 默认值    | 校验与说明                                                                                                     |
+| ---------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------- |
+| `WEB_HOST`                               | `0.0.0.0` | 开发服务器监听地址。默认对局域网及容器环境开放；若需仅本机访问，可显式设置为 `127.0.0.1`。                     |
+| `WEB_PORT`（或 `PORT`）                  | `4173`    | 服务端口，范围 1–65535。`WEB_PORT` 优先于 `PORT`。                                                             |
+| `WEB_DEPLOYMENT_MODE`                    | `static`  | Host 部署模式：`static`（静态导出）、`static-enumerated`（静态枚举）或 `server`（Next SSR/API）。              |
+| `NEXT_PUBLIC_NEOCLOUD_AUTH_MODE`         | `mock`    | 认证模式：`mock`（内置演示账号）或 `backend`（真实后端鉴权）。生产环境缺省报错。                               |
+| `NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL` | -         | `backend` 模式下后端 API 基础路径，必须为相对路径或合法的 HTTPS URL（本地开发允许 HTTP localhost/127.0.0.1）。 |
+| `NEXT_DIST_DIR`                          | -         | Next 构建产物输出目录覆盖（用于隔离开发缓存与 Playwright 测试运行）。                                          |
 
 ## 3. Listen URL 与 Probe URL 契约
 

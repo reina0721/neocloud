@@ -95,7 +95,7 @@ type fileOptionalSessionAuth struct {
 }
 
 func (a fileOptionalSessionAuth) AuthenticateOptional(request *http.Request) (*http.Request, error) {
-	_, err := a.session.cookie(request)
+	_, err := request.Cookie(a.session.cookieName)
 	if errors.Is(err, http.ErrNoCookie) {
 		return request, nil
 	}

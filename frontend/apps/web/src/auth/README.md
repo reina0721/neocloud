@@ -1,6 +1,6 @@
 # Web Host 认证与账户边界
 
-当前 NeoCloud 使用 Go IAM 的真实 Cookie 会话，Web Host 通过 `createBackendAuthService` 访问同源 `/api/console/v1`。身份、权限、注册策略和会话撤销由服务端决定；本目录拥有浏览器传输与应用生命周期，不实现另一套生产身份库。部署和 Cookie/Origin 边界见[部署说明](../../../../../docs/operations/clouddrive-deployment.md)。
+当前 NeoCloud 使用 Go IAM 的真实 Cookie 会话，Web Host 通过 `createBackendAuthService` 访问同源 `/api/console/v1`。身份、权限、注册策略和会话撤销由服务端决定；本目录拥有浏览器传输与应用生命周期，不实现另一套生产身份库。部署和 Cookie/Origin 边界见[部署说明](../../../../../docs/operations/neocloud-deployment.md)。
 
 ## 入口与配置
 

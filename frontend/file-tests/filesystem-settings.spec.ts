@@ -11,8 +11,8 @@ type SettingsResponse = {
 };
 
 test('管理文件系统参数可校验、保存、刷新和恢复继承', async ({ page, browser }, testInfo) => {
-  const accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
-  const memberPath = process.env.CLOUDDRIVE_INVENTORY_MEMBER_ACCESS;
+  const accessPath = process.env.NEOCLOUD_FILE_TEST_ACCESS;
+  const memberPath = process.env.NEOCLOUD_INVENTORY_MEMBER_ACCESS;
   test.skip(!accessPath || !memberPath, '设置验证仅使用隔离 QA 服务。');
   const readAccess = async (path: string) =>
     JSON.parse((await readFile(resolve(__dirname, path), 'utf8')).replace(/^\uFEFF/, '')) as {

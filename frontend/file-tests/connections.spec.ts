@@ -1,3 +1,4 @@
+import { readPreviewAccess } from './reading-fixture';
 import { test, expect } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -7,15 +8,7 @@ import { request } from 'node:http';
 test('连接管理、一次性凭据、真实同源WebDAV与窄屏布局', async ({ page, context }) => {
   test.setTimeout(180_000);
   const access = JSON.parse(
-    (
-      await readFile(
-        resolve(
-          __dirname,
-          process.env.CLOUDDRIVE_FILE_TEST_ACCESS ?? '../../.data/preview-access.json',
-        ),
-        'utf8',
-      )
-    ).replace(/^\uFEFF/, ''),
+    (await readFile(resolve(__dirname, readPreviewAccess().path), 'utf8')).replace(/^\uFEFF/, ''),
   ) as { username: string; password: string };
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));

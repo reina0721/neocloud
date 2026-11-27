@@ -77,7 +77,7 @@ func TestResumableTransfersLargeFileRestartRetargetAndRange(t *testing.T) {
 	})
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "transfer-owner@clouddrive.test", "name": "传输验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "transfer-owner@neocloud.test", "name": "传输验收", "password": password}, 200)
 	content := bytes.Repeat([]byte("real-large-transfer-"), (33<<20)/20+1)
 	digest := sha256.Sum256(content)
 	create := func(name, key string) map[string]any {
@@ -218,10 +218,10 @@ func TestResumableTransfersLargeFileRestartRetargetAndRange(t *testing.T) {
 	role := owner.request(t, "POST", "/roles", map[string]any{"name": "Transfer users", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	roleID := role["id"].(string)
 	owner.request(t, "PUT", "/native/iam/roles/"+roleID+"/permissions", map[string]any{"expectedRoleVersion": 1, "permissionKeys": []string{"files:read", "files:write"}}, 200)
-	owner.request(t, "POST", "/users", map[string]any{"email": "transfer-other@clouddrive.test", "name": "另一个传输用户", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
+	owner.request(t, "POST", "/users", map[string]any{"email": "transfer-other@neocloud.test", "name": "另一个传输用户", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
 	other := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
 	other.request(t, "GET", "/auth/csrf", nil, 200)
-	other.request(t, "POST", "/auth/login", map[string]string{"email": "transfer-other@clouddrive.test", "password": password}, 200)
+	other.request(t, "POST", "/auth/login", map[string]string{"email": "transfer-other@neocloud.test", "password": password}, 200)
 	other.request(t, "GET", "/native/files/transfers/"+id, nil, 404)
 	other.request(t, "POST", "/native/files/transfers/"+id+"/pause", nil, 404)
 	transferBytes(t, other, "PATCH", dataPath, []byte("x"), map[string]string{"Content-Type": "application/offset+octet-stream", "Tus-Resumable": "1.0.0", "Upload-Offset": "0"}, 404)

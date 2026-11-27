@@ -1,4 +1,3 @@
-import { readProductStorage, writeProductStorage } from '@neocloud/state-foundation';
 import { Upload, DetailedError } from 'tus-js-client';
 import { z } from 'zod';
 import {
@@ -137,7 +136,7 @@ export function createTransferRuntime(deps: Dependencies) {
             ...(item.targetParentId ? { targetParentId: item.targetParentId } : {}),
             ...(item.candidate.relativePath ? { relativePath: item.candidate.relativePath } : {}),
           });
-      writeProductStorage(localStorage, storageKey, JSON.stringify(pending));
+      localStorage.setItem(storageKey, JSON.stringify(pending));
       snapshot = { ...snapshot, persistenceFailure: false };
     } catch {
       snapshot = { ...snapshot, persistenceFailure: true };
@@ -719,7 +718,7 @@ export function createTransferRuntime(deps: Dependencies) {
       if (!loadedPending) {
         loadedPending = true;
         try {
-          const stored = readProductStorage(localStorage, storageKey);
+          const stored = localStorage.getItem(storageKey);
           if (stored)
             for (const descriptor of pendingSchema.parse(JSON.parse(stored))) {
               const item = newManaged(

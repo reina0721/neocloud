@@ -42,7 +42,7 @@ func TestNativeBrowserIngressTrustsOnlyVerifiedSchemeAndOwnerOrigin(t *testing.T
 				if origin := httpx.RequestOrigin(request); origin != test.wantOrigin || request.Header.Get("X-NeoCloud-Web-Origin") != origin {
 					t.Fatalf("public origin=%q display=%q; want %q", origin, request.Header.Get("X-NeoCloud-Web-Origin"), test.wantOrigin)
 				}
-				if request.Header.Get("X-CloudDrive-Web-Origin") != "" || request.Header.Get("X-Forwarded-Proto") != "" || request.Header.Get(control.WebHeader) != "" || request.Header.Get(control.SchemeHeader) != "" {
+				if request.Header.Get("X-Forwarded-Proto") != "" || request.Header.Get(control.WebHeader) != "" || request.Header.Get(control.SchemeHeader) != "" {
 					t.Fatal("private or sensitive forwarding metadata leaked to business routes")
 				}
 				w.WriteHeader(http.StatusNoContent)
@@ -55,7 +55,6 @@ func TestNativeBrowserIngressTrustsOnlyVerifiedSchemeAndOwnerOrigin(t *testing.T
 			request.Header.Set(control.RemoteHeader, test.peer)
 			request.Header.Set(control.WebHeader, "1")
 			request.Header.Set(control.SchemeHeader, test.directScheme)
-			request.Header.Set("X-CloudDrive-Web-Origin", "https://spoofed.example.test")
 			request.Header.Set("X-NeoCloud-Web-Origin", "https://spoofed.example.test")
 			request.Header.Set("Origin", test.origin)
 			for _, value := range test.forwarded {

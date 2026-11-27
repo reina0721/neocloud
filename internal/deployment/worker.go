@@ -61,9 +61,6 @@ func newWorker(ctx context.Context, e engine) (*Worker, error) {
 	if !locked {
 		return nil, ErrBusy
 	}
-	if err := requireNoDockerRename(e.root); err != nil {
-		return nil, err
-	}
 	e.dataDir, err = instanceDataDir(e.root)
 	if err != nil {
 		return nil, err
@@ -261,9 +258,6 @@ func (w *Worker) Submit(req Request) (Job, error) {
 	}
 	if !locked {
 		return Job{}, ErrBusy
-	}
-	if err := requireNoDockerRename(w.engine.root); err != nil {
-		return Job{}, err
 	}
 	if w.engine.local {
 		if err = w.load(); err != nil {

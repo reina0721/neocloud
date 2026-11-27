@@ -83,7 +83,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/pkg/i18n"
+	"github.com/reina0721/neocloud/pkg/i18n"
 )
 
 func main() {
@@ -119,7 +119,7 @@ import (
 	"embed"
 	"fmt"
 
-	"github.com/reina0721/clouddrive/pkg/i18n"
+	"github.com/reina0721/neocloud/pkg/i18n"
 )
 
 //go:embed locales/*.yaml locales/*.json
@@ -155,7 +155,7 @@ func main() {
 ```go
 package user
 
-import "github.com/reina0721/clouddrive/pkg/i18n"
+import "github.com/reina0721/neocloud/pkg/i18n"
 
 type Service struct {
 	translator i18n.Translator

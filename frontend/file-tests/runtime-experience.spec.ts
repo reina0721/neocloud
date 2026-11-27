@@ -6,7 +6,7 @@ import { storageSection as section } from './storage-fixture';
 
 test.use({ actionTimeout: 15_000 });
 test.beforeEach(() =>
-  test.skip(!process.env.CLOUDDRIVE_FILE_TEST_ACCESS, '仅使用显式指定的隔离预览。'),
+  test.skip(!process.env.NEOCLOUD_FILE_TEST_ACCESS, '仅使用显式指定的隔离预览。'),
 );
 async function login(page: Page, credentials = readPreviewAccess()) {
   await page.goto('/login?returnTo=%2Fsystem-tools%2Fruntime');
@@ -181,7 +181,7 @@ test('真实仅运行读取角色不请求安全审计，也不能调用受保�
   await login(page);
   const credentials = {
     ...readPreviewAccess(),
-    username: 'runtime-' + randomUUID().slice(0, 8) + '@clouddrive.test',
+    username: 'runtime-' + randomUUID().slice(0, 8) + '@neocloud.test',
     password: randomUUID(),
   };
   await page.evaluate(async (credentials) => {

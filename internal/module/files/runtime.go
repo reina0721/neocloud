@@ -3,7 +3,6 @@ package files
 import (
 	"context"
 	"fmt"
-	tusadapter "github.com/reina0721/neocloud/internal/module/files/adapter/tus"
 
 	filesconfig "github.com/reina0721/neocloud/internal/module/files/binding/config"
 	"github.com/reina0721/neocloud/internal/module/files/handler"
@@ -62,24 +61,6 @@ func CheckManagedPaths(ctx context.Context, client database.Client, identity, st
 
 // PrepareRuntime 读取本代文件设置并装配协议服务。启动时准备持久资源，
 // 热重载时只读取已经就绪的实例资源。
-// RebindManagedPaths is called only on an offline, verified instance copy.
-func RebindManagedPaths(ctx context.Context, client database.Client, contentOld, contentNew, stagingOld, stagingCopy, stagingNew string) error {
-	previous, err := stagingIdentity(stagingOld)
-	if err != nil {
-		return err
-	}
-	next, err := stagingIdentity(stagingNew)
-	if err != nil {
-		return err
-	}
-	if previous != next {
-		if err := tusadapter.RelocateInfo(ctx, stagingOld, stagingCopy, stagingNew); err != nil {
-			return err
-		}
-	}
-	return repo.RebindManagedPaths(ctx, client, contentOld, contentNew, previous, next)
-}
-
 func PrepareRuntime(ctx context.Context, cfg filesconfig.Config, deps RuntimeDependencies, startup bool) (Module, error) {
 	if deps.TaskEnabled == nil {
 		return Module{}, fmt.Errorf("files task configuration is missing")

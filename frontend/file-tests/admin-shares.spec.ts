@@ -41,8 +41,8 @@ async function fixture<T>(page: Page, path: string, body: unknown) {
 }
 
 test('跨账号分享筛选、计数详情与窄屏批量撤销', async ({ page, browser }, info) => {
-  const adminPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
-  const memberPath = process.env.CLOUDDRIVE_INVENTORY_MEMBER_ACCESS;
+  const adminPath = process.env.NEOCLOUD_FILE_TEST_ACCESS;
+  const memberPath = process.env.NEOCLOUD_INVENTORY_MEMBER_ACCESS;
   test.skip(!adminPath || !memberPath, '仅在隔离 QA 验证管理撤销。');
   const [admin, member] = await Promise.all([readAccess(adminPath!), readAccess(memberPath!)]);
   const origin = new URL(admin.url).origin;

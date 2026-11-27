@@ -25,9 +25,9 @@ func TestReleaseCatalogReadsCanonicalPublicAssets(t *testing.T) {
 		return catalogFixtureResponse(http.StatusOK, `{
 			"tag_name":"v0.2.2", "published_at":"2026-11-18T18:54:00Z", "body":"Release notes",
 			"draft":false,"prerelease":false,"html_url":"https://untrusted.invalid", "assets":[
-				{"name":"clouddrive_0.2.2_windows_amd64.zip", "size":20, "state":"uploaded", "browser_download_url":"http://untrusted.invalid"},
+				{"name":"neocloud_0.2.2_windows_amd64.zip", "size":20, "state":"uploaded", "browser_download_url":"http://untrusted.invalid"},
 				{"name":"checksums+extra.txt", "size":24, "state":"uploaded"},
-				{"name":"clouddrive_v0.2.2_windows_amd64_managed-full.zip", "size":25, "state":"uploaded"},
+				{"name":"neocloud_v0.2.2_windows_amd64_managed-full.zip", "size":25, "state":"uploaded"},
 				{"name":"../secret", "size":12,"state":"uploaded"},
 				{"name":"incomplete.zip", "size":5,"state":"starter"}
 			]}`), nil
@@ -48,7 +48,7 @@ func TestReleaseCatalogReadsCanonicalPublicAssets(t *testing.T) {
 	if got.Version != "v0.2.2" || got.Notes != "Release notes" || got.PublishedAt != "2026-11-18T18:54:00Z" || got.URL != release+"/tag/v0.2.2" || len(got.Assets) != 3 {
 		t.Fatalf("invalid catalog: %+v", got)
 	}
-	if got.Assets[0].Kind != "windows-backend" || got.Assets[0].DownloadURL != release+"/download/v0.2.2/clouddrive_0.2.2_windows_amd64.zip" ||
+	if got.Assets[0].Kind != "windows-backend" || got.Assets[0].DownloadURL != release+"/download/v0.2.2/neocloud_0.2.2_windows_amd64.zip" ||
 		got.Assets[1].Kind != "other" || got.Assets[1].DownloadURL != release+"/download/v0.2.2/checksums%2Bextra.txt" || got.Assets[2].Kind != "managed-full" {
 		t.Fatalf("invalid catalog assets: %+v", got.Assets)
 	}

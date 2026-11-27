@@ -24,9 +24,7 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const { values } = parseArgs({
   options: {
     preview: { type: "boolean", default: false },
-    "legacy-preview": { type: "boolean", default: false },
     acceptance: { type: "boolean", default: false },
-    prepare: { type: "boolean", default: false },
     webpack: { type: "boolean", default: false },
     "web-port": { type: "string" },
     "api-port": { type: "string" },
@@ -37,7 +35,7 @@ const { values } = parseArgs({
 });
 if (values.help) {
   console.log(
-    "node scripts/dev.mjs [--preview | --acceptance] [--webpack] [--web-port N] [--api-port N] [--management-port N] [--go-executable PATH]\n启动前按锁文件同步前端依赖，兼容旧参数 --prepare。Ctrl+C 关闭拥有的进程树。\n--preview 保留预览数据并初始化测试账号。--acceptance 使用全新数据库运行真实浏览器验收。",
+    "node scripts/dev.mjs [--preview | --acceptance] [--webpack] [--web-port N] [--api-port N] [--management-port N] [--go-executable PATH]\n启动前按锁文件同步前端依赖。Ctrl+C 关闭拥有的进程树。\n--preview 保留预览数据并初始化测试账号。--acceptance 使用全新数据库运行真实浏览器验收。",
   );
   process.exit(0);
 }
@@ -45,8 +43,6 @@ if (Number(process.versions.node.split(".")[0]) < 24)
   throw new Error("启动工具需要 Node 24 或更高版本。");
 if (values.preview && values.acceptance)
   throw new Error("预览与一次性验收只能选择一个。");
-if (values["legacy-preview"] && !values.preview)
-  throw new Error("--legacy-preview 需要同时指定 --preview。");
 const isolated = values.preview || values.acceptance;
 const port = (value, fallback) => {
   const number = Number(value ?? fallback);
@@ -63,16 +59,9 @@ const managementPort = port(
 if (new Set([webPort, apiPort, managementPort]).size !== 3)
   throw new Error("三个服务必须使用不同端口。");
 const acceptanceRoot = join(repo, ".data", "acceptance");
-let data = values.acceptance ? acceptanceRoot : join(repo, ".data", values["legacy-preview"] ? "file-preview" : values.preview ? "preview" : "dev");
+let data = values.acceptance ? acceptanceRoot : join(repo, ".data", values.preview ? "neocloud-preview" : "dev");
 const base = `http://127.0.0.1:${webPort}`;
-function brandedEnvironment(name) {
-  const canonical = process.env["NEOCLOUD_" + name];
-  const legacy = process.env["CLOUDDRIVE_" + name];
-  if (canonical !== undefined && legacy !== undefined && canonical !== legacy)
-    throw new Error("NEOCLOUD_" + name + " 与 CLOUDDRIVE_" + name + " 的值冲突。");
-  return canonical ?? legacy;
-}
-const viewerOrigins = JSON.parse(brandedEnvironment("ALLOWED_ORIGINS") ?? "[]");
+const viewerOrigins = JSON.parse(process.env.NEOCLOUD_ALLOWED_ORIGINS ?? "[]");
 if (
   !Array.isArray(viewerOrigins) ||
   !viewerOrigins.every((value) => {
@@ -275,7 +264,7 @@ try {
   const workdir = isolated ? data : repo;
   const binary = join(
     values.acceptance ? data : join(repo, ".tools"),
-    `neocloud-${values.acceptance ? "acceptance" : values["legacy-preview"] ? "file-preview" : values.preview ? "preview" : "dev"}${process.platform === "win32" ? ".exe" : ""}`,
+    `neocloud-${values.acceptance ? "acceptance" : values.preview ? "preview" : "dev"}${process.platform === "win32" ? ".exe" : ""}`,
   );
   if (process.platform !== "win32") {
     await chmod(join(repo, ".data"), 0o700);
@@ -302,58 +291,48 @@ try {
   const go = values["go-executable"];
   await run(go, ["version"]);
   await run(go, ["build", "-o", binary, "./cmd/app"]);
-  const legacyToken = join(repo, ".data", "dev-setup-token");
-  const tokenPath = !isolated && await exists(legacyToken) && !(await exists(join(data, "setup-token")))
-    ? legacyToken : join(data, "setup-token");
+  const tokenPath = join(data, "setup-token");
   const providedSetupToken =
-    !isolated && process.env.APP_IAM__LOCAL__SETUPTOKEN;
+    !isolated && process.env.NEOCLOUD_APP_IAM__LOCAL__SETUPTOKEN;
   if (!providedSetupToken && !(await exists(tokenPath)))
     await privateWrite(tokenPath, randomBytes(32).toString("base64url") + "\n");
-  let setupToken =
+  const setupToken =
     providedSetupToken || (await readFile(tokenPath, "utf8")).trim();
   const tokenSource = providedSetupToken
-    ? "环境变量 APP_IAM__LOCAL__SETUPTOKEN"
+    ? "环境变量 NEOCLOUD_APP_IAM__LOCAL__SETUPTOKEN"
     : tokenPath;
   const environment = {
     // 预览不能继承调用者的数据库、Storage 或认证配置而连接到真实数据。
-    APP_IAM__LOCAL__SETUPTOKEN: setupToken,
-    APP_HTTP__ADDR: `127.0.0.1:${apiPort}`,
-    APP_MANAGEMENT__ADDR: `127.0.0.1:${managementPort}`,
-    APP_HTTP__CORS__ALLOWEDORIGINS: allowedOrigins,
+    NEOCLOUD_APP_IAM__LOCAL__SETUPTOKEN: setupToken,
+    NEOCLOUD_APP_HTTP__ADDR: `127.0.0.1:${apiPort}`,
+    NEOCLOUD_APP_MANAGEMENT__ADDR: `127.0.0.1:${managementPort}`,
+    NEOCLOUD_APP_HTTP__CORS__ALLOWEDORIGINS: allowedOrigins,
   };
   const backendOptions = {
     cwd: workdir,
     env: environment,
-    baseEnv: isolated ? Object.fromEntries(Object.entries(process.env).filter(([name]) => !/^(?:neocloud_)?app_/i.test(name))) : process.env,
+    baseEnv: isolated ? Object.fromEntries(Object.entries(process.env).filter(([name]) => !/^neocloud_app_/i.test(name))) : process.env,
   };
   const configPath = join(workdir, "config.yaml");
   let accessPath;
   if (values.preview) {
-    accessPath = values["legacy-preview"] ? join(repo, ".data", "preview-access.json") : join(data, "access.json");
+    accessPath = join(data, "access.json");
     let preview;
     if (await exists(accessPath)) {
       preview = JSON.parse(await readFile(accessPath, "utf8"));
-      const legacy = values["legacy-preview"] && preview.environment === undefined &&
-        typeof preview.username === "string" && typeof preview.setupToken === "string" &&
-        typeof preview.dataDirectory === "string" && resolve(preview.dataDirectory) === data;
-      if ((!legacy && !["clouddrive-node-preview-v1", "neocloud-node-preview-v1"].includes(preview.environment)) || typeof preview.password !== "string")
+      if (preview.environment !== "neocloud-node-preview-v1" || typeof preview.password !== "string")
         throw new Error("预览目录不是本工具创建的环境，已保留其内容。");
-      if (legacy) {
-        setupToken = preview.setupToken;
-        environment.APP_IAM__LOCAL__SETUPTOKEN = setupToken;
-        await privateWrite(tokenPath, setupToken + "\n");
-      }
     } else {
       if (await exists(configPath))
         throw new Error("预览目录已有配置，已保留其内容。");
       preview = {
-        environment: "clouddrive-node-preview-v1",
+        environment: "neocloud-node-preview-v1",
         username: "preview@neocloud.test",
         password: randomBytes(24).toString("base64url"),
       };
     }
     Object.assign(preview, {
-      environment: "clouddrive-node-preview-v1",
+      environment: "neocloud-node-preview-v1",
       url: base + "/home",
       apiUrl: backend,
       managementUrl: `http://127.0.0.1:${managementPort}`,
@@ -368,9 +347,9 @@ try {
     await run(binary, ["config", "init"]);
   }
   if (values.acceptance) {
-    environment.APP_CONSOLE__RELAY__ALLOWEDORIGINS = JSON.stringify([backend]);
+    environment.NEOCLOUD_APP_CONSOLE__RELAY__ALLOWEDORIGINS = JSON.stringify([backend]);
     // 在隔离实例用少量文件覆盖搜索超限，保留正常目录和回收站操作。
-    environment.APP_FILES__SEARCH__TREEENTRIES = "12";
+    environment.NEOCLOUD_APP_FILES__SEARCH__TREEENTRIES = "12";
   }
   await run(binary, ["db", "migrate", "up"], backendOptions);
   if (values.acceptance)
@@ -387,14 +366,14 @@ try {
     {
       cwd: join(repo, "frontend"),
       env: {
-        NEXT_PUBLIC_AUTH_MODE: "backend",
-        NEXT_PUBLIC_AUTH_API_BASE_URL: "/api/console/v1",
+        NEXT_PUBLIC_NEOCLOUD_AUTH_MODE: "backend",
+        NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL: "/api/console/v1",
         WEB_DEPLOYMENT_MODE: "server",
         WEB_HOST: "127.0.0.1",
         WEB_PORT: String(webPort),
         NEOCLOUD_BACKEND_URL: backend,
         NEOCLOUD_ALLOWED_ORIGINS: allowedOrigins,
-        NEXT_DIST_DIR: values.acceptance ? `.next/acceptance-${webPort}` : values["legacy-preview"] ? ".next/file-preview" : values.preview ? ".next/preview" : ".next",
+        NEXT_DIST_DIR: values.acceptance ? `.next/acceptance-${webPort}` : values.preview ? ".next/neocloud-preview" : ".next",
         ...(values.webpack
           ? { NEOCLOUD_DEV_BUNDLER: "webpack", WATCHPACK_POLLING: "true" }
           : {}),
@@ -406,10 +385,10 @@ try {
   if (values.acceptance) {
     console.log(`验收日志与数据：${data}`);
     await pnpm(["exec", "playwright", "test", "--config", "playwright.integration.config.ts"], {
-      CLOUDDRIVE_TEST_WEB_URL: base,
-      CLOUDDRIVE_TEST_API_URL: backend,
-      CLOUDDRIVE_TEST_SETUP_TOKEN: setupToken,
-      CLOUDDRIVE_TEST_PASSWORD: randomBytes(24).toString("base64url"),
+      NEOCLOUD_TEST_WEB_URL: base,
+      NEOCLOUD_TEST_API_URL: backend,
+      NEOCLOUD_TEST_SETUP_TOKEN: setupToken,
+      NEOCLOUD_TEST_PASSWORD: randomBytes(24).toString("base64url"),
     });
   } else {
     if (accessPath)

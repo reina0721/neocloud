@@ -6,10 +6,10 @@ import "encoding/json"
 const (
 	WorkerArgument = "_native-worker"
 	// #nosec G101 -- 固定值是私有 HTTP 头名称，认证值由宿主运行时生成。
-	TokenHeader  = "X-CloudDrive-Native-Token"
-	RemoteHeader = "X-CloudDrive-Native-Remote"
-	WebHeader    = "X-CloudDrive-Native-Web"
-	SchemeHeader = "X-CloudDrive-Native-Scheme"
+	TokenHeader  = "X-NeoCloud-Native-Token"
+	RemoteHeader = "X-NeoCloud-Native-Remote"
+	WebHeader    = "X-NeoCloud-Native-Web"
+	SchemeHeader = "X-NeoCloud-Native-Scheme"
 	Protocol     = 1
 )
 

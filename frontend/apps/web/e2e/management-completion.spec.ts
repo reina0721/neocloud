@@ -36,7 +36,7 @@ test('Bulk status preserves protected users and reports partial results', async 
   await expect(dialog).toBeHidden();
   await expect(page.getByRole('main')).toContainText('成功');
   const persisted: unknown = JSON.parse(
-    await page.evaluate(() => localStorage.getItem('clouddrive.auth-mock') ?? ''),
+    await page.evaluate(() => localStorage.getItem('neocloud.auth-mock') ?? ''),
   );
   const state = z
     .object({
@@ -80,7 +80,7 @@ test('Role members change only the selected role and audit filters survive detai
     .click();
   await expect(page.getByRole('link', { name: 'Member 01', exact: true })).toBeVisible();
   const persisted: unknown = JSON.parse(
-    await page.evaluate(() => localStorage.getItem('clouddrive.auth-mock') ?? ''),
+    await page.evaluate(() => localStorage.getItem('neocloud.auth-mock') ?? ''),
   );
   const users = z
     .object({ state: z.object({ users: z.array(userSchema) }).passthrough() })

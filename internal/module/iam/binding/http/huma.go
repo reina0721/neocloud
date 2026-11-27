@@ -287,7 +287,7 @@ func loginResultBodyFrom(session service.Session) loginResultBody {
 
 type emptyOutput struct{}
 type logoutOutput struct {
-	SetCookie []string `header:"Set-Cookie"`
+	SetCookie string `header:"Set-Cookie"`
 }
 type jsonOutput[T any] struct {
 	CacheControl string `header:"Cache-Control"`
@@ -358,9 +358,7 @@ func RegisterHuma(api huma.API, handler *Handler) {
 		if err := handler.service.Logout(ctx, id); err != nil {
 			return nil, httpx.NewProtocolProblemError(ctx, statusError(http.StatusInternalServerError, "internal_server_error", err))
 		}
-		return &logoutOutput{SetCookie: []string{
-			handler.expiredCookie(service.SessionCookieName), handler.expiredCookie(service.LegacySessionCookieName),
-		}}, nil
+		return &logoutOutput{SetCookie: handler.expiredCookie()}, nil
 	})
 	verify := protected(opVerifyPassword, http.MethodPost, "/api/v1/iam/self/password/verify", string(iampermission.SelfRead), "execute")
 	verify.MaxBodyBytes = 2048
@@ -879,8 +877,8 @@ func (h *Handler) sessionEnvelope(v service.Session) *sessionOutputEnvelope {
 func (h *Handler) sessionCookie(id string) string {
 	return h.cookies.Cookie(http.Cookie{Secure: true, Name: service.SessionCookieName, Value: id, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode}).String()
 }
-func (h *Handler) expiredCookie(name string) string {
-	return h.cookies.Cookie(http.Cookie{Secure: true, Name: name, Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteLaxMode}).String()
+func (h *Handler) expiredCookie() string {
+	return h.cookies.Cookie(http.Cookie{Secure: true, Name: service.SessionCookieName, Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteLaxMode}).String()
 }
 func jsonEnvelope[T any](body T) *jsonOutput[T] {
 	return &jsonOutput[T]{CacheControl: "no-store", Body: body}

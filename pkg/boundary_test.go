@@ -35,7 +35,7 @@ func TestNoOldStorageModuleImportsRemain(t *testing.T) {
 
 func TestPackageLayerDoesNotImportInternal(t *testing.T) {
 	root := packageRoot(t)
-	internalPrefix := strings.Join([]string{"github.com", "rin721", "clouddrive", "internal"}, "/") + "/"
+	const internalPrefix = "github.com/reina0721/neocloud/internal/"
 	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") {
 			return walkErr

@@ -108,7 +108,7 @@ func verifyOnlineRelease(ctx context.Context, dir, version string) (signedOfflin
 	if err != nil {
 		return release, err
 	}
-	if _, err = verifyBundleFormat(release.bundle); err != nil {
+	if err = verifyBundleFormat(release.bundle); err != nil {
 		return release, err
 	}
 	release.checksums, err = readOfflineFile(source, offlineChecksums)
@@ -138,6 +138,7 @@ func verifyOnlineSignature(ctx context.Context, release signedOfflineRelease) er
 		"--bundle", staged.Name(),
 		"--certificate-identity", releaseOrigin+"/.github/workflows/release.yml@refs/tags/"+release.version,
 		"--certificate-oidc-issuer", "https://token.actions.githubusercontent.com",
+		"--new-bundle-format",
 		"-")
 	command.Stdin = bytes.NewReader(release.checksums)
 	if err := command.Run(); err != nil {
@@ -204,7 +205,7 @@ func (s *Releases) Package(ctx context.Context, dir, version string) error {
 	if err != nil {
 		return err
 	}
-	_, asset, err := release.dockerAsset(runtime.GOARCH)
+	asset, err := release.dockerAsset(runtime.GOARCH)
 	if err != nil {
 		return err
 	}
@@ -241,15 +242,11 @@ func dockerAssetInChecksums(dir, version, arch string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, name, err := (signedOfflineRelease{version: version, digests: digests}).dockerAsset(arch)
-	return name, err
+	return (signedOfflineRelease{version: version, digests: digests}).dockerAsset(arch)
 }
 
 func releaseCosign() string {
 	if executable := os.Getenv("NEOCLOUD_COSIGN"); executable != "" {
-		return executable
-	}
-	if executable := os.Getenv("CLOUDDRIVE_COSIGN"); executable != "" {
 		return executable
 	}
 	return "cosign"

@@ -29,7 +29,7 @@ const offlineBundle = '{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+js
 const checksum = (name, body) =>
   `${createHash("sha256").update(body).digest("hex")}  ${name}\n`;
 async function fixture(t) {
-  const base = await mkdtemp(join(tmpdir(), "clouddrive-installer-unit-"));
+  const base = await mkdtemp(join(tmpdir(), "neocloud-installer-unit-"));
   t.after(() => rm(base, { recursive: true, force: true }));
   const bin = join(base, "bin"),
     log = join(base, "docker.log");
@@ -41,7 +41,10 @@ async function fixture(t) {
     join(bin, "cosign"),
     `#!/usr/bin/env bash
 set -euo pipefail
-[[ $1 == verify-blob && $* == *'--offline --new-bundle-format --trusted-root '* ]]
+[[ $1 == verify-blob && $* == *'--new-bundle-format'* ]]
+if [[ " $* " == *' --offline '* ]]; then
+  [[ $* == *'--offline --new-bundle-format --trusted-root '* ]]
+fi
 [[ -f \${!#} && \${FAKE_SIGNATURE_FAILURE:-0} != 1 ]]
 `,
     { mode: 0o700 },
@@ -102,7 +105,7 @@ case "$1" in
        marker=\${!#}
        label=
        for option; do
-         case $option in io.clouddrive.release.owner=*) label=\${option#*=} ;; esac
+         case $option in io.neocloud.release.owner=*) label=\${option#*=} ;; esac
        done
        [[ -n $label ]]
        if [[ ! -e $FAKE_BASE/volumes/$marker ]]; then
@@ -120,12 +123,12 @@ case "$1" in
  image)
    case "$2" in
      load) true ;;
-     inspect) ref=\${!#}; v=\${ref#*:}; v=\${v%-amd64}; id='${webID}'; [[ $ref != clouddrive-api:* && $ref != neocloud-api:* ]] || id='${apiID}'; [[ \${FAKE_MANIFEST_IDS:-0} != 1 ]] || id='sha256:${"3".repeat(64)}'; echo "$id|linux|amd64|$v|${commit}" ;;
+     inspect) ref=\${!#}; v=\${ref#*:}; v=\${v%-amd64}; id='${webID}'; [[ $ref != neocloud-api:* ]] || id='${apiID}'; [[ \${FAKE_MANIFEST_IDS:-0} != 1 ]] || id='sha256:${"3".repeat(64)}'; echo "$id|linux|amd64|$v|${commit}" ;;
      save) if [[ \${3:-} == --help ]]; then echo '--platform'; else tar -cf - -C "$FAKE_BASE/exported" blobs; fi ;;
    esac ;;
  compose)
-   if [[ -n \${CLOUDDRIVE_RELEASE_DATA_DIR:-} ]]; then
-     printf 'compose data=%s\\n' "$CLOUDDRIVE_RELEASE_DATA_DIR" >> "$FAKE_LOG"
+   if [[ -n \${NEOCLOUD_RELEASE_DATA_DIR:-} ]]; then
+     printf 'compose data=%s\\n' "$NEOCLOUD_RELEASE_DATA_DIR" >> "$FAKE_LOG"
    fi
    if [[ $* == *'version --short'* ]]; then echo 2.40.0
    elif [[ $* == *'db migrate status'* ]]; then
@@ -134,7 +137,7 @@ case "$1" in
    elif [[ $* == *' exec '* && \${FAKE_HEALTH_FAILURE:-0} == 1 && $* == *'v1.0.1'* ]]; then exit 1
    fi ;;
  run)
-   if [[ $* == *'.clouddrive-installation'* ]]; then
+   if [[ $* == *'.neocloud-installation'* ]]; then
      source=$(mounted_source "$@")
      printf 'verify data mount=%s\\n' "$source" >> "$FAKE_LOG"
      while [[ $1 != node ]]; do shift; done; shift
@@ -185,7 +188,7 @@ fi
     DOCKER_HOST: "unix:///fake/docker.sock",
     FAKE_LOG: log,
     FAKE_BASE: base,
-    CLOUDDRIVE_OFFLINE_TRUST_DIR: trust,
+    NEOCLOUD_OFFLINE_TRUST_DIR: trust,
   };
   const root = join(base, "instance");
   const run = (args, extra = {}) =>
@@ -196,7 +199,7 @@ fi
     });
   async function bundle(
     version,
-    { network = true, entrypoint = true, layout = true, tooling = false, family = "clouddrive" } = {},
+    { network = true, entrypoint = true, layout = true, tooling = false } = {},
   ) {
     const source = join(base, version),
       stage = join(source, "stage");
@@ -206,13 +209,13 @@ fi
     await writeFile(join(stage, "images.tar"), "fixture-image-archive");
     await writeFile(
       join(stage, "images.env"),
-      `API_IMAGE=${family}-api:${version}-amd64\nWEB_IMAGE=${family}-web:${version}-amd64\n`,
+      `API_IMAGE=neocloud-api:${version}-amd64\nWEB_IMAGE=neocloud-web:${version}-amd64\n`,
     );
     await writeFile(
       join(stage, "manifest.txt"),
       `FORMAT=1\n${network ? "NETWORK=1\n" : ""}${entrypoint ? "ENTRYPOINT=1\n" : ""}${layout ? "INSTANCE_LAYOUT=1\n" : ""}${tooling ? "OFFLINE_MAINTENANCE=1\n" : ""}VERSION=${version}\nARCH=amd64\nCOMMIT=${commit}\nAPI_ID=${apiID}\nWEB_ID=${webID}\n`,
     );
-    const name = `${family}_${version}_linux_amd64_docker.tar.gz`;
+    const name = `neocloud_${version}_linux_amd64_docker.tar.gz`;
     const packed = spawnSync("tar", [
       "-czf",
       join(source, name),
@@ -229,7 +232,7 @@ fi
     await writeFile(join(source, "version.txt"), `${version}\n`);
     const files = [name, "install.sh", "version.txt"];
     if (tooling) {
-      const binary = `${family}-maintenance_${version}_linux_amd64`;
+      const binary = `neocloud-maintenance_${version}_linux_amd64`;
       await writeFile(join(source, binary), `#!/usr/bin/env bash\nset -eu\nprintf '%s\\n' "$*"\n`);
       files.push(binary);
     }
@@ -256,7 +259,7 @@ fi
 }
 test("部署计划显示自定义入口和精确资源路径，且不调用 Docker 或创建目录", async (t) => {
   const f = await fixture(t);
-  const root = join(await realpath(f.base), "CloudDrive instance");
+  const root = join(await realpath(f.base), "NeoCloud instance");
   const project = "drive-preview";
   const arch = process.arch === "arm64" ? "arm64" : "amd64";
   const result = f.run([
@@ -403,7 +406,7 @@ test("自定义实例名和外部空目录用于启动、重启及数据库备�
     await readFile(join(f.base, "volumes/drive-external-instance"), "utf8")
   ).trim();
   assert.match(owner, /^[a-f0-9]{64}$/);
-  const dataMarker = join(data, ".clouddrive-installation");
+  const dataMarker = join(data, ".neocloud-installation");
   assert.equal(await readFile(dataMarker, "utf8"), owner);
   await assert.rejects(access(join(root, "data")), { code: "ENOENT" });
   let log = await readFile(f.log, "utf8");
@@ -692,8 +695,20 @@ else fs.copyFileSync(path.join(process.env.FAKE_ASSETS,path.basename(url)),args[
     bootstrap,
     "https://github.com/reina0721/neocloud/releases/latest",
     "https://github.com/reina0721/neocloud/releases/download/v1.0.0/checksums.txt",
-    "https://github.com/reina0721/neocloud/releases/download/v1.0.0/clouddrive_v1.0.0_linux_amd64_docker.tar.gz",
+    "https://github.com/reina0721/neocloud/releases/download/v1.0.0/checksums.txt.sigstore.json",
+    "https://github.com/reina0721/neocloud/releases/download/v1.0.0/neocloud_v1.0.0_linux_amd64_docker.tar.gz",
   ]);
+  const blocked = join(f.base, "blocked-online-install");
+  await writeFile(requests, "");
+  const invalid = f.run(["install", "--dir", blocked, "--version", "v1.0.0"], {
+    FAKE_CURL_LOG: requests,
+    FAKE_ASSETS: source,
+    FAKE_SIGNATURE_FAILURE: "1",
+  });
+  assert.notEqual(invalid.status, 0);
+  assert.match(invalid.stderr, /正式发布签名验证失败/);
+  assert.doesNotMatch(await readFile(requests, "utf8"), /docker\.tar\.gz/);
+  await assert.rejects(access(blocked), { code: "ENOENT" });
 });
 test("目标版本启动超时仅在旧数据库兼容时恢复旧服务", async (t) => {
   const f = await fixture(t);
@@ -1017,7 +1032,7 @@ test("启用网页运维使用正式版签名校验，并执行摘要匹配的�
   const f = await fixture(t);
   await f.install();
   const source = join(f.base, "v1.0.0");
-  const binary = "clouddrive-maintenance_v1.0.0_linux_amd64";
+  const binary = "neocloud-maintenance_v1.0.0_linux_amd64";
   const script =
     "#!/usr/bin/env bash\nset -eu\n[[ $1 == enable && $2 == --root ]]\nprintf 'maintenance fixture\\n'\n";
   const digest = createHash("sha256").update(script).digest("hex");
@@ -1086,6 +1101,37 @@ test("离线检查验证完整包，坏签名和旧目标在停服前拒绝", as
   assert.equal(await readFile(join(f.root, ".control/current"), "utf8"), "v1.0.0\n");
 });
 
+test("旧包即使使用 NeoCloud 项目名，也在 Docker 和维护入口执行前被拒绝", async (t) => {
+  const f = await fixture(t);
+  const control = join(f.root, ".control");
+  const release = join(f.root, "releases", "v0.3.4");
+  const images = "API_IMAGE=clouddrive-api:v0.3.4-amd64\nWEB_IMAGE=clouddrive-web:v0.3.4-amd64\n";
+  await mkdir(control, { recursive: true });
+  await mkdir(release, { recursive: true });
+  await writeFile(join(control, "project"), `${projectFor(await realpath(f.root))}\n`);
+  await writeFile(join(release, "images.env"), images);
+  await writeFile(f.log, "");
+
+  for (const [marker, commands] of [
+    ["current", [[], ["upgrade"], ["restart"]]],
+    ["candidate", [["install"]]],
+  ]) {
+    const record = join(control, marker);
+    await writeFile(record, "v0.3.4\n");
+    for (const command of commands) {
+      const rejected = f.run([...command, "--dir", `${f.root}/missing/..`]);
+      assert.equal(rejected.status, 1, rejected.stderr);
+      assert.match(rejected.stderr, /v0\.3\.4 的镜像引用不符合 NeoCloud 发布格式/);
+    }
+    assert.equal(await readFile(record, "utf8"), "v0.3.4\n");
+    await rm(record);
+  }
+
+  assert.equal(await readFile(f.log, "utf8"), "");
+  assert.equal(await readFile(join(release, "images.env"), "utf8"), images);
+  await assert.rejects(access(join(control, "lock")), { code: "ENOENT" });
+});
+
 test("离线升级从签名包安装共用维护入口并传入明确的离线版本", async (t) => {
   const f = await fixture(t);
   await f.install();
@@ -1111,6 +1157,15 @@ test("首次安装中断后以原候选回读，拒绝把不同离线包当作�
   assert.notEqual(rejected.status, 0);
   assert.match(rejected.stderr, /与离线目录 version\.txt 不一致/);
   assert.doesNotMatch(await readFile(f.log, "utf8"), /image load|run --rm --no-deps migrate/);
+
+  // 模拟首次安装在记录候选后、原子保存签名包前中断。
+  await rm(join(f.root, "releases", "v1.0.0"), { recursive: true });
+  const status = f.run(["status", "--dir", f.root]);
+  assert.match(status.stderr, /镜像引用不符合 NeoCloud 发布格式/);
+  const unsigned = f.run([...args, original], { FAKE_SIGNATURE_FAILURE: "1" });
+  assert.match(unsigned.stderr, /离线签名验证失败/);
+  await assert.rejects(access(join(f.root, "releases", "v1.0.0")), { code: "ENOENT" });
+
   const retried = f.run([...args, original]);
   assert.equal(retried.status, 0, retried.stderr);
   assert.equal(await readFile(join(f.root, ".control/current"), "utf8"), "v1.0.0\n");

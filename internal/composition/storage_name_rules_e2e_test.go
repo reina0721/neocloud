@@ -55,7 +55,7 @@ func TestStorageNameRulesEnforcedAfterRestart(t *testing.T) {
 	defer stop()
 	admin := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	admin.request(t, "GET", "/auth/csrf", nil, 200)
-	admin.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "file-name-rules@clouddrive.test", "name": "名称规则验收", "password": password}, 200)
+	admin.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "file-name-rules@neocloud.test", "name": "名称规则验收", "password": password}, 200)
 	const files = "/native/files"
 	const endpoint = files + "/storage-policy/name-rules"
 	anon := &consoleTestClient{base: admin.base, cookies: map[string]string{}}

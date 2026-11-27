@@ -7,7 +7,7 @@ test.use({
 
 async function resetPreferences(page: Page) {
   await page.goto('/settings/actions');
-  await page.evaluate(() => window.localStorage.removeItem('clouddrive.shell'));
+  await page.evaluate(() => window.localStorage.removeItem('neocloud.shell'));
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
 }

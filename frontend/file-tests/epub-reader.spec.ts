@@ -190,8 +190,7 @@ test('真实 EPUB 的目录、章节、包内图片、字号及失败恢复', as
       key: string,
     ) => string | null;
     Storage.prototype.getItem = function (key: string) {
-      if (key.startsWith('clouddrive.files.epub.'))
-        throw new DOMException('denied', 'SecurityError');
+      if (key.startsWith('neocloud.files.epub.')) throw new DOMException('denied', 'SecurityError');
       return original.call(this, key);
     };
   });

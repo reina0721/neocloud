@@ -64,15 +64,15 @@ describe('packages/config - resolveConfig', () => {
 
   it('resolves backend auth mode with relative path or valid localhost/https url', () => {
     const relativeAuth = resolveConfig({
-      NEXT_PUBLIC_AUTH_MODE: 'backend',
-      NEXT_PUBLIC_AUTH_API_BASE_URL: '/api/auth',
+      NEXT_PUBLIC_NEOCLOUD_AUTH_MODE: 'backend',
+      NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL: '/api/auth',
     });
     expect(relativeAuth.auth).toEqual({ mode: 'backend', apiBaseUrl: '/api/auth' });
 
     const localAuth = resolveConfig(
       {
-        NEXT_PUBLIC_AUTH_MODE: 'backend',
-        NEXT_PUBLIC_AUTH_API_BASE_URL: 'http://127.0.0.1:4174/api',
+        NEXT_PUBLIC_NEOCLOUD_AUTH_MODE: 'backend',
+        NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL: 'http://127.0.0.1:4174/api',
       },
       { isProduction: false },
     );
@@ -83,7 +83,7 @@ describe('packages/config - resolveConfig', () => {
     // Missing apiBaseUrl
     expect(() =>
       resolveConfig({
-        NEXT_PUBLIC_AUTH_MODE: 'backend',
+        NEXT_PUBLIC_NEOCLOUD_AUTH_MODE: 'backend',
       }),
     ).toThrow(ConfigError);
 
@@ -91,8 +91,8 @@ describe('packages/config - resolveConfig', () => {
     expect(() =>
       resolveConfig(
         {
-          NEXT_PUBLIC_AUTH_MODE: 'backend',
-          NEXT_PUBLIC_AUTH_API_BASE_URL: 'http://api.example.com',
+          NEXT_PUBLIC_NEOCLOUD_AUTH_MODE: 'backend',
+          NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL: 'http://api.example.com',
         },
         { isProduction: true },
       ),

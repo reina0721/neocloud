@@ -1,4 +1,4 @@
-import { assertPreviewOrigin } from './reading-fixture';
+import { readPreviewAccess, assertPreviewOrigin } from './reading-fixture';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -13,7 +13,7 @@ async function login(page: Page, account: { username: string; password: string }
 }
 
 test('文件 Blob 按对象显示真实引用并保护管理入口', async ({ page, browser }, testInfo) => {
-  const memberPath = process.env.CLOUDDRIVE_INVENTORY_MEMBER_ACCESS;
+  const memberPath = process.env.NEOCLOUD_INVENTORY_MEMBER_ACCESS;
   test.skip(!memberPath, 'Blob 验证使用独立验收账号。');
   const readAccess = async (path: string) =>
     JSON.parse((await readFile(resolve(__dirname, path), 'utf8')).replace(/^\uFEFF/, '')) as {
@@ -23,9 +23,7 @@ test('文件 Blob 按对象显示真实引用并保护管理入口', async ({ pa
       purpose?: string;
     };
   const member = await readAccess(memberPath!);
-  const admin = await readAccess(
-    process.env.CLOUDDRIVE_FILE_TEST_ACCESS ?? '../../.data/preview-access.json',
-  );
+  const admin = await readAccess(readPreviewAccess().path);
   const origin = new URL(member.url).origin;
   expect(member.purpose).toBe('direct-links-fixture');
   assertPreviewOrigin(origin);

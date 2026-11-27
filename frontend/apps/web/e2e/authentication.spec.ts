@@ -53,7 +53,7 @@ test('Registration validates confirmation, displays success and persists only sa
   await page.getByLabel('确认密码', { exact: true }).fill('UniqueDemoPass2026!');
   await page.getByRole('button', { name: '创建账户', exact: true }).click();
   await expect(page.getByText('账户已创建', { exact: true })).toBeVisible();
-  const stored = await page.evaluate(() => localStorage.getItem('clouddrive.auth-mock'));
+  const stored = await page.evaluate(() => localStorage.getItem('neocloud.auth-mock'));
   expect(stored).not.toContain('UniqueDemoPass2026!');
   expect(stored).toMatch(/"digest":"[0-9a-f]{64}"/);
   await page.getByRole('button', { name: '开始使用', exact: true }).click();
@@ -118,16 +118,16 @@ test('Existing sessions redirect guest routes and corrupt demo records can be re
   await expect(page.getByRole('button', { name: '当前用户', exact: true })).toBeVisible();
   await page.goto('/login?returnTo=%2Fsettings%2Fnotifications');
   await expect(page).toHaveURL(`${e2eBaseUrl}/settings/notifications`);
-  await page.evaluate(() => localStorage.setItem('clouddrive.auth-mock', 'damaged-record'));
+  await page.evaluate(() => localStorage.setItem('neocloud.auth-mock', 'damaged-record'));
   await page.goto('/login');
   await expect(
     page.getByText('认证响应或本地记录无效，请联系维护者。', { exact: true }),
   ).toBeVisible();
   await expect(page.getByRole('button', { name: '当前用户', exact: true })).toHaveCount(0);
-  expect(await page.evaluate(() => localStorage.getItem('clouddrive.auth-mock'))).toBe(
+  expect(await page.evaluate(() => localStorage.getItem('neocloud.auth-mock'))).toBe(
     'damaged-record',
   );
-  await page.evaluate(() => localStorage.removeItem('clouddrive.auth-mock'));
+  await page.evaluate(() => localStorage.removeItem('neocloud.auth-mock'));
   await page.getByRole('button', { name: '重试', exact: true }).click();
   await expect(page.getByRole('textbox', { name: '邮箱', exact: true })).toBeVisible();
 });
@@ -159,7 +159,7 @@ test('Session expiry removes protected content and returns to the expired-sessio
   await login(page);
   await expect(page.getByRole('button', { name: '当前用户', exact: true })).toBeVisible();
   await page.evaluate(() => {
-    const key = 'clouddrive.auth-mock';
+    const key = 'neocloud.auth-mock';
     // Change only the expiration in this test's known persisted fixture.
     const record = localStorage.getItem(key);
     if (!record) throw new Error('Expected the established demo session');
@@ -185,16 +185,16 @@ test('Logout synchronizes other tabs and clears private records while retaining 
   await second.goto('/settings');
   await expect(second.getByRole('button', { name: '当前用户', exact: true })).toBeVisible();
   await page.evaluate(() => {
-    localStorage.setItem('clouddrive.test-private', JSON.stringify({ secret: 'previous-owner' }));
-    sessionStorage.setItem('clouddrive.test-private', 'previous-owner');
+    localStorage.setItem('neocloud.test-private', JSON.stringify({ secret: 'previous-owner' }));
+    sessionStorage.setItem('neocloud.test-private', 'previous-owner');
   });
   await page.getByRole('button', { name: '当前用户', exact: true }).click();
   await page.getByRole('menuitem', { name: '退出登录', exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
   await expect(second).toHaveURL(/\/login\?returnTo=/);
-  expect(await page.evaluate(() => localStorage.getItem('clouddrive.test-private'))).toBeNull();
-  expect(await page.evaluate(() => sessionStorage.getItem('clouddrive.test-private'))).toBeNull();
-  expect(await page.evaluate(() => localStorage.getItem('clouddrive.shell'))).not.toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('neocloud.test-private'))).toBeNull();
+  expect(await page.evaluate(() => sessionStorage.getItem('neocloud.test-private'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('neocloud.shell'))).not.toBeNull();
   await second.close();
 });
 
@@ -229,7 +229,7 @@ test('Large English dark mobile registration keeps password entry usable', async
   await page.addInitScript(
     ({ preferences, version }) => {
       localStorage.setItem(
-        'clouddrive.shell',
+        'neocloud.shell',
         JSON.stringify({
           version,
           state: {

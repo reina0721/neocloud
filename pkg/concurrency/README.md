@@ -17,7 +17,7 @@ package batch
 import (
 	"context"
 
-	"github.com/reina0721/clouddrive/pkg/concurrency"
+	"github.com/reina0721/neocloud/pkg/concurrency"
 )
 
 func Process(ctx context.Context, ids []string, handle func(context.Context, string) error) error {
@@ -38,7 +38,7 @@ func Process(ctx context.Context, ids []string, handle func(context.Context, str
 package profile
 
 import (
-	"github.com/reina0721/clouddrive/pkg/concurrency"
+	"github.com/reina0721/neocloud/pkg/concurrency"
 )
 
 type Loader struct {

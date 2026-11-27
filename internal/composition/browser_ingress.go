@@ -73,7 +73,7 @@ func (p browserIngress) wrap(next http.Handler) http.Handler {
 				return
 			}
 		}
-		for _, key := range []string{"Forwarded", "X-Forwarded-Host", "X-Forwarded-Proto", "X-Forwarded-Port", "X-CloudDrive-Web-Origin", "X-NeoCloud-Web-Origin"} {
+		for _, key := range []string{"Forwarded", "X-Forwarded-Host", "X-Forwarded-Proto", "X-Forwarded-Port", "X-NeoCloud-Web-Origin"} {
 			r.Header.Del(key)
 		}
 		// Display metadata must never copy a client value or act as a permission grant.

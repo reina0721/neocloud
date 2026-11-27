@@ -51,7 +51,7 @@ pkg/logger/
 package main
 
 import (
-	"github.com/reina0721/clouddrive/pkg/logger"
+	"github.com/reina0721/neocloud/pkg/logger"
 )
 
 func main() {
@@ -76,7 +76,7 @@ func main() {
 package main
 
 import (
-	"github.com/reina0721/clouddrive/pkg/logger"
+	"github.com/reina0721/neocloud/pkg/logger"
 )
 
 func main() {
@@ -110,7 +110,7 @@ func main() {
 ```go
 package user
 
-import "github.com/reina0721/clouddrive/pkg/logger"
+import "github.com/reina0721/neocloud/pkg/logger"
 
 type Service struct {
 	log logger.Logger

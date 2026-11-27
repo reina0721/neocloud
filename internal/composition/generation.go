@@ -491,7 +491,7 @@ func (f *applicationGenerationFactory) Prepare(
 	if err != nil {
 		return abort(err)
 	}
-	filesSession, err := newIAMSessionAuthAdapter(generation.iamModule.Sessions, generation.iamModule.SessionCookieName(), generation.iamModule.LegacySessionCookieName())
+	filesSession, err := newIAMSessionAuthAdapter(generation.iamModule.Sessions, generation.iamModule.SessionCookieName())
 	if err != nil {
 		return abort(err)
 	}
@@ -533,8 +533,8 @@ func (f *applicationGenerationFactory) Prepare(
 	consoleHandler, err := console.New(console.Dependencies{
 		Runtime: generation.consoleRuntime, DeploymentOwner: (consoleIAMPort{generation.iamModule.Service}).deploymentOwner,
 		IAM: consoleIAMPort{generation.iamModule.Service}, CookieName: generation.iamModule.SessionCookieName(),
-		LegacyCookieName: generation.iamModule.LegacySessionCookieName(), Cookies: generation.iamModule.Cookies,
-		Native: httptransport.IsolatedRoutes(apiRoutes), Origins: httpConfig.CORS.AllowedOrigins, SiteOrigins: consoleConfig.SiteOrigins,
+		Cookies: generation.iamModule.Cookies,
+		Native:  httptransport.IsolatedRoutes(apiRoutes), Origins: httpConfig.CORS.AllowedOrigins, SiteOrigins: consoleConfig.SiteOrigins,
 		Database: databaseAccess, Logger: generation.logger.value(), Relay: consoleConfig.Relay, Executor: generation.execution.value(),
 		Authenticate: consoleAuthenticate(generation.authModule.SessionSource.AuthenticateRequest), Todos: consoleTodoPort{generation.module.Operations},
 		Navigation: consoleNavigationPort{generation.navigationModule.Operations}, ReleaseCatalog: http.HandlerFunc(deployment.NewReleases().ServeReleaseCatalog),

@@ -8,15 +8,7 @@ import (
 func TestConnectionRequestOriginIsPresentationOnly(t *testing.T) {
 	for _, value := range []string{"http://192.0.2.10:4173", "https://drive.example", "http://[::1]:4173"} {
 		r := httptest.NewRequest("GET", "http://backend:8080/api/v1/files/connections", nil)
-		r.Header.Set("X-CloudDrive-Web-Origin", value)
-		if got := connectionRequestOrigin(r); got != value {
-			t.Fatalf("legacy presentation origin: %q", got)
-		}
 		r.Header.Set("X-NeoCloud-Web-Origin", value)
-		if got := connectionRequestOrigin(r); got != value {
-			t.Fatalf("matching presentation aliases: %q", got)
-		}
-		r.Header.Del("X-CloudDrive-Web-Origin")
 		if got := connectionRequestOrigin(r); got != value {
 			t.Fatalf("canonical presentation origin: %q", got)
 		}
@@ -32,9 +24,9 @@ func TestConnectionRequestOriginIsPresentationOnly(t *testing.T) {
 		}
 	}
 	r := httptest.NewRequest("GET", "http://backend:8080/api/v1/files/connections", nil)
-	r.Header.Set("X-CloudDrive-Web-Origin", "https://other.example")
-	r.Header.Set("X-NeoCloud-Web-Origin", "https://drive.example")
+	r.Header.Add("X-NeoCloud-Web-Origin", "https://other.example")
+	r.Header.Add("X-NeoCloud-Web-Origin", "https://drive.example")
 	if got := connectionRequestOrigin(r); got != "http://backend:8080" {
-		t.Fatalf("conflicting presentation aliases accepted: %q", got)
+		t.Fatalf("multiple presentation origins accepted: %q", got)
 	}
 }

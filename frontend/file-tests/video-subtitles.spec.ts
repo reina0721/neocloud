@@ -1,11 +1,9 @@
+import { readPreviewAccess } from './reading-fixture';
 import { expect, test, type Page } from './preview-test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-const accessPath = resolve(
-  __dirname,
-  process.env.CLOUDDRIVE_FILE_TEST_ACCESS ?? '../../.data/preview-access.json',
-);
+const accessPath = resolve(__dirname, readPreviewAccess().path);
 
 async function makeVideo(page: Page) {
   const bytes = await page.evaluate(async () => {

@@ -11,7 +11,6 @@
 import { createJSONStorage, type PersistStorage, type StateStorage } from 'zustand/middleware';
 
 import type { UnavailablePolicy, WebStorageKind } from './types';
-import { readProductStorage, removeProductStorage, writeProductStorage } from './product-key';
 
 /**
  * 创建永不抛错的惰性 StateStorage：方法首次调用时才 resolve 浏览器 storage。
@@ -24,13 +23,13 @@ function createLazyWebStorage(kind: WebStorageKind, policy: UnavailablePolicy): 
     if (typeof window !== 'undefined' && window[kind]) {
       const store = window[kind];
       cached = {
-        getItem: (name) => readProductStorage(store, name),
+        getItem: (name) => store.getItem(name),
         setItem: (name, value) => {
-          writeProductStorage(store, name, value);
+          store.setItem(name, value);
           return undefined;
         },
         removeItem: (name) => {
-          removeProductStorage(store, name);
+          store.removeItem(name);
           return undefined;
         },
       };

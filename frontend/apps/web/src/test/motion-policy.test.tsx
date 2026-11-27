@@ -8,7 +8,7 @@ import {
   ViewportRevealProvider,
 } from '@neocloud/surface-foundation/viewport-reveal';
 
-const sessionKey = 'clouddrive.motion-inspector';
+const sessionKey = 'neocloud.motion-inspector';
 
 function PolicyHarness() {
   const policy = useMotionPolicy();

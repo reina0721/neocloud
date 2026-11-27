@@ -1,9 +1,4 @@
 import {
-  readProductStorage,
-  removeProductStorage,
-  writeProductStorage,
-} from '@neocloud/state-foundation';
-import {
   defaultFilePreferences,
   filePreferenceSnapshotSchema,
   filePreferencesSchema,
@@ -26,16 +21,15 @@ export function createFilePreferences(
   function readLocal(): FilePreferenceSnapshot {
     assertCurrent();
     try {
-      const saved = readProductStorage(localStorage, key);
+      const saved = localStorage.getItem(key);
       if (saved !== null) return filePreferenceSnapshotSchema.parse(JSON.parse(saved));
-      const legacy = readProductStorage(localStorage, previousPreferenceKey + '.' + account);
+      const legacy = localStorage.getItem(previousPreferenceKey + '.' + account);
       const document = defaultFilePreferences();
       if (legacy !== null) document.defaults = fileViewPreferencesSchema.parse(JSON.parse(legacy));
       const snapshot = { sync: false, configuration: document };
       // 先成功写入新文档，再移除旧键，避免存储失败造成偏好丢失。
-      writeProductStorage(localStorage, key, JSON.stringify(snapshot));
-      if (legacy !== null)
-        removeProductStorage(localStorage, previousPreferenceKey + '.' + account);
+      localStorage.setItem(key, JSON.stringify(snapshot));
+      if (legacy !== null) localStorage.removeItem(previousPreferenceKey + '.' + account);
       return snapshot;
     } catch (error) {
       throw new FilesError('invalid', { cause: error });
@@ -43,7 +37,7 @@ export function createFilePreferences(
   }
   function writeLocal(value: FilePreferenceSnapshot) {
     assertCurrent();
-    writeProductStorage(localStorage, key, JSON.stringify(value));
+    localStorage.setItem(key, JSON.stringify(value));
   }
   return {
     loadPreferences: async (

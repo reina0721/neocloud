@@ -28,12 +28,11 @@ function localOrigin(value: string): URL {
 }
 
 export function readPreviewAccess() {
-  const current = resolve(localData, 'preview/access.json');
-  const path = process.env.CLOUDDRIVE_FILE_TEST_ACCESS
-    ? resolve(frontend, process.env.CLOUDDRIVE_FILE_TEST_ACCESS)
-    : existsSync(current)
-      ? current
-      : resolve(localData, 'preview-access.json');
+  const path = process.env.NEOCLOUD_FILE_TEST_ACCESS
+    ? resolve(frontend, process.env.NEOCLOUD_FILE_TEST_ACCESS)
+    : resolve(localData, 'neocloud-preview/access.json');
+  if (!existsSync(path))
+    throw new Error('Run node scripts/dev.mjs --preview to prepare isolated preview access.');
   if (!isWithinData(path)) throw new Error('Files preview credentials must be inside local .data.');
   const access: unknown = JSON.parse(readFileSync(path, 'utf8').replace(/^\uFEFF/, ''));
   if (
@@ -55,12 +54,8 @@ export function readPreviewAccess() {
   )
     throw new Error('Run node scripts/dev.mjs --preview to prepare isolated preview access.');
   const marker = 'environment' in access ? access.environment : undefined;
-  const legacy =
-    marker === undefined &&
-    path === resolve(localData, 'preview-access.json') &&
-    resolve(access.dataDirectory) === resolve(localData, 'file-preview');
   if (
-    (!legacy && marker !== 'clouddrive-node-preview-v1' && marker !== 'neocloud-node-preview-v1') ||
+    marker !== 'neocloud-node-preview-v1' ||
     !isWithinData(access.dataDirectory) ||
     !existsSync(resolve(access.dataDirectory, 'initialized'))
   )
@@ -78,11 +73,11 @@ export function readPreviewAccess() {
     publicationOrigin:
       'publicationOrigin' in access && typeof access.publicationOrigin === 'string'
         ? access.publicationOrigin
-        : process.env.CLOUDDRIVE_TEST_PUBLICATION_ORIGIN,
+        : process.env.NEOCLOUD_TEST_PUBLICATION_ORIGIN,
     offlineSourceAllowed:
       'offlineSourceAllowed' in access
         ? access.offlineSourceAllowed === true
-        : process.env.CLOUDDRIVE_FILE_TEST_OFFLINE_SOURCE_ALLOWED === '1',
+        : process.env.NEOCLOUD_FILE_TEST_OFFLINE_SOURCE_ALLOWED === '1',
     username: access.username,
     password: access.password,
   };

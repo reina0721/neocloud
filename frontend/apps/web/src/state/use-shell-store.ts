@@ -1,4 +1,3 @@
-import { removeProductStorage } from '@neocloud/state-foundation';
 import { createPersistStore, createLocalStorage } from '@neocloud/state-foundation';
 import {
   defaultPreferences,
@@ -302,7 +301,7 @@ export const useShellStore = createPersistStore<ShellState, ShellPersisted>(
         // setState 把默认值静默写回损坏记录上方（呈现层会显示原因 + 恢复动作，
         // 不静默覆盖、不宣称保存成功）。
         if (typeof window !== 'undefined' && window.localStorage) {
-          removeProductStorage(window.localStorage, 'neocloud.shell');
+          window.localStorage.removeItem('neocloud.shell');
         }
         useShellStore.setState({
           hasHydrated: true,

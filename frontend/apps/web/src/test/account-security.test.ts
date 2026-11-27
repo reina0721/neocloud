@@ -1,4 +1,3 @@
-import { legacyStorageKey } from '@neocloud/state-foundation';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { webcrypto } from 'node:crypto';
 import {
@@ -13,11 +12,9 @@ import {
   createDatabaseAuthRepository,
   MOCK_DATABASE_KEY,
 } from '../identity/mock-database';
-const MOCK_DATABASE_LEGACY_KEY = legacyStorageKey(MOCK_DATABASE_KEY);
-
 beforeEach(async () => {
   vi.stubGlobal('crypto', webcrypto);
-  window.localStorage.removeItem(MOCK_DATABASE_LEGACY_KEY);
+  window.localStorage.removeItem(MOCK_DATABASE_KEY);
   await createDatabaseAuthRepository().saveSession({
     user: { id: 'mock-demo', name: 'Rin', email: 'demo@community.test' },
     expiresAt: Date.now() + 60000,
@@ -25,7 +22,7 @@ beforeEach(async () => {
 });
 afterEach(() => {
   vi.unstubAllGlobals();
-  window.localStorage.removeItem(MOCK_DATABASE_LEGACY_KEY);
+  window.localStorage.removeItem(MOCK_DATABASE_KEY);
 });
 it('changes a password atomically, revokes all sessions and rejects the old credential', async () => {
   const security = createMockAccountSecurity(() => 'mock-demo');
@@ -72,13 +69,13 @@ it('preserves v4 accounts and configuration while migrating session metadata in 
   const prior = await readMockDatabase();
   const { securitySessions, ...state } = prior;
   expect(securitySessions.length).toBeGreaterThan(0);
-  window.localStorage.setItem(MOCK_DATABASE_LEGACY_KEY, JSON.stringify({ version: 4, state }));
+  window.localStorage.setItem(MOCK_DATABASE_KEY, JSON.stringify({ version: 4, state }));
   const next = await readMockDatabase();
   expect(next.users).toEqual(prior.users);
   expect(next.accounts).toEqual(prior.accounts);
   expect(next.registrationSettings).toEqual(prior.registrationSettings);
   expect(next.securitySessions).toHaveLength(1);
-  const stored: unknown = JSON.parse(window.localStorage.getItem(MOCK_DATABASE_LEGACY_KEY) ?? '');
+  const stored: unknown = JSON.parse(window.localStorage.getItem(MOCK_DATABASE_KEY) ?? '');
   expect(stored).toMatchObject({ version: 5 });
 });
 it('enforces cookie, CSRF and strict session responses without falling back to mock', async () => {

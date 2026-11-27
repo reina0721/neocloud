@@ -8,27 +8,25 @@ trust=$(realpath -e -- "$2")
 version=$3
 arch=$4
 [[ $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && ( $arch == amd64 || $arch == arm64 ) ]]
-cosign=$(command -v "${NEOCLOUD_COSIGN:-${CLOUDDRIVE_COSIGN:-cosign}}")
-family=$(awk -v suffix="-maintenance_${version}_linux_${arch}" '$2 == "neocloud" suffix { print "neocloud" } $2 == "clouddrive" suffix { print "clouddrive" }' "$assets/checksums.txt")
-[[ $family == neocloud || $family == clouddrive ]] || { echo '维护程序命名系列无法确定' >&2; exit 1; }
-tool="$family-maintenance_${version}_linux_${arch}"
-fixture=$(mktemp -d "${TMPDIR:-/tmp}/clouddrive-airgap-XXXXXXXX")
+cosign=$(command -v "${NEOCLOUD_COSIGN:-cosign}")
+tool="neocloud-maintenance_${version}_linux_${arch}"
+fixture=$(mktemp -d "${TMPDIR:-/tmp}/neocloud-airgap-XXXXXXXX")
 fixture=$(realpath -e -- "$fixture")
 instance="$fixture/instance"
 disk="$fixture/disk"
 data="$disk/data"
 checksum=$(printf '%s' "$instance" | sha256sum)
-project="clouddrive-airgap-${checksum:0:12}"
+project="neocloud-airgap-${checksum:0:12}"
 owner=$(printf '%s\0%s\0%s' "$instance" "$project" "$data" | sha256sum)
 owner=${owner%% *}
 mounted=false
 
 cleanup() {
   local status=$? current_owner cleaned=true
-  current_owner=$(sudo docker volume inspect --format '{{index .Labels "io.clouddrive.release.owner"}}' "$project-instance" 2>/dev/null) || current_owner=
+  current_owner=$(sudo docker volume inspect --format '{{index .Labels "io.neocloud.release.owner"}}' "$project-instance" 2>/dev/null) || current_owner=
   if [[ $current_owner == "$owner" ]]; then
     if sudo test -f "$instance/releases/$version/compose.yaml"; then
-      sudo env "CLOUDDRIVE_RELEASE_DATA_DIR=$data" docker compose --project-directory "$instance" --project-name "$project" \
+      sudo env "NEOCLOUD_RELEASE_DATA_DIR=$data" docker compose --project-directory "$instance" --project-name "$project" \
         --env-file "$instance/runtime.env" --env-file "$instance/releases/$version/images.env" \
         --file "$instance/releases/$version/compose.yaml" down --remove-orphans || cleaned=false
     fi
@@ -49,7 +47,7 @@ cleanup() {
 trap cleanup EXIT
 
 airgap() {
-  sudo unshare --net -- env "PATH=$PATH" "CLOUDDRIVE_COSIGN=$cosign" bash -ec '
+  sudo unshare --net -- env "PATH=$PATH" "NEOCLOUD_COSIGN=$cosign" bash -ec '
     [[ -z $(ip route show default) && -z $(ip -6 route show default) ]]
     exec "$@"
   ' bash "$@"
@@ -97,7 +95,7 @@ airgap docker run --rm --network none --pull never --user 0:0 \
   --mount "type=bind,source=$disk,target=/disk,readonly" "$web_image" sh -ec '
     test -f /disk/data/app.db
     test ! -e /disk/data/release-airgap-probe
-    set -- /disk/.clouddrive-restore-*/original-data/release-airgap-probe
+    set -- /disk/.neocloud-restore-*/original-data/release-airgap-probe
     test "$#" -eq 1
     test "$(cat -- "$1")" = "test modification"
   '

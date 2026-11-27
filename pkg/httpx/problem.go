@@ -150,7 +150,7 @@ func ProblemOf(request *http.Request, err error) (Problem, int) {
 		code = errorCodeInternalServer
 	}
 	problem := Problem{
-		Type: "urn:clouddrive:problem:" + code, Title: http.StatusText(status),
+		Type: "urn:neocloud:problem:" + code, Title: http.StatusText(status),
 		Status: status, Detail: detail, Code: code,
 	}
 	if requestID, ok := RequestIDFromContext(requestContext(request)); ok {

@@ -102,7 +102,7 @@ test('Backend M2–M6 uses proposed REST/CSRF contracts, preserves conflict draf
     expect.arrayContaining(['/users', '/me', '/roles', '/notifications/read-all']),
   );
   expect(fixture.writes.every((item) => item.csrf === 'product-csrf')).toBe(true);
-  expect(await page.evaluate(() => localStorage.getItem('clouddrive.auth-mock'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('neocloud.auth-mock'))).toBeNull();
   await page.goto('/system-settings');
   const registrationSwitch = page.getByRole('switch', { name: '开放公开注册', exact: true });
   await expect(registrationSwitch).toBeChecked();
@@ -134,5 +134,5 @@ test('Backend M2–M6 uses proposed REST/CSRF contracts, preserves conflict draf
     method: 'PATCH',
     csrf: 'product-csrf',
   });
-  expect(await page.evaluate(() => localStorage.getItem('clouddrive.auth-mock'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('neocloud.auth-mock'))).toBeNull();
 });

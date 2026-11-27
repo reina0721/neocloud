@@ -393,7 +393,7 @@ test('窄屏英文深色保留筛选和菜单，公共工具栏选择不横向�
 test('没有分享的新账户得到文件入口，不显示没有作用的分页', async ({ page, browser }, info) => {
   await login(page);
   const suffix = randomUUID().slice(0, 8);
-  const account = { username: 'catalog-' + suffix + '@clouddrive.test', password: randomUUID() };
+  const account = { username: 'catalog-' + suffix + '@neocloud.test', password: randomUUID() };
   await page.evaluate(
     async ({ suffix, account }) => {
       const { token } = (await (await fetch('/api/console/v1/auth/csrf')).json()) as {

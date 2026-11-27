@@ -21,7 +21,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/reina0721/clouddrive/pkg/fault"
+	"github.com/reina0721/neocloud/pkg/fault"
 )
 
 func Call(ctx context.Context, query func(context.Context) error) error {

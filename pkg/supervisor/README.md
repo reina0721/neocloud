@@ -22,7 +22,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/supervisor"
+	"github.com/reina0721/neocloud/pkg/supervisor"
 )
 
 type Server struct{}

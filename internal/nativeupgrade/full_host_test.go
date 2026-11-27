@@ -136,7 +136,7 @@ func buildFullFixture(t *testing.T, repo, exportDirectory, exportID string) test
 	var previousCommit string
 	for index, version := range []string{firstVersion, secondVersion} {
 		commit := strings.Repeat(fmt.Sprint(index+1), 40)
-		executable := filepath.Join(versions, version+"-clouddrive")
+		executable := filepath.Join(versions, version+"-neocloud")
 		if runtime.GOOS == "windows" {
 			executable += ".exe"
 		}
@@ -167,10 +167,10 @@ func buildFullFixture(t *testing.T, repo, exportDirectory, exportID string) test
 // This release gate executes the exact host and worker binaries shipped in
 // the independently verified draft. The regular test suite has no signed draft.
 func TestSignedFullReleaseBoot(t *testing.T) {
-	release := os.Getenv("CLOUDDRIVE_TEST_NATIVE_RELEASE_DIR")
-	trust := os.Getenv("CLOUDDRIVE_TEST_NATIVE_TRUST_DIR")
-	version := os.Getenv("CLOUDDRIVE_TEST_NATIVE_TAG")
-	commit := os.Getenv("CLOUDDRIVE_TEST_NATIVE_COMMIT")
+	release := os.Getenv("NEOCLOUD_TEST_NATIVE_RELEASE_DIR")
+	trust := os.Getenv("NEOCLOUD_TEST_NATIVE_TRUST_DIR")
+	version := os.Getenv("NEOCLOUD_TEST_NATIVE_TAG")
+	commit := os.Getenv("NEOCLOUD_TEST_NATIVE_COMMIT")
 	if release == "" && trust == "" && version == "" && commit == "" {
 		t.Skip("no signed release draft supplied")
 	}
@@ -209,7 +209,7 @@ func TestSignedFullReleaseBoot(t *testing.T) {
 // The opt-in browser run serves an actual static export and sends the browser
 // through a native full host. Release selection is a fixture in this test.
 func TestManagedFullBrowser(t *testing.T) {
-	directory := os.Getenv("CLOUDDRIVE_TEST_MANAGED_WEB_DIR")
+	directory := os.Getenv("NEOCLOUD_TEST_MANAGED_WEB_DIR")
 	if directory == "" {
 		t.Skip("no static export supplied for browser acceptance")
 	}
@@ -241,10 +241,10 @@ func TestManagedFullBrowser(t *testing.T) {
 	browser := exec.CommandContext(ctx, "node", "frontend/tooling/native-managed-browser.mjs")
 	browser.Dir = repo
 	browser.Env = append(browser.Environ(),
-		"CLOUDDRIVE_NATIVE_BROWSER_ORIGIN=http://"+site,
-		"CLOUDDRIVE_NATIVE_BROWSER_SETUP_TOKEN="+fixtureSetupToken,
-		"CLOUDDRIVE_NATIVE_BROWSER_EMAIL=native-upgrade@clouddrive.test",
-		"CLOUDDRIVE_NATIVE_BROWSER_PASSWORD=native-upgrade-fixture-owner-password",
+		"NEOCLOUD_NATIVE_BROWSER_ORIGIN=http://"+site,
+		"NEOCLOUD_NATIVE_BROWSER_SETUP_TOKEN="+fixtureSetupToken,
+		"NEOCLOUD_NATIVE_BROWSER_EMAIL=native-upgrade@neocloud.test",
+		"NEOCLOUD_NATIVE_BROWSER_PASSWORD=native-upgrade-fixture-owner-password",
 	)
 	if data, err := browser.CombinedOutput(); err != nil {
 		t.Fatalf("native browser acceptance: %v\n%s", err, data)
@@ -257,7 +257,7 @@ func fullTestRoot(t *testing.T) (string, [2]string, string) {
 	t.Helper()
 	for _, value := range os.Environ() {
 		name, _, _ := strings.Cut(value, "=")
-		if strings.HasPrefix(strings.ToUpper(name), "APP_") {
+		if strings.HasPrefix(strings.ToUpper(name), "NEOCLOUD_APP_") {
 			t.Setenv(name, "")
 			if err := os.Unsetenv(name); err != nil {
 				t.Fatal(err)
@@ -275,10 +275,10 @@ func fullTestRoot(t *testing.T) (string, [2]string, string) {
 		t.Fatal(err)
 	}
 	addresses := [2]string{unusedAddress(t), unusedAddress(t)}
-	t.Setenv("APP_HTTP__ADDR", addresses[0])
-	t.Setenv("APP_MANAGEMENT__ADDR", addresses[1])
-	t.Setenv("APP_IAM__LOCAL__SETUPTOKEN", fixtureSetupToken)
-	t.Setenv("APP_IAM__LOCAL__ALLOWINSECUREHTTP", "true")
+	t.Setenv("NEOCLOUD_APP_HTTP__ADDR", addresses[0])
+	t.Setenv("NEOCLOUD_APP_MANAGEMENT__ADDR", addresses[1])
+	t.Setenv("NEOCLOUD_APP_IAM__LOCAL__SETUPTOKEN", fixtureSetupToken)
+	t.Setenv("NEOCLOUD_APP_IAM__LOCAL__ALLOWINSECUREHTTP", "true")
 	return root, addresses, unusedAddress(t)
 }
 

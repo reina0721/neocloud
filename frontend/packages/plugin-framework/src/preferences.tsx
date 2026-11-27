@@ -3,7 +3,7 @@
  *
  * `@neocloud/plugin-framework/preferences`：偏好能力的公共契约 + client
  * Provider/context/hook。Host 在 Composition Root 注入完整实现（读
- * `clouddrive.shell` v1 持久化，见 apps/web Host store）；Plugin（settings）与
+ * `neocloud.shell` v1 持久化，见 apps/web Host store）；Plugin（settings）与
  * Shell 经本入口读写同一份偏好，禁止跨 Plugin 直接读 Host store。
  *
  * 设计约束（R107-002）：

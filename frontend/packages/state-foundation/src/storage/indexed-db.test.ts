@@ -102,13 +102,13 @@ describe('indexedDB storage adapter (fake idb)', () => {
 
   it('PersistStorage 形态 async roundtrip（StorageValue JSON）', async () => {
     const storage = createIndexedDBStorage<Payload>({ databaseName: 'test-db2' });
-    await storage.setItem('clouddrive.shell', { state: { theme: 'light' }, version: 1 });
-    expect(await storage.getItem('clouddrive.shell')).toEqual({
+    await storage.setItem('neocloud.shell', { state: { theme: 'light' }, version: 1 });
+    expect(await storage.getItem('neocloud.shell')).toEqual({
       state: { theme: 'light' },
       version: 1,
     });
-    await storage.removeItem('clouddrive.shell');
-    expect(await storage.getItem('clouddrive.shell')).toBeNull();
+    await storage.removeItem('neocloud.shell');
+    expect(await storage.getItem('neocloud.shell')).toBeNull();
   });
 
   it('unavailablePolicy=noop 在无 idb 时不崩（async noop）', async () => {

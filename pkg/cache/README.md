@@ -51,8 +51,8 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/reina0721/clouddrive/pkg/cache"
-	"github.com/reina0721/clouddrive/pkg/cache/redisstore"
+	"github.com/reina0721/neocloud/pkg/cache"
+	"github.com/reina0721/neocloud/pkg/cache/redisstore"
 )
 
 type Profile struct {

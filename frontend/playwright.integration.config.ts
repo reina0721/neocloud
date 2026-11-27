@@ -1,6 +1,5 @@
 import { defineConfig } from '@playwright/test';
-import { readNeoCloudEnv } from './apps/web/runtime/environment.mjs';
-const managedWebUrl = readNeoCloudEnv('TEST_WEB_URL');
+const managedWebUrl = process.env.NEOCLOUD_TEST_WEB_URL;
 export default defineConfig({
   testDir: './integration',
   workers: 1,

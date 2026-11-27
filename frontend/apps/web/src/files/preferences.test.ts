@@ -40,15 +40,15 @@ describe('真实文件偏好边界', () => {
   it('旧偏好成功落盘后才删除旧键，保存失败保留旧值', async () => {
     const { port } = setup();
     const old = { ...defaultFilePreferences().defaults, view: 'list' };
-    localStorage.setItem('clouddrive.files.view.v1.owner', JSON.stringify(old));
+    localStorage.setItem('neocloud.files.view.v1.owner', JSON.stringify(old));
     const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('quota');
     });
     await expect(port.loadPreferences()).rejects.toThrow(FilesError);
-    expect(localStorage.getItem('clouddrive.files.view.v1.owner')).not.toBeNull();
+    expect(localStorage.getItem('neocloud.files.view.v1.owner')).not.toBeNull();
     set.mockRestore();
     expect((await port.loadPreferences()).configuration.defaults.view).toBe('list');
-    expect(localStorage.getItem('clouddrive.files.view.v1.owner')).toBeNull();
+    expect(localStorage.getItem('neocloud.files.view.v1.owner')).toBeNull();
   });
   it('开启同步先读revision，再发布当前设置；关闭后不写远端', async () => {
     const { call, port } = setup();
@@ -77,13 +77,13 @@ describe('真实文件偏好边界', () => {
   it('同步失败和冲突不上报成功，不隐藏回退、不自动覆盖', async () => {
     const { call, port } = setup();
     const saved = { sync: true, configuration: { ...defaultFilePreferences(), revision: 4 } };
-    localStorage.setItem('clouddrive.files.view.v2.owner', JSON.stringify(saved));
+    localStorage.setItem('neocloud.files.view.v2.owner', JSON.stringify(saved));
     const conflict = new FilesError('conflict');
     call.mockRejectedValue(conflict);
     await expect(port.loadPreferences()).rejects.toBe(conflict);
     await expect(port.savePreferences(saved)).rejects.toBe(conflict);
     expect(call).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(localStorage.getItem('clouddrive.files.view.v2.owner')!)).toEqual(saved);
+    expect(JSON.parse(localStorage.getItem('neocloud.files.view.v2.owner')!)).toEqual(saved);
   });
   it('账号在服务器响应前失效时不落盘', async () => {
     const { call, port, expire } = setup();
@@ -94,7 +94,7 @@ describe('真实文件偏好边界', () => {
     await expect(port.loadPreferences(undefined, 'server')).rejects.toThrow(FilesError);
     expect(
       filePreferenceSnapshotSchema.parse(
-        JSON.parse(localStorage.getItem('clouddrive.files.view.v2.owner')!),
+        JSON.parse(localStorage.getItem('neocloud.files.view.v2.owner')!),
       ).sync,
     ).toBe(false);
   });

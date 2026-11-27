@@ -165,7 +165,7 @@ messaging:
       atLeastOnceDeadLetter: true
 ```
 
-URI 和凭据使用 `APP_MESSAGING__PROVIDERS__PRIMARY__RABBITMQ__URI` 等部署环境变量注入，不写入仓库。可靠 Route
+URI 和凭据使用 `NEOCLOUD_APP_MESSAGING__PROVIDERS__PRIMARY__RABBITMQ__URI` 等部署环境变量注入，不写入仓库。可靠 Route
 要求 quorum queue、正数 delayed retry 范围、正数 delivery limit、at-least-once DLX 和 Provider 对应能力；缺失或与
 Binding 策略冲突会在 Candidate Freeze 时失败。运行时只做 passive topology probe，不创建或修改生产 topology；Policy
 必须由运维侧预置并验证。

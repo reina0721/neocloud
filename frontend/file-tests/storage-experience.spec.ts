@@ -7,7 +7,7 @@ import { customizeLimit, loginStorage, storageRequest, storageSection } from './
 
 test.use({ actionTimeout: 15_000 });
 test.beforeEach(() =>
-  test.skip(!process.env.CLOUDDRIVE_FILE_TEST_ACCESS, '仅使用显式指定的隔离预览。'),
+  test.skip(!process.env.NEOCLOUD_FILE_TEST_ACCESS, '仅使用显式指定的隔离预览。'),
 );
 async function openLimits(page: Page) {
   await page.getByRole('main').getByRole('button', { name: '编辑上传限额', exact: true }).click();
@@ -216,7 +216,7 @@ test('只读存储账户能读取摘要和用量，不呈现编辑控件', async
   });
   const credentials = {
     ...readPreviewAccess(),
-    username: 'storage-' + suffix + '@clouddrive.test',
+    username: 'storage-' + suffix + '@neocloud.test',
     password: randomUUID(),
   };
   await consoleWrite(page, '/users', 'POST', {

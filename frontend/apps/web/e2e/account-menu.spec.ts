@@ -150,7 +150,7 @@ test('Dark English expanded text and Reduced Motion keep preference overlays acc
   await page.addInitScript(
     ({ preferences, version }) => {
       localStorage.setItem(
-        'clouddrive.shell',
+        'neocloud.shell',
         JSON.stringify({
           version,
           state: {

@@ -44,7 +44,7 @@ jobs:
       - name: Set up pinned pnpm
         shell: pwsh
         run: |
-          $pnpmRoot = Join-Path $env:RUNNER_TEMP 'clouddrive-pnpm'
+          $pnpmRoot = Join-Path $env:RUNNER_TEMP 'neocloud-pnpm'
           & npm install --prefix $pnpmRoot --no-package-lock --no-save pnpm@10.22.0
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           (Join-Path $pnpmRoot 'node_modules/.bin') >> $env:GITHUB_PATH

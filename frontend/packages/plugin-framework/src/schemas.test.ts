@@ -47,8 +47,8 @@ describe('plugin-framework/schemas（浏览器安全入口）', () => {
   it('浏览器入口源码不 import Node Runtime 或 schemas 内部路径', async () => {
     const source = await readFile(join(here, 'schemas.ts'), 'utf8');
     expect(source).not.toMatch(/node:/);
-    expect(source).not.toMatch(/@(?:neocloud|clouddrive)\/schemas\/runtime/);
-    expect(source).not.toMatch(/@(?:neocloud|clouddrive)\/schemas\/src\//);
+    expect(source).not.toMatch(/@neocloud\/schemas\/runtime/);
+    expect(source).not.toMatch(/@neocloud\/schemas\/src\//);
     expect(source).not.toMatch(/packages\/schemas\/src/);
     expect(source).not.toMatch(/SOURCE_PATHS/);
   });
@@ -56,7 +56,7 @@ describe('plugin-framework/schemas（浏览器安全入口）', () => {
   it('plugin 入口（/plugin）源码不含 Node Runtime 且 schemas 命名空间只来自根入口', async () => {
     const source = await readFile(join(here, 'plugin.tsx'), 'utf8');
     expect(source).not.toMatch(/node:/);
-    expect(source).not.toMatch(/@(?:neocloud|clouddrive)\/schemas\/runtime/);
+    expect(source).not.toMatch(/@neocloud\/schemas\/runtime/);
     expect(source).not.toMatch(/schemas-runtime/);
   });
 });

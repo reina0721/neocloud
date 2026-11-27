@@ -23,6 +23,7 @@ import { fileURLToPath } from "node:url";
 const { values } = parseArgs({
   options: {
     "release-dir": { type: "string" },
+    "public-installer": { type: "string" },
     version: { type: "string" },
     "upgrade-dir": { type: "string" },
     "upgrade-version": { type: "string" },
@@ -30,16 +31,16 @@ const { values } = parseArgs({
     keep: { type: "boolean", default: false },
     faults: { type: "boolean", default: false },
     "network-host": { type: "string" },
-    "legacy-entrypoint": { type: "boolean", default: false },
     "artifact-smoke": { type: "boolean", default: false },
     arch: { type: "string" },
     commit: { type: "string" },
     trace: { type: "string" },
   },
 });
+const onlineSmoke = Boolean(values["public-installer"]);
 assert.ok(
-  values["release-dir"] && values.version,
-  "--release-dir 与 --version 必填",
+  values.version && Boolean(values["release-dir"]) !== onlineSmoke,
+  "必须指定 --version 和唯一一种安装来源：--release-dir 或 --public-installer",
 );
 assert.equal(
   Boolean(values["upgrade-dir"]),
@@ -47,6 +48,7 @@ assert.equal(
   "升级目录和版本必须一起提供",
 );
 const artifactSmoke = values["artifact-smoke"];
+assert.ok(artifactSmoke || !onlineSmoke, "--public-installer 仅用于 --artifact-smoke");
 assert.ok(
   artifactSmoke || (!values.arch && !values.commit && !values.trace),
   "--arch、--commit 和 --trace 用于 --artifact-smoke",
@@ -70,19 +72,18 @@ if (artifactSmoke) {
     !values["upgrade-dir"] &&
       !values["emulated-arch"] &&
       !values["network-host"] &&
-      !values["legacy-entrypoint"] &&
       !values.faults,
     "产物冒烟只在原生架构执行一次签名包安装",
   );
   assert.equal(process.platform, "linux", "产物冒烟需要原生 Linux Docker 主机");
   assert.ok(
-    process.env.CLOUDDRIVE_OFFLINE_TRUST_DIR,
-    "产物冒烟需要独立的 CLOUDDRIVE_OFFLINE_TRUST_DIR",
+    onlineSmoke || process.env.NEOCLOUD_OFFLINE_TRUST_DIR,
+    "离线产物冒烟需要独立的 NEOCLOUD_OFFLINE_TRUST_DIR",
   );
 }
 const smokeTracePath = values.trace ? resolve(values.trace) : undefined;
 if (smokeTracePath) await assert.rejects(lstat(smokeTracePath), { code: "ENOENT" });
-const source = resolve(values["release-dir"]);
+const source = values["release-dir"] && resolve(values["release-dir"]);
 const networkHost = values["network-host"];
 assert.ok(
   !networkHost ||
@@ -103,18 +104,18 @@ const dockerPath = spawnSync("sh", ["-c", "command -v docker"], {
 });
 assert.equal(dockerPath.status, 0, "Docker 验收需要可执行的 docker 命令");
 const docker = dockerPath.stdout.trim();
-const base = await mkdtemp(join(tmpdir(), "clouddrive-release-test-"));
-await writeFile(join(base, ".test-owner"), "clouddrive-release-fixture-v1", {
+const base = await mkdtemp(join(tmpdir(), "neocloud-release-test-"));
+await writeFile(join(base, ".test-owner"), "neocloud-release-fixture-v1", {
   mode: 0o600,
 });
 const root = join(base, "instance");
 const bootstrap = join(base, "bootstrap.sh");
-await cp(join(projectRoot, "install.sh"), bootstrap);
+await cp(onlineSmoke ? resolve(values["public-installer"]) : join(projectRoot, "install.sh"), bootstrap);
 const bin = join(base, "bin");
 await mkdir(bin);
 const quote = (s) => "'" + s.replaceAll("'", "'\\''") + "'";
 const dockerArgs =
-  process.env.CLOUDDRIVE_DOCKER_SUDO === "1"
+  process.env.NEOCLOUD_DOCKER_SUDO === "1"
     ? ["sudo", "-n", docker]
     : [docker];
 const architectureOverride = values["emulated-arch"];
@@ -129,12 +130,12 @@ exec ${dockerArgs.map(quote).join(" ")} "$@"
   { mode: 0o700 },
 );
 const env = { ...process.env, PATH: bin + ":" + process.env.PATH };
-function run(command, args, { failure = false, input } = {}) {
+function run(command, args, { failure = false, input, timeout = 300_000 } = {}) {
   const result = spawnSync(command, args, {
     env,
     encoding: "utf8",
     input,
-    timeout: 300000,
+    timeout,
     maxBuffer: 8 * 1024 * 1024,
   });
   if (failure) assert.notEqual(result.status, 0, "预期命令失败");
@@ -194,11 +195,9 @@ async function request(path, method = "GET", body) {
     signal: AbortSignal.timeout(30000),
   });
   for (const cookie of response.headers.getSetCookie()) {
-    if (!values["legacy-entrypoint"] || networkHost) {
-      assert.doesNotMatch(cookie, /^__Host-/);
-      assert.doesNotMatch(cookie, /;\s*Secure(?:;|$)/i);
-      assert.match(cookie, /;\s*HttpOnly(?:;|$)/i);
-    }
+    assert.doesNotMatch(cookie, /^__Host-/);
+    assert.doesNotMatch(cookie, /;\s*Secure(?:;|$)/i);
+    assert.match(cookie, /;\s*HttpOnly(?:;|$)/i);
     const pair = cookie.split(";")[0];
     const at = pair.indexOf("=");
     cookieJar.set(pair.slice(0, at), pair.slice(at + 1));
@@ -217,7 +216,7 @@ async function exerciseInstanceLayout(version) {
   const parent = await realpath(base);
   const instance = join(parent, "named-instance");
   const data = join(parent, "named-data");
-  const name = `clouddrive-test-${randomBytes(8).toString("hex")}`;
+  const name = `neocloud-test-${randomBytes(8).toString("hex")}`;
   const volume = `${name}-instance`;
   const owner = sha(Buffer.from([instance, name, data].join("\0")));
   const instancePort = await freePort();
@@ -250,7 +249,7 @@ async function exerciseInstanceLayout(version) {
       "volume",
       "inspect",
       "--format",
-      '{{index .Labels "io.clouddrive.release.owner"}}',
+      '{{index .Labels "io.neocloud.release.owner"}}',
       volume,
     );
   let stopped = false;
@@ -446,10 +445,15 @@ async function exerciseArtifactSmoke(trace) {
   assert.equal(platform[daemonArch], values.arch, "Docker daemon 与目标原生架构不符");
 
   trace.phase = "install";
-  install(
+  const args = [
     "install", "--dir", root, "--bind", "127.0.0.1", "--port", String(port),
-    "--version", active, "--release-dir", source,
-  );
+    "--version", active,
+  ];
+  if (onlineSmoke) {
+    run("bash", [bootstrap, ...args], { timeout: 35 * 60_000 });
+  } else {
+    install(...args, "--release-dir", source);
+  }
   assert.equal((await readFile(join(root, ".control/current"), "utf8")).trim(), active);
 
   trace.phase = "health";
@@ -503,9 +507,6 @@ async function exerciseFullRelease() {
     active,
     "--release-dir",
     source,
-    ...(values["legacy-entrypoint"]
-      ? ["--bind", "0.0.0.0", "--public-url", origin, "--allow-http"]
-      : []),
   );
   install(
     "install",
@@ -517,15 +518,11 @@ async function exerciseFullRelease() {
     source,
   );
   await exerciseInstanceLayout(active);
-  if (values["legacy-entrypoint"]) {
-    // 后续成功升级真正由旧包自带安装器执行，验证已发布管理入口的兼容性。
-    await cp(join(root, "install.sh"), bootstrap);
-  }
   const setupToken = (
     await readFile(join(root, ".control/setup-token"), "utf8")
   ).trim();
   const account = {
-    email: "release-owner@clouddrive.test",
+    email: "release-owner@neocloud.test",
     password: randomBytes(24).toString("base64url"),
   };
   csrf = (await request("/auth/csrf")).token;
@@ -552,7 +549,7 @@ async function exerciseFullRelease() {
   });
   const content = await request("/native/files/" + entry.id + "/content");
   assert.equal(sha(content), sha(Buffer.from(text)));
-  if (!values["legacy-entrypoint"]) {
+  {
     const share = await request("/native/files/shares", "POST", {
       rootId: entry.id,
       title: "release-share",
@@ -615,7 +612,7 @@ async function exerciseFullRelease() {
     dav = await fetch(endpoint + "moved.txt", { headers: davHeaders });
     assert.equal(dav.status, 200);
     assert.equal(await dav.text(), "DAV persisted bytes");
-    if (!values["legacy-entrypoint"]) {
+    {
       const bytes = Buffer.alloc(33 * 1024 * 1024, 79);
       for (const fixed of [true, false]) {
         const address = endpoint + (fixed ? "fixed.bin" : "chunked.bin");
@@ -645,7 +642,7 @@ async function exerciseFullRelease() {
       headers: {
         Origin: "http://evil.example",
         "X-Forwarded-Host": "evil.example",
-        "X-CloudDrive-Web-Origin": origin,
+        "X-NeoCloud-Web-Origin": origin,
         "X-CSRF-Token": csrf,
         Cookie: [...cookieJar].map(([k, v]) => k + "=" + v).join("; "),
       },
@@ -719,7 +716,7 @@ async function exerciseFullRelease() {
   const [entrypoint] = JSON.parse(run("docker", [
     "inspect", "--format", "{{json .Config.Entrypoint}}", apiContainer,
   ]).stdout);
-  assert.match(entrypoint, /^\/app\/(neocloud|clouddrive)$/);
+  assert.match(entrypoint, /^\/app\/neocloud$/);
   const originalStorage = run("docker", [
     "exec",
     apiContainer,
@@ -832,7 +829,7 @@ async function exerciseFullRelease() {
       );
       await writeFile(
         join(clone, ".control/project"),
-        "clouddrive-" + sha(Buffer.from(clone)).slice(0, 12) + "\n",
+        "neocloud-" + sha(Buffer.from(clone)).slice(0, 12) + "\n",
       );
       await writeFile(join(clone, ".control/current"), active + "\n");
       additionalInstances.push({ root: clone, version: active });
@@ -1072,7 +1069,7 @@ async function cleanupFixture() {
   if (ok && !values.keep) {
     assert.equal(
       await readFile(join(base, ".test-owner"), "utf8"),
-      "clouddrive-release-fixture-v1",
+      "neocloud-release-fixture-v1",
     );
     const webImage = (
       await readFile(join(root, "releases", active, "images.env"), "utf8")
@@ -1101,7 +1098,7 @@ async function cleanupFixture() {
 async function validateSmokeProject() {
   assert.equal(
     await readFile(join(base, ".test-owner"), "utf8"),
-    "clouddrive-release-fixture-v1",
+    "neocloud-release-fixture-v1",
   );
   const project = await readFile(join(root, ".control/project"), "utf8").catch((error) => {
     if (error.code !== "ENOENT" || ok) throw error;
@@ -1116,7 +1113,8 @@ async function validateSmokeProject() {
 async function runArtifactSmoke() {
   const started = Date.now();
   const trace = {
-    schema: "clouddrive-docker-artifact-smoke-v1",
+    schema: "neocloud-docker-artifact-smoke-v1",
+    source: onlineSmoke ? "github-release" : "local-release",
     version: active,
     expectedArch: values.arch,
     expectedCommit: values.commit,

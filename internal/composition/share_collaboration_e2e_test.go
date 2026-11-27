@@ -84,7 +84,7 @@ func TestShareCollaborationScopeCASBatchPolicyAndUpload(t *testing.T) {
 	}()
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "collaboration-owner@clouddrive.test", "name": "协作验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "collaboration-owner@neocloud.test", "name": "协作验收", "password": password}, 200)
 	ancestor := owner.request(t, "POST", "/native/files/folders", map[string]string{"name": "不公开的祖先", "parentId": ""}, 200)["id"].(string)
 	root := owner.request(t, "POST", "/native/files/folders", map[string]string{"name": "分享目录", "parentId": ancestor}, 200)["id"].(string)
 	outside := owner.request(t, "POST", "/native/files/folders", map[string]string{"name": "不可访问目录", "parentId": ""}, 200)["id"].(string)
@@ -301,10 +301,10 @@ func verifyShareCurrentAuthority(t *testing.T, owner *consoleTestClient, passwor
 	role := owner.request(t, "POST", "/roles", map[string]any{"name": "分享成员", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	rolePath := "/native/iam/roles/" + role["id"].(string) + "/permissions"
 	owner.request(t, "PUT", rolePath, map[string]any{"expectedRoleVersion": 1, "permissionKeys": []string{"files:read", "files:write"}}, 200)
-	created := owner.request(t, "POST", "/users", map[string]any{"email": "share-member@clouddrive.test", "name": "分享成员", "password": password, "roleIds": []string{role["id"].(string)}, "status": "active"}, 200)["user"].(map[string]any)
+	created := owner.request(t, "POST", "/users", map[string]any{"email": "share-member@neocloud.test", "name": "分享成员", "password": password, "roleIds": []string{role["id"].(string)}, "status": "active"}, 200)["user"].(map[string]any)
 	member := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
 	member.request(t, "GET", "/auth/csrf", nil, 200)
-	member.request(t, "POST", "/auth/login", map[string]string{"email": "share-member@clouddrive.test", "password": password}, 200)
+	member.request(t, "POST", "/auth/login", map[string]string{"email": "share-member@neocloud.test", "password": password}, 200)
 	root := member.request(t, "POST", "/native/files/folders", map[string]string{"name": "成员分享", "parentId": ""}, 200)["id"].(string)
 	rights := service.SharePermissions{Browse: true, Preview: true, Download: true, Create: true, Upload: true, Modify: true, Rename: true, Move: true, Copy: true, Delete: true}
 	share := member.request(t, "POST", "/native/files/shares", map[string]any{"rootId": root, "permissions": rights}, 200)

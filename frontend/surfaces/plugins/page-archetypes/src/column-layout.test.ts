@@ -69,7 +69,7 @@ describe('列布局 store（column-layout，SET-002-005 分片）', () => {
   it('rehydrateStore：localStorage 预置记录在显式 hydration 后进入 state', async () => {
     useColumnLayoutStore.setState({ layouts: {} });
     window.localStorage.setItem(
-      'clouddrive.page-archetypes.column-layout',
+      'neocloud.page-archetypes.column-layout',
       JSON.stringify({
         state: { layouts: { 'resource-list': { visibleOrder: ['status', 'owner'] } } },
         version: 1,

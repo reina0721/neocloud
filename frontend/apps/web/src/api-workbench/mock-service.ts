@@ -1,4 +1,3 @@
-import { readProductStorage, writeProductStorage } from '@neocloud/state-foundation';
 /**
  * Mock Service Implementation for API Workbench.
  *
@@ -142,7 +141,7 @@ class StorageAdapter {
 
   async load(): Promise<WorkspaceSnapshot> {
     if (this.inMemoryCache) return this.inMemoryCache;
-    const raw = readProductStorage(window.localStorage, STORAGE_KEY);
+    const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
       const validation = safeParseWorkspaceSnapshot(parsed);
@@ -157,7 +156,7 @@ class StorageAdapter {
 
   save(snapshot: WorkspaceSnapshot): Promise<void> {
     try {
-      writeProductStorage(window.localStorage, STORAGE_KEY, JSON.stringify(snapshot));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
       this.inMemoryCache = snapshot;
       return Promise.resolve();
     } catch (failure) {
@@ -179,7 +178,7 @@ class StorageAdapter {
   async getUsage(): Promise<{ dbSizeFormatted: string; count: number }> {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
-        const raw = readProductStorage(window.localStorage, STORAGE_KEY) ?? '';
+        const raw = window.localStorage.getItem(STORAGE_KEY) ?? '';
         const bytes = new Blob([raw]).size;
         const kb = (bytes / 1024).toFixed(1);
         const snapshot = await this.load();

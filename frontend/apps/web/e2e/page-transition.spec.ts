@@ -28,7 +28,7 @@ async function ready(page: Page, path: string) {
 
 async function resetPreferences(page: Page) {
   await ready(page, '/settings');
-  await page.evaluate(() => window.localStorage.removeItem('clouddrive.shell'));
+  await page.evaluate(() => window.localStorage.removeItem('neocloud.shell'));
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
 }
@@ -99,13 +99,13 @@ test.describe('page transition preference', () => {
   test('旧存储记录（无 pageTransition 字段）仍落在默认动画', async ({ page }) => {
     await ready(page, '/settings');
     await page.evaluate(() => {
-      const raw = window.localStorage.getItem('clouddrive.shell');
+      const raw = window.localStorage.getItem('neocloud.shell');
       if (!raw) return;
       const parsed = JSON.parse(raw) as { state?: { preferences?: { appearance?: unknown } } };
       if (parsed.state?.preferences?.appearance) {
         delete (parsed.state.preferences.appearance as Record<string, unknown>).pageTransition;
       }
-      window.localStorage.setItem('clouddrive.shell', JSON.stringify(parsed));
+      window.localStorage.setItem('neocloud.shell', JSON.stringify(parsed));
     });
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');

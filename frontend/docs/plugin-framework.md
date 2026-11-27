@@ -473,7 +473,7 @@ expectedVersion)`、`resetPresentation`、`clear`、`clearAll`、`recover`（清
 - 写入语义：标题 1–40 字符；排序 0–999 整数；权限码为小写点分；每次写入自增 `version`，
   版本不匹配返回 `conflict` 且不覆盖；损坏记录拒绝静默覆盖。
 - Host 实现：`apps/web/src/state/use-navigation-admin-store.ts`（key
-  `clouddrive.navigation-admin` v1，localStorage）+ `apps/web/src/host/navigation-admin-port.tsx`。
+  `neocloud.navigation-admin` v1，localStorage）+ `apps/web/src/host/navigation-admin-port.tsx`。
 - 应用：`useProductNavigation` 在权限过滤前后应用 hidden/order/permission；标题覆盖经
   `useNavigationLabelOverrides` 同时作用于侧栏、页签标题与命令面板。
 - Backend 从服务端 `/navigation` 加载呈现覆盖，mock 使用上述本地实现。Host 通过

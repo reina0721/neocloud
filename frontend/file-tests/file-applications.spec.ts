@@ -482,9 +482,9 @@ test('新建文件映射按配置创建真实文件并保留后缀', async ({ pa
 });
 
 test('网页应用配置和临时文件预览', async ({ page }, info) => {
-  const httpsWeb = process.env.CLOUDDRIVE_TEST_WEB_HTTPS_ORIGIN;
-  const httpsReader = process.env.CLOUDDRIVE_TEST_WEB_PREVIEW_ORIGIN;
-  const verifyExpiry = process.env.CLOUDDRIVE_TEST_WEB_PREVIEW_EXPIRY === '1';
+  const httpsWeb = process.env.NEOCLOUD_TEST_WEB_HTTPS_ORIGIN;
+  const httpsReader = process.env.NEOCLOUD_TEST_WEB_PREVIEW_ORIGIN;
+  const verifyExpiry = process.env.NEOCLOUD_TEST_WEB_PREVIEW_EXPIRY === '1';
   if (httpsReader && verifyExpiry) test.setTimeout(420_000);
   for (const origin of [httpsWeb, httpsReader]) {
     if (!origin) continue;

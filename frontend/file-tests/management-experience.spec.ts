@@ -45,7 +45,7 @@ async function member(page: Page, permissionKeys: string[]) {
   const access = readPreviewAccess();
   const credentials = {
     ...access,
-    username: 'management-' + suffix + '@clouddrive.test',
+    username: 'management-' + suffix + '@neocloud.test',
     password: randomUUID(),
   };
   await write(page, '/users', 'POST', {
@@ -158,7 +158,7 @@ test('用户资料编辑只读取用户，创建页仍要求角色目录', async
   ).role as { id: string };
   const target = (
     await write(page, '/users', 'POST', {
-      email: `profile-target-${suffix}@clouddrive.test`,
+      email: `profile-target-${suffix}@neocloud.test`,
       password: randomUUID(),
       name: `资料目标-${suffix}`,
       roleIds: [role.id],
@@ -222,7 +222,7 @@ test('用户资料编辑只读取用户，创建页仍要求角色目录', async
   await page.getByRole('textbox', { name: '姓名', exact: true }).fill(`新成员-${suffix}`);
   await page
     .getByRole('textbox', { name: '邮箱', exact: true })
-    .fill(`created-${suffix}@clouddrive.test`);
+    .fill(`created-${suffix}@neocloud.test`);
   await page.getByLabel('初始密码', { exact: true }).fill(randomUUID());
   const targetRole = page.getByRole('checkbox', { name: `资料目标-${suffix}`, exact: true });
   await expect(targetRole).not.toBeChecked();

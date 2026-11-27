@@ -38,7 +38,7 @@
 - 新增能力时，除修改实现和测试，还必须在[文档治理规范](../development/documentation-governance.md)中完成影响评估。
 
 
-控制台为独立 Next 进程，Go 不托管页面。运行摘要由 `/api/console/v1/system/runtime` 和受保护的 management 转发呈现，见 [部署说明](clouddrive-deployment.md)。
+控制台为独立 Next 进程，Go 不托管页面。运行摘要由 `/api/console/v1/system/runtime` 和受保护的 management 转发呈现，见 [部署说明](neocloud-deployment.md)。
 
 WebDAV 连接当前提供 `/home/connections` 与独立 `/dav/{connectionId}/...` 协议，复用 files/IAM/Storage 和传输预算；SQLite/HTTP验证包含33MiB未知长度写入、CAS交错、范围下载、密码轮换、权限撤回及服务重启。实际系统挂载、LOCK/UNLOCK、任意扩展属性和外部生产资源仍不在验证承诺内，详见[文件管理](file-management.md)。
 

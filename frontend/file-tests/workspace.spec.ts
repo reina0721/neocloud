@@ -1,12 +1,10 @@
+import { readPreviewAccess } from './reading-fixture';
 import { test, expect, type Page } from './preview-test';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import AxeBuilder from '@axe-core/playwright';
-const accessPath = resolve(
-  __dirname,
-  process.env.CLOUDDRIVE_FILE_TEST_ACCESS ?? '../../.data/preview-access.json',
-);
+const accessPath = resolve(__dirname, readPreviewAccess().path);
 async function access() {
   return JSON.parse((await readFile(accessPath, 'utf8')).replace(/^\uFEFF/, '')) as {
     username: string;

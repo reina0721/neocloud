@@ -3,7 +3,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$containerName = "clouddrive-messaging-rabbitmq-43-test"
+$containerName = "neocloud-messaging-rabbitmq-43-test"
 $testUser = "messaging_integration"
 $testPassword = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(24))
 

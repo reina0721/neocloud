@@ -8,7 +8,7 @@ async function ready(page: Page, path: string) {
 }
 
 async function clearOverrides(page: Page) {
-  await page.evaluate(() => window.localStorage.removeItem('clouddrive.navigation-admin'));
+  await page.evaluate(() => window.localStorage.removeItem('neocloud.navigation-admin'));
 }
 
 test('菜单标题覆盖与隐藏立即作用于侧栏', async ({ page }) => {

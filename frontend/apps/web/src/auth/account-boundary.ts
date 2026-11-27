@@ -2,8 +2,6 @@ import {
   createLocalStorage,
   createPersistStore,
   createHydrationLifecycle,
-  isProductStorageKey,
-  legacyStorageKey,
 } from '@neocloud/state-foundation';
 import { useWorkspaceStore } from '../state/use-workspace-store';
 import { useWorkbenchStore } from '../state/use-workbench-store';
@@ -23,7 +21,6 @@ const owner = createPersistStore<{ userId: string | null }, { userId: string | n
   },
 );
 const deviceKeys = new Set(['neocloud.shell', 'neocloud.auth-mock', 'neocloud.auth-owner']);
-for (const key of [...deviceKeys]) deviceKeys.add(legacyStorageKey(key));
 
 /** Called before the authorized subtree mounts. Identity-changing navigation reloads Plugin modules. */
 export function applyAccountBoundary(userId: string | null): void {
@@ -36,7 +33,7 @@ export function applyAccountBoundary(userId: string | null): void {
     for (const storage of [window.localStorage, window.sessionStorage]) {
       const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index));
       for (const key of keys)
-        if (key && isProductStorageKey(key) && !deviceKeys.has(key)) storage.removeItem(key);
+        if (key?.startsWith('neocloud.') && !deviceKeys.has(key)) storage.removeItem(key);
     }
     useWorkspaceStore.setState({ records: {} });
     useWorkbenchStore.setState({ recents: [], favorites: [] });

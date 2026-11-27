@@ -23,7 +23,7 @@ import (
 
 const (
 	participantName          = "files.offline.source"
-	sourceUserAgent          = "clouddrive-offline/1"
+	sourceUserAgent          = "neocloud-offline/1"
 	sourceMaxIdleConnections = 16
 	sourceMaxHostConnections = 2
 	sourceMaxHostnameBytes   = 253

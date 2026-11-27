@@ -1,3 +1,4 @@
+import { readPreviewAccess } from './reading-fixture';
 import { test, expect } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -8,15 +9,7 @@ test.use({ actionTimeout: 15_000 });
 test('大文件暂停、跨路由、刷新重选校验、断点接续和原生下载', async ({ page }) => {
   test.setTimeout(180_000);
   const access = JSON.parse(
-    (
-      await readFile(
-        resolve(
-          __dirname,
-          process.env.CLOUDDRIVE_FILE_TEST_ACCESS ?? '../../.data/preview-access.json',
-        ),
-        'utf8',
-      )
-    ).replace(/^\uFEFF/, ''),
+    (await readFile(resolve(__dirname, readPreviewAccess().path), 'utf8')).replace(/^\uFEFF/, ''),
   ) as { username: string; password: string };
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));

@@ -84,7 +84,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 func main() {
@@ -120,7 +120,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 func main() {
@@ -157,7 +157,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 func main() {
@@ -203,7 +203,7 @@ package user
 import (
 	"context"
 
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 type Gateway struct {

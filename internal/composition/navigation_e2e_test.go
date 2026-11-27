@@ -77,14 +77,14 @@ func TestSavedSharesLifecyclePinCASAuthorizationAndRestart(t *testing.T) {
 	defer func() { stop() }()
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "shortcut-owner@clouddrive.test", "name": "原文件所有者", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "shortcut-owner@neocloud.test", "name": "原文件所有者", "password": password}, 200)
 	role := owner.request(t, "POST", "/roles", map[string]any{"name": "保存分享用户", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	roleID := role["id"].(string)
 	owner.request(t, "PUT", "/native/iam/roles/"+roleID+"/permissions", map[string]any{"expectedRoleVersion": 1, "permissionKeys": []string{"files:read", "files:write"}}, 200)
-	owner.request(t, "POST", "/users", map[string]any{"email": "shortcut-member@clouddrive.test", "name": "引用所有者", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
+	owner.request(t, "POST", "/users", map[string]any{"email": "shortcut-member@neocloud.test", "name": "引用所有者", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
 	member := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
 	member.request(t, "GET", "/auth/csrf", nil, 200)
-	member.request(t, "POST", "/auth/login", map[string]string{"email": "shortcut-member@clouddrive.test", "password": password}, 200)
+	member.request(t, "POST", "/auth/login", map[string]string{"email": "shortcut-member@neocloud.test", "password": password}, 200)
 	root := owner.request(t, "POST", "/native/files/folders", map[string]string{"name": "原分享目录", "parentId": ""}, 200)["id"].(string)
 	original := owner.request(t, "POST", "/native/files/text", map[string]string{"name": "原始.txt", "parentId": root, "text": "不能被引用删除的内容", "key": "shortcut-original-fixture"}, 200)["id"].(string)
 	share := owner.request(t, "POST", "/native/files/shares", map[string]string{"rootId": root, "password": password}, 200)
@@ -222,7 +222,7 @@ func TestSavedSharesLifecyclePinCASAuthorizationAndRestart(t *testing.T) {
 	owner.request(t, "PUT", "/native/iam/roles/"+roleID+"/permissions", map[string]any{"expectedRoleVersion": 4, "permissionKeys": []string{"files:read", "files:write"}}, 200)
 	// IAM权限变更会撤销旧会话；恢复权限后仍需重新登录，不能复活旧Cookie。
 	member.request(t, "GET", "/auth/csrf", nil, 200)
-	member.request(t, "POST", "/auth/login", map[string]string{"email": "shortcut-member@clouddrive.test", "password": password}, 200)
+	member.request(t, "POST", "/auth/login", map[string]string{"email": "shortcut-member@neocloud.test", "password": password}, 200)
 	copiedID := copied["id"].(string)
 	owner.request(t, "POST", "/native/files/"+root+"/trash", nil, 200)
 	shortcutRedirect(t, member, copiedID, 404)

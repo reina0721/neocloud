@@ -18,8 +18,8 @@ vi.mock('../auth/registration-policy', () => ({
 vi.mock('next/navigation', () => ({ useSearchParams: () => new URLSearchParams() }));
 
 function renderAuth(kind: 'login' | 'expired' | 'register', mode: 'backend' | 'mock') {
-  vi.stubEnv('NEXT_PUBLIC_AUTH_MODE', mode);
-  vi.stubEnv('NEXT_PUBLIC_AUTH_API_BASE_URL', '/api/console/v1');
+  vi.stubEnv('NEXT_PUBLIC_NEOCLOUD_AUTH_MODE', mode);
+  vi.stubEnv('NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL', '/api/console/v1');
   render(
     <FrontendI18nProvider
       runtime={createFrontendI18n({

@@ -17,16 +17,18 @@
 
 ## 安装与部署
 
-以下指南以 [v0.3.3 正式版](https://github.com/reina0721/neocloud/releases/tag/v0.3.3) 为例，从安装依赖写到首次设置和日常维护。
+以下指南以 `v0.4.0` 的发布格式为例，从安装依赖写到首次设置和日常维护。发布包以 [GitHub Releases](https://github.com/reina0721/neocloud/releases) 上的公开标签为准。
+
+从 v0.4.0 起，安装和升级使用 NeoCloud 格式。更早的发行版请保留原实例和备份，为 NeoCloud 选择独立安装目录和数据位置。
 
 | 部署方式 | 系统与架构 | 目标机需要 | 默认 Web 端口 |
 | --- | --- | --- | --- |
 | [原生整包](docs/operations/backend-archive.md#运行原生-go-与-web-整包) | Windows amd64、Linux amd64/arm64 | 签名整包和 Cosign，网页由 Go 宿主提供 | `8080` |
-| [Docker 正式版](docs/operations/clouddrive-deployment.md#release-下载版安装与升级) · [离线安装](docs/operations/clouddrive-deployment.md#自动化与离线安装) | Linux amd64/arm64 | Docker Engine 和 Compose，镜像从 GitHub Release 归档导入 | `4173` |
-| [Docker 源码构建](docs/operations/clouddrive-deployment.md#从源码部署) | Linux amd64/arm64 | Git、Docker Engine、Compose 和构建所需的网络访问 | `4180` |
-| [无 Docker 源码部署](docs/operations/clouddrive-deployment.md#构建与进程) | Windows amd64、Linux amd64/arm64 | 构建用 Git、Go 和 Node，运行打包后的 Web Host 用 Node | `4173` |
+| [Docker 正式版](docs/operations/neocloud-deployment.md#release-下载版安装与升级) · [离线安装](docs/operations/neocloud-deployment.md#自动化与离线安装) | Linux amd64/arm64 | Docker Engine、Compose 和 Cosign，镜像从 GitHub Release 归档导入 | `4173` |
+| [Docker 源码构建](docs/operations/neocloud-deployment.md#从源码部署) | Linux amd64/arm64 | Git、Docker Engine、Compose 和构建所需的网络访问 | `4180` |
+| [无 Docker 源码部署](docs/operations/neocloud-deployment.md#构建与进程) | Windows amd64、Linux amd64/arm64 | 构建用 Git、Go 和 Node，运行打包后的 Web Host 用 Node | `4173` |
 
-首次启动后，访问所选入口的 `/setup`，使用该实例的设置令牌创建管理员。服务器只监听回环地址时，可用 SSH 转发完成设置，再配置对外访问。[远程访问与 HTTPS](docs/operations/clouddrive-deployment.md#远程访问与-https)
+首次启动后，访问所选入口的 `/setup`，使用该实例的设置令牌创建管理员。服务器只监听回环地址时，可用 SSH 转发完成设置，再配置对外访问。[远程访问与 HTTPS](docs/operations/neocloud-deployment.md#远程访问与-https)
 
 ## 源码开发
 
@@ -75,6 +77,6 @@ node scripts/verify-changed.mjs
 
 ## 来源与许可
 
-项目采用 [Apache-2.0](LICENSE)，保留 [NOTICE](NOTICE) 与第三方许可。后端源于 community-go，前端源于 console-web；导入的源码快照、分支和完整提交号见 [SOURCES.json](SOURCES.json) 与[来源记录](docs/provenance/README.md)。Go module 为 `github.com/reina0721/neocloud`，GitHub 仓库地址为 `reina0721/neocloud`。旧发行版及已有实例使用[改名与升级指南](docs/operations/neocloud-rename.md)。
+项目采用 [Apache-2.0](LICENSE)，保留 [NOTICE](NOTICE) 与第三方许可。后端源于 community-go，前端源于 console-web；导入的源码快照、分支和完整提交号见 [SOURCES.json](SOURCES.json) 与[来源记录](docs/provenance/README.md)。Go module 为 `github.com/reina0721/neocloud`，GitHub 仓库地址为 `reina0721/neocloud`。
 
 缺陷、需求和使用问题请参阅[支持指南](SUPPORT.md)，潜在漏洞请通过[私密安全渠道](SECURITY.md)报告。

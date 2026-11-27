@@ -5,7 +5,7 @@ import { defaultPreferences, type Preferences } from '@neocloud/surface/preferen
 import { createHostPreferencesPort } from '../host/preferences-port';
 import { useShellStore } from '../state/use-shell-store';
 
-const PERSIST_KEY = 'clouddrive.shell';
+const PERSIST_KEY = 'neocloud.shell';
 
 function storedPreferences(): Preferences {
   const raw = window.localStorage.getItem(PERSIST_KEY);

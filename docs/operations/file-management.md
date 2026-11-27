@@ -44,11 +44,11 @@
 
 文本和 Markdown 应用行的“编辑映射”可从已关联的扩展名中选择后缀、指定菜单名称并排序。清空映射会隐藏该应用的新建项，“恢复内置映射”会恢复当前关联所允许的内置项。移除关联同时移除使用该扩展名的映射。保存后，下次打开“新建”菜单时按应用启用状态和窗口平台筛选。
 
-使用“添加网页应用”设置 HTTPS 模板、扩展名、平台、图标及大小上限。最大文件大小填写字节数，0 表示不限。兼容同一后缀的网页应用可参与默认打开方式。文件所有者看到接收站点并确认后，站点可用五分钟有效的地址读取当前版本。阅读器可在页面内显示，拒绝嵌入的服务可改用新标签。远端阅读器需要能够访问 clouddrive 的网页地址。当前支持模板查询值中的文件地址、名称及主题。
+使用“添加网页应用”设置 HTTPS 模板、扩展名、平台、图标及大小上限。最大文件大小填写字节数，0 表示不限。兼容同一后缀的网页应用可参与默认打开方式。文件所有者看到接收站点并确认后，站点可用五分钟有效的地址读取当前版本。阅读器可在页面内显示，拒绝嵌入的服务可改用新标签。远端阅读器需要能够访问 neocloud 的网页地址。当前支持模板查询值中的文件地址、名称及主题。
 
-普通网页阅读器的精确 HTTPS Origin 必须加入 Go 的 `http.cors.allowedOrigins`（环境变量 `APP_HTTP__CORS__ALLOWEDORIGINS`，值为 JSON 数组）。Docker Compose 的 `ALLOWED_ORIGINS` 同时配置 Go 和 Web Host。单独启动 Next Web Host 时，其 `CLOUDDRIVE_ALLOWED_ORIGINS` 须包含相同的阅读器来源。应用表会提示已启用阅读器的部署状态。Go 在签发和读取临时地址时复查来源策略。未获准时可选用已启用且兼容格式的内置阅读器。WOPI 通过其协议独立校验。
+普通网页阅读器的精确 HTTPS Origin 必须加入 Go 的 `http.cors.allowedOrigins`（环境变量 `NEOCLOUD_APP_HTTP__CORS__ALLOWEDORIGINS`，值为 JSON 数组）。Docker Compose 的 `ALLOWED_ORIGINS` 同时配置 Go 和 Web Host。单独启动 Next Web Host 时，其 `NEOCLOUD_ALLOWED_ORIGINS` 须包含相同的阅读器来源。应用表会提示已启用阅读器的部署状态。Go 在签发和读取临时地址时复查来源策略。未获准时可选用已启用且兼容格式的内置阅读器。WOPI 通过其协议独立校验。
 
-使用“添加 WOPI 应用”检查自托管文档服务的 HTTPS 发现地址。确认可用格式后应用到草稿，再统一保存。发现结果包含与发现地址同源的查看动作及对应的可用编辑动作。应用可改名、限制格式与平台、设为兼容格式默认项或停用。服务端按既有来源网络策略访问发现地址，文档服务需能回调 clouddrive 的 `/wopi/files`。部署代理的访问日志应排除回调查询中的访问令牌。
+使用“添加 WOPI 应用”检查自托管文档服务的 HTTPS 发现地址。确认可用格式后应用到草稿，再统一保存。发现结果包含与发现地址同源的查看动作及对应的可用编辑动作。应用可改名、限制格式与平台、设为兼容格式默认项或停用。服务端按既有来源网络策略访问发现地址，文档服务需能回调 neocloud 的 `/wopi/files`。部署代理的访问日志应排除回调查询中的访问令牌。
 
 发现结果可同时列出编辑格式。旧应用可通过“重新发现”更新动作。管理员启用“允许在线编辑”后，持有文件写权限的所有者可在打开时选择“允许编辑”。会话有效期两小时，锁有效期最长三十分钟并可续期，单次保存最多 8 MiB。保存沿用名称、配额及历史保留策略。写锁清单会标明 WOPI，所有者可从清单释放。
 
@@ -90,7 +90,7 @@ HTTP/HTTPS离线任务位于 `/home/downloads`，支持单链接、最多20行�
 
 `files.offline` 由既有Scheduler驱动，关闭Scheduler或该任务后仍可读记录、取消和清理，新建/继续明确不可用。默认每账号200条、全局2000条、每批20条、并发1、1秒调度、20秒租约/5秒续租、单次15分钟、最多20次自动领取（下载与清理共用）、每次64个逻辑来源请求；硬预算只能调小。清理耗尽自动预算会保留待办，显式取消/移除仍能维护清理；从头下载重新建立预算。内容和暂存仍使用原文件配额及单文件上限，不创建第二套存储。
 
-HTTP来源默认仅公网HTTP(S)，逐跳验证全部DNS结果并钉住实际连接IP，不使用环境代理，不转发网页登录Cookie、Authorization或Referer，HTTPS不降级。`files.offline.source.allowedNetworks` 仅供明确受信网络的受控部署；云元数据地址始终拒绝。浏览器夹具必须使用隔离数据库并显式设置 `CLOUDDRIVE_FILE_TEST_OFFLINE_SOURCE_ALLOWED=1`，普通预览不放开回环来源。超过 `files.search.treeEntries` 时任务列表标记目录信息受限，保存相关操作拒绝使用截断树，取消和记录清理保持可用。
+HTTP来源默认仅公网HTTP(S)，逐跳验证全部DNS结果并钉住实际连接IP，不使用环境代理，不转发网页登录Cookie、Authorization或Referer，HTTPS不降级。`files.offline.source.allowedNetworks` 仅供明确受信网络的受控部署；云元数据地址始终拒绝。浏览器夹具必须使用隔离数据库并显式设置 `NEOCLOUD_FILE_TEST_OFFLINE_SOURCE_ALLOWED=1`，普通预览不放开回环来源。超过 `files.search.treeEntries` 时任务列表标记目录信息受限，保存相关操作拒绝使用截断树，取消和记录清理保持可用。
 
 ### BT任务与受信节点
 
@@ -132,7 +132,7 @@ Storage 通过租约内的可寻址流读写内容，local/S3-compatible 都有�
 
 本人当前图片可从文件列表或图库打开大画布；沿当前页面和目录的排序切换符合图片应用规则的相邻项，在照片导航工具栏内也可按左右方向键。拍摄信息显示浏览器解码尺寸和真实格式。打开信息面板时，浏览器在独立线程中读取不超过 12 MiB 的原图 EXIF，最多等待 5 秒；位置默认收起。文件原件与服务端记录保持原样。无 EXIF、解析失败或超限时仍可浏览原图。历史版本、公开分享、上传提取和元数据检索不在此查看器的处理范围。
 
-本人文件可打开 UTF-8 的 `.drawio` 图表，或从新建菜单选择目标目录和文件名。图表窗口会提示接收文件名和图表内容的编辑器来源，确认加载后再连接。内置默认服务是 `https://embed.diagrams.net/`，构建前设置 `NEXT_PUBLIC_CLOUDDRIVE_DRAWIO_URL` 可使用自托管的独立 HTTPS 编辑器。HTTP 地址仅允许回环本机，自托管编辑器须支持 Draw.io JSON 嵌入协议。编辑器须使用不同主机名，避免两个端口共享文件站点的 Cookie。
+本人文件可打开 UTF-8 的 `.drawio` 图表，或从新建菜单选择目标目录和文件名。图表窗口会提示接收文件名和图表内容的编辑器来源，确认加载后再连接。内置默认服务是 `https://embed.diagrams.net/`，构建前设置 `NEXT_PUBLIC_NEOCLOUD_DRAWIO_URL` 可使用自托管的独立 HTTPS 编辑器。HTTP 地址仅允许回环本机，自托管编辑器须支持 Draw.io JSON 嵌入协议。编辑器须使用不同主机名，避免两个端口共享文件站点的 Cookie。
 
 编辑器内点击保存才发布图表内容。保存沿用本人文件大小限制、修订冲突检查和版本历史。冲突时可下载草稿；退出前会提示可能丢失的修改。手机端打开时使用简洁工具栏并收起两侧面板。普通上传和下载仍使用原有文件入口。管理员可通过文件浏览应用设置调整启用、平台、扩展名和新建映射。实时协作及公开分享图表编辑属于后续范围。
 
@@ -225,11 +225,11 @@ Storage 通过租约内的可寻址流读写内容，local/S3-compatible 都有�
 
 ## 本地预览与验证
 
-从根目录执行 `node scripts/dev.mjs --preview` 启动独立 SQLite、文件与传输环境，默认 WebUI 为 `http://127.0.0.1:4180/home`，API 8120，management 9120。数据与账号位于忽略的 `.data/preview/`；Ctrl+C 停止拥有的进程，重启保留数据。完整参数与环境隔离规则见[本地开发](../getting-started/local-development.md)。
+从根目录执行 `node scripts/dev.mjs --preview` 启动独立 SQLite、文件与传输环境，默认 WebUI 为 `http://127.0.0.1:4180/home`，API 8120，management 9120。数据与账号位于忽略的 `.data/neocloud-preview/`；Ctrl+C 停止拥有的进程，重启保留数据。完整参数与环境隔离规则见[本地开发](../getting-started/local-development.md)。
 
-既有 Windows `Start-FilePreview.ps1` 仍使用 `.data/file-preview/` 与 `.data/preview-access.json`。浏览器配置优先读取新预览资料，缺少时兼容既有资料；可用 `CLOUDDRIVE_FILE_TEST_ACCESS` 明确指定文件。配置和阅读器用例共用一个入口，校验回环 HTTP 地址，不再绑定某次测试使用的端口。凭据、Cookie、截图与 trace 留在忽略目录；trace 可能包含会话信息，不提交或公开分享。
+Windows `Start-FilePreview.ps1` 同样使用 `.data/neocloud-preview/access.json`。可用 `NEOCLOUD_FILE_TEST_ACCESS` 指定其他隔离实例的访问资料。配置和阅读器用例共用一个入口并校验回环 HTTP 地址。凭据、Cookie、截图与 trace 留在忽略目录；trace 可能包含会话信息，不提交或公开分享。
 
-完整浏览器验收为每批准备独立数据库和存储，接受预览资料中的 `publicationOrigin` 和 `offlineSourceAllowed` 声明。需要对照账户的用例只在本例共享或切换明确的夹具账户。网页阅读器验收需要两个回环 HTTPS Origin，使用 `CLOUDDRIVE_TEST_WEB_HTTPS_ORIGIN` 指定 Web 发布入口，使用 `CLOUDDRIVE_TEST_WEB_PREVIEW_ORIGIN` 指定能通过浏览器跨域请求读取回调正文的阅读器。按上文配置精确的阅读器 Origin 后执行 `file-applications.spec.ts`。设置 `CLOUDDRIVE_TEST_WEB_PREVIEW_EXPIRY=1` 可等待实际五分钟票据到期。
+完整浏览器验收为每批准备独立数据库和存储，接受预览资料中的 `publicationOrigin` 和 `offlineSourceAllowed` 声明。需要对照账户的用例只在本例共享或切换明确的夹具账户。网页阅读器验收需要两个回环 HTTPS Origin，使用 `NEOCLOUD_TEST_WEB_HTTPS_ORIGIN` 指定 Web 发布入口，使用 `NEOCLOUD_TEST_WEB_PREVIEW_ORIGIN` 指定能通过浏览器跨域请求读取回调正文的阅读器。按上文配置精确的阅读器 Origin 后执行 `file-applications.spec.ts`。设置 `NEOCLOUD_TEST_WEB_PREVIEW_EXPIRY=1` 可等待实际五分钟票据到期。
 
 按改动选择真实链路；模拟和拦截式失败场景不能代替真实服务：
 

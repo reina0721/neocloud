@@ -44,7 +44,7 @@ func TestHistoryPreferencesHTTPQuotaChangeAndAtomicPublication(t *testing.T) {
 	})
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "retention-owner@clouddrive.test", "name": "版本保留验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "retention-owner@neocloud.test", "name": "版本保留验收", "password": password}, 200)
 	base := "/native/files"
 	original := owner.request(t, "GET", base+"/preferences/history", nil, 200)
 	if original["enabled"] != true || original["maxVersions"] != float64(0) {
@@ -127,10 +127,10 @@ func TestHistoryPreferencesHTTPQuotaChangeAndAtomicPublication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	owner.request(t, "POST", "/users", map[string]any{"email": "retention-other@clouddrive.test", "password": otherPassword, "name": "其他账号", "roleIds": []string{roleID}, "status": "active"}, 200)
+	owner.request(t, "POST", "/users", map[string]any{"email": "retention-other@neocloud.test", "password": otherPassword, "name": "其他账号", "roleIds": []string{roleID}, "status": "active"}, 200)
 	other := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
 	other.request(t, "GET", "/auth/csrf", nil, 200)
-	other.request(t, "POST", "/auth/login", map[string]string{"email": "retention-other@clouddrive.test", "password": otherPassword}, 200)
+	other.request(t, "POST", "/auth/login", map[string]string{"email": "retention-other@neocloud.test", "password": otherPassword}, 200)
 	isolated := other.request(t, "GET", base+"/preferences/history", nil, 200)
 	if isolated["revision"] != float64(0) || isolated["enabled"] != true {
 		t.Fatal("账号策略没有隔离")

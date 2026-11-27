@@ -27,7 +27,6 @@ import (
 )
 
 const SessionCookieName = "__Host-neocloud_iam_session"
-const LegacySessionCookieName = "__Host-clouddrive_iam_session"
 
 const (
 	defaultListLimit = 20

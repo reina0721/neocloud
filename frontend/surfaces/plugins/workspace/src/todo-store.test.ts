@@ -1,13 +1,10 @@
 // @vitest-environment jsdom
-import { legacyStorageKey } from '@neocloud/state-foundation';
 import { rehydrateStore } from '@neocloud/state-foundation';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useWorkspaceTodoStore, WORKSPACE_TODO_STORAGE_KEY } from '../stores/todo-store';
 import { parseTodoPersisted } from './todo-store-schema';
 import { WORKSPACE_TODO_IDS } from './workspace-data';
-
-const WORKSPACE_TODO_STORAGE_LEGACY_KEY = legacyStorageKey(WORKSPACE_TODO_STORAGE_KEY);
 
 const wait = (ms: number): Promise<void> =>
   new Promise((resolve) => {
@@ -31,7 +28,7 @@ describe('todo store（plugin-scoped persist）', () => {
     useWorkspaceTodoStore.getState().toggleTodo('review-access');
     expect(useWorkspaceTodoStore.getState().completedIds).toEqual(['sync-metrics']);
 
-    const raw = window.localStorage.getItem(WORKSPACE_TODO_STORAGE_LEGACY_KEY);
+    const raw = window.localStorage.getItem(WORKSPACE_TODO_STORAGE_KEY);
     expect(raw).toBeTruthy();
     const stored = JSON.parse(raw ?? '{}') as {
       state?: { completedIds?: readonly string[] };
@@ -51,7 +48,7 @@ describe('todo store（plugin-scoped persist）', () => {
 
   it('损坏记录 → 默认值 + 非阻塞 warning，且不覆盖原记录', async () => {
     const corrupt = JSON.stringify({ state: { completedIds: 'broken' }, version: 1 });
-    window.localStorage.setItem(WORKSPACE_TODO_STORAGE_LEGACY_KEY, corrupt);
+    window.localStorage.setItem(WORKSPACE_TODO_STORAGE_KEY, corrupt);
 
     rehydrateStore(useWorkspaceTodoStore);
     await wait(40);
@@ -60,7 +57,7 @@ describe('todo store（plugin-scoped persist）', () => {
     expect(state.completedIds).toEqual([]);
     expect(state.warning).toBe('invalid-record');
     // 原记录保留：只有用户下一次主动变更才会写回。
-    expect(window.localStorage.getItem(WORKSPACE_TODO_STORAGE_LEGACY_KEY)).toBe(corrupt);
+    expect(window.localStorage.getItem(WORKSPACE_TODO_STORAGE_KEY)).toBe(corrupt);
   });
 });
 

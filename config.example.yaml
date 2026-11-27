@@ -9,8 +9,8 @@
 # 如果手工复制本文件为 config.yaml，仍需先执行 db migrate up 再启动 Service。
 # 详细关系见 docs/configuration/README.md 与 docs/getting-started/local-development.md。
 #
-# 环境变量使用 APP_ 前缀，并以双下划线分隔嵌套字段。
-# 例如 APP_DATABASE__DRIVER、APP_DATABASE__DSN、APP_LOGGER__LEVEL。
+# 环境变量使用 NEOCLOUD_APP_ 前缀，并以双下划线分隔嵌套字段。
+# 例如 NEOCLOUD_APP_DATABASE__DRIVER、NEOCLOUD_APP_DATABASE__DSN、NEOCLOUD_APP_LOGGER__LEVEL。
 
 logger:
   # 运行环境：development（开发）或 production（生产）。
@@ -58,9 +58,9 @@ database:
 
   # PostgreSQL/MySQL 的 DSN 不应写入配置文件，改用环境变量，例如：
   # PostgreSQL:
-  #   $env:APP_DATABASE__DSN = 'postgres://<user>:<password>@localhost:5432/<database>?sslmode=disable'
+  #   $env:NEOCLOUD_APP_DATABASE__DSN = 'postgres://<user>:<password>@localhost:5432/<database>?sslmode=disable'
   # MySQL:
-  #   $env:APP_DATABASE__DSN = '<user>:<password>@tcp(localhost:3306)/<database>?parseTime=true'
+  #   $env:NEOCLOUD_APP_DATABASE__DSN = '<user>:<password>@tcp(localhost:3306)/<database>?parseTime=true'
 
   pool:
     # 最大打开连接数；0 使用 database 包默认值，负数非法。
@@ -90,7 +90,7 @@ cache:
   redis:
     address: 127.0.0.1:6379
     username: ""
-    # 密码不要写入配置文件，使用 APP_CACHE__REDIS__PASSWORD。
+    # 密码不要写入配置文件，使用 NEOCLOUD_APP_CACHE__REDIS__PASSWORD。
     password: ""
     database: 0
     dialTimeout: 5s
@@ -129,8 +129,8 @@ storage:
     endpoint: ""
     region: us-east-1
     bucket: ""
-    # 凭据不要写入配置文件，使用 APP_STORAGE__S3__ACCESSKEYID 和
-    # APP_STORAGE__S3__SECRETACCESSKEY。
+    # 凭据不要写入配置文件，使用 NEOCLOUD_APP_STORAGE__S3__ACCESSKEYID 和
+    # NEOCLOUD_APP_STORAGE__S3__SECRETACCESSKEY。
     accessKeyId: ""
     secretAccessKey: ""
     usePathStyle: false
@@ -141,7 +141,7 @@ storage:
     endpoint: ""
     region: us-east-1
     bucket: ""
-    # 使用 APP_STORAGE__MINIO__ACCESSKEYID 和 APP_STORAGE__MINIO__SECRETACCESSKEY。
+    # 使用 NEOCLOUD_APP_STORAGE__MINIO__ACCESSKEYID 和 NEOCLOUD_APP_STORAGE__MINIO__SECRETACCESSKEY。
     accessKeyId: ""
     secretAccessKey: ""
     usePathStyle: true
@@ -225,7 +225,7 @@ auth:
     leeway: 30s
     maxResponseBodyBytes: 1048576
 
-# 本地身份、凭据与会话由 IAM 独立拥有；setupToken 应通过 APP_IAM__LOCAL__SETUPTOKEN 注入。
+# 本地身份、凭据与会话由 IAM 独立拥有；setupToken 应通过 NEOCLOUD_APP_IAM__LOCAL__SETUPTOKEN 注入。
 iam:
   local:
     # 仅显式 HTTP 部署启用；使用无 __Host- 前缀的 HttpOnly Cookie，保留 CSRF 校验。

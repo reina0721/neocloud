@@ -41,7 +41,7 @@ describe('独立运行信息读取', () => {
     ] as const) {
       const request = vi
         .fn<typeof fetch>()
-        .mockResolvedValueOnce(new Response(null, { headers: { 'X-CloudDrive-Maintenance': '1' } }))
+        .mockResolvedValueOnce(new Response(null, { headers: { 'X-NeoCloud-Maintenance': '1' } }))
         .mockResolvedValueOnce(new Response(null, { status }));
       const port = createRuntimePort(metadata, () => 'account', request);
       if (status === 200 || status === 403)

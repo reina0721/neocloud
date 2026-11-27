@@ -39,7 +39,7 @@ export function parseAuthConfig(
     throw new ConfigError('Invalid authentication configuration', [
       {
         path: 'auth.apiBaseUrl',
-        message: 'Backend authentication requires NEXT_PUBLIC_AUTH_API_BASE_URL to be set',
+        message: 'Backend authentication requires NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL to be set',
       },
     ]);
   }
@@ -168,8 +168,8 @@ export function resolveConfig(
   let auth: AuthConfig = { mode: 'mock' };
   try {
     auth = parseAuthConfig(
-      rawEnv.NEXT_PUBLIC_AUTH_MODE,
-      rawEnv.NEXT_PUBLIC_AUTH_API_BASE_URL,
+      rawEnv.NEXT_PUBLIC_NEOCLOUD_AUTH_MODE,
+      rawEnv.NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL,
       isProduction,
     );
   } catch (err) {

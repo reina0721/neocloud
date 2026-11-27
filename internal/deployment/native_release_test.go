@@ -38,7 +38,6 @@ func TestNativeCandidatesFiltersPublishedPlatformAssetsAndSorts(t *testing.T) {
 	}
 	page := make([]nativeReleaseSummary, 30)
 	page[0] = release("v0.9.0", "uploaded")
-	page[0].Assets[0].Name = strings.Replace(page[0].Assets[0].Name, "clouddrive_", "neocloud_", 1)
 	page[1] = release("v0.12.0", "uploaded")
 	page[1].Draft = true
 	page[2] = release("v0.13.0", "uploaded")
@@ -46,7 +45,7 @@ func TestNativeCandidatesFiltersPublishedPlatformAssetsAndSorts(t *testing.T) {
 	page[3] = release("v0.14.0", "starter")
 	page[4] = release("v0.1.9", "uploaded")
 	page[5] = release("v0.15.0", "uploaded")
-	page[5].Assets[0].Name = "install.sh"
+	page[5].Assets[0].Name = strings.Replace(page[5].Assets[0].Name, "neocloud_", "clouddrive_", 1)
 	page[6] = release("v0.8.0", "uploaded")
 	page[6].Assets[0].Name = strings.Replace(page[6].Assets[0].Name, "_managed-go.zip", "_managed-full.zip", 1)
 	var calls int
@@ -121,8 +120,8 @@ func baselineNativeFixture(t *testing.T) []nativeZipTestEntry {
 	}
 	return []nativeZipTestEntry{
 		{name: nativeManifestFile, body: string(manifest), mode: 0400},
-		{name: "clouddrive.exe", body: "candidate", mode: 0500},
-		{name: "clouddrive-host.exe", body: "host", mode: 0500},
+		{name: "neocloud.exe", body: "candidate", mode: 0500},
+		{name: "neocloud-host.exe", body: "host", mode: 0500},
 	}
 }
 
@@ -139,8 +138,8 @@ func TestNativeArchiveIdentityAndUnsafeEntries(t *testing.T) {
 	for _, entry := range []nativeZipTestEntry{
 		{name: "../evil.exe", body: "escape", mode: 0500},
 		{name: `folder\evil.exe`, body: "escape", mode: 0500},
-		{name: "CLOuddrive.exe", body: "duplicate", mode: 0500},
-		{name: "link", body: "clouddrive.exe", mode: fs.ModeSymlink},
+		{name: "NEOcloud.exe", body: "duplicate", mode: 0500},
+		{name: "link", body: "neocloud.exe", mode: fs.ModeSymlink},
 	} {
 		t.Run(entry.name, func(t *testing.T) {
 			archive := writeNativeFixture(t, append(base, entry))
@@ -151,16 +150,11 @@ func TestNativeArchiveIdentityAndUnsafeEntries(t *testing.T) {
 	}
 }
 
-func TestNativeArchiveRequiresMatchingExecutableFamily(t *testing.T) {
+func TestNativeArchiveRejectsOldExecutableNames(t *testing.T) {
 	entries := baselineNativeFixture(t)
-	entries[1].name, entries[2].name = "neocloud.exe", "neocloud-host.exe"
-	manifest, _, err := inspectNativeFile(writeNativeFixture(t, entries), "v0.2.3", "windows", "amd64")
-	if err != nil || manifest.family != neoRelease {
-		t.Fatalf("无法读取 NeoCloud 原生程序：%v %v", manifest.family, err)
-	}
-	entries[2].name = "clouddrive-host.exe"
+	entries[1].name, entries[2].name = "clouddrive.exe", "clouddrive-host.exe"
 	if _, _, err := inspectNativeFile(writeNativeFixture(t, entries), "v0.2.3", "windows", "amd64"); err == nil {
-		t.Fatal("接受了不同命名系列的业务程序和宿主")
+		t.Fatal("接受了旧命名的原生程序")
 	}
 }
 

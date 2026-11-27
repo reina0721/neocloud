@@ -7,9 +7,9 @@
 只从已验证的 release tag/commit 导出 tracked files，不复制工作目录、`.git`、本地配置、`.data`、凭据、缓存或构建产物：
 
 ```bash
-git archive --format=tar --output=clouddrive.tar <release-tag>
+git archive --format=tar --output=neocloud.tar <release-tag>
 mkdir <target-directory>
-tar -xf clouddrive.tar -C <target-directory>
+tar -xf neocloud.tar -C <target-directory>
 ```
 
 `.scaffold/identity.yaml` 是迁移清单，不是长期 generator authority。复制者必须逐项确定并审阅：目标 module path、应用名/描述、binary、环境变量前缀、配置文件名、OCI source、CI repository guard 和来源记录。

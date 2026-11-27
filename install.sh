@@ -9,16 +9,13 @@ if [[ $# -gt 0 && $1 != -* ]]; then command_name=$1; shift; fi
 script_directory=
 if [[ -n ${BASH_SOURCE[0]:-} ]]; then script_directory=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd); fi
 root=${HOME:?}/neocloud
-legacy_root=$HOME/clouddrive
-installed_script=false
 if [[ -n $script_directory && -f $script_directory/.control/project ]]; then
   root=$script_directory
-  installed_script=true
 fi
 version=latest
 release_source=
 offline=false
-trust_dir=${NEOCLOUD_OFFLINE_TRUST_DIR:-${CLOUDDRIVE_OFFLINE_TRUST_DIR:-}}
+trust_dir=${NEOCLOUD_OFFLINE_TRUST_DIR:-}
 full_backup=false
 port=4173
 bind=0.0.0.0
@@ -42,7 +39,6 @@ follow=false
 tail_lines=100
 work=
 release_archive=
-release_family=neocloud
 stop_recovery=false
 old_version=
 enable_web=false
@@ -65,7 +61,7 @@ restore --backup-id ID --confirm-restore ID 用于完整恢复。
 首次安装可用 --enable-web-management 启用同址网页运维。
 upgrade 支持 --version；install/upgrade/check-update 支持 --release-dir 离线产物目录。
 高级选项：--public-url HTTP(S)根地址、--allow-origin 精确Origin（可重复）、--allow-http。
-首次安装需要 Linux、本机 Docker Engine、Docker Compose >=2.20、iproute2 (ss) 与标准 Linux 工具。
+首次安装需要 Linux、Docker Engine、Docker Compose >=2.20、Cosign、iproute2 (ss) 与标准 Linux 工具。
 新安装默认 ~/neocloud、0.0.0.0:4173、HTTP；API 与 management 不映射宿主机端口。
 HELP
 }
@@ -90,6 +86,35 @@ management_menu() {
       *) printf '请输入 0–8。\n' >&3; continue ;;
     esac
     if ! "$root/install.sh" "$operation"; then printf '操作失败，请查看上方原因。\n' >&3; fi
+  done
+}
+valid_version() { [[ $1 =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; }
+resolve_install_root() {
+  command -v realpath >/dev/null || fail '缺少 realpath，请先安装'
+  root=$(realpath -m -- "$root")
+  [[ $root != *$'\n'* && $root != *$'\r'* && $root != *,* && $root != / ]] || fail '安装路径不能为根目录或包含换行、逗号'
+}
+release_images_match() {
+  local file=$1 release=$2 architecture=$3
+  [[ -f $file && ! -L $file ]] &&
+    cmp -s -- "$file" <(printf 'API_IMAGE=neocloud-api:%s-%s\nWEB_IMAGE=neocloud-web:%s-%s\n' "$release" "$architecture" "$release" "$architecture")
+}
+require_installed_release_family() {
+  local marker record release directory file
+  for marker in current candidate; do
+    record="$root/.control/$marker"
+    [[ -e $record || -L $record ]] || continue
+    [[ -f $record && ! -L $record && ! -L $root/.control ]] || fail "实例版本记录无效：$marker"
+    release=$(cat -- "$record")
+    valid_version "$release" || fail "实例版本记录无效：$marker"
+    directory="$root/releases/$release"
+    file="$directory/images.env"
+    [[ ! -L $root/releases && ! -L $directory ]] || fail "实例版本 $release 的发布目录不能是符号链接。"
+    # 首次安装可能在原子保存签名包前中断。只允许 install 重试原候选，并由 prepare_release 验证对应产物。
+    if [[ $marker == candidate && $command_name == install && ! -e $root/.control/current &&
+          -f $root/.control/project && ! -e $directory ]]; then continue; fi
+    release_images_match "$file" "$release" amd64 || release_images_match "$file" "$release" arm64 ||
+      fail "实例版本 $release 的镜像引用不符合 NeoCloud 发布格式，请使用该实例原版本的安装管理程序。"
   done
 }
 [[ $command_name != help ]] || { usage; exit 0; }
@@ -121,15 +146,17 @@ while [[ $# -gt 0 ]]; do
     *) fail "未知参数：$1" ;;
   esac
 done
-if [[ $explicit_dir == false && $installed_script == false && -f $legacy_root/.control/project ]]; then
-  [[ ! -f $root/.control/project ]] || fail '同时检测到旧版和新版默认实例，请通过 --dir 指定实例目录'
-  root=$legacy_root
-fi
+resolve_install_root
+require_installed_release_family
 if [[ -z $command_name ]]; then
   if [[ $yes == true ]]; then command_name=install
   elif open_terminal; then
     if [[ -f $root/.control/current ]]; then management_menu; exit 0; fi
-    [[ $explicit_dir == true ]] || prompt '安装目录' "$root" root
+    if [[ $explicit_dir == false ]]; then
+      prompt '安装目录' "$root" root
+      resolve_install_root
+      require_installed_release_family
+    fi
     [[ $explicit_bind == true ]] || prompt '监听地址' "$bind" bind
     [[ $explicit_port == true ]] || prompt 'Web 端口' "$port" port
     printf '\n安装目录：%s\n监听地址：%s:%s\n版本：%s\n' "$root" "$bind" "$port" "$version" >&3
@@ -146,7 +173,7 @@ fi
 case $command_name in
   install|plan|upgrade|check-update|status|backup|start|stop|restart|logs|rollback|restore|enable-web-management|import-release|update-maintenance) ;;
   _prepare|_images|_serving|_config|_probe|_compat|_migrate|_start|_stop|_idle|_capture|_extract)
-    [[ ${CLOUDDRIVE_MAINTENANCE_ENGINE:-} == 1 ]] || fail '此命令由宿主维护进程调用' ;;
+    [[ ${NEOCLOUD_MAINTENANCE_ENGINE:-} == 1 ]] || fail '此命令由宿主维护进程调用' ;;
   *) fail "未知命令：$command_name" ;;
 esac
 if [[ $explicit_http == false && $public_origin == https://* ]]; then allow_http=false; fi
@@ -155,21 +182,14 @@ if [[ $explicit_http == false && $public_origin == https://* ]]; then allow_http
 [[ $check_plan == false || $command_name == plan ]] || fail '--check 只用于 plan'
 [[ $full_backup == false || $command_name == backup ]] || fail '--full 只用于 backup'
 [[ $(uname -s) == Linux ]] || fail '当前安装包只支持 Linux'
-for dependency in curl realpath sha256sum; do
+for dependency in curl sha256sum; do
   command -v "$dependency" >/dev/null || fail "缺少 $dependency，请先安装"
 done
-root=$(realpath -m -- "$root")
-[[ $root != *$'\n'* && $root != *$'\r'* && $root != *,* && $root != / ]] || fail '安装路径不能为根目录或包含换行、逗号'
-if [[ -e $root/.control/rename-in-progress || -L $root/.control/rename-in-progress ]]; then
-  [[ $command_name == _* && ${CLOUDDRIVE_MAINTENANCE_ENGINE:-} == 1 ]] ||
-    fail '实例名称迁移尚未完成，请使用维护程序继续或回退该操作'
-fi
 [[ $port =~ ^[0-9]+$ && ${#port} -le 5 ]] || fail '端口必须为数字'
 port=$((10#$port))
 ((port >= 1024 && port <= 65535)) || fail '端口范围为 1024–65535'
 [[ $wait_timeout =~ ^[1-9][0-9]{0,2}$ ]] || fail '等待时间不合法'
 ((wait_timeout >= 5 && wait_timeout <= 600)) || fail '等待时间范围为 5–600 秒'
-valid_version() { [[ $1 =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; }
 normalize_arch() {
   case $1 in x86_64|amd64) printf amd64 ;; aarch64|arm64) printf arm64 ;; *) fail '仅支持 amd64/arm64' ;; esac
 }
@@ -210,7 +230,7 @@ read_install_layout() {
     data_dir=$(resolve_data_directory "$recorded")
     [[ $data_dir == "$recorded" ]] || fail "已安装实例的数据路径已变化：$recorded"
     layout_owner=$(layout_fingerprint)
-  elif [[ -f $root/.control/maintenance-project || ! $project =~ ^(clouddrive|neocloud)-[a-f0-9]{12}$ ]]; then
+  elif [[ -f $root/.control/maintenance-project || ! $project =~ ^neocloud-[a-f0-9]{12}$ ]]; then
     fail '实例布局记录缺失，请恢复安装目录中的 .control/data-dir'
   fi
   [[ -z $requested_name || $requested_name == "$project" ]] || fail "此安装目录已使用实例名 $project；请保留该名称或为新实例指定不同的 --dir"
@@ -240,7 +260,7 @@ access_origin() {
 }
 show_deployment() {
   local listen=$bind
-  local api="$release_family-api:$version-$arch" web="$release_family-web:$version-$arch"
+  local api="neocloud-api:$version-$arch" web="neocloud-web:$version-$arch"
   if [[ -f $root/releases/$version/images.env ]]; then
     api=$(sed -n 's/^API_IMAGE=//p' "$root/releases/$version/images.env")
     web=$(sed -n 's/^WEB_IMAGE=//p' "$root/releases/$version/images.env")
@@ -268,7 +288,7 @@ check_fresh_project() {
 }
 check_layout_owner() {
   local owner
-  owner=$(docker volume inspect --format '{{with .Labels}}{{index . "io.clouddrive.release.owner"}}{{end}}' "$project-instance" 2>/dev/null) || return 1
+  owner=$(docker volume inspect --format '{{with .Labels}}{{index . "io.neocloud.release.owner"}}{{end}}' "$project-instance" 2>/dev/null) || return 1
   [[ $owner == "$layout_owner" ]]
 }
 require_layout_owner() {
@@ -449,7 +469,7 @@ verify_instance_storage() {
     --mount "type=bind,source=$data_dir,target=/data" "$web_ref" node -e '
       const fs = require("node:fs");
       const [owner, mode] = process.argv.slice(1);
-      const marker = "/data/.clouddrive-installation";
+      const marker = "/data/.neocloud-installation";
       if (fs.existsSync(marker)) {
         if (!fs.lstatSync(marker).isFile() || fs.readFileSync(marker, "utf8") !== owner) {
           throw Error("数据目录属于其他实例");
@@ -471,12 +491,12 @@ compose_at() {
   local -a maintenance=()
   require_layout_owner
   if [[ $layout == true ]]; then local -x COMPOSE_COMPATIBILITY=false; fi
-  if [[ $1 == up || $1 == run && -z ${CLOUDDRIVE_MAINTENANCE_STAGE:-} ]]; then verify_instance_storage "$release"; fi
-  if [[ ${CLOUDDRIVE_MAINTENANCE_ENGINE:-} == 1 && -n ${CLOUDDRIVE_MAINTENANCE_COMPOSE:-} ]]; then
-    maintenance=(--file "$CLOUDDRIVE_MAINTENANCE_COMPOSE")
+  if [[ $1 == up || $1 == run && -z ${NEOCLOUD_MAINTENANCE_STAGE:-} ]]; then verify_instance_storage "$release"; fi
+  if [[ ${NEOCLOUD_MAINTENANCE_ENGINE:-} == 1 && -n ${NEOCLOUD_MAINTENANCE_COMPOSE:-} ]]; then
+    maintenance=(--file "$NEOCLOUD_MAINTENANCE_COMPOSE")
   fi
-  NEOCLOUD_RELEASE_DATA_DIR="$data_dir" CLOUDDRIVE_RELEASE_DATA_DIR="$data_dir" \
-    docker compose --project-directory "$root" --env-file "${CLOUDDRIVE_MAINTENANCE_CONFIG:-$root/runtime.env}" --env-file "$root/releases/$release/images.env" --project-name "$project" --file "$root/releases/$release/compose.yaml" "${maintenance[@]}" "$@"
+  NEOCLOUD_RELEASE_DATA_DIR="$data_dir" \
+    docker compose --project-directory "$root" --env-file "${NEOCLOUD_MAINTENANCE_CONFIG:-$root/runtime.env}" --env-file "$root/releases/$release/images.env" --project-name "$project" --file "$root/releases/$release/compose.yaml" "${maintenance[@]}" "$@"
 }
 current() { cat "$root/.control/current"; }
 atomic_current() { printf '%s\n' "$1" > "$root/.control/current.new"; mv -- "$root/.control/current.new" "$root/.control/current"; }
@@ -496,8 +516,8 @@ probe() {
 migration_status() {
   local release=$1 web_ref
   local -a mounts=()
-  if [[ -n ${CLOUDDRIVE_MAINTENANCE_STAGE:-} ]]; then
-    mounts=(--volume "$CLOUDDRIVE_MAINTENANCE_STAGE:/app/.data")
+  if [[ -n ${NEOCLOUD_MAINTENANCE_STAGE:-} ]]; then
+    mounts=(--volume "$NEOCLOUD_MAINTENANCE_STAGE:/app/.data")
   fi
   web_ref=$(sed -n 's/^WEB_IMAGE=//p' "$root/releases/$release/images.env")
   compose_at "$release" run --rm --no-deps "${mounts[@]}" migrate db migrate status |
@@ -552,49 +572,22 @@ verify_asset_file() {
   actual=$(sha256sum < "$2")
   [[ ${actual%% *} == "$digest" ]] || fail "$1 摘要不匹配；现有服务保持不动"
 }
-select_release_asset() {
-  local preferred=$1 legacy=$2 selected
-  selected=$(awk -v preferred="$preferred" -v legacy="$legacy" '
-    $2 == preferred || $2 == "*" preferred { print preferred }
-    $2 == legacy || $2 == "*" legacy { print legacy }
-  ' "$work/checksums.txt")
-  [[ $selected == "$preferred" || $selected == "$legacy" ]] || fail "校验清单须包含唯一的 $preferred 或 $legacy"
-  asset_digest "$selected" >/dev/null
-  printf '%s\n' "$selected"
-}
 verify_release_signature() {
-  local cosign=${NEOCLOUD_COSIGN:-${CLOUDDRIVE_COSIGN:-cosign}} identity modern=false
+  local cosign=${NEOCLOUD_COSIGN:-cosign} identity
   local -a verification
-  command -v "$cosign" >/dev/null || fail '离线安装与维护需要 Cosign 2.6.5 或兼容的已修补版本'
+  command -v "$cosign" >/dev/null || fail '验签需要 Cosign 2.6.5 或兼容的已修补版本'
   fetch_asset checksums.txt.sigstore.json "$work/checksums.txt.sigstore.json"
   identity="https://github.com/$REPOSITORY/.github/workflows/release.yml@refs/tags/$version"
   verification=(verify-blob --bundle "$work/checksums.txt.sigstore.json" --certificate-identity "$identity"
     --certificate-oidc-issuer https://token.actions.githubusercontent.com)
-  if grep -Eq '"mediaType"[[:space:]]*:[[:space:]]*"application/vnd\.dev\.sigstore\.bundle' "$work/checksums.txt.sigstore.json"; then
-    modern=true
-  else
-    local build major minor patch
-    build=$("$cosign" version)
-    [[ $build =~ GitVersion:[[:space:]]+v([0-9]+)\.([0-9]+)\.([0-9]+)([[:space:]]|$) ]] || fail '无法识别验证旧版签名所用的 Cosign 版本'
-    major=${BASH_REMATCH[1]}; minor=${BASH_REMATCH[2]}; patch=${BASH_REMATCH[3]}
-    (( major > 3 || major == 3 && ( minor > 1 || minor == 1 && patch >= 3 ) ||
-       major == 2 && ( minor > 6 || minor == 6 && patch >= 5 ) )) || fail '旧版签名验证需要 Cosign 2.6.5、3.1.3 或更新的已修复版本'
-  fi
   if [[ $offline == false ]]; then
-    if [[ $modern == true ]]; then verification+=(--new-bundle-format); fi
-    "$cosign" "${verification[@]}" "$work/checksums.txt" || fail '正式发布签名验证失败'
+    "$cosign" "${verification[@]}" --new-bundle-format "$work/checksums.txt" || fail '正式发布签名验证失败'
     return
   fi
   trust_dir=$(realpath -m -- "${trust_dir:-$root/.control/maintenance/trust}")
   [[ -d $trust_dir && $trust_dir != "$release_source" && $trust_dir != "$release_source/"* ]] || fail '离线验签需要独立提供的 --trust-dir'
-  if [[ $modern == true ]]; then
-    [[ -f $trust_dir/trusted_root.json ]] || fail '离线信任目录缺少 trusted_root.json'
-    "$cosign" "${verification[@]}" --offline --new-bundle-format --trusted-root "$trust_dir/trusted_root.json" "$work/checksums.txt" || fail '正式发布离线签名验证失败'
-  else
-    [[ -f $trust_dir/fulcio.pem && -f $trust_dir/rekor.pub && -f $trust_dir/ctfe.pub ]] || fail '旧版签名包需要本地 fulcio.pem、rekor.pub 和 ctfe.pub'
-    SIGSTORE_ROOT_FILE="$trust_dir/fulcio.pem" SIGSTORE_REKOR_PUBLIC_KEY="$trust_dir/rekor.pub" SIGSTORE_CT_LOG_PUBLIC_KEY_FILE="$trust_dir/ctfe.pub" \
-      "$cosign" "${verification[@]}" --offline "$work/checksums.txt" || fail '正式发布离线签名验证失败'
-  fi
+  [[ -f $trust_dir/trusted_root.json ]] || fail '离线信任目录缺少 trusted_root.json'
+  "$cosign" "${verification[@]}" --offline --new-bundle-format --trusted-root "$trust_dir/trusted_root.json" "$work/checksums.txt" || fail '正式发布离线签名验证失败'
   if [[ -f $release_source/version.txt ]]; then verify_asset_file version.txt "$release_source/version.txt"; fi
 }
 read_manifest() { sed -n "s/^$1=//p" "${2:-$work/bundle/manifest.txt}"; }
@@ -618,10 +611,9 @@ prepare_release() {
     release_source="$root/.control/maintenance/assets/$version"
   fi
   fetch_asset checksums.txt "$work/checksums.txt"
-  if [[ $offline == true && $command_name != _prepare ]]; then verify_release_signature; fi
-  name=$(select_release_asset "neocloud_${version}_linux_${arch}_docker.tar.gz" "clouddrive_${version}_linux_${arch}_docker.tar.gz")
+  if [[ $command_name != _prepare ]]; then verify_release_signature; fi
+  name="neocloud_${version}_linux_${arch}_docker.tar.gz"
   release_archive=$name
-  release_family=${name%%_*}
   fetch_asset "$name" "$work/$name"
   progress '校验安装包与版本清单'
   verify_asset_file "$name" "$work/$name"
@@ -632,7 +624,7 @@ prepare_release() {
   local -a members=()
   if [[ $mode == verify ]]; then members=(manifest.txt compose.yaml images.env install.sh); fi
   tar --extract --gzip --file "$work/$name" --directory "$work/bundle" --no-same-owner --no-same-permissions "${members[@]}"
-  if [[ $offline == true && $command_name != _prepare ]]; then verify_asset_file install.sh "$work/bundle/install.sh"; fi
+  verify_asset_file install.sh "$work/bundle/install.sh"
   validate_release_metadata "$work/bundle"
   [[ $mode == load ]] || return 0
   progress '导入配套 Docker 镜像'
@@ -654,8 +646,8 @@ validate_release_metadata() {
   for kind in API WEB; do
     [[ $(read_manifest "${kind}_ID" "$manifest") =~ ^sha256:[a-f0-9]{64}$ ]] || fail "$kind 镜像 ID 无效"
   done
-  api_image="$release_family-api:$version-$arch"; web_image="$release_family-web:$version-$arch"
-  [[ $(cat "$directory/images.env") == "API_IMAGE=$api_image"$'\n'"WEB_IMAGE=$web_image" ]] || fail '镜像引用不符合配套版本'
+  api_image="neocloud-api:$version-$arch"; web_image="neocloud-web:$version-$arch"
+  release_images_match "$directory/images.env" "$version" "$arch" || fail '镜像引用不符合配套版本'
 }
 verify_release_images() {
   local manifest=$1/manifest.txt commit
@@ -709,7 +701,7 @@ install_manager() {
 }
 stage_maintenance_tool() {
   local binary
-  binary=$(select_release_asset "neocloud-maintenance_${version}_linux_${arch}" "clouddrive-maintenance_${version}_linux_${arch}")
+  binary="neocloud-maintenance_${version}_linux_${arch}"
   fetch_asset "$binary" "$work/client"
   fetch_asset install.sh "$work/installer"
   verify_asset_file "$binary" "$work/client"
@@ -739,20 +731,12 @@ host_privileged() {
   if [[ $EUID == 0 ]]; then "$@"; else sudo -- "$@"; fi
 }
 activate_web_tool() (
-  local directory="$root/.control/maintenance" host_project installed gateway worker attempt old_tool new_tool
+  local directory="$root/.control/maintenance" host_project installed gateway worker attempt
   local saved="$work/before-update"
   host_project=$(cat -- "$root/.control/maintenance-project" 2>/dev/null || cat -- "$root/.control/project")
-  [[ $host_project =~ ^(clouddrive|neocloud)-[a-f0-9]{12}$ ]] || fail '宿主机维护标记不合法'
-  old_tool="/usr/local/lib/clouddrive/$host_project/clouddrive-maintenance"
-  new_tool="/usr/local/lib/neocloud/$host_project/neocloud-maintenance"
-  if host_privileged test -x "$new_tool"; then
-    if host_privileged test -x "$old_tool"; then fail '检测到重复的维护程序，请先检查 systemd 服务登记'; fi
-    installed=$new_tool
-  elif host_privileged test -x "$old_tool"; then
-    installed=$old_tool
-  else
-    fail '未找到实际登记的宿主机维护程序'
-  fi
+  [[ $host_project =~ ^neocloud-[a-f0-9]{12}$ ]] || fail '宿主机维护标记不合法'
+  installed="/usr/local/lib/neocloud/$host_project/neocloud-maintenance"
+  host_privileged test -x "$installed" || fail '未找到实际登记的 NeoCloud 维护程序'
   gateway="$host_project-gateway.service"
   worker="$host_project-maintenance.service"
   mkdir -- "$saved"
@@ -834,7 +818,7 @@ enable_maintenance() {
   local name supports_offline
   version=$(current)
   [[ $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail '网页运维要求正式版本'
-  local cosign=${NEOCLOUD_COSIGN:-${CLOUDDRIVE_COSIGN:-cosign}}
+  local cosign=${NEOCLOUD_COSIGN:-cosign}
   command -v "$cosign" >/dev/null || fail '启用网页运维前请按部署手册安装 cosign'
   command -v systemctl >/dev/null || fail '网页运维要求 systemd'
   [[ $EUID == 0 ]] || command -v sudo >/dev/null || fail '启用网页运维需要 sudo'
@@ -845,7 +829,7 @@ enable_maintenance() {
   [[ -z $work ]] || rm -rf -- "$work"
   work=$(mktemp -d)
   fetch_asset checksums.txt "$work/checksums.txt"
-  name=$(select_release_asset "neocloud-maintenance_${version}_linux_${arch}" "clouddrive-maintenance_${version}_linux_${arch}")
+  name="neocloud-maintenance_${version}_linux_${arch}"
   verify_release_signature
   fetch_asset "$name" "$work/$name"
   verify_asset_file "$name" "$work/$name"
@@ -906,7 +890,7 @@ if [[ $command_name == install ]]; then
     preflight
     if [[ $layout == true ]] && ! check_layout_owner; then
       # Docker 按卷名创建。即使两次预检同时通过，也只有原归属能继续。
-      docker volume create --label "io.clouddrive.release.owner=$layout_owner" "$project-instance" >/dev/null || fail "无法预留实例名 $project；请检查同名卷 $project-instance 或修改 --name"
+      docker volume create --label "io.neocloud.release.owner=$layout_owner" "$project-instance" >/dev/null || fail "无法预留实例名 $project；请检查同名卷 $project-instance 或修改 --name"
       check_layout_owner || fail "实例名 $project 已被其他安装抢先占用；请修改 --name"
       claim_created=true
     fi
@@ -989,8 +973,8 @@ if [[ $command_name == _* ]]; then
         verify_instance_storage "$version"
         docker run --rm --pull never --network none --user 0:0 --mount "type=bind,source=$data_dir,target=/data,readonly" "$web_ref" tar --numeric-owner -C /data -czf - .
       else
-        [[ -n ${CLOUDDRIVE_MAINTENANCE_STAGE:-} ]] || fail '缺少恢复暂存目录'
-        docker run --rm --pull never --network none --user 0:0 --interactive --mount "type=bind,source=$CLOUDDRIVE_MAINTENANCE_STAGE,target=/data" "$web_ref" tar --numeric-owner --same-owner -C /data -xzf -
+        [[ -n ${NEOCLOUD_MAINTENANCE_STAGE:-} ]] || fail '缺少恢复暂存目录'
+        docker run --rm --pull never --network none --user 0:0 --interactive --mount "type=bind,source=$NEOCLOUD_MAINTENANCE_STAGE,target=/data" "$web_ref" tar --numeric-owner --same-owner -C /data -xzf -
       fi ;;
   esac
   exit 0

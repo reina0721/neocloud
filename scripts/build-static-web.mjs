@@ -53,8 +53,6 @@ const environment = {
   NEXT_PUBLIC_NEOCLOUD_WEB_BUILD_ID: buildId,
   NEOCLOUD_NATIVE_BUILD_CACHE: "0",
 };
-for (const legacy of ["NEXT_PUBLIC_AUTH_MODE", "NEXT_PUBLIC_AUTH_API_BASE_URL", "NEXT_PUBLIC_CLOUDDRIVE_WEB_BUILD_ID", "CLOUDDRIVE_NATIVE_BUILD_CACHE"])
-  delete environment[legacy];
 // Next uses .next for intermediate export files, even when distDir names the export destination.
 // A private application copy keeps those files and next-env.d.ts away from running dev servers.
 const scratch = join(frontend, ".next");
@@ -102,7 +100,7 @@ async function clearOwned(path, directory, prefix) {
   await rm(path, { recursive: true, force: true });
 }
 
-const app = await mkdtemp(join(scratchRoot, "clouddrive-static-app-"));
+const app = await mkdtemp(join(scratchRoot, "neocloud-static-app-"));
 let publication;
 let failure;
 try {
@@ -161,7 +159,7 @@ try {
   const html = await readFile(join(exported, "home.html"), "utf8");
   if (!html.includes('data-dpl-id="' + buildId + '"'))
     throw new Error("Next 导出缺少与 Web 元数据相同的部署标识。");
-  publication = await mkdtemp(join(outputRoot, ".clouddrive-web-"));
+  publication = await mkdtemp(join(outputRoot, ".neocloud-web-"));
   await cp(exported, publication, { recursive: true });
   await writeFile(
     join(publication, "web-build.json"),
@@ -177,8 +175,8 @@ try {
   throw error;
 } finally {
   const results = await Promise.allSettled([
-    clearOwned(app, scratchRoot, "clouddrive-static-app-"),
-    clearOwned(publication, outputRoot, ".clouddrive-web-"),
+    clearOwned(app, scratchRoot, "neocloud-static-app-"),
+    clearOwned(publication, outputRoot, ".neocloud-web-"),
   ]);
   const cleanupErrors = results
     .filter((result) => result.status === "rejected")

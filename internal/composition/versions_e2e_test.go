@@ -41,7 +41,7 @@ func TestVersionsHTTPPersistencePrivacyAndAtomicity(t *testing.T) {
 	}()
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "annotation-owner@clouddrive.test", "name": "整理验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "annotation-owner@neocloud.test", "name": "整理验收", "password": password}, 200)
 
 	file := owner.request(t, "POST", "/native/files/text", map[string]string{"name": "version.txt", "parentId": "", "key": "version-http-fixture", "text": "old bytes"}, 200)["id"].(string)
 	path := "/native/files/" + file
@@ -136,10 +136,10 @@ func TestVersionsHTTPPersistencePrivacyAndAtomicity(t *testing.T) {
 	}
 	role := owner.request(t, "POST", "/roles", map[string]any{"name": "版本成员", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	owner.request(t, "PUT", "/native/iam/roles/"+role["id"].(string)+"/permissions", map[string]any{"expectedRoleVersion": 1, "permissionKeys": []string{"files:read", "files:write"}}, 200)
-	owner.request(t, "POST", "/users", map[string]any{"email": "version-member@clouddrive.test", "name": "版本成员", "password": password, "roleIds": []string{role["id"].(string)}, "status": "active"}, 200)
+	owner.request(t, "POST", "/users", map[string]any{"email": "version-member@neocloud.test", "name": "版本成员", "password": password, "roleIds": []string{role["id"].(string)}, "status": "active"}, 200)
 	member := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
 	member.request(t, "GET", "/auth/csrf", nil, 200)
-	member.request(t, "POST", "/auth/login", map[string]string{"email": "version-member@clouddrive.test", "password": password}, 200)
+	member.request(t, "POST", "/auth/login", map[string]string{"email": "version-member@neocloud.test", "password": password}, 200)
 	member.request(t, "GET", path+"/versions", nil, 404)
 	member.request(t, "POST", path+"/versions/2/copy", map[string]string{"name": "stolen.txt", "parentId": ""}, 404)
 	stopCtx, cancel := context.WithTimeout(t.Context(), 5*time.Second)

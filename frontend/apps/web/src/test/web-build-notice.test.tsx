@@ -16,7 +16,7 @@ afterEach(() => {
 it('新部署只提示刷新，关闭本次提醒后还可发现新部署', async () => {
   const loaded = 'a'.repeat(40);
   let buildId = loaded;
-  vi.stubEnv('NEXT_PUBLIC_CLOUDDRIVE_WEB_BUILD_ID', loaded);
+  vi.stubEnv('NEXT_PUBLIC_NEOCLOUD_WEB_BUILD_ID', loaded);
   const fetcher = vi.fn(() => Promise.resolve(Response.json({ buildId })));
   vi.stubGlobal('fetch', fetcher);
   const { WebBuildNotice } = await import('../host/web-build-notice');

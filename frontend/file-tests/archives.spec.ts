@@ -2,7 +2,7 @@ import { test, expect, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
-const accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS!;
+const accessPath = process.env.NEOCLOUD_FILE_TEST_ACCESS!;
 type FixtureEntry = { id: string; name: string; contentRevision: number };
 async function api<T>(page: Page, path: string, body?: unknown) {
   return page.evaluate(
@@ -502,7 +502,7 @@ test('HTTP边界：会话、CSRF、源版本与二进制响应头', async ({ pag
         headers: {
           Origin: new URL(page.url()).origin,
           'X-CSRF-Token': csrf.token,
-          Cookie: '__Host-clouddrive_console_csrf=' + csrf.token,
+          Cookie: '__Host-neocloud_console_csrf=' + csrf.token,
         },
         data: { expectedRevision: entry.contentRevision, password: '' },
       })

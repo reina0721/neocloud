@@ -116,9 +116,7 @@ export function createRuntimePort(
       owned(async () => {
         const options = { cache: 'no-store' as const, ...(signal ? { signal } : {}) };
         const gateway = await request('/maintenance', { ...options, method: 'HEAD' });
-        const gatewayMarker =
-          gateway.headers.get('X-NeoCloud-Maintenance') ??
-          gateway.headers.get('X-CloudDrive-Maintenance');
+        const gatewayMarker = gateway.headers.get('X-NeoCloud-Maintenance');
         if (gateway.status === 404 || (gateway.ok && gatewayMarker !== '1')) {
           return 'gateway-unavailable';
         }

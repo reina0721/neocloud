@@ -30,7 +30,7 @@ for (const scenario of [
     await page.addInitScript(
       ({ preferences, version, language, theme }) => {
         localStorage.setItem(
-          'clouddrive.shell',
+          'neocloud.shell',
           JSON.stringify({
             version,
             state: {

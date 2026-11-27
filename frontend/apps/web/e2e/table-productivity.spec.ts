@@ -6,9 +6,9 @@ import { expect, test } from '@playwright/test';
 async function resetPreferences(page: Page) {
   await page.goto('/settings/data-display');
   await page.evaluate(() => {
-    window.localStorage.removeItem('clouddrive.shell');
-    window.localStorage.removeItem('clouddrive.plugin.users.column-layout');
-    window.localStorage.removeItem('clouddrive.plugin.audit.column-layout');
+    window.localStorage.removeItem('neocloud.shell');
+    window.localStorage.removeItem('neocloud.plugin.users.column-layout');
+    window.localStorage.removeItem('neocloud.plugin.audit.column-layout');
   });
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');

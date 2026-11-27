@@ -19,4 +19,4 @@ foreach ($record in (Get-Content -LiteralPath $state -Raw | ConvertFrom-Json)) {
     }
 }
 Remove-Item -LiteralPath $state
-Write-Host 'Recorded clouddrive processes stopped.'
+Write-Host 'Recorded neocloud processes stopped.'

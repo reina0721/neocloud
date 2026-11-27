@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 /** 清空偏好。 */
 async function resetPreferences(page: Page) {
   await page.goto('/settings/navigation');
-  await page.evaluate(() => window.localStorage.removeItem('clouddrive.shell'));
+  await page.evaluate(() => window.localStorage.removeItem('neocloud.shell'));
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
 }

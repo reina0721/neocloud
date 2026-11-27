@@ -1,29 +1,29 @@
-name: clouddrive-ui-test
+name: neocloud-ui-test
 
 # Isolated production-mode acceptance environment; no developer database or storage mount.
 x-backend: &backend
-  image: clouddrive-api:kira
+  image: neocloud-api:kira
   build:
     context: .
     dockerfile: Dockerfile
   working_dir: /app
   env_file:
-    - .data/ui-production-control/backend.env
+    - .data/neocloud-ui-production-control/backend.env
   environment:
-    APP_LOGGER__ENVIRONMENT: production
-    APP_LOGGER__LEVEL: info
-    APP_AUTH__MODE: session
-    APP_SCHEDULER__ENABLED: "true"
-    APP_HTTP__ADDR: 0.0.0.0:8080
-    APP_MANAGEMENT__ADDR: 0.0.0.0:9090
-    APP_DATABASE__DRIVER: sqlite
-    APP_DATABASE__DSN: .data/app.db
-    APP_STORAGE__DRIVER: local
-    APP_STORAGE__LOCAL__BASEPATH: .data/storage
-    APP_FILES__TRANSFERS__STAGINGPATH: .data/transfers
-    APP_FILES__CONNECTIONS__PUBLICORIGIN: http://127.0.0.1:${CLOUDDRIVE_UI_API_PORT:-8130}
+    NEOCLOUD_APP_LOGGER__ENVIRONMENT: production
+    NEOCLOUD_APP_LOGGER__LEVEL: info
+    NEOCLOUD_APP_AUTH__MODE: session
+    NEOCLOUD_APP_SCHEDULER__ENABLED: "true"
+    NEOCLOUD_APP_HTTP__ADDR: 0.0.0.0:8080
+    NEOCLOUD_APP_MANAGEMENT__ADDR: 0.0.0.0:9090
+    NEOCLOUD_APP_DATABASE__DRIVER: sqlite
+    NEOCLOUD_APP_DATABASE__DSN: .data/app.db
+    NEOCLOUD_APP_STORAGE__DRIVER: local
+    NEOCLOUD_APP_STORAGE__LOCAL__BASEPATH: .data/storage
+    NEOCLOUD_APP_FILES__TRANSFERS__STAGINGPATH: .data/transfers
+    NEOCLOUD_APP_FILES__CONNECTIONS__PUBLICORIGIN: http://127.0.0.1:${NEOCLOUD_UI_API_PORT:-8130}
   volumes:
-    - ./.data/ui-production:/app/.data
+    - ./.data/neocloud-ui-production:/app/.data
 
 services:
   migrate:
@@ -35,20 +35,20 @@ services:
     <<: *backend
     restart: unless-stopped
     ports:
-      - 127.0.0.1:${CLOUDDRIVE_UI_API_PORT:-8130}:8080
-      - 127.0.0.1:${CLOUDDRIVE_UI_MANAGEMENT_PORT:-9130}:9090
+      - 127.0.0.1:${NEOCLOUD_UI_API_PORT:-8130}:8080
+      - 127.0.0.1:${NEOCLOUD_UI_MANAGEMENT_PORT:-9130}:9090
 
   web:
-    image: clouddrive-web:kira
+    image: neocloud-web:kira
     build:
       context: .
       dockerfile: frontend/Dockerfile
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      CLOUDDRIVE_BACKEND_URL: http://backend:8080
+      NEOCLOUD_BACKEND_URL: http://backend:8080
     ports:
-      - 127.0.0.1:${CLOUDDRIVE_UI_WEB_PORT:-4194}:4173
+      - 127.0.0.1:${NEOCLOUD_UI_WEB_PORT:-4194}:4173
     depends_on:
       backend:
         condition: service_started

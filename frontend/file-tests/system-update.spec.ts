@@ -21,9 +21,9 @@ const release = {
   releaseUrl,
   assets: [
     {
-      name: 'clouddrive_1.2.3_windows_amd64.zip',
+      name: 'neocloud_1.2.3_windows_amd64.zip',
       sizeBytes: 24305999,
-      downloadUrl: downloads + 'clouddrive_1.2.3_windows_amd64.zip',
+      downloadUrl: downloads + 'neocloud_1.2.3_windows_amd64.zip',
       kind: 'windows-backend',
     },
     {
@@ -92,7 +92,7 @@ test('开发环境按需读取 GitHub 正式版，维护动作保持禁用', asy
   const { checks, blocked } = await observeReleaseChecks(page, access.origin, [200]);
   const main = await openSystemUpdate(page, access);
   const gateway = await page.request.head('/maintenance');
-  expect(gateway.headers()['x-clouddrive-maintenance']).toBeUndefined();
+  expect(gateway.headers()['x-neocloud-maintenance']).toBeUndefined();
   const build = await page.request.get('/management/build');
   expect(build.ok()).toBe(true);
   const { version } = (await build.json()) as { version: string };

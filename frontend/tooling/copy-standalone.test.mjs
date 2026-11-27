@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import { copyStandalone } from './copy-standalone.mjs';
 
 test('relocated junction keeps peer dependency resolution without the original build tree', async (t) => {
-  const base = await mkdtemp(join(tmpdir(), 'clouddrive-junction-'));
+  const base = await mkdtemp(join(tmpdir(), 'neocloud-junction-'));
   t.after(() => rm(base, { recursive: true, force: true }));
   const root = join(base, 'build');
   const modules = join(root, 'store', 'node_modules');
@@ -33,7 +33,7 @@ test('relocated junction keeps peer dependency resolution without the original b
 });
 
 test('untraced external dependencies fail before copying the runtime', async (t) => {
-  const base = await mkdtemp(join(tmpdir(), 'clouddrive-junction-'));
+  const base = await mkdtemp(join(tmpdir(), 'neocloud-junction-'));
   t.after(() => rm(base, { recursive: true, force: true }));
   const root = join(base, 'build');
   const external = join(base, 'external');

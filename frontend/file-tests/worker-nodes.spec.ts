@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { expect, test } from './preview-test';
 
 test('节点检查按需读取，关联任务范围可传入并清除', async ({ page }, info) => {
-  const accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
+  const accessPath = process.env.NEOCLOUD_FILE_TEST_ACCESS;
   test.skip(!accessPath, '需要管理员预览访问文件。');
   const account = JSON.parse(
     (await readFile(resolve(__dirname, accessPath!), 'utf8')).replace(/^\uFEFF/, ''),
@@ -97,8 +97,8 @@ test('节点检查按需读取，关联任务范围可传入并清除', async ({
 });
 
 test('节点管理显示真实 aria2 诊断和已筛选的关联任务', async ({ page }, info) => {
-  const accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
-  const nodeId = process.env.CLOUDDRIVE_WORKER_TEST_NODE;
+  const accessPath = process.env.NEOCLOUD_FILE_TEST_ACCESS;
+  const nodeId = process.env.NEOCLOUD_WORKER_TEST_NODE;
   test.skip(!accessPath || !nodeId, '节点验收使用配置了独立 aria2 的 QA。');
   const account = JSON.parse(
     (await readFile(resolve(__dirname, accessPath!), 'utf8')).replace(/^\uFEFF/, ''),

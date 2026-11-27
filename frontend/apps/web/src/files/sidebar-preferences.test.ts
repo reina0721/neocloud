@@ -7,17 +7,17 @@ describe('设备侧栏偏好的迁移和隔离', () => {
     vi.restoreAllMocks();
     localStorage.clear();
   });
-  const legacyKey = 'clouddrive.files.sidebar.v1.one';
-  const key = 'clouddrive.files.sidebar.v2.one';
+  const legacyKey = 'neocloud.files.sidebar.v1.one';
+  const key = 'neocloud.files.sidebar.v2.one';
   it('保留旧折叠值，成功写新键后删除旧键，不改服务器视图配置', () => {
     localStorage.setItem(legacyKey, 'true');
-    localStorage.setItem('clouddrive.files.view.v2.one', 'retained-view');
+    localStorage.setItem('neocloud.files.view.v2.one', 'retained-view');
     const port = createFileSidebarPreferences('one', vi.fn());
     expect(port.loadSidebarPreferences()).toEqual({ collapsed: true, autoExpandTree: true });
     expect(localStorage.getItem(legacyKey)).toBeNull();
     port.saveSidebarPreferences({ collapsed: false, autoExpandTree: false });
     expect(port.loadSidebarPreferences()).toEqual({ collapsed: false, autoExpandTree: false });
-    expect(localStorage.getItem('clouddrive.files.view.v2.one')).toBe('retained-view');
+    expect(localStorage.getItem('neocloud.files.view.v2.one')).toBe('retained-view');
   });
   it('新文档落盘失败时保留旧键及错误链', () => {
     localStorage.setItem(legacyKey, 'true');

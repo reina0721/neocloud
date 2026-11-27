@@ -10,7 +10,7 @@ import {
   existsSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import {
   parseArgs,
@@ -24,11 +24,11 @@ import {
 } from "./verify-changed.mjs";
 
 const workspaces = [
-  { directory: "frontend/apps/web", name: "@clouddrive/web" },
-  { directory: "frontend/packages/core", name: "@clouddrive/core" },
+  { directory: "frontend/apps/web", name: "@neocloud/web" },
+  { directory: "frontend/packages/core", name: "@neocloud/core" },
 ];
 function repository(t) {
-  const root = mkdtempSync(join(tmpdir(), "clouddrive-validation-"));
+  const root = mkdtempSync(join(tmpdir(), "neocloud-validation-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const git = (...args) =>
     execFileSync("git", args, { cwd: root, stdio: "pipe", encoding: "utf8" });
@@ -56,7 +56,8 @@ test("收集暂存、未暂存、未跟踪、改名两端、删除和特殊路�
   write("tracked.go", "modified");
   write("staged.go");
   git("add", "staged.go");
-  write("untracked\nfile.go");
+  const untracked = process.platform === "win32" ? "untracked file.go" : "untracked\nfile.go";
+  write(untracked);
   assert.deepEqual(
     collectChanges(root).paths,
     [
@@ -64,7 +65,7 @@ test("收集暂存、未暂存、未跟踪、改名两端、删除和特殊路�
       "renamed.go",
       "staged.go",
       "tracked.go",
-      "untracked\nfile.go",
+      untracked,
       "中文 文件.go",
     ].sort(),
   );
@@ -113,7 +114,7 @@ test("局部页面使用原生反向依赖过滤，不执行构建或完整浏�
   );
   const plan = buildPlan(selected, parseArgs([]), "/repository");
   assert.equal(selected.fullFrontend, false);
-  assert.ok(plan.some((step) => step.args.includes("...@clouddrive/web")));
+  assert.ok(plan.some((step) => step.args.includes("...@neocloud/web")));
   assert.ok(
     plan.every(
       (step) =>
@@ -146,19 +147,20 @@ test("共享组件、契约、依赖、未知路径和无基线扩大且给出�
 });
 
 test("Go 反向闭包包括 TestImports 和 XTestImports", () => {
+  const root = resolve("fixture-repo");
   const packages = [
-    { Dir: "/repo/pkg/a", ImportPath: "a" },
-    { Dir: "/repo/pkg/b", ImportPath: "b", TestImports: ["a"] },
-    { Dir: "/repo/pkg/c", ImportPath: "c", XTestImports: ["b"] },
-    { Dir: "/repo/pkg/d", ImportPath: "d" },
+    { Dir: join(root, "pkg", "a"), ImportPath: "a" },
+    { Dir: join(root, "pkg", "b"), ImportPath: "b", TestImports: ["a"] },
+    { Dir: join(root, "pkg", "c"), ImportPath: "c", XTestImports: ["b"] },
+    { Dir: join(root, "pkg", "d"), ImportPath: "d" },
   ];
-  assert.deepEqual(selectGoPackages(packages, ["pkg/a/a.go"], "/repo"), [
+  assert.deepEqual(selectGoPackages(packages, ["pkg/a/a.go"], root), [
     "a",
     "b",
     "c",
   ]);
   assert.equal(
-    selectGoPackages(packages, ["pkg/deleted/file.go"], "/repo"),
+    selectGoPackages(packages, ["pkg/deleted/file.go"], root),
     null,
   );
   const stream = '{"Dir":"/a/{quoted}","ImportPath":"a"}\n{"ImportPath":"b"}';
@@ -217,7 +219,7 @@ test("子命令失败、缺工具和取消保留失败结果并等待退出", as
     /退出码 7/,
   );
   await assert.rejects(
-    runCommand("missing-clouddrive-executable", []),
+    runCommand("missing-neocloud-executable", []),
     /无法启动/,
   );
   const controller = new AbortController();
@@ -268,7 +270,7 @@ test("准备失败仍生成失败报告，不记录原始输出", async (t) => {
   git("commit", "-qm", "first");
   write("README.md", "changed");
   await assert.rejects(
-    main(["--scope", "docs", "--go-executable", "missing-clouddrive-go"], root),
+    main(["--scope", "docs", "--go-executable", "missing-neocloud-go"], root),
   );
   const directory = join(root, ".data/validation");
   const report = JSON.parse(
@@ -312,7 +314,7 @@ test("平台特有测试也扩大后端，不依赖本机可见的包图", () =>
 });
 
 test("取消验证会等待并终止后代进程，而非只终止直接命令", async (t) => {
-  const directory = mkdtempSync(join(tmpdir(), "clouddrive-command-tree-"));
+  const directory = mkdtempSync(join(tmpdir(), "neocloud-command-tree-"));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const pidFile = join(directory, "child.pid");
   const controller = new AbortController();

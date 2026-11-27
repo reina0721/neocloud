@@ -33,7 +33,7 @@ func fixture(t *testing.T) (*Worker, string) {
 		}
 	}
 	for name, contents := range map[string]string{
-		".control/project": "clouddrive-12345678abcd", ".control/current": fromVersion,
+		".control/project": "neocloud-12345678abcd", ".control/current": fromVersion,
 		".control/maintenance/recovery-token": strings.Repeat("a", 64), "runtime.env": "WEB_PORT=4173",
 		"releases/" + fromVersion + "/manifest.txt": "previous source", "releases/" + toVersion + "/manifest.txt": "next source",
 		"data/app.db": "SQLite fixture", "data/storage/file": "baseline",
@@ -44,12 +44,12 @@ if [[ -f "$root/fail" ]] && grep -Fqx "$action $version" "$root/fail"; then exit
 case "$action" in
 _images) [[ ! -f "$root/uncached-$version" ]] ;;
 _prepare) rm -f -- "$root/uncached-$version" ;;
-_serving) [[ -z "$CLOUDDRIVE_MAINTENANCE_COMPOSE" ]]; printf 'false\n' ;;
+_serving) [[ -z "$NEOCLOUD_MAINTENANCE_COMPOSE" ]]; printf 'false\n' ;;
 _capture)
   data="$root/data"
   if [[ -f "$root/.control/data-dir" ]]; then data=$(cat "$root/.control/data-dir"); fi
   tar -C "$data" -czf - . ;;
-_extract) tar -C "$CLOUDDRIVE_MAINTENANCE_STAGE" -xzf - ;;
+_extract) tar -C "$NEOCLOUD_MAINTENANCE_STAGE" -xzf - ;;
 esac
 `,
 	} {
@@ -57,7 +57,7 @@ esac
 			t.Fatal(err)
 		}
 	}
-	cfg := Config{Project: "clouddrive-12345678abcd", Listen: "127.0.0.1:4173", Upstream: "127.0.0.1:44173"}
+	cfg := Config{Project: "neocloud-12345678abcd", Listen: "127.0.0.1:4173", Upstream: "127.0.0.1:44173"}
 	w, err := NewWorker(t.Context(), root, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -126,7 +126,7 @@ func TestCompleteRestoreAndRollback(t *testing.T) {
 func customLayout(t *testing.T) (*Worker, string, string) {
 	t.Helper()
 	w, root := fixture(t)
-	data := filepath.Join(t.TempDir(), "CloudDrive data")
+	data := filepath.Join(t.TempDir(), "NeoCloud data")
 	if err := os.Rename(filepath.Join(root, "data"), data); err != nil {
 		t.Fatal(err)
 	}
@@ -160,8 +160,8 @@ func TestCustomLayoutRestore(t *testing.T) {
 	}
 	for name, want := range map[string]string{
 		filepath.Join(data, "storage", "file"): "baseline",
-		filepath.Join(filepath.Dir(data), ".clouddrive-restore-"+restore.ID, "original-data", "storage", "file"): updated,
-		filepath.Join(root, ".control", "maintenance", "restore-"+restore.ID, "original.env"):                    "WEB_PORT=4173",
+		filepath.Join(filepath.Dir(data), ".neocloud-restore-"+restore.ID, "original-data", "storage", "file"): updated,
+		filepath.Join(root, ".control", "maintenance", "restore-"+restore.ID, "original.env"):                  "WEB_PORT=4173",
 	} {
 		got, err := readText(name)
 		if err != nil || got != want {
@@ -235,7 +235,7 @@ func TestCustomLayoutRestoreRecovery(t *testing.T) {
 				}
 			}
 			if tc == "replacement installed" {
-				name := filepath.Join(filepath.Dir(data), ".clouddrive-restore-"+id, "failed-data", "storage", "file")
+				name := filepath.Join(filepath.Dir(data), ".neocloud-restore-"+id, "failed-data", "storage", "file")
 				if got, err := readText(name); err != nil || got != "baseline" {
 					t.Fatalf("failed replacement was not retained: %q %v", got, err)
 				}
@@ -295,7 +295,7 @@ func TestInstallerLockAndVerificationBeforeStop(t *testing.T) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("CLOUDDRIVE_COSIGN", "/bin/false")
+	t.Setenv("NEOCLOUD_COSIGN", "/bin/false")
 	if err := os.WriteFile(filepath.Join(root, "uncached-"+toVersion), nil, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -402,7 +402,7 @@ func (f releaseFiles) RoundTrip(r *http.Request) (*http.Response, error) {
 
 func TestVerifiedDownloadIsRetained(t *testing.T) {
 	w, root := fixture(t)
-	t.Setenv("CLOUDDRIVE_COSIGN", "/bin/true")
+	t.Setenv("NEOCLOUD_COSIGN", "/bin/true")
 	name := dockerAssetName(toVersion, runtime.GOARCH)
 	asset := "verified flow fixture"
 	digest := fmt.Sprintf("%x", sha256.Sum256([]byte(asset)))
@@ -619,7 +619,7 @@ func makeCookieRequest(cookie *http.Cookie) *http.Request {
 }
 
 func TestGatewayRecognizesOnlyConfiguredTLSProxy(t *testing.T) {
-	cfg := Config{Project: "clouddrive-12345678abcd", Listen: "0.0.0.0:4173",
+	cfg := Config{Project: "neocloud-12345678abcd", Listen: "0.0.0.0:4173",
 		Upstream: "127.0.0.1:44173", Origin: "https://drive.test", TrustedProxy: "192.0.2.10"}
 	gateway, err := NewGateway(cfg, []byte(strings.Repeat("k", 32)))
 	if err != nil {
@@ -656,7 +656,7 @@ func TestUpgradeFailureKeepsDataAndGatesOldProgram(t *testing.T) {
 	} {
 		t.Run(run.name, func(t *testing.T) {
 			w, root := fixture(t)
-			t.Setenv("CLOUDDRIVE_COSIGN", "/bin/true")
+			t.Setenv("NEOCLOUD_COSIGN", "/bin/true")
 			if err := os.WriteFile(filepath.Join(root, "uncached-"+toVersion), nil, 0600); err != nil {
 				t.Fatal(err)
 			}
@@ -664,7 +664,7 @@ func TestUpgradeFailureKeepsDataAndGatesOldProgram(t *testing.T) {
 			if err := os.MkdirAll(cache, 0700); err != nil {
 				t.Fatal(err)
 			}
-			name := fmt.Sprintf("clouddrive_%s_linux_%s_docker.tar.gz", toVersion, runtime.GOARCH)
+			name := fmt.Sprintf("neocloud_%s_linux_%s_docker.tar.gz", toVersion, runtime.GOARCH)
 			if err := os.WriteFile(filepath.Join(cache, name), []byte("verified flow fixture"), 0600); err != nil {
 				t.Fatal(err)
 			}

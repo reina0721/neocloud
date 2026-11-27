@@ -1,3 +1,4 @@
+import { readPreviewAccess } from './reading-fixture';
 import { test, expect, type Locator, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -55,15 +56,7 @@ function wave(art?: Buffer) {
 
 async function setupTracks(page: Page) {
   const access = JSON.parse(
-    (
-      await readFile(
-        resolve(
-          __dirname,
-          process.env.CLOUDDRIVE_FILE_TEST_ACCESS ?? '../../.data/preview-access.json',
-        ),
-        'utf8',
-      )
-    ).replace(/^\uFEFF/, ''),
+    (await readFile(resolve(__dirname, readPreviewAccess().path), 'utf8')).replace(/^\uFEFF/, ''),
   ) as {
     username: string;
     password: string;

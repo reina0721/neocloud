@@ -6,8 +6,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { expect, test } from './preview-test';
 
 test('管理员能确认回收验收对象，保护期内仍显示候选', async ({ page }, testInfo) => {
-  const accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
-  const qaStatePath = process.env.CLOUDDRIVE_BLOB_RECLAMATION_QA_STATE;
+  const accessPath = process.env.NEOCLOUD_FILE_TEST_ACCESS;
+  const qaStatePath = process.env.NEOCLOUD_BLOB_RECLAMATION_QA_STATE;
   test.skip(!accessPath || !qaStatePath, '回收验收仅在隔离服务处理本测试生成的对象。');
   const parse = async (path: string): Promise<unknown> =>
     JSON.parse((await readFile(resolve(__dirname, path), 'utf8')).replace(/^\uFEFF/, ''));

@@ -8,7 +8,7 @@ type Definition = { key: string; name: string; kind: string };
 type Definitions = { revision: number; items: Definition[] };
 
 test('管理员定义文件属性，窄屏编辑并保留移除定义后的值', async ({ page }, info) => {
-  const accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
+  const accessPath = process.env.NEOCLOUD_FILE_TEST_ACCESS;
   test.skip(!accessPath, '全局定义验收仅使用隔离预览。');
   const account = JSON.parse(
     (await readFile(resolve(__dirname, accessPath!), 'utf8')).replace(/^\uFEFF/, ''),

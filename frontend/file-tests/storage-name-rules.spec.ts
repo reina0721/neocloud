@@ -3,7 +3,7 @@ import type { StorageNameRulesView } from '../surfaces/src/files/storage-policy'
 import { loginStorage, storageRequest, storageSection } from './storage-fixture';
 
 test('名称规则在独立窗口试测，输入变化取消旧结果并保存待生效摘要', async ({ page }, info) => {
-  test.skip(!process.env.CLOUDDRIVE_FILE_TEST_ACCESS, '写入只使用显式指定的隔离预览。');
+  test.skip(!process.env.NEOCLOUD_FILE_TEST_ACCESS, '写入只使用显式指定的隔离预览。');
   await loginStorage(page);
   const initial = await storageRequest<StorageNameRulesView>(page, '/name-rules');
   const section = storageSection(page, '上传名称规则');

@@ -3,7 +3,7 @@ import { test, expect, type Page } from './preview-test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFile } from 'node:fs/promises';
 
-async function access(path = process.env.CLOUDDRIVE_FILE_TEST_ACCESS) {
+async function access(path = process.env.NEOCLOUD_FILE_TEST_ACCESS) {
   if (!path) throw Error('需要隔离QA账号');
   const value = JSON.parse((await readFile(path, 'utf8')).replace(/^\uFEFF/, '')) as {
     url: string;
@@ -103,8 +103,8 @@ test('F429、438–439：重复提交、断网恢复及退出后的迟到结果'
   expect(count).toBe(1);
   await panel.getByRole('button', { name: '退出登录', exact: true }).click();
   await expect(page).toHaveURL(/\/login/);
-  if (!process.env.CLOUDDRIVE_FILE_TEST_SECOND_ACCESS) throw Error('需要第二个隔离QA账号');
-  const second = await login(page, process.env.CLOUDDRIVE_FILE_TEST_SECOND_ACCESS);
+  if (!process.env.NEOCLOUD_FILE_TEST_SECOND_ACCESS) throw Error('需要第二个隔离QA账号');
+  const second = await login(page, process.env.NEOCLOUD_FILE_TEST_SECOND_ACCESS);
   expect(second.username).not.toBe(account.username);
   panel = await lock(page);
   release();

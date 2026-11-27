@@ -100,7 +100,7 @@ func newAudienceFixture(t *testing.T) (*consoleTestClient, *consoleTestClient, s
 	})
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "audience-owner@clouddrive.test", "name": "受众验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "audience-owner@neocloud.test", "name": "受众验收", "password": password}, 200)
 	return owner, &consoleTestClient{base: owner.base, cookies: map[string]string{}}, password
 }
 
@@ -115,11 +115,11 @@ func TestShareAudienceIdentityInheritanceAndPublication(t *testing.T) {
 	role := owner.request(t, "POST", "/roles", map[string]any{"name": "受众成员", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	roleID := role["id"].(string)
 	owner.request(t, "PUT", "/native/iam/roles/"+roleID+"/permissions", map[string]any{"expectedRoleVersion": 1, "permissionKeys": []string{"files:read", "files:write"}}, 200)
-	user := owner.request(t, "POST", "/users", map[string]any{"email": "audience-member@clouddrive.test", "name": "受众成员", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)["user"].(map[string]any)
+	user := owner.request(t, "POST", "/users", map[string]any{"email": "audience-member@neocloud.test", "name": "受众成员", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)["user"].(map[string]any)
 	memberID := user["id"].(string)
 	member := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
 	member.request(t, "GET", "/auth/csrf", nil, 200)
-	member.request(t, "POST", "/auth/login", map[string]string{"email": "audience-member@clouddrive.test", "password": password}, 200)
+	member.request(t, "POST", "/auth/login", map[string]string{"email": "audience-member@neocloud.test", "password": password}, 200)
 	root := owner.request(t, "POST", "/native/files/folders", map[string]string{"parentId": "", "name": "受众目录"}, 200)["id"].(string)
 	folder := owner.request(t, "POST", "/native/files/folders", map[string]string{"parentId": root, "name": "受保护目录"}, 200)["id"].(string)
 	leaf := owner.request(t, "POST", "/native/files/text", map[string]string{"parentId": folder, "name": "protected.txt", "text": "protected audience content", "key": "audience-protected-source-key"}, 200)["id"].(string)
@@ -145,7 +145,7 @@ func TestShareAudienceIdentityInheritanceAndPublication(t *testing.T) {
 	if administratorView.Denied || administratorView.Permissions == nil || !administratorView.Permissions.Modify {
 		t.Fatal("真实系统管理员未获得其他拥有者有效分享的全部能力")
 	}
-	lookup := audienceTyped[service.AudienceTarget](t, owner, "POST", "/api/console/v1/native/files/audience/lookup", map[string]string{"kind": "account", "key": "audience-member@clouddrive.test"}, 200)
+	lookup := audienceTyped[service.AudienceTarget](t, owner, "POST", "/api/console/v1/native/files/audience/lookup", map[string]string{"kind": "account", "key": "audience-member@neocloud.test"}, 200)
 	if lookup.ID != memberID {
 		t.Fatal("精确账号查找返回错误主体")
 	}
@@ -207,7 +207,7 @@ func TestShareAudienceIdentityInheritanceAndPublication(t *testing.T) {
 	audienceHTTP(t, member, "GET", downloadPath, nil, 401)
 	audienceHTTP(t, member, "POST", path+"/transfers/"+transfer.ID+"/commit", nil, 401)
 	member.request(t, "GET", "/auth/csrf", nil, 200)
-	member.request(t, "POST", "/auth/login", map[string]string{"email": "audience-member@clouddrive.test", "password": password}, 200)
+	member.request(t, "POST", "/auth/login", map[string]string{"email": "audience-member@neocloud.test", "password": password}, 200)
 	audienceHTTP(t, member, "GET", downloadPath, nil, 403)
 	audienceHTTP(t, member, "POST", path+"/transfers/"+transfer.ID+"/commit", nil, 403)
 	canceled := audienceTyped[service.SharedTransfer](t, member, "POST", path+"/transfers/"+transfer.ID+"/cancel", nil, 200)

@@ -16,7 +16,7 @@ async function seedAppearance(
   await page.addInitScript(
     ({ preferences, version, expanded, accent }) => {
       localStorage.setItem(
-        'clouddrive.shell',
+        'neocloud.shell',
         JSON.stringify({
           version,
           state: {

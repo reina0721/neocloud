@@ -25,7 +25,7 @@ async function write<T>(page: Page, path: string, method: string, body: unknown)
 }
 
 test('站点信息保存后应用到文件区、访客登录注册和公开分享', async ({ page, browser }, info) => {
-  const accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
+  const accessPath = process.env.NEOCLOUD_FILE_TEST_ACCESS;
   test.skip(!accessPath, '站点信息写入只在隔离 QA 中验证。');
   const account = readPreviewAccess();
   const origin = account.origin;

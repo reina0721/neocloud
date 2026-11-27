@@ -45,8 +45,6 @@ const buildEnv = {
   NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL: '/api/console/v1',
   NEOCLOUD_NATIVE_BUILD_CACHE: values['no-web-cache'] ? '0' : '1',
 };
-for (const legacy of ['NEXT_PUBLIC_AUTH_MODE', 'NEXT_PUBLIC_AUTH_API_BASE_URL', 'CLOUDDRIVE_NATIVE_BUILD_CACHE'])
-  delete buildEnv[legacy];
 
 function run(command, args, cwd = repo, env = process.env) {
   return new Promise((done, reject) => {

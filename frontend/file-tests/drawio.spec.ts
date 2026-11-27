@@ -5,7 +5,7 @@ import { expect, test, type Page } from './preview-test';
 import { openReadingFixtureFolder, readPreviewAccess } from './reading-fixture';
 import { drawioEndpoint } from '../surfaces/plugins/files/src/drawio-protocol';
 
-const editorURL = process.env.CLOUDDRIVE_DRAWIO_TEST_URL;
+const editorURL = process.env.NEOCLOUD_DRAWIO_TEST_URL;
 const editorOrigin = new URL(editorURL ?? 'https://embed.diagrams.net/').origin;
 const frameSelector = 'iframe[title="Draw.io 绘图编辑器"]';
 const filename = 'diagram.drawio';

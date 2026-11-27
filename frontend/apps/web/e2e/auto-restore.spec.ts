@@ -19,8 +19,8 @@ const legacyPreferenceFixture = z
 async function resetAll(page: Page) {
   await page.goto('/settings/navigation');
   await page.evaluate(() => {
-    window.localStorage.removeItem('clouddrive.shell');
-    window.localStorage.removeItem('clouddrive.workspace');
+    window.localStorage.removeItem('neocloud.shell');
+    window.localStorage.removeItem('neocloud.workspace');
   });
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
@@ -54,12 +54,12 @@ test('旧自动恢复偏好保留兼容，但首页不跳转且草稿仍可手�
   await resetAll(page);
   await enableAutosave(page);
   const raw: unknown = JSON.parse(
-    await page.evaluate(() => localStorage.getItem('clouddrive.shell') ?? '{}'),
+    await page.evaluate(() => localStorage.getItem('neocloud.shell') ?? '{}'),
   );
   const stored = legacyPreferenceFixture.parse(raw);
   stored.state.preferences.navigation.autoRestoreWorkspace = true;
   await page.evaluate((fixture) => {
-    localStorage.setItem('clouddrive.shell', JSON.stringify(fixture));
+    localStorage.setItem('neocloud.shell', JSON.stringify(fixture));
   }, stored);
   await page.goto('/reference-resources/create');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');

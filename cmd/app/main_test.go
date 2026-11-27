@@ -268,7 +268,7 @@ http:
 				if missingTypeResponse.StatusCode != http.StatusUnsupportedMediaType || decodeErr != nil ||
 					missingTypePayload.Status != missingTypeResponse.StatusCode ||
 					missingTypePayload.Code != "unsupported_media_type" ||
-					missingTypePayload.Type != "urn:clouddrive:problem:unsupported_media_type" {
+					missingTypePayload.Type != "urn:neocloud:problem:unsupported_media_type" {
 					cancel()
 					<-done
 					t.Fatalf("missing Content-Type response = %d %#v, decodeErr=%v", missingTypeResponse.StatusCode, missingTypePayload, decodeErr)

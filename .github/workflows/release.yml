@@ -8,9 +8,6 @@ on:
 permissions:
   contents: read
 
-env:
-  NEOCLOUD_RELEASE_PROFILE: ${{ vars.NEOCLOUD_RELEASE_PROFILE || (github.ref_name == 'v0.3.4' && 'legacy') || 'neocloud' }}
-
 jobs:
   release:
     name: Verify source and build standalone release archives
@@ -57,6 +54,10 @@ jobs:
           fi
           test -z "$(git status --porcelain)"
           printf '构建版本 %s，提交 %s。\n' "$GITHUB_REF_NAME" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify Go and release controls
+        run: |
+          go test -p 2 ./... -count=1
+          node --test scripts/release-config.test.mjs scripts/verify-release.test.mjs scripts/install.test.mjs scripts/verify-elf-platform.test.mjs scripts/docker-image-config-id.test.mjs
       - name: Install pinned release tools
         run: |
           tool_dir="$(node scripts/project-layout.mjs --field toolsRoot)"
@@ -74,28 +75,20 @@ jobs:
           if [[ "$GITHUB_REF_NAME" == *-* ]]; then
             unset GORELEASER_PREVIOUS_TAG
           fi
-          family="$(node scripts/release-go-source.mjs family)"
-          if [[ "$family" == clouddrive ]]; then
-            export NEOCLOUD_RELEASE_GO_ROOT
-            NEOCLOUD_RELEASE_GO_ROOT="$(mktemp -d "$RUNNER_TEMP/legacy-go-XXXXXXXX")"
-            trap 'rm -rf -- "$NEOCLOUD_RELEASE_GO_ROOT"' EXIT
-            node scripts/release-go-source.mjs prepare-legacy "$NEOCLOUD_RELEASE_GO_ROOT"
-          fi
           node scripts/release-config.mjs --output "${RUNNER_TEMP}/goreleaser.yaml"
           goreleaser release --clean --skip=sign --config "${RUNNER_TEMP}/goreleaser.yaml"
       - name: Verify standalone archive targets and license trees
         run: |
-          family="$(node scripts/release-go-source.mjs family)"
           version="${GITHUB_REF_NAME#v}"
-          linux="${GORELEASER_DIST}/${family}_${version}_linux_amd64.tar.gz"
-          windows="${GORELEASER_DIST}/${family}_${version}_windows_amd64.zip"
+          linux="${GORELEASER_DIST}/neocloud_${version}_linux_amd64.tar.gz"
+          windows="${GORELEASER_DIST}/neocloud_${version}_windows_amd64.zip"
           tar -tzf "$linux" > "$RUNNER_TEMP/linux-files.txt"
           unzip -Z1 "$windows" > "$RUNNER_TEMP/windows-files.txt"
-          tar -xOzf "$linux" "$family" > "$RUNNER_TEMP/standalone-linux"
-          unzip -p "$windows" "$family.exe" > "$RUNNER_TEMP/standalone-windows"
+          tar -xOzf "$linux" "neocloud" > "$RUNNER_TEMP/standalone-linux"
+          unzip -p "$windows" "neocloud.exe" > "$RUNNER_TEMP/standalone-windows"
           for target in linux windows; do
             go version -m "$RUNNER_TEMP/standalone-$target" > "$RUNNER_TEMP/$target-build.txt"
-            grep -Ex "[[:space:]]+path[[:space:]]+github.com/reina0721/$family/cmd/app" "$RUNNER_TEMP/$target-build.txt"
+            grep -Ex "[[:space:]]+path[[:space:]]+github.com/reina0721/neocloud/cmd/app" "$RUNNER_TEMP/$target-build.txt"
             grep -Ex "[[:space:]]+build[[:space:]]+GOOS=$target" "$RUNNER_TEMP/$target-build.txt"
             grep -Ex '[[:space:]]+build[[:space:]]+GOARCH=amd64' "$RUNNER_TEMP/$target-build.txt"
             for file in README.md LICENSE NOTICE SOURCES.json locales/messages.zh-CN.yaml internal/module/todo/binding/i18n/locales/messages.zh-CN.yaml third-party/GO-LICENSE third-party/github.com/spf13/cobra/LICENSE.txt; do
@@ -129,24 +122,16 @@ jobs:
         run: bash scripts/build-docker-release.sh --version "${GITHUB_REF_NAME}" --arch "${{ matrix.arch }}" --out dist/docker
       - name: Build host maintenance command
         run: |
-          family="$(node scripts/release-go-source.mjs family)"
-          go_root="$PWD"
-          if [[ "$family" == clouddrive ]]; then
-            go_root="$(mktemp -d "$RUNNER_TEMP/legacy-go-XXXXXXXX")"
-            trap 'rm -rf -- "$go_root"' EXIT
-            node scripts/release-go-source.mjs prepare-legacy "$go_root"
-          fi
-          binary="$PWD/dist/docker/${family}-maintenance_${GITHUB_REF_NAME}_linux_${{ matrix.arch }}"
-          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go -C "$go_root" build -trimpath -buildvcs=false -ldflags="-s -w" -o "${binary}" "./cmd/${family}-maintenance"
+          binary="$PWD/dist/docker/neocloud-maintenance_${GITHUB_REF_NAME}_linux_${{ matrix.arch }}"
+          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build -trimpath -buildvcs=false -ldflags="-s -w" -o "${binary}" "./cmd/neocloud-maintenance"
           node scripts/verify-elf-platform.mjs "${binary}" "${{ matrix.arch }}"
-          go version -m "$binary" | grep -Ex "[[:space:]]+path[[:space:]]+github.com/reina0721/$family/cmd/$family-maintenance"
+          go version -m "$binary" | grep -Ex "[[:space:]]+path[[:space:]]+github.com/reina0721/neocloud/cmd/neocloud-maintenance"
       - name: Produce image SBOMs
         run: |
-          family="$(node scripts/release-go-source.mjs family)"
           GOBIN="${RUNNER_TEMP}/release-tools" go install github.com/anchore/syft/cmd/syft@v1.50.0
           for service in api web; do
-            "${RUNNER_TEMP}/release-tools/syft" "docker:${family}-${service}:${GITHUB_REF_NAME}-${{ matrix.arch }}" \
-              --output "spdx-json=dist/docker/${family}-${service}_${GITHUB_REF_NAME}_${{ matrix.arch }}.spdx.json"
+            "${RUNNER_TEMP}/release-tools/syft" "docker:neocloud-${service}:${GITHUB_REF_NAME}-${{ matrix.arch }}" \
+              --output "spdx-json=dist/docker/neocloud-${service}_${GITHUB_REF_NAME}_${{ matrix.arch }}.spdx.json"
           done
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -234,11 +219,11 @@ jobs:
           baseline="$BASELINE"
           [[ "$baseline" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
           baseline_assets=$(gh release view "$baseline" --json assets --jq '.assets[].name')
-          family="$(node scripts/release-go-source.mjs family)"
           source_args=()
-          if grep -q '_managed-go\.zip$' <<< "$baseline_assets"; then
-            grep -Fxq -e "clouddrive_${baseline}_${TARGET_OS}_${TARGET_ARCH}_managed-go.zip" \
-              -e "neocloud_${baseline}_${TARGET_OS}_${TARGET_ARCH}_managed-go.zip" <<< "$baseline_assets"
+          if grep -Eq '^neocloud_.+_managed-(go|full)\.zip$' <<< "$baseline_assets"; then
+            for profile in managed-go managed-full; do
+              grep -Fxq "neocloud_${baseline}_${TARGET_OS}_${TARGET_ARCH}_${profile}.zip" <<< "$baseline_assets"
+            done
             baseline_commit=$(git rev-parse "${baseline}^{commit}")
             source_args=(--base-version "$baseline" --base-commit "$baseline_commit")
           fi
@@ -248,7 +233,7 @@ jobs:
             --os "$TARGET_OS" --arch "$TARGET_ARCH" --out dist/managed-go "${source_args[@]}" \
             --web-dir "$RUNNER_TEMP/managed-static/web" --web-licenses-dir "$RUNNER_TEMP/managed-static/licenses"
           for profile in managed-go managed-full; do
-            archive="dist/managed-go/${family}_${GITHUB_REF_NAME}_${TARGET_OS}_${TARGET_ARCH}_${profile}.zip"
+            archive="dist/managed-go/neocloud_${GITHUB_REF_NAME}_${TARGET_OS}_${TARGET_ARCH}_${profile}.zip"
             syft "file:$archive" --output "spdx-json=$archive.spdx.json"
           done
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -293,7 +278,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          family="$(node scripts/release-go-source.mjs family)"
           mkdir -p dist/complete
           test "$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft)" = true
           gh release download "${GITHUB_REF_NAME}" --pattern checksums.txt --pattern '*.spdx.json' --dir dist/complete
@@ -301,7 +285,7 @@ jobs:
           cd dist/docker
           sha256sum --check "checksums-amd64.txt"
           sha256sum --check "checksums-arm64.txt"
-          sha256sum -- "${family}_"*_docker.tar.gz "${family}-maintenance_"* install.sh version.txt *.spdx.json >> ../complete/checksums.txt
+          sha256sum -- "neocloud_"*_docker.tar.gz "neocloud-maintenance_"* install.sh version.txt *.spdx.json >> ../complete/checksums.txt
           if [[ "$GITHUB_REF_NAME" != *-* ]]; then
             (cd ../managed-go && sha256sum -- *_managed-go.zip *_managed-full.zip *_managed-go.zip.spdx.json *_managed-full.zip.spdx.json) >> ../complete/checksums.txt
           fi
@@ -318,10 +302,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          family="$(node scripts/release-go-source.mjs family)"
           test "$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq .isDraft)" = true
-          gh release upload "${GITHUB_REF_NAME}" "dist/docker/${family}_"*_docker.tar.gz dist/docker/install.sh \
-            dist/docker/version.txt dist/docker/*.spdx.json "dist/docker/${family}-maintenance_"* dist/complete/checksums.txt dist/complete/checksums.txt.sigstore.json --clobber
+          gh release upload "${GITHUB_REF_NAME}" "dist/docker/neocloud_"*_docker.tar.gz dist/docker/install.sh \
+            dist/docker/version.txt dist/docker/*.spdx.json "dist/docker/neocloud-maintenance_"* dist/complete/checksums.txt dist/complete/checksums.txt.sigstore.json --clobber
           if [[ "$GITHUB_REF_NAME" != *-* ]]; then
             gh release upload "${GITHUB_REF_NAME}" dist/managed-go/*_managed-go.zip dist/managed-go/*_managed-full.zip \
               dist/managed-go/*_managed-go.zip.spdx.json dist/managed-go/*_managed-full.zip.spdx.json --clobber
@@ -371,9 +354,9 @@ jobs:
           ARCH: ${{ matrix.arch }}
         run: |
           GOBIN="$RUNNER_TEMP/release-tools" go install github.com/sigstore/cosign/v2/cmd/cosign@v2.6.5
-          export CLOUDDRIVE_COSIGN="$RUNNER_TEMP/release-tools/cosign"
-          export CLOUDDRIVE_OFFLINE_TRUST_DIR="$RUNNER_TEMP/offline-trust"
-          bash scripts/prepare-offline-trust.sh "$CLOUDDRIVE_OFFLINE_TRUST_DIR"
+          export NEOCLOUD_COSIGN="$RUNNER_TEMP/release-tools/cosign"
+          export NEOCLOUD_OFFLINE_TRUST_DIR="$RUNNER_TEMP/offline-trust"
+          bash scripts/prepare-offline-trust.sh "$NEOCLOUD_OFFLINE_TRUST_DIR"
           node scripts/test-docker-release.mjs --artifact-smoke --release-dir "$RUNNER_TEMP/docker-candidate" \
             --version "$GITHUB_REF_NAME" --arch "$ARCH" --commit "$GITHUB_SHA" \
             --trace "$RUNNER_TEMP/docker-smoke-$ARCH.json"
@@ -434,13 +417,13 @@ jobs:
           Remove-Item Env:TUF_ROOT_JSON, Env:TUF_MIRROR -ErrorAction SilentlyContinue
           $cosign = Join-Path $tools ($IsWindows ? 'cosign.exe' : 'cosign')
           # 原生整包启动验收会清空被测宿主进程的 PATH。
-          $env:CLOUDDRIVE_COSIGN = $cosign
+          $env:NEOCLOUD_COSIGN = $cosign
           & $cosign initialize --mirror https://tuf-repo-cdn.sigstore.dev
           Copy-Item -LiteralPath (Join-Path $env:TUF_ROOT 'tuf-repo-cdn.sigstore.dev/targets/trusted_root.json') -Destination $trust
-          $env:CLOUDDRIVE_TEST_NATIVE_RELEASE_DIR = $release
-          $env:CLOUDDRIVE_TEST_NATIVE_TRUST_DIR = $trust
-          $env:CLOUDDRIVE_TEST_NATIVE_TAG = $env:GITHUB_REF_NAME
-          $env:CLOUDDRIVE_TEST_NATIVE_COMMIT = $env:GITHUB_SHA
+          $env:NEOCLOUD_TEST_NATIVE_RELEASE_DIR = $release
+          $env:NEOCLOUD_TEST_NATIVE_TRUST_DIR = $trust
+          $env:NEOCLOUD_TEST_NATIVE_TAG = $env:GITHUB_REF_NAME
+          $env:NEOCLOUD_TEST_NATIVE_COMMIT = $env:GITHUB_SHA
           go test -count=1 -v ./internal/nativeupgrade -run '^TestSignedFullReleaseBoot$'
 
   publish:
@@ -479,7 +462,6 @@ jobs:
           test "$(git rev-parse "$ref^{commit}")" = "$GITHUB_SHA"
       - name: Download and verify complete signed asset set
         run: |
-          family="$(node scripts/release-go-source.mjs family)"
           gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" > "${RUNNER_TEMP}/release-pages.json"
           node scripts/verify-release.mjs draft "${RUNNER_TEMP}/release-pages.json" "${GITHUB_REF_NAME}" > "${RUNNER_TEMP}/release.json"
           gh release download "${GITHUB_REF_NAME}" --dir "${RUNNER_TEMP}/release-assets"
@@ -491,7 +473,7 @@ jobs:
             os=${target%/*}
             arch=${target#*/}
             for profile in managed-go managed-full; do
-              archive="${RUNNER_TEMP}/release-assets/${family}_${GITHUB_REF_NAME}_${os}_${arch}_${profile}.zip"
+              archive="${RUNNER_TEMP}/release-assets/neocloud_${GITHUB_REF_NAME}_${os}_${arch}_${profile}.zip"
               go run ./internal/tools/native-archive --profile "$profile" --verify-managed "$archive" \
                 --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" --os "$os" --arch "$arch"
             done
@@ -513,7 +495,7 @@ jobs:
           test "$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)" = "${GITHUB_REF_NAME}"
       - name: Verify public download propagation
         run: |
-          export CLOUDDRIVE_COSIGN="${RUNNER_TEMP}/release-tools/cosign"
+          export NEOCLOUD_COSIGN="${RUNNER_TEMP}/release-tools/cosign"
           for attempt in {1..6}; do
             if curl --fail --location --silent --show-error --proto '=https' --proto-redir '=https' \
               --connect-timeout 10 --max-time 20 \
@@ -540,3 +522,16 @@ jobs:
             test "$native_verified" = true
           done
           echo "正式版：https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}" >> "${GITHUB_STEP_SUMMARY}"
+      - name: Install published signed Docker package online
+        timeout-minutes: 40
+        run: |
+          export NEOCLOUD_COSIGN="$RUNNER_TEMP/release-tools/cosign"
+          node scripts/test-docker-release.mjs --artifact-smoke --public-installer "$RUNNER_TEMP/public-install.sh" \
+            --version "$GITHUB_REF_NAME" --arch amd64 --commit "$GITHUB_SHA" \
+            --trace "$RUNNER_TEMP/docker-smoke-online-amd64.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: ${{ always() }}
+        with:
+          name: docker-smoke-online-amd64
+          path: ${{ runner.temp }}/docker-smoke-online-amd64.json
+          if-no-files-found: ignore

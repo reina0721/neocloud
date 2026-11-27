@@ -1,5 +1,4 @@
 'use client';
-import { readProductStorage, writeProductStorage } from '@neocloud/state-foundation';
 
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 
@@ -42,7 +41,7 @@ function readReducedMotion() {
 function readStoredPolicy(): MotionPolicyState {
   if (!inspectorAvailable || typeof window === 'undefined') return defaultPolicy;
   try {
-    const value = readProductStorage(window.sessionStorage, motionSessionKey);
+    const value = window.sessionStorage.getItem(motionSessionKey);
     if (!value) return defaultPolicy;
     const parsed = JSON.parse(value) as Partial<MotionPolicyState>;
     const mode = ['system', 'full', 'reduced', 'off'].includes(parsed.mode ?? '')
@@ -119,7 +118,7 @@ export function MotionPolicyProvider({
         : 'off';
     }
     if (inspectorAvailable) {
-      writeProductStorage(window.sessionStorage, motionSessionKey, JSON.stringify(policy));
+      window.sessionStorage.setItem(motionSessionKey, JSON.stringify(policy));
     }
   }, [policy, preference]);
 

@@ -9,7 +9,6 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { bundleLicenses } from "../frontend/tooling/bundle-licenses.mjs";
-import { prepareLegacyGoSource, releaseFamily } from "./release-go-source.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const { values } = parseArgs({
@@ -23,7 +22,6 @@ const { values } = parseArgs({
     "base-commit": { type: "string" },
     "web-dir": { type: "string" },
     "web-licenses-dir": { type: "string" },
-    profile: { type: "string" },
   },
 });
 const { version, commit, os, arch, out } = values;
@@ -65,6 +63,7 @@ for (const key of Object.keys(migration))
 const baseline = values["base-version"];
 const baselineCommit = values["base-commit"];
 assert.equal(Boolean(baseline), Boolean(baselineCommit));
+assert.ok(baseline || Object.keys(migration).length === 0, "迁移清单需要已发布的 NeoCloud 原生基线");
 if (baseline) {
   if (migration.fromVersion !== undefined) assert.equal(migration.fromVersion, baseline);
   if (migration.fromCommit !== undefined) assert.equal(migration.fromCommit, baselineCommit);
@@ -73,11 +72,10 @@ if (baseline) {
 }
 
 const output = resolve(out);
-const family = releaseFamily(values.profile);
 const work = await mkdtemp(join(tmpdir(), "neocloud-managed-go-"));
 const suffix = os === "windows" ? ".exe" : "";
-const binaryName = family + suffix;
-const hostName = family + "-host" + suffix;
+const binaryName = "neocloud" + suffix;
+const hostName = "neocloud-host" + suffix;
 const manifest = { version, commit, os, arch, hostProtocol: 1, ...migration };
 const profile = values["web-dir"] ? "managed-full" : "managed-go";
 const content = [
@@ -147,17 +145,16 @@ async function includeStaticWeb() {
 
 try {
   await mkdir(output, { recursive: true });
-  const goRoot = family === "clouddrive" ? await prepareLegacyGoSource(root, join(work, ".legacy-go")) : root;
   const binaries = [
     [binaryName, "./cmd/app"],
-    [hostName, `./cmd/${family}-host`],
+    [hostName, "./cmd/neocloud-host"],
   ];
   for (const [name, entry] of binaries) {
     execFileSync(
       "go",
       ["build", "-trimpath", "-buildvcs=false", "-ldflags", buildFlags, "-o", join(work, name), entry],
       {
-        cwd: goRoot,
+        cwd: root,
         stdio: "inherit",
         env: { ...process.env, GOOS: os, GOARCH: arch, CGO_ENABLED: "0" },
       },
@@ -168,12 +165,10 @@ try {
     [
       join(root, "scripts/prepare-go-licenses.mjs"),
       "--managed-host", "--output", join(work, "third-party"),
-      "--source", goRoot,
       "--goos", os, "--goarch", arch,
     ],
     { cwd: root, stdio: "inherit" },
   );
-  if (goRoot !== root) await rm(goRoot, { recursive: true, force: true });
   for (const file of content) {
     await mkdir(dirname(join(work, file)), { recursive: true });
     await copyFile(join(root, file), join(work, file));
@@ -183,7 +178,7 @@ try {
   await writeFile(join(work, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n", {
     flag: "wx",
   });
-  const archive = join(output, `${family}_${version}_${os}_${arch}_${profile}.zip`);
+  const archive = join(output, `neocloud_${version}_${os}_${arch}_${profile}.zip`);
   execFileSync(
     "go",
     [

@@ -3,7 +3,7 @@ import { test, expect, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { openReadingFixtureFolder } from './reading-fixture';
-const accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS!;
+const accessPath = process.env.NEOCLOUD_FILE_TEST_ACCESS!;
 async function login(page: Page) {
   const a = JSON.parse((await readFile(accessPath, 'utf8')).replace(/^\uFEFF/, '')) as {
     username: string;

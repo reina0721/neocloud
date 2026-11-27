@@ -1,10 +1,10 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
-/** 清空偏好（clouddrive.shell），保证每次测试从默认开始（confirmLeave 默认开）。 */
+/** 清空偏好（neocloud.shell），保证每次测试从默认开始（confirmLeave 默认开）。 */
 async function resetPreferences(page: Page) {
   await page.goto('/settings/actions');
-  await page.evaluate(() => window.localStorage.removeItem('clouddrive.shell'));
+  await page.evaluate(() => window.localStorage.removeItem('neocloud.shell'));
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
 }

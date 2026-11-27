@@ -51,7 +51,7 @@ async function fileRequest<T>(page: Page, path: string, body?: unknown) {
 }
 
 test('任务摘要不被状态筛选污染，移动端任务条目没有横向溢出', async ({ page }) => {
-  const accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
+  const accessPath = process.env.NEOCLOUD_FILE_TEST_ACCESS;
   test.skip(!accessPath, '任务只读验收需要管理员访问文件。');
   const account = JSON.parse(
     (await readFile(resolve(__dirname, accessPath!), 'utf8')).replace(/^\uFEFF/, ''),
@@ -93,8 +93,8 @@ test('任务摘要不被状态筛选污染，移动端任务条目没有横向�
 });
 
 test('管理员过滤并清理成员的终态归档任务，保留发布文件', async ({ page, browser }, info) => {
-  const adminPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
-  const memberPath = process.env.CLOUDDRIVE_INVENTORY_MEMBER_ACCESS;
+  const adminPath = process.env.NEOCLOUD_FILE_TEST_ACCESS;
+  const memberPath = process.env.NEOCLOUD_INVENTORY_MEMBER_ACCESS;
   test.skip(!adminPath || !memberPath, '清理验收仅使用隔离 QA。');
   const readAccess = async (path: string) =>
     JSON.parse((await readFile(resolve(__dirname, path), 'utf8')).replace(/^\uFEFF/, '')) as Access;
@@ -192,7 +192,7 @@ test('管理员过滤并清理成员的终态归档任务，保留发布文件',
 
 test('管理员可以筛选调度器生成的系统维护记录', async ({ page }, info) => {
   test.setTimeout(100000);
-  const accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS;
+  const accessPath = process.env.NEOCLOUD_FILE_TEST_ACCESS;
   test.skip(!accessPath, '维护验收使用已启用调度器的隔离 QA。');
   const account = JSON.parse(
     (await readFile(resolve(__dirname, accessPath!), 'utf8')).replace(/^\uFEFF/, ''),

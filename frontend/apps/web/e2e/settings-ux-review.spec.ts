@@ -7,9 +7,9 @@ import { defaultPreferences, PREFERENCES_VERSION } from '@neocloud/surface/prefe
 async function setup(page: Page, pinned = true) {
   await page.addInitScript(
     ({ preferences, version, pinned }) => {
-      if (localStorage.getItem('clouddrive.shell')) return;
+      if (localStorage.getItem('neocloud.shell')) return;
       localStorage.setItem(
-        'clouddrive.shell',
+        'neocloud.shell',
         JSON.stringify({
           version,
           state: {

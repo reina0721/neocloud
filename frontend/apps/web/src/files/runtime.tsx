@@ -34,7 +34,6 @@ import { createReaderPersistence } from './reader-persistence';
 import { downloadBlob } from './native-download';
 import { createReaderAudioFocus, type VideoHandoffBuffers } from './reader-playback';
 import { MusicDock } from './music-dock';
-import { compatibleEnv } from '../../runtime/environment.mjs';
 
 const PDFReader = lazy(() =>
   import('./pdf/reader-view').then((module) => ({ default: module.PDFReaderView })),
@@ -326,13 +325,7 @@ export function FilesRuntime({
       accountTools={FileAccountMenu}
       {...(readerPersistence ? { readerPersistence } : {})}
       uploadMarkdownImage={runtime.uploadMarkdownImage}
-      drawioEndpoint={
-        compatibleEnv(
-          'NEXT_PUBLIC_NEOCLOUD_DRAWIO_URL',
-          process.env.NEXT_PUBLIC_NEOCLOUD_DRAWIO_URL,
-          process.env.NEXT_PUBLIC_CLOUDDRIVE_DRAWIO_URL,
-        ) ?? 'https://embed.diagrams.net/'
-      }
+      drawioEndpoint={process.env.NEXT_PUBLIC_NEOCLOUD_DRAWIO_URL ?? 'https://embed.diagrams.net/'}
       {...(fileWorkspace
         ? {
             music: {

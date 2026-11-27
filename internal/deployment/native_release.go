@@ -46,7 +46,6 @@ const (
 // NativeManifest binds the worker to a platform and the managed-host protocol.
 // Migration descriptors are opaque to deployment and interpreted by the application.
 type NativeManifest struct {
-	family             releaseFamily
 	Version            string                     `json:"version"`
 	Commit             string                     `json:"commit"`
 	OS                 string                     `json:"os"`
@@ -74,10 +73,6 @@ func nativeAssetName(version, goos, arch string) (string, error) {
 }
 
 func nativeAssetNameFor(version, goos, arch string, profile NativeProfile) (string, error) {
-	return legacyRelease.nativeAsset(version, goos, arch, profile)
-}
-
-func (family releaseFamily) nativeAsset(version, goos, arch string, profile NativeProfile) (string, error) {
 	if profile != NativeGo && profile != NativeFull {
 		return "", errors.New("不支持的原生发布包类型")
 	}
@@ -87,25 +82,14 @@ func (family releaseFamily) nativeAsset(version, goos, arch string, profile Nati
 	if !(goos == "windows" && arch == "amd64" || goos == "linux" && (arch == "amd64" || arch == "arm64")) {
 		return "", fmt.Errorf("不支持的托管原生平台 %s/%s", goos, arch)
 	}
-	return fmt.Sprintf("%s_%s_%s_%s_%s.zip", family, version, goos, arch, profile), nil
+	return fmt.Sprintf("neocloud_%s_%s_%s_%s.zip", version, goos, arch, profile), nil
 }
 
-func (family releaseFamily) nativeExecutables(goos string) [2]string {
-	if family == "" {
-		family = legacyRelease
-	}
-	worker, host := string(family), string(family)+"-host"
+func nativeExecutables(goos string) [2]string {
 	if goos == "windows" {
-		worker, host = worker+".exe", host+".exe"
+		return [2]string{"neocloud.exe", "neocloud-host.exe"}
 	}
-	return [2]string{worker, host}
-}
-
-func (release signedOfflineRelease) nativeAsset(profile NativeProfile) (releaseFamily, string, error) {
-	return selectSignedAsset(release.digests, func(family releaseFamily) string {
-		asset, _ := family.nativeAsset(release.version, runtime.GOOS, runtime.GOARCH, profile)
-		return asset
-	})
+	return [2]string{"neocloud", "neocloud-host"}
 }
 
 func (m NativeManifest) validate(version, goos, arch string, profile NativeProfile) error {
@@ -165,9 +149,8 @@ func (s *Releases) NativeCandidatesFor(ctx context.Context, current string, prof
 			if err != nil {
 				return nil, err
 			}
-			neoAsset, _ := neoRelease.nativeAsset(release.Tag, runtime.GOOS, runtime.GOARCH, profile)
 			for _, file := range release.Assets {
-				if file.State == "uploaded" && (file.Name == asset || file.Name == neoAsset) {
+				if file.State == "uploaded" && file.Name == asset {
 					seen[release.Tag] = true
 					tags = append(tags, release.Tag)
 					break
@@ -221,7 +204,7 @@ func (s *Releases) StageNative(ctx context.Context, versionsRoot, version string
 
 // StageNativeFor verifies and stages one package profile from GitHub Releases.
 func (s *Releases) StageNativeFor(ctx context.Context, versionsRoot, version string, profile NativeProfile) (NativeTarget, error) {
-	return stageNative(ctx, versionsRoot, version, profile, func(stage *os.Root) (signedOfflineRelease, error) {
+	return stageNative(ctx, versionsRoot, version, profile, func(stage *os.Root, asset string) (signedOfflineRelease, error) {
 		for _, name := range []string{offlineChecksums, offlineBundle} {
 			if err := s.download(ctx, stage.Name(), version, name, offlineSmallFile); err != nil {
 				return signedOfflineRelease{}, err
@@ -232,10 +215,6 @@ func (s *Releases) StageNativeFor(ctx context.Context, versionsRoot, version str
 			return signedOfflineRelease{}, err
 		}
 		release, err := verifyAndStoreNativeTrust(ctx, stage, version, root)
-		if err != nil {
-			return signedOfflineRelease{}, err
-		}
-		_, asset, err := release.nativeAsset(profile)
 		if err != nil {
 			return signedOfflineRelease{}, err
 		}
@@ -263,7 +242,7 @@ func ImportNative(ctx context.Context, versionsRoot, releaseDir, trustDir, versi
 
 // ImportNativeFor stages a local signed package against separately provisioned trust.
 func ImportNativeFor(ctx context.Context, versionsRoot, releaseDir, trustDir, version string, profile NativeProfile) (NativeTarget, error) {
-	return stageNative(ctx, versionsRoot, version, profile, func(stage *os.Root) (signedOfflineRelease, error) {
+	return stageNative(ctx, versionsRoot, version, profile, func(stage *os.Root, asset string) (signedOfflineRelease, error) {
 		source, trust, err := offlineInputs(releaseDir, trustDir)
 		if err != nil {
 			return signedOfflineRelease{}, err
@@ -279,10 +258,6 @@ func ImportNativeFor(ctx context.Context, versionsRoot, releaseDir, trustDir, ve
 			}
 		}
 		release, err := verifyAndStoreNativeTrust(ctx, stage, version, trust[nativeTrustFile])
-		if err != nil {
-			return signedOfflineRelease{}, err
-		}
-		_, asset, err := release.nativeAsset(profile)
 		if err != nil {
 			return signedOfflineRelease{}, err
 		}
@@ -307,8 +282,8 @@ func verifyAndStoreNativeTrust(ctx context.Context, stage *os.Root, version stri
 	return release, writeNativeFile(stage, nativeTrustFile, bytes.NewReader(root), offlineSmallFile, 0600)
 }
 
-func stageNative(ctx context.Context, versionsRoot, version string, profile NativeProfile, acquire func(*os.Root) (signedOfflineRelease, error)) (NativeTarget, error) {
-	_, err := nativeAssetNameFor(version, runtime.GOOS, runtime.GOARCH, profile)
+func stageNative(ctx context.Context, versionsRoot, version string, profile NativeProfile, acquire func(*os.Root, string) (signedOfflineRelease, error)) (NativeTarget, error) {
+	asset, err := nativeAssetNameFor(version, runtime.GOOS, runtime.GOARCH, profile)
 	if err != nil {
 		return NativeTarget{}, err
 	}
@@ -336,7 +311,7 @@ func stageNative(ctx context.Context, versionsRoot, version string, profile Nati
 		return NativeTarget{}, errors.Join(err, ErrBusy)
 	}
 	if _, err = store.Lstat(version); err == nil {
-		return loadNative(ctx, store, version, profile)
+		return loadNative(ctx, store, version, asset, profile)
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return NativeTarget{}, err
 	}
@@ -350,11 +325,11 @@ func stageNative(ctx context.Context, versionsRoot, version string, profile Nati
 		return NativeTarget{}, err
 	}
 	defer stage.Close()
-	release, err := acquire(stage)
+	release, err := acquire(stage, asset)
 	if err != nil {
 		return NativeTarget{}, err
 	}
-	manifest, err := unpackNativeTarget(ctx, stage, release, profile, true)
+	manifest, err := unpackNativeTarget(ctx, stage, release, asset, profile, true)
 	if err != nil {
 		return NativeTarget{}, err
 	}
@@ -375,7 +350,7 @@ func LoadNative(ctx context.Context, versionsRoot, version string) (NativeTarget
 
 // LoadNativeFor verifies a cached package without reaching GitHub or TUF.
 func LoadNativeFor(ctx context.Context, versionsRoot, version string, profile NativeProfile) (NativeTarget, error) {
-	_, err := nativeAssetNameFor(version, runtime.GOOS, runtime.GOARCH, profile)
+	asset, err := nativeAssetNameFor(version, runtime.GOOS, runtime.GOARCH, profile)
 	if err != nil {
 		return NativeTarget{}, err
 	}
@@ -388,10 +363,10 @@ func LoadNativeFor(ctx context.Context, versionsRoot, version string, profile Na
 		return NativeTarget{}, err
 	}
 	defer store.Close()
-	return loadNative(ctx, store, version, profile)
+	return loadNative(ctx, store, version, asset, profile)
 }
 
-func loadNative(ctx context.Context, store *os.Root, version string, profile NativeProfile) (NativeTarget, error) {
+func loadNative(ctx context.Context, store *os.Root, version, asset string, profile NativeProfile) (NativeTarget, error) {
 	info, err := store.Lstat(version)
 	if err != nil {
 		return NativeTarget{}, err
@@ -412,7 +387,7 @@ func loadNative(ctx context.Context, store *os.Root, version string, profile Nat
 	if err != nil {
 		return NativeTarget{}, err
 	}
-	manifest, err := unpackNativeTarget(ctx, stage, release, profile, false)
+	manifest, err := unpackNativeTarget(ctx, stage, release, asset, profile, false)
 	if err != nil {
 		return NativeTarget{}, err
 	}
@@ -421,7 +396,7 @@ func loadNative(ctx context.Context, store *os.Root, version string, profile Nat
 
 func nativeTarget(store *os.Root, manifest NativeManifest) NativeTarget {
 	dir := filepath.Join(store.Name(), manifest.Version)
-	names := manifest.family.nativeExecutables(manifest.OS)
+	names := nativeExecutables(manifest.OS)
 	target := NativeTarget{Manifest: manifest, Directory: dir, Executable: filepath.Join(dir, names[0]), HostExecutable: filepath.Join(dir, names[1])}
 	if manifest.Profile == NativeFull {
 		target.WebDirectory = filepath.Join(dir, nativeWebDirectory)
@@ -465,11 +440,7 @@ func withoutTUFOverrides(env []string) []string {
 	return filtered
 }
 
-func unpackNativeTarget(ctx context.Context, stage *os.Root, release signedOfflineRelease, profile NativeProfile, create bool) (NativeManifest, error) {
-	family, asset, err := release.nativeAsset(profile)
-	if err != nil {
-		return NativeManifest{}, err
-	}
+func unpackNativeTarget(ctx context.Context, stage *os.Root, release signedOfflineRelease, asset string, profile NativeProfile, create bool) (NativeManifest, error) {
 	file, err := release.openVerified(ctx, stage, asset, nativePackageLimitFor(profile))
 	if err != nil {
 		return NativeManifest{}, err
@@ -479,16 +450,13 @@ func unpackNativeTarget(ctx context.Context, stage *os.Root, release signedOffli
 	if err != nil {
 		return NativeManifest{}, err
 	}
-	if manifest.family != family {
-		return NativeManifest{}, errors.New("原生归档内的程序名称与签名附件名称不一致")
-	}
 	for _, entry := range entries[:3] {
 		if err := handleNativeEntry(ctx, stage, entry, create); err != nil {
 			return NativeManifest{}, err
 		}
 	}
 	if create {
-		for index, name := range manifest.family.nativeExecutables(manifest.OS) {
+		for index, name := range nativeExecutables(manifest.OS) {
 			binary, err := openOfflineFile(stage, name, nativeBinaryLimit)
 			if err != nil {
 				return NativeManifest{}, err
@@ -531,12 +499,6 @@ func InspectNativeArchiveFor(archive, version, goos, arch string, profile Native
 	if err != nil {
 		return NativeManifest{}, err
 	}
-	for _, family := range releaseFamilies {
-		name, _ := family.nativeAsset(version, goos, arch, profile)
-		if filepath.Base(archive) == name && manifest.family != family {
-			return NativeManifest{}, errors.New("原生归档名称与包内程序名称不一致")
-		}
-	}
 	for index, entry := range entries[1:3] {
 		binary, err := entry.Open()
 		if err != nil {
@@ -567,18 +529,14 @@ func verifyNativeBinary(input io.ReaderAt, manifest NativeManifest, index int) e
 	if err != nil {
 		return fmt.Errorf("无法核对 Go 二进制身份: %w", err)
 	}
-	family := manifest.family
-	if family == "" {
-		family = legacyRelease
-	}
-	module := "github.com/reina0721/" + string(family)
-	expected := [2]string{module + "/cmd/app", module + "/cmd/" + string(family) + "-host"}
+	const module = "github.com/reina0721/neocloud"
+	expected := [2]string{module + "/cmd/app", module + "/cmd/neocloud-host"}
 	settings := make(map[string]string, len(info.Settings))
 	for _, setting := range info.Settings {
 		settings[setting.Key] = setting.Value
 	}
 	if info.Path != expected[index] || settings["GOOS"] != manifest.OS || settings["GOARCH"] != manifest.Arch || settings["CGO_ENABLED"] != "0" {
-		return fmt.Errorf("原生发布的二进制身份或平台不匹配：%s", family.nativeExecutables(manifest.OS)[index])
+		return fmt.Errorf("原生发布的二进制身份或平台不匹配：%s", nativeExecutables(manifest.OS)[index])
 	}
 	return nil
 }
@@ -606,8 +564,8 @@ func inspectNativeFileFor(file *os.File, version, goos, arch string, profile Nat
 	if len(archive.File) > entryLimit {
 		return NativeManifest{}, nil, errors.New("原生发布包条目过多")
 	}
-	legacyNames, neoNames := legacyRelease.nativeExecutables(goos), neoRelease.nativeExecutables(goos)
-	required := []string{nativeManifestFile, legacyNames[0], legacyNames[1], neoNames[0], neoNames[1]}
+	names := nativeExecutables(goos)
+	required := []string{nativeManifestFile, names[0], names[1]}
 	found := make(map[string]*zip.File, len(required))
 	seen := make(map[string]bool, len(archive.File))
 	var fullEntries []*zip.File
@@ -642,24 +600,15 @@ func inspectNativeFileFor(file *os.File, version, goos, arch string, profile Nat
 			found[name] = entry
 		}
 	}
-	if found[nativeManifestFile] == nil {
-		return NativeManifest{}, nil, fmt.Errorf("原生发布包缺少 %s", nativeManifestFile)
-	}
-	var family releaseFamily
-	var names [2]string
-	switch {
-	case found[legacyNames[0]] != nil && found[legacyNames[1]] != nil && found[neoNames[0]] == nil && found[neoNames[1]] == nil:
-		family, names = legacyRelease, legacyNames
-	case found[neoNames[0]] != nil && found[neoNames[1]] != nil && found[legacyNames[0]] == nil && found[legacyNames[1]] == nil:
-		family, names = neoRelease, neoNames
-	default:
-		return NativeManifest{}, nil, errors.New("原生发布包须包含同一命名系列的业务程序和宿主")
+	for _, name := range required {
+		if found[name] == nil {
+			return NativeManifest{}, nil, fmt.Errorf("原生发布包缺少 %s", name)
+		}
 	}
 	manifest, err := decodeNativeManifest(found[nativeManifestFile])
 	if err == nil {
 		err = manifest.validate(version, goos, arch, profile)
 	}
-	manifest.family = family
 	return manifest, append([]*zip.File{found[nativeManifestFile], found[names[0]], found[names[1]]}, fullEntries...), err
 }
 

@@ -104,7 +104,3 @@ func NewHTTP(dependencies HTTPDependencies) (HTTPModule, error) {
 }
 
 func (m HTTPModule) SessionCookieName() string { return m.Cookies.Name(service.SessionCookieName) }
-
-func (m HTTPModule) LegacySessionCookieName() string {
-	return m.Cookies.Name(service.LegacySessionCookieName)
-}

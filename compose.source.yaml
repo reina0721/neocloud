@@ -5,7 +5,7 @@ x-source-data: &source-data
   target: /app/.data
 
 x-source-owner: &source-owner
-  io.clouddrive.source.instance: ${NEOCLOUD_SOURCE_OWNER:-${CLOUDDRIVE_SOURCE_OWNER:?missing source owner}}
+  io.neocloud.source.instance: ${NEOCLOUD_SOURCE_OWNER:?missing source owner}
 
 services:
   migrate:
@@ -17,7 +17,7 @@ services:
     build:
       context: .
       args:
-        COMMIT: ${NEOCLOUD_SOURCE_COMMIT:-${CLOUDDRIVE_SOURCE_COMMIT:-unknown}}
+        COMMIT: ${NEOCLOUD_SOURCE_COMMIT:-unknown}
       labels: *source-owner
     volumes:
       - *source-data
@@ -27,7 +27,7 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
       args:
-        COMMIT: ${NEOCLOUD_SOURCE_COMMIT:-${CLOUDDRIVE_SOURCE_COMMIT:-unknown}}
+        COMMIT: ${NEOCLOUD_SOURCE_COMMIT:-unknown}
       labels: *source-owner
     healthcheck:
       test:
@@ -45,7 +45,7 @@ services:
 volumes:
   source-data:
     external: true
-    name: ${NEOCLOUD_SOURCE_PROJECT:-${CLOUDDRIVE_SOURCE_PROJECT:?missing source project}}-data
+    name: ${NEOCLOUD_SOURCE_PROJECT:?missing source project}-data
 
 networks:
   default:

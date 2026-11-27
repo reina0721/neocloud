@@ -86,7 +86,7 @@ func TestFileSharingPublicPasswordScopeRevocationAndRestart(t *testing.T) {
 	})
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "sharing-owner@clouddrive.test", "name": "分享验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "sharing-owner@neocloud.test", "name": "分享验收", "password": password}, 200)
 	root := owner.request(t, "POST", "/native/files/folders", map[string]string{"parentId": "", "name": "秘密目录名"}, 200)["id"].(string)
 	file, err := uploadFileHTTP(t.Context(), owner, root, "shared.txt", "shared-file-upload-key", []byte("public authorized bytes"))
 	if err != nil {
@@ -123,10 +123,10 @@ func TestFileSharingPublicPasswordScopeRevocationAndRestart(t *testing.T) {
 	role := owner.request(t, "POST", "/roles", map[string]any{"name": "Share users", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	roleID := role["id"].(string)
 	owner.request(t, "PUT", "/native/iam/roles/"+roleID+"/permissions", map[string]any{"expectedRoleVersion": 1, "permissionKeys": []string{"files:read", "files:write"}}, 200)
-	owner.request(t, "POST", "/users", map[string]any{"email": "sharing-other@clouddrive.test", "name": "另一分享用户", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
+	owner.request(t, "POST", "/users", map[string]any{"email": "sharing-other@neocloud.test", "name": "另一分享用户", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
 	other := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
 	other.request(t, "GET", "/auth/csrf", nil, 200)
-	other.request(t, "POST", "/auth/login", map[string]string{"email": "sharing-other@clouddrive.test", "password": password}, 200)
+	other.request(t, "POST", "/auth/login", map[string]string{"email": "sharing-other@neocloud.test", "password": password}, 200)
 	other.request(t, "POST", "/native/files/shares", map[string]string{"rootId": root}, 404)
 	other.request(t, "POST", "/native/files/shares/"+shareID+"/revoke", nil, 404)
 	// 无密码链接也必须以服务端时钟在准确到期后拒绝读取。

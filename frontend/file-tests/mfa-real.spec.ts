@@ -63,7 +63,7 @@ test('独立账户完成真实 TOTP 绑定、恢复码登录和解除绑定', as
   for (const fixture of priorFixtures.items) {
     if (
       fixture.displayName === 'MFA 独立验收' &&
-      /^mfa-[a-f0-9-]{36}@clouddrive\.test$/.test(fixture.username) &&
+      /^mfa-[a-f0-9-]{36}@neocloud\.test$/.test(fixture.username) &&
       fixture.status === 'active'
     ) {
       await write(page, `/native/iam/accounts/${fixture.id}/status`, 'PATCH', {
@@ -71,7 +71,7 @@ test('独立账户完成真实 TOTP 绑定、恢复码登录和解除绑定', as
       });
     }
   }
-  const email = `mfa-${randomUUID()}@clouddrive.test`;
+  const email = `mfa-${randomUUID()}@neocloud.test`;
   const password = randomUUID();
   const role = (await write(page, '/roles', 'POST', {
     name: 'MFA 验收-' + randomUUID().slice(0, 8),

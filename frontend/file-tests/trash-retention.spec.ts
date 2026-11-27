@@ -1,3 +1,4 @@
+import { readPreviewAccess } from './reading-fixture';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -5,15 +6,7 @@ import { expect, test } from './preview-test';
 
 test('回收站期限只作用于未来回收，并可在桌面和窄屏管理', async ({ page }, testInfo) => {
   const access = JSON.parse(
-    (
-      await readFile(
-        resolve(
-          __dirname,
-          process.env.CLOUDDRIVE_FILE_TEST_ACCESS ?? '../../.data/preview-access.json',
-        ),
-        'utf8',
-      )
-    ).replace(/^\uFEFF/, ''),
+    (await readFile(resolve(__dirname, readPreviewAccess().path), 'utf8')).replace(/^\uFEFF/, ''),
   ) as { purpose?: string; username: string; password: string; url: string };
   test.skip(access.purpose !== 'trash-retention-fixture', '期限验证使用独立验收账号。');
   await page.goto('/login?returnTo=%2Fhome');

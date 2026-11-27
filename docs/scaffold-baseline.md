@@ -4,11 +4,11 @@
 
 ## 可验证事实
 
-- 当前根 Go module、README、Docker 与 `.scaffold/identity.yaml` 使用 `clouddrive` 身份。
-- 当前 Git remote 是 `git@github.com:rin721/clouddrive.git`。
+- 原脚手架基线使用 `clouddrive`。当前根 Go module 是 `github.com/reina0721/neocloud`，README、Docker 与 `.scaffold/identity.yaml` 使用 NeoCloud 标识。
+- 当前 Git remote 是 `git@github.com:reina0721/neocloud.git`。
 - 当前提交 `8e98d44` 把既有 `backend/**` 路径导入为 `old-backend/**`，并在根目录导入脚手架快照；`old-backend/` 不属于当前文档治理范围。
 - 上游任务档案随快照导入，现已退出工作树；来源以 SOURCES.json、ADR 与 Git 历史为准。
-- `.scaffold/identity.yaml` 要求该基线文档存在；本文件补齐这一 provenance contract，但不完成仓库身份迁移。
+- `.scaffold/identity.yaml` 要求该基线文档存在，以记录脚手架来源。
 
 ## 使用边界
 

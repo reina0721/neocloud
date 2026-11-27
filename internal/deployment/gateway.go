@@ -23,7 +23,6 @@ import (
 )
 
 const cookiePrefix = "neocloud_maintenance_"
-const legacyMaintenanceCookiePrefix = "clouddrive_maintenance_"
 
 //go:embed maintenance.html
 var pageHTML string
@@ -167,9 +166,6 @@ func (g *Gateway) signature(kind, payload, origin string) string {
 
 func (g *Gateway) value(r *http.Request, kind, origin string) string {
 	c, err := r.Cookie(cookiePrefix + kind)
-	if errors.Is(err, http.ErrNoCookie) {
-		c, err = r.Cookie(legacyMaintenanceCookiePrefix + kind)
-	}
 	if err != nil {
 		return ""
 	}
@@ -191,11 +187,9 @@ func (g *Gateway) value(r *http.Request, kind, origin string) string {
 
 func (g *Gateway) issue(w http.ResponseWriter, kind, value, origin string, https bool, lifetime time.Duration) {
 	token := g.makeToken(kind, value, origin, lifetime)
-	for _, prefix := range []string{cookiePrefix, legacyMaintenanceCookiePrefix} {
-		// #nosec G124 -- 兼容旧网关，使用同一个已验证的 Origin 与签名令牌。
-		http.SetCookie(w, &http.Cookie{Name: prefix + kind, Value: token, Path: MaintenancePath,
-			MaxAge: int(lifetime.Seconds()), HttpOnly: true, Secure: https, SameSite: http.SameSiteStrictMode})
-	}
+	// #nosec G124 -- 网关依据已验证连接设置 Secure，仅本机回环允许 HTTP。
+	http.SetCookie(w, &http.Cookie{Name: cookiePrefix + kind, Value: token, Path: MaintenancePath,
+		MaxAge: int(lifetime.Seconds()), HttpOnly: true, Secure: https, SameSite: http.SameSiteStrictMode})
 }
 
 func (g *Gateway) iamRequest(r *http.Request, method, path string) (*http.Request, error) {
@@ -205,7 +199,7 @@ func (g *Gateway) iamRequest(r *http.Request, method, path string) (*http.Reques
 	}
 	req.Host = r.Host
 	for _, cookie := range r.Cookies() {
-		if !strings.HasPrefix(cookie.Name, cookiePrefix) && !strings.HasPrefix(cookie.Name, legacyMaintenanceCookiePrefix) {
+		if !strings.HasPrefix(cookie.Name, cookiePrefix) {
 			req.AddCookie(cookie)
 		}
 	}
@@ -307,7 +301,6 @@ func (g *Gateway) maintenance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("X-NeoCloud-Maintenance", "1")
-	w.Header().Set("X-CloudDrive-Maintenance", "1")
 	if r.Method == http.MethodHead {
 		w.WriteHeader(200)
 		return
@@ -380,10 +373,8 @@ func (g *Gateway) mutate(w http.ResponseWriter, r *http.Request, origin string, 
 		}
 		g.issue(w, "recovery", "authorized", origin, secure, 30*time.Minute)
 	case "recovery-logout":
-		for _, prefix := range []string{cookiePrefix, legacyMaintenanceCookiePrefix} {
-			// #nosec G124 -- 与签发使用同一受信连接策略。
-			http.SetCookie(w, &http.Cookie{Name: prefix + "recovery", Path: MaintenancePath, MaxAge: -1, HttpOnly: true, Secure: secure, SameSite: http.SameSiteStrictMode})
-		}
+		// #nosec G124 -- 与签发使用同一受信连接策略。
+		http.SetCookie(w, &http.Cookie{Name: cookiePrefix + "recovery", Path: MaintenancePath, MaxAge: -1, HttpOnly: true, Secure: secure, SameSite: http.SameSiteStrictMode})
 	default:
 		switch action {
 		case "check", "upgrade", "backup", "rollback", "restore":

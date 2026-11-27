@@ -1,6 +1,6 @@
 # NeoCloud 安装与部署
 
-已有 CloudDrive 实例的桥接升级及停机改名见[改名与升级](neocloud-rename.md)。历史命令按文中的正式标签解释。
+本手册适用于 NeoCloud v0.4.0 及后续版本。更早发行版的数据和配置应保留在原实例。安装 NeoCloud 时选择独立目录、数据位置和空闲端口。
 
 选择与目标机匹配的入口。Windows 和 Linux 可运行[原生整包](backend-archive.md#运行原生-go-与-web-整包)，也可[从源码构建 Go 与 Node 本机包](#构建与进程)。Linux 服务器可用 [Docker Release 安装脚本](#release-下载版安装与升级)下载配套包、将附件复制到[离线目标机](#自动化与离线安装)，或在本机[构建 Docker 镜像](#从源码部署)。
 
@@ -45,7 +45,7 @@ docker buildx version
 在准备好[系统依赖](#安装-docker-与系统依赖)的 Linux 服务器上构建。首次构建需要访问 Docker Hub、Google Container Registry、Go 模块源和 npm 源，以获取基础镜像和依赖。Go、Node.js 与 pnpm 在构建容器中运行。
 
 ```bash
-git clone --branch v0.3.3 https://github.com/reina0721/neocloud.git
+git clone --branch v0.4.0 https://github.com/reina0721/neocloud.git
 cd neocloud
 bash scripts/deploy-docker.sh plan
 bash scripts/deploy-docker.sh up
@@ -56,12 +56,12 @@ bash scripts/deploy-docker.sh up
 | 项目 | 默认值与用途 |
 | --- | --- |
 | 源码目录 | 当前源码所在的目录，也是构建输入 |
-| 安装目录 | `~/clouddrive-deploy`，保存部署配置和记录 |
+| 安装目录 | `~/neocloud-deploy`，保存部署配置和记录 |
 | 配置和令牌 | 安装目录下的 `deploy.env` 保存用户编辑的配置，`.control/` 存放实例记录与首次设置令牌 `setup-token` |
-| Compose 项目与网络 | `clouddrive`、`clouddrive_default` |
-| 容器 | `clouddrive-backend-1`、`clouddrive-web-1`、一次性迁移容器 `clouddrive-migrate` |
-| 镜像 | `clouddrive-api:local`、`clouddrive-web:local` |
-| 数据 | 新实例通过本地 Docker 卷 `clouddrive-data`，将宿主机的 `~/clouddrive-deploy/data/` 挂载到 Go 与迁移容器的 `/app/.data`，包含 SQLite `app.db`、用户文件 `storage/`、传输暂存 `transfers/` |
+| Compose 项目与网络 | `neocloud`、`neocloud_default` |
+| 容器 | `neocloud-backend-1`、`neocloud-web-1`、一次性迁移容器 `neocloud-migrate` |
+| 镜像 | `neocloud-api:local`、`neocloud-web:local` |
+| 数据 | 新实例通过本地 Docker 卷 `neocloud-data`，将宿主机的 `~/neocloud-deploy/data/` 挂载到 Go 与迁移容器的 `/app/.data`，包含 SQLite `app.db`、用户文件 `storage/`、传输暂存 `transfers/` |
 | 数据库备份 | 实例目录下的 `backups/` |
 | 端口和访问地址 | 宿主 `0.0.0.0:4180` 转发至 Web 容器 `4173/tcp`，浏览器打开 `http://服务器IP:4180`。Go API 的 `8080` 与运维的 `9090` 通过容器网络访问 |
 
@@ -79,17 +79,17 @@ bash scripts/deploy-docker.sh --config ./deploy.env
 例如，要将安装文件和数据分别放到系统盘与数据盘，可以在 `deploy.env` 设置以下值。
 
 ```dotenv
-INSTALL_DIR=/opt/clouddrive
-DATA_DIR=/mnt/cloud-data/clouddrive
-COMPOSE_PROJECT_NAME=clouddrive
+INSTALL_DIR=/opt/neocloud
+DATA_DIR=/mnt/cloud-data/neocloud
+COMPOSE_PROJECT_NAME=neocloud
 WEB_PORT=4180
 ```
 
 | 参数 | 新实例默认值 | 用途 |
 | --- | --- | --- |
-| `INSTALL_DIR` | 空，使用 `~/clouddrive-deploy` | 保存配置、备份和部署记录的宿主机目录。相对路径以提供的配置文件所在目录为基准。显式 `--dir` 优先 |
+| `INSTALL_DIR` | 空，使用 `~/neocloud-deploy` | 保存配置、备份和部署记录的宿主机目录。相对路径以提供的配置文件所在目录为基准。显式 `--dir` 优先 |
 | `DATA_DIR` | `./data` | 数据的宿主机目录。相对路径以安装目录为基准，可填绝对路径，例如 `/mnt/cloud-data/drive`。实例独占该目录 |
-| `COMPOSE_PROJECT_NAME` | `clouddrive` | 决定容器、镜像、网络等资源名称。已有配置可继续使用旧键 `INSTANCE_NAME` |
+| `COMPOSE_PROJECT_NAME` | `neocloud` | 决定容器、镜像、网络等资源名称。已有配置可继续使用旧键 `INSTANCE_NAME` |
 | `WEB_BIND` | `0.0.0.0` | 宿主机监听 IP，IPv6 地址使用方括号 |
 | `WEB_PORT` | `4180` | 浏览器访问的宿主机端口，范围为 1024–65535 |
 | `PUBLIC_ORIGIN` | 空 | 可选的公开入口，例如 `https://drive.example.com`。填写完整 HTTP(S) Origin，无路径或尾斜杠 |
@@ -130,41 +130,41 @@ bash scripts/deploy-docker.sh up --config ./deploy.env
 
 镜像构建成功后，脚本会停止本实例，备份 SQLite，再执行迁移并等待 Web 和 Go 就绪。迁移失败时按[迁移与回滚](migration-and-rollback.md)处理。完整备份包括安装目录和实际数据路径。使用单独的数据目录时须单独备份该目录。
 
-已有实例继续使用原来的 Docker 数据卷。保留 `DATA_DIR` 空白或省略该键，部署及 `status` 会列出原卷名称和宿主机挂载路径，备份时需保留该卷。更早期的实例可在原源码目录继续部署，沿用 `.data/docker/runtime.env`，数据库备份仍写入 `.data/docker/backups/`。
+已有 NeoCloud 源码部署继续使用原来的 Docker 数据卷。保留 `DATA_DIR` 空白或省略该键，部署及 `status` 会列出原卷名称和宿主机挂载路径，备份时需保留该卷。
 
 ## Release 下载版安装与升级
 
-下载版支持 Linux amd64、arm64，使用 SQLite 和本地文件存储。先完成[系统依赖](#安装-docker-与系统依赖)安装。安装脚本需要本机 Docker Unix socket、Compose 2.20 或更新版本和当前账户的 Docker 权限。在线方式从 GitHub Releases 下载镜像归档，然后导入本机 Docker。离线方式从已转移的附件读取同一套归档。两种方式均无需目标机安装 Go、Node.js 或 pnpm。安装前检查实例和数据盘、临时解包目录（默认 `/tmp`，可通过 `TMPDIR` 调整）以及 Docker 存储目录的可用空间。安装器会暂存下载归档和解包后的 `images.tar`，Docker 导入后还需要镜像空间。可通过 `docker info --format '{{.DockerRootDir}}'` 查看 Docker 存储目录。
+下载版支持 Linux amd64、arm64，使用 SQLite 和本地文件存储。先完成[系统依赖](#安装-docker-与系统依赖)安装。安装脚本需要本机 Docker Unix socket、Compose 2.20 或更新版本、当前账户的 Docker 权限，以及可执行的 Cosign。发布验证使用 Cosign 2.6.5，可通过 `NEOCLOUD_COSIGN` 指定工具路径。在线方式从 GitHub Releases 下载并验签，离线方式使用单独准备的可信根校验同一套归档。两种方式均无需目标机安装 Go、Node.js 或 pnpm。安装前检查实例和数据盘、临时解包目录（默认 `/tmp`，可通过 `TMPDIR` 调整）以及 Docker 存储目录的可用空间。安装器会暂存下载归档和解包后的 `images.tar`，Docker 导入后还需要镜像空间。可通过 `docker info --format '{{.DockerRootDir}}'` 查看 Docker 存储目录。[Cosign 安装](https://docs.sigstore.dev/cosign/system_config/installation/)
 
 ### 安装当前正式版
 
-在部署账号的 Linux 终端下载脚本并查看选项，再安装 v0.3.3。本例绑定回环地址并显式使用 `4180`。安装器默认目录为 `~/clouddrive`，默认端口为 `4173`。
+在部署账号的 Linux 终端下载脚本并查看选项，再安装 v0.4.0。本例绑定回环地址并显式使用 `4180`。安装器默认目录为 `~/neocloud`，默认端口为 `4173`。
 
 ```bash
 curl -fsSL --proto '=https' --proto-redir '=https' \
-  https://github.com/reina0721/neocloud/releases/download/v0.3.3/install.sh -o install.sh
+  https://github.com/reina0721/neocloud/releases/download/v0.4.0/install.sh -o install.sh
 bash install.sh --help
-bash install.sh install --version v0.3.3 --dir "$HOME/clouddrive" --bind 127.0.0.1 --port 4180
-"$HOME/clouddrive/install.sh" status
+bash install.sh install --version v0.4.0 --dir "$HOME/neocloud" --bind 127.0.0.1 --port 4180
+"$HOME/neocloud/install.sh" status
 curl -fsS http://127.0.0.1:4180/api/console/v1/auth/registration-policy
 ```
 
-在服务器打开 `http://127.0.0.1:4180/setup`，或按[远程访问](#ssh-隧道与局域网访问)从自己的电脑访问。运行 `cat "$HOME/clouddrive/.control/setup-token"` 读取令牌，在设置页创建管理员。令牌文件权限为 `0600`，应仅交给负责初始化的管理员。创建管理员后登录并上传一个小文件，运行 `"$HOME/clouddrive/install.sh" restart`，再登录确认可以下载原文件。
+在服务器打开 `http://127.0.0.1:4180/setup`，或按[远程访问](#ssh-隧道与局域网访问)从自己的电脑访问。运行 `cat "$HOME/neocloud/.control/setup-token"` 读取令牌，在设置页创建管理员。令牌文件权限为 `0600`，应仅交给负责初始化的管理员。创建管理员后登录并上传一个小文件，运行 `"$HOME/neocloud/install.sh" restart`，再登录确认可以下载原文件。
 
 | 项目 | 上例的实际位置或名称 |
 | --- | --- |
-| 安装目录和管理入口 | `~/clouddrive/`，日常管理使用其中的 `install.sh` |
-| 数据与备份 | 数据为 `~/clouddrive/data/`，包括 `app.db`、`storage/` 和 `transfers/`，挂载到容器内 `/app/.data`。备份为 `~/clouddrive/backups/` |
-| Compose 项目 | `clouddrive-<安装目录 SHA-256 的前 12 位>`，以解析后的绝对路径派生 |
+| 安装目录和管理入口 | `~/neocloud/`，日常管理使用其中的 `install.sh` |
+| 数据与备份 | 数据为 `~/neocloud/data/`，包括 `app.db`、`storage/` 和 `transfers/`，挂载到容器内 `/app/.data`。备份为 `~/neocloud/backups/` |
+| Compose 项目 | `neocloud-<安装目录 SHA-256 的前 12 位>`，以解析后的绝对路径派生 |
 | 容器和网络 | `<项目>-backend-1`、`<项目>-web-1`、`<项目>_default` |
-| 镜像 | `clouddrive-api:<版本>-<架构>`、`clouddrive-web:<版本>-<架构>` |
+| 镜像 | `neocloud-api:<版本>-<架构>`、`neocloud-web:<版本>-<架构>` |
 | 端口 | 宿主机 `127.0.0.1:4180` 映射到 Web 容器 `4173/tcp`。Go 的 `8080` 和 `9090` 在容器网络内 |
 
 #### 安装参数
 
 | 参数 | 默认值 | 用途 |
 | --- | --- | --- |
-| `--dir DIR` | `~/clouddrive` | 保存安装脚本、配置、备份与部署记录。相对路径以当前目录为基准 |
+| `--dir DIR` | `~/neocloud` | 保存安装脚本、配置、备份与部署记录。相对路径以当前目录为基准 |
 | `--name NAME` | 从安装目录派生 | 指定 Compose 项目名，影响容器、网络和名称保留卷。需要 `INSTANCE_LAYOUT=1` |
 | `--data-dir DIR` | 安装目录的 `data/` | 指定持久化路径。相对路径以安装目录为基准。需要 `INSTANCE_LAYOUT=1` |
 | `--bind IP` | `0.0.0.0` | 宿主机监听 IP。`127.0.0.1` 仅供本机、SSH 隧道或本机反向代理。IPv6 例如 `[::1]` |
@@ -172,7 +172,7 @@ curl -fsS http://127.0.0.1:4180/api/console/v1/auth/registration-policy
 | `--public-url ORIGIN` | 空 | 浏览器使用的可选公开地址，例如 `https://drive.example.com`。只接受 HTTP(S) 根 Origin，省略路径、尾斜杠、查询、片段及凭据 |
 | `--allow-origin ORIGIN` | 无额外 Origin | 单次允许一个精确的跨域 Origin，可重复，支持最多 32 项 Origin 配置（包含显式公开地址）。同源网页通常省略 |
 | `--allow-http` | 无 HTTPS 公开地址时允许 HTTP | 显式使用 HTTP Cookie 模式。公网 HTTPS 部署填 HTTPS 地址并省略此参数 |
-| `--version TAG` | 在线取最新正式版，离线读 `version.txt` | 固定版本，例如 `v0.3.3`。自动化可将下载地址和参数锁定在同一个 tag |
+| `--version TAG` | 在线取最新正式版，离线读 `version.txt` | 固定版本，例如 `v0.4.0`。自动化可将下载地址和参数锁定在同一个 tag |
 | `--release-dir DIR` | 在线下载 | 读取目标机已有的 Release 附件，启用本地安装或更新路径。参见[离线安装](#自动化与离线安装) |
 | `--trust-dir DIR` | 实例已保存的信任目录 | 指定独立准备的 Sigstore 信任目录。首次签名离线安装需显式提供 |
 | `--wait-timeout SECONDS` | `120` | 安装器等待启动就绪的秒数，范围 5–600 |
@@ -182,16 +182,16 @@ curl -fsS http://127.0.0.1:4180/api/console/v1/auth/registration-policy
 
 ### 自定义实例与安装检查
 
-`v0.3.3` 的归档已带有 `INSTANCE_LAYOUT=1`。以下使用由部署账户拥有的路径，也可指定已授权的 `/opt/`、`/mnt/` 专用目录。
+`v0.4.0` 的归档已带有 `INSTANCE_LAYOUT=1`。以下使用由部署账户拥有的路径，也可指定已授权的 `/opt/`、`/mnt/` 专用目录。
 
 ```bash
-bash install.sh plan --check --version v0.3.3 --name cloud-main --dir "$HOME/clouddrive-main" \
+bash install.sh plan --check --version v0.4.0 --name cloud-main --dir "$HOME/neocloud-main" \
   --data-dir "$HOME/cloud-data/cloud-main" --bind 127.0.0.1 --port 44180
-bash install.sh install --version v0.3.3 --name cloud-main --dir "$HOME/clouddrive-main" \
+bash install.sh install --version v0.4.0 --name cloud-main --dir "$HOME/neocloud-main" \
   --data-dir "$HOME/cloud-data/cloud-main" --bind 127.0.0.1 --port 44180
 ```
 
-本例在 `http://127.0.0.1:44180/setup` 设置第二个实例，令牌位于 `~/clouddrive-main/.control/setup-token`。项目名以小写字母或数字开头，最多 40 个字符，可含小写字母、数字、下划线和短横线。上例创建 `cloud-main-backend-1`、`cloud-main-web-1`、`cloud-main_default` 和名称保留卷 `cloud-main-instance`。该卷在容器停止后仍保留实例名称。相同版本和架构的实例共用镜像。老版本如 `v0.2.2` 使用上节基础安装命令及默认目录布局。
+本例在 `http://127.0.0.1:44180/setup` 设置第二个实例，令牌位于 `~/neocloud-main/.control/setup-token`。项目名以小写字母或数字开头，最多 40 个字符，可含小写字母、数字、下划线和短横线。上例创建 `cloud-main-backend-1`、`cloud-main-web-1`、`cloud-main_default` 和名称保留卷 `cloud-main-instance`。该卷在容器停止后仍保留实例名称。相同版本和架构的实例共用镜像。
 
 首次安装使用可创建或为空的专用数据目录。独立数据盘使用挂载点下的子目录。若 `/mnt/data` 已挂载，可用 `sudo install -d -m 0700 -o "$USER" -g "$(id -gn)" /mnt/data/cloud-main` 创建专用空目录，并将两个命令的 `--data-dir` 都改成 `/mnt/data/cloud-main`。数据目录不能是挂载点本身、安装目录或安装目录的上级。项目名与解析后的数据位置在安装后固定，升级沿用此实例的真实路径。第二个实例需要独立的安装目录、数据路径、项目名和空闲端口。
 
@@ -199,24 +199,24 @@ bash install.sh install --version v0.3.3 --name cloud-main --dir "$HOME/clouddri
 
 ### 安装向导
 
-下载脚本后直接运行 `bash install.sh`。向导询问安装目录、监听地址、端口和是否启用网页运维。新安装默认 `~/clouddrive`、`0.0.0.0:4173`，局域网访问按[下方说明](#ssh-隧道与局域网访问)设置。安装器检查附件摘要和镜像身份，导入两张配套镜像，迁移数据库后启动并检查就绪。没有交互终端时使用 `install` 或 `--yes`。
+下载脚本后直接运行 `bash install.sh`。向导询问安装目录、监听地址、端口和是否启用网页运维。新安装默认 `~/neocloud`、`0.0.0.0:4173`，局域网访问按[下方说明](#ssh-隧道与局域网访问)设置。安装器检查附件摘要和镜像身份，导入两张配套镜像，迁移数据库后启动并检查就绪。没有交互终端时使用 `install` 或 `--yes`。
 
 ### 自动化与离线安装
 
-上一节的 `install --version v0.3.3` 可用于自动化。要自动取最新正式版，可从 [latest](https://github.com/reina0721/neocloud/releases/latest/download/install.sh) 下载安装脚本并省略 `--version`。断网目标机使用以下离线流程。
+上一节的 `install --version v0.4.0` 可用于自动化。要自动取最新正式版，可从 [latest](https://github.com/reina0721/neocloud/releases/latest/download/install.sh) 下载安装脚本并省略 `--version`。断网目标机使用以下离线流程。
 
 1. 在目标机运行 `docker info --format '{{.OSType}}/{{.Architecture}}'` 确认架构。到可信的联网工作站安装 [Cosign](https://docs.sigstore.dev/cosign/system_config/installation/)，此示例使用项目发布工具的 `v2.6.5`。在联网的 Linux 工作站运行以下命令，将 `arch` 改为目标架构。准备目录应位于实例目录之外。
 
    ```bash
    (
      set -euo pipefail
-     tag=v0.3.3
+     tag=v0.4.0
      arch=amd64
-     prepare="$PWD/clouddrive-offline"
+     prepare="$PWD/neocloud-offline"
      release_base="https://github.com/reina0721/neocloud/releases/download/$tag"
      mkdir -p "$prepare/release" "$prepare/tools"
      for name in install.sh version.txt checksums.txt checksums.txt.sigstore.json \
-       "clouddrive_${tag}_linux_${arch}_docker.tar.gz" "clouddrive-maintenance_${tag}_linux_${arch}"; do
+       "neocloud_${tag}_linux_${arch}_docker.tar.gz" "neocloud-maintenance_${tag}_linux_${arch}"; do
        curl -fsSL --proto '=https' --proto-redir '=https' "$release_base/$name" -o "$prepare/release/$name"
      done
      curl -fsSL --proto '=https' --proto-redir '=https' \
@@ -226,32 +226,32 @@ bash install.sh install --version v0.3.3 --name cloud-main --dir "$HOME/clouddri
    )
    ```
 
-   目标机也需要 Cosign。若其未预装，可从 [Cosign v2.6.5 附件](https://github.com/sigstore/cosign/releases/tag/v2.6.5)获取并校验目标架构的 `cosign-linux-amd64` 或 `cosign-linux-arm64`，放入 `tools/` 一起转移。目标机以 `sudo install -m 0755 <Cosign文件> /usr/local/bin/cosign` 安装，并执行 `cosign version` 检查。需要兼容旧版签名格式时，联网工作站的信任准备命令须加 `--legacy` 并准备 Node.js，以额外导出 `fulcio.pem`、`rekor.pub`、`ctfe.pub`。新版 Sigstore bundle 使用 `trusted_root.json`。[信任准备脚本](../../scripts/prepare-offline-trust.sh) · [Cosign 离线验证](https://github.com/sigstore/cosign#air-gapped-verification)
+   目标机也需要 Cosign。若其未预装，可从 [Cosign v2.6.5 附件](https://github.com/sigstore/cosign/releases/tag/v2.6.5)获取并校验目标架构的 `cosign-linux-amd64` 或 `cosign-linux-arm64`，放入 `tools/` 一起转移。目标机以 `sudo install -m 0755 <Cosign文件> /usr/local/bin/cosign` 安装，并执行 `cosign version` 检查。Sigstore bundle 使用 `trusted_root.json`。[信任准备脚本](../../scripts/prepare-offline-trust.sh) · [Cosign 离线验证](https://github.com/sigstore/cosign#air-gapped-verification)
 
-2. 将 `release/` 与单独准备的 `sigstore-trust/` 转移到目标机。本例放在 `~/clouddrive-offline/`。运行下列命令。在执行新下载的安装脚本前，先用信任根核验签名与已取得的四个附件摘要。签名身份绑定本例的正式标签，换版时同时更新 `tag`、附件和身份。
+2. 将 `release/` 与单独准备的 `sigstore-trust/` 转移到目标机。本例放在 `~/neocloud-offline/`。运行下列命令。在执行新下载的安装脚本前，先用信任根核验签名与已取得的四个附件摘要。签名身份绑定本例的正式标签，换版时同时更新 `tag`、附件和身份。
 
    ```bash
    (
      set -euo pipefail
-     tag=v0.3.3
+     tag=v0.4.0
      arch=amd64
-     assets="$HOME/clouddrive-offline/release"
-     trust="$HOME/clouddrive-offline/sigstore-trust"
+     assets="$HOME/neocloud-offline/release"
+     trust="$HOME/neocloud-offline/sigstore-trust"
      cd "$assets"
      cosign verify-blob --bundle checksums.txt.sigstore.json \
        --offline --new-bundle-format --trusted-root "$trust/trusted_root.json" \
        --certificate-identity "https://github.com/reina0721/neocloud/.github/workflows/release.yml@refs/tags/$tag" \
        --certificate-oidc-issuer https://token.actions.githubusercontent.com checksums.txt
      for name in install.sh version.txt \
-       "clouddrive_${tag}_linux_${arch}_docker.tar.gz" "clouddrive-maintenance_${tag}_linux_${arch}"; do
+       "neocloud_${tag}_linux_${arch}_docker.tar.gz" "neocloud-maintenance_${tag}_linux_${arch}"; do
        digest=$(awk -v name="$name" '$2 == name {print $1}' checksums.txt)
        [[ $digest =~ ^[0-9a-f]{64}$ ]]
        printf '%s  %s\n' "$digest" "$name" | sha256sum --check --strict
      done
-     bash "$assets/install.sh" install --dir "$HOME/clouddrive" --bind 127.0.0.1 --port 4180 \
+     bash "$assets/install.sh" install --dir "$HOME/neocloud" --bind 127.0.0.1 --port 4180 \
        --version "$tag" --release-dir "$assets" --trust-dir "$trust"
    )
-   "$HOME/clouddrive/install.sh" status
+   "$HOME/neocloud/install.sh" status
    ```
 
 安装器再次校验签名、文件摘要、架构与归档，导入镜像并迁移数据库。带 `OFFLINE_MAINTENANCE=1` 的正式版会把信任材料和验证后的发布包保存到实例，供[离线检查与升级](#离线检查与升级)使用。首次设置地址、令牌位置与在线安装相同。
@@ -261,37 +261,37 @@ bash install.sh install --version v0.3.3 --name cloud-main --dir "$HOME/clouddri
 以下示例使用默认目录，自定义目录时替换路径。脚本根据自身位置定位实例，无须先 `cd`：
 
 ```bash
-~/clouddrive/install.sh                 # 管理菜单
-~/clouddrive/install.sh status
-~/clouddrive/install.sh logs --tail 100
-~/clouddrive/install.sh logs -f
-~/clouddrive/install.sh check-update
-~/clouddrive/install.sh upgrade         # update 是同义命令
+~/neocloud/install.sh                 # 管理菜单
+~/neocloud/install.sh status
+~/neocloud/install.sh logs --tail 100
+~/neocloud/install.sh logs -f
+~/neocloud/install.sh check-update
+~/neocloud/install.sh upgrade         # update 是同义命令
 # 当前版本更旧时，也可指定正式升级目标。
-~/clouddrive/install.sh upgrade --version v0.3.3
-~/clouddrive/install.sh backup
-~/clouddrive/install.sh stop
-~/clouddrive/install.sh start
-~/clouddrive/install.sh restart
+~/neocloud/install.sh upgrade --version v0.4.0
+~/neocloud/install.sh backup
+~/neocloud/install.sh stop
+~/neocloud/install.sh start
+~/neocloud/install.sh restart
 ```
 
 `restart` 会应用修改后的配置并检查就绪状态。启用新版维护工具后，应用升级和宿主维护工具更新分别执行。相同版本不会重复迁移。重复安装不重建已有实例，目标目录非空且无实例标记时拒绝接管。不同实例使用独立 Compose project、配置和数据目录。
 
 #### 离线检查与升级
 
-每个正式版本单独存放一个资产目录。已有旧安装器的实例先用新版签名资产刷新宿主维护工具。使用实际安装目录，并核对新版资产与信任目录。
+每个 NeoCloud 正式版本单独存放一个资产目录。需要更新已启用的宿主维护工具时，使用实际安装目录，并核对目标版本的签名资产与信任目录。
 
 ```bash
-assets="$HOME/clouddrive-offline/release"
-trust="$HOME/clouddrive-offline/sigstore-trust"
-bash "$assets/install.sh" update-maintenance --dir "$HOME/clouddrive" \
+assets="$HOME/neocloud-offline/release"
+trust="$HOME/neocloud-offline/sigstore-trust"
+bash "$assets/install.sh" update-maintenance --dir "$HOME/neocloud" \
   --release-dir "$assets" --trust-dir "$trust"
 ```
 
 之后可以直接检查、导入和升级。`check-update --release-dir` 检查指定目录的签名与归档，报告目标版本能否用于升级。导入会把验证过的发布包保存到实例，便于重复使用。
 
 ```bash
-manager="$HOME/clouddrive/install.sh"
+manager="$HOME/neocloud/install.sh"
 next=/mnt/cloud-install/next-release
 "$manager" check-update --release-dir "$next"
 "$manager" import-release --release-dir "$next"
@@ -304,7 +304,7 @@ next=/mnt/cloud-install/next-release
 主目录结构：
 
 ```text
-clouddrive/
+neocloud/
 ├── install.sh          # 本实例管理入口
 ├── runtime.env         # 用户配置，升级保留
 ├── data/               # 数据库、文件与传输暂存
@@ -343,10 +343,10 @@ Web Host 校验外部 Host/Origin，并向 Go 转发内部同源请求；额外�
 新版宿主维护工具支持不启用网页运维的完整备份、兼容回退与恢复。`backup --full` 把数据库、文件、传输暂存和应用配置写入 `backups/full-<编号>/`。查看命令返回的恢复点编号或从状态输出中选取恢复点。
 
 ```bash
-"$HOME/clouddrive/install.sh" backup --full
-"$HOME/clouddrive/install.sh" rollback --offline
+"$HOME/neocloud/install.sh" backup --full
+"$HOME/neocloud/install.sh" rollback --offline
 # 将 ID 替换为要恢复的完整恢复点编号。
-"$HOME/clouddrive/install.sh" restore --offline --backup-id ID --confirm-restore ID
+"$HOME/neocloud/install.sh" restore --offline --backup-id ID --confirm-restore ID
 ```
 
 下载或校验失败不会停止服务。备份失败不会执行目标迁移。后续失败会保留数据、候选版本和备份；只有旧镜像报告各迁移集精确兼容时才恢复旧服务。否则停止自动回退，按[迁移与回滚](migration-and-rollback.md)选择 forward-fix 或经所有者确认的备份恢复，不执行自动 `down`、删除版本记录或覆盖数据库。恢复前先停止实例、另存失败现场并校验备份，不在运行中的数据库上解包。
@@ -355,11 +355,11 @@ Web Host 校验外部 Host/Origin，并向 Go 转发内部同源请求；额外�
 
 ## 网页运维
 
-发布附件包含同版本、同架构的 `clouddrive-maintenance_…` 后，Linux systemd 上的安装器托管实例可以启用。网页运维需要 Docker Compose 2.24.4 或更新版本，以便单独替换 Web 发布端口。宿主机需能访问本机 Docker，安装账户需有对应权限，启用时需要 sudo 或 root。安装 [发布验证所用的 cosign](release.md#docker-下载产物)，并让安装账户可以在 PATH 找到它。
+发布附件包含同版本、同架构的 `neocloud-maintenance_…` 后，Linux systemd 上的安装器托管实例可以启用。网页运维需要 Docker Compose 2.24.4 或更新版本，以便单独替换 Web 发布端口。宿主机需能访问本机 Docker，安装账户需有对应权限，启用时需要 sudo 或 root。安装 [发布验证所用的 cosign](release.md#docker-下载产物)，并让安装账户可以在 PATH 找到它。
 
 ```bash
 # 已有实例先用旧管理脚本升级到配套的正式版。
-~/clouddrive/install.sh enable-web-management
+~/neocloud/install.sh enable-web-management
 # 新实例可在向导选择启用，或给 install 子命令加 --enable-web-management。
 ```
 
@@ -372,7 +372,7 @@ Web Host 校验外部 Host/Origin，并向 Go 转发内部同源请求；额外�
 - 「检查正式版（GitHub）」显示在线候选和发布说明。「检查本地包」重新验证宿主机已导入的包，并显示可升级的确切版本。导入在宿主机使用 `install.sh import-release --release-dir <目录>`。每个实例一次只运行一个维护任务，刷新维护页可以重新查看进度。
 - 选中本地候选后用「从本地包升级到」提交。安装器在停服前检查目标及当前版本的镜像，必要时从已导入的签名包补齐。兼容回退与恢复也使用本地来源。
 - `backups/full-<编号>/` 保存 SQLite、文件、传输暂存、应用配置与版本清单。创建恢复点会停服，并需要足够空间写入压缩档案。旧 CLI 生成的 SQLite 备份继续适用于人工流程。
-- 兼容回退使用上一套程序及当前数据。恢复完整备份会重新启用当时的数据和应用配置。确认前核对备份时间和恢复点编号。恢复通过同一文件系统上的重命名切换数据目录。使用默认数据目录时，原数据保留在安装目录的 `.control/maintenance/restore-<任务编号>/original-data`。使用自定义数据目录时，原数据保留在该目录旁的 `.clouddrive-restore-<任务编号>/original-data`。宿主网关配置、恢复凭据和任务记录仍在原处。
+- 兼容回退使用上一套程序及当前数据。恢复完整备份会重新启用当时的数据和应用配置。确认前核对备份时间和恢复点编号。恢复通过同一文件系统上的重命名切换数据目录。使用默认数据目录时，原数据保留在安装目录的 `.control/maintenance/restore-<任务编号>/original-data`。使用自定义数据目录时，原数据保留在该目录旁的 `.neocloud-restore-<任务编号>/original-data`。宿主网关配置、恢复凭据和任务记录仍在原处。
 - CLI 的 `check-update`、`upgrade`、`backup`、`rollback` 和 `restore --backup-id <编号> --confirm-restore <编号>` 使用相同执行路径。systemd 用安装目录派生的维护标记命名 `<维护标记>-gateway.service` 和 `<维护标记>-maintenance.service`。Compose 容器名使用 `--name`。任务失败的详细阶段可在维护服务的宿主日志中查看。
 
 ## 远程访问与 HTTPS
@@ -399,7 +399,7 @@ ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:4180:127.0.0.1:4180 user@server.
 | --- | --- |
 | Release 首次安装 | 使用 `--bind 127.0.0.1 --port 4180 --public-url https://drive.example.com` |
 | 已有 Release 或源码 Docker | Release 修改实例的 `runtime.env` 后执行 `install.sh restart`。源码 Docker 修改实例的 `deploy.env` 后运行原 `deploy-docker.sh up`。设 `WEB_BIND=127.0.0.1`、`WEB_PORT=4180`、`PUBLIC_ORIGIN=https://drive.example.com`、`ALLOW_INSECURE_HTTP=false` |
-| 独立 Node Web Host | 设 `HOSTNAME=127.0.0.1`、`PORT=4180`、`CLOUDDRIVE_PUBLIC_ORIGIN=https://drive.example.com`。Go 侧使用同值的 `files.connections.publicOrigin` 并设 `iam.local.allowInsecureHTTP: false`，同时移除首次启动示例设置的 `APP_IAM__LOCAL__ALLOWINSECUREHTTP` 覆盖 |
+| 独立 Node Web Host | 设 `HOSTNAME=127.0.0.1`、`PORT=4180`、`NEOCLOUD_PUBLIC_ORIGIN=https://drive.example.com`。Go 侧使用同值的 `files.connections.publicOrigin` 并设 `iam.local.allowInsecureHTTP: false`，同时移除首次启动示例设置的 `NEOCLOUD_APP_IAM__LOCAL__ALLOWINSECUREHTTP` 覆盖 |
 | [原生 Go 与 Web 整包](backend-archive.md#运行原生-go-与-web-整包) | 首次启动可选择 `--web-addr 127.0.0.1:4180`。已初始化的实例沿用实际 Web 端口，例如默认的 `8080`，并修改下例 Nginx 的 `proxy_pass`。Go 配置 `files.connections.publicOrigin: https://drive.example.com`、`iam.local.allowInsecureHTTP: false`，将同机代理直连地址 `127.0.0.1/32` 加入 `http.trustedProxyCIDRs` |
 
 如果启用了 Docker 网页运维，代理仍转发原 Web 端口，并按[网页运维](#网页运维)指定直连网关的受信代理地址。切换 Cookie 策略后从新的公开地址重新登录。
@@ -412,7 +412,7 @@ sudo apt-get install -y nginx certbot python3-certbot-nginx
 sudo systemctl enable --now nginx
 ```
 
-使用 `sudoedit /etc/nginx/conf.d/clouddrive.conf` 写入以下配置，并将域名、端口改为实际值。
+使用 `sudoedit /etc/nginx/conf.d/neocloud.conf` 写入以下配置，并将域名、端口改为实际值。
 
 ```nginx
 server {
@@ -476,7 +476,7 @@ sudo apt-get update
 sudo apt-get install -y git ca-certificates curl tar gzip xz-utils openssl
 # 下载并校验对应架构的 Go .tar.gz 与 Node 24 .tar.xz 后，
 # 在下载目录内分别创建全新的 Go 和 Node 工具目录。
-tool_dir=$(mktemp -d "$HOME/clouddrive-tools.XXXXXXXX")
+tool_dir=$(mktemp -d "$HOME/neocloud-tools.XXXXXXXX")
 mkdir "$tool_dir/go" "$tool_dir/node"
 tar -xzf /path/to/go1.26.11.linux-amd64.tar.gz -C "$tool_dir/go" --strip-components=1
 tar -xJf /path/to/node-v24.x.y-linux-x64.tar.xz -C "$tool_dir/node" --strip-components=1
@@ -492,7 +492,7 @@ git --version
 go version
 node --version
 npm --version
-git clone --branch v0.3.3 https://github.com/reina0721/neocloud.git
+git clone --branch v0.4.0 https://github.com/reina0721/neocloud.git
 cd neocloud
 node scripts/build.mjs
 ```
@@ -504,35 +504,35 @@ node scripts/build.mjs
 
 ### 解包、迁移并启动
 
-以下命令用于全新实例。选一个未使用的运行目录，两个终端都在其中解包得到的 `clouddrive` 目录运行。已有实例继续使用原 `config.yaml`、工作目录和数据。默认配置可以用 `config init` 生成，初始化只需要执行一次。
+以下命令用于全新实例。选一个未使用的运行目录，两个终端都在其中解包得到的 `neocloud` 目录运行。已有实例继续使用原 `config.yaml`、工作目录和数据。默认配置可以用 `config init` 生成，初始化只需要执行一次。
 
 **Windows PowerShell，终端一**
 
 ```powershell
-$archive = (Resolve-Path 'dist/native/windows-amd64/clouddrive-windows-amd64.zip').Path
-$target = Join-Path $HOME 'clouddrive-source-run'
+$archive = (Resolve-Path 'dist/native/windows-amd64/neocloud-windows-amd64.zip').Path
+$target = Join-Path $HOME 'neocloud-source-run'
 New-Item -ItemType Directory -Path $target -ErrorAction Stop | Out-Null
 Expand-Archive -LiteralPath $archive -DestinationPath $target -ErrorAction Stop
-Set-Location (Join-Path $target 'clouddrive')
-.\clouddrive.exe config init
+Set-Location (Join-Path $target 'neocloud')
+.\neocloud.exe config init
 if ($LASTEXITCODE -ne 0) { throw '配置初始化失败' }
 New-Item -ItemType Directory -Path .data -ErrorAction Stop | Out-Null
 $tokenBytes = New-Object byte[] 32
 $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
 try { $rng.GetBytes($tokenBytes) } finally { $rng.Dispose() }
-$env:APP_IAM__LOCAL__SETUPTOKEN = [Convert]::ToBase64String($tokenBytes)
-$env:APP_IAM__LOCAL__ALLOWINSECUREHTTP = 'true'
-.\clouddrive.exe db migrate up
+$env:NEOCLOUD_APP_IAM__LOCAL__SETUPTOKEN = [Convert]::ToBase64String($tokenBytes)
+$env:NEOCLOUD_APP_IAM__LOCAL__ALLOWINSECUREHTTP = 'true'
+.\neocloud.exe db migrate up
 if ($LASTEXITCODE -ne 0) { throw '数据库迁移失败' }
-Write-Host "首次设置令牌：$env:APP_IAM__LOCAL__SETUPTOKEN"
-.\clouddrive.exe
+Write-Host "首次设置令牌：$env:NEOCLOUD_APP_IAM__LOCAL__SETUPTOKEN"
+.\neocloud.exe
 ```
 
 **Windows PowerShell，终端二**
 
 ```powershell
-Set-Location (Join-Path $HOME 'clouddrive-source-run/clouddrive')
-$env:CLOUDDRIVE_BACKEND_URL = 'http://127.0.0.1:8080'
+Set-Location (Join-Path $HOME 'neocloud-source-run/neocloud')
+$env:NEOCLOUD_BACKEND_URL = 'http://127.0.0.1:8080'
 $env:HOSTNAME = '127.0.0.1'
 $env:PORT = '4173'
 node start-web.mjs
@@ -548,25 +548,25 @@ case $(uname -m) in
   aarch64|arm64) arch=arm64 ;;
   *) printf '此示例支持 Linux amd64 或 arm64\n' >&2; exit 1 ;;
 esac
-target="$HOME/clouddrive-source-run"
+target="$HOME/neocloud-source-run"
 mkdir "$target"
-tar -xzf "dist/native/linux-$arch/clouddrive-linux-$arch.tar.gz" -C "$target"
-cd "$target/clouddrive"
-./clouddrive config init
+tar -xzf "dist/native/linux-$arch/neocloud-linux-$arch.tar.gz" -C "$target"
+cd "$target/neocloud"
+./neocloud config init
 mkdir -m 700 .data
 setup_token=$(openssl rand -hex 32)
-export APP_IAM__LOCAL__SETUPTOKEN="$setup_token"
-export APP_IAM__LOCAL__ALLOWINSECUREHTTP=true
-./clouddrive db migrate up
+export NEOCLOUD_APP_IAM__LOCAL__SETUPTOKEN="$setup_token"
+export NEOCLOUD_APP_IAM__LOCAL__ALLOWINSECUREHTTP=true
+./neocloud db migrate up
 printf '首次设置令牌：%s\n' "$setup_token"
-./clouddrive
+./neocloud
 ```
 
 **Linux Bash，终端二**
 
 ```bash
-cd "$HOME/clouddrive-source-run/clouddrive"
-CLOUDDRIVE_BACKEND_URL=http://127.0.0.1:8080 HOSTNAME=127.0.0.1 PORT=4173 node start-web.mjs
+cd "$HOME/neocloud-source-run/neocloud"
+NEOCLOUD_BACKEND_URL=http://127.0.0.1:8080 HOSTNAME=127.0.0.1 PORT=4173 node start-web.mjs
 ```
 
 运行包内的 `start-web.mjs`。它在 Windows 还负责恢复 Next 所需的依赖目录链接，因此应完整保留 `web/` 和 `.standalone-links.json`。实例目录需由当前运行账号控制。令牌只需在首次创建管理员时提供，应当作密码保管。若在完成设置前停止 Go，重启时在该进程环境中重新提供令牌。长期使用回环 HTTP 时，在 `config.yaml` 持久设置 `iam.local.allowInsecureHTTP: true`，或在每次启动 Go 的进程环境中设置上例的变量。
@@ -577,15 +577,15 @@ CLOUDDRIVE_BACKEND_URL=http://127.0.0.1:8080 HOSTNAME=127.0.0.1 PORT=4173 node s
 
 | 参数 | 默认值与用途 |
 | --- | --- |
-| `http.addr` / `APP_HTTP__ADDR` | Go 业务端监听 `127.0.0.1:8080`。修改时同步调整 Web 的 `CLOUDDRIVE_BACKEND_URL`。 |
-| `management.addr` / `APP_MANAGEMENT__ADDR` | Go 运维监听 `127.0.0.1:9090`，用于 `/readyz`、`/build` 等本机检查。 |
-| `APP_IAM__LOCAL__SETUPTOKEN` | 默认空。新库首次设置令牌，传给 Go 进程。 |
-| `iam.local.allowInsecureHTTP` / `APP_IAM__LOCAL__ALLOWINSECUREHTTP` | 默认 `false`，使用 HTTPS Cookie。上例在 Go 进程显式设为 `true` 以允许回环 HTTP，HTTPS 部署设回 `false`。 |
+| `http.addr` / `NEOCLOUD_APP_HTTP__ADDR` | Go 业务端监听 `127.0.0.1:8080`。修改时同步调整 Web 的 `NEOCLOUD_BACKEND_URL`。 |
+| `management.addr` / `NEOCLOUD_APP_MANAGEMENT__ADDR` | Go 运维监听 `127.0.0.1:9090`，用于 `/readyz`、`/build` 等本机检查。 |
+| `NEOCLOUD_APP_IAM__LOCAL__SETUPTOKEN` | 默认空。新库首次设置令牌，传给 Go 进程。 |
+| `iam.local.allowInsecureHTTP` / `NEOCLOUD_APP_IAM__LOCAL__ALLOWINSECUREHTTP` | 默认 `false`，使用 HTTPS Cookie。上例在 Go 进程显式设为 `true` 以允许回环 HTTP，HTTPS 部署设回 `false`。 |
 | `HOSTNAME` / `PORT` | 包内 Web 启动器默认 `127.0.0.1` 和 `4173`。填写监听地址和整数端口。 |
-| `CLOUDDRIVE_BACKEND_URL` | 默认 `http://127.0.0.1:8080`，作为 Web 服务端的 Go 上游。填 HTTP(S) Origin，省略路径、凭据、查询和片段。 |
-| `CLOUDDRIVE_PUBLIC_ORIGIN` | 默认空。配置 HTTPS 反代时填写公开 Origin，并让 Go 的 `files.connections.publicOrigin` 使用同一值。 |
+| `NEOCLOUD_BACKEND_URL` | 默认 `http://127.0.0.1:8080`，作为 Web 服务端的 Go 上游。填 HTTP(S) Origin，省略路径、凭据、查询和片段。 |
+| `NEOCLOUD_PUBLIC_ORIGIN` | 默认空。配置 HTTPS 反代时填写公开 Origin，并让 Go 的 `files.connections.publicOrigin` 使用同一值。 |
 
-`APP_` 环境变量覆盖 `config.yaml`。修改启动参数后重启对应进程。开发入口的 `WEB_PORT` 和构建期的 `NEXT_PUBLIC_*` 各有自己的用途，独立 Web Host 的监听端口通过 `PORT` 设置。[应用配置](../configuration/README.md)
+`NEOCLOUD_APP_` 环境变量覆盖 `config.yaml`。修改启动参数后重启对应进程。开发入口的 `WEB_PORT` 和构建期的 `NEXT_PUBLIC_NEOCLOUD_*` 各有自己的用途，独立 Web Host 的监听端口通过 `PORT` 设置。[应用配置](../configuration/README.md)
 
 ### 停止、备份和更新
 

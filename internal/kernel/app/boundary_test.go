@@ -13,7 +13,7 @@ import (
 
 func TestAppLayerDoesNotImportKernelOrComposition(t *testing.T) {
 	root := appRoot(t)
-	modulePrefix := strings.Join([]string{"github.com", "rin721", "clouddrive", "internal", "kernel"}, "/")
+	const modulePrefix = "github.com/reina0721/neocloud/internal/kernel"
 	forbidden := map[string]struct{}{
 		modulePrefix:                  {},
 		modulePrefix + "/composition": {},

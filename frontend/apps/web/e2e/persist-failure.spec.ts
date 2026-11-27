@@ -9,7 +9,7 @@ test('持久化失败：显示"未保存到此浏览器"且会话效果保留，
     if (typeof original !== 'function') throw new Error('Storage setItem unavailable');
     (window as unknown as { __origSetItem: typeof original }).__origSetItem = original;
     Storage.prototype.setItem = function (key: string, value: string) {
-      if (key === 'clouddrive.shell') {
+      if (key === 'neocloud.shell') {
         const error = new DOMException('quota', 'QuotaExceededError');
         throw error;
       }

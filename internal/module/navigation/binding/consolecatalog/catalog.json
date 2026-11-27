@@ -480,6 +480,16 @@
     "Manageable": true
   },
   {
+    "ID": "system-tools.update",
+    "ModuleID": "system-tools",
+    "RouteID": "system-tools.update",
+    "TitleMessageID": "systemTools.nav.update",
+    "IconID": "settings",
+    "DefaultParentID": "group:administration",
+    "DefaultOrder": 45,
+    "Manageable": true
+  },
+  {
     "ID": "system-tools.root",
     "ModuleID": "system-tools",
     "RouteID": "system-tools.icons",

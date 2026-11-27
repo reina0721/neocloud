@@ -282,10 +282,7 @@ for (const density of ['compact', 'standard', 'comfortable'] as const) {
     };
     await page.addInitScript(
       ({ preferences, version }) => {
-        localStorage.setItem(
-          'clouddrive.shell',
-          JSON.stringify({ state: { preferences }, version }),
-        );
+        localStorage.setItem('neocloud.shell', JSON.stringify({ state: { preferences }, version }));
       },
       { preferences, version: PREFERENCES_VERSION },
     );
@@ -343,7 +340,7 @@ for (const density of ['compact', 'standard', 'comfortable'] as const) {
 test('Corrupt current column layout is reported and can be retried', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem(
-      'clouddrive.page-archetypes.column-layout',
+      'neocloud.page-archetypes.column-layout',
       JSON.stringify({
         state: {
           layouts: {
@@ -360,7 +357,7 @@ test('Corrupt current column layout is reported and can be retried', async ({ pa
   await page.goto('/page-archetypes/resource-list');
   await expect(page.getByText('未能恢复列布局', { exact: true })).toBeVisible();
   await expect(page.getByRole('grid').getByRole('rowheader').first()).toBeVisible();
-  await page.evaluate(() => localStorage.removeItem('clouddrive.page-archetypes.column-layout'));
+  await page.evaluate(() => localStorage.removeItem('neocloud.page-archetypes.column-layout'));
   await page.getByLabel('未能恢复列布局', { exact: true }).getByRole('button').click();
   await expect(page.getByText('未能恢复列布局', { exact: true })).not.toBeVisible();
 });
@@ -378,7 +375,7 @@ test('Saving a restored draft clears its dirty baseline before continuing creati
   };
   await page.addInitScript(
     ({ preferences, version }) => {
-      localStorage.setItem('clouddrive.shell', JSON.stringify({ state: { preferences }, version }));
+      localStorage.setItem('neocloud.shell', JSON.stringify({ state: { preferences }, version }));
     },
     { preferences, version: PREFERENCES_VERSION },
   );
@@ -386,7 +383,7 @@ test('Saving a restored draft clears its dirty baseline before continuing creati
   const name = page.getByRole('textbox', { name: '名称' });
   await name.fill('恢复后提交的草稿');
   await expect
-    .poll(() => page.evaluate(() => localStorage.getItem('clouddrive.workspace')))
+    .poll(() => page.evaluate(() => localStorage.getItem('neocloud.workspace')))
     .toContain('恢复后提交的草稿');
   await page.reload();
   await expect(name).toHaveValue('恢复后提交的草稿');

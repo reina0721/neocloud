@@ -1,21 +1,17 @@
-# NeoCloud 项目与实例身份迁移
+# NeoCloud 发布与运行标识
 
 ## 决定
 
-产品名称为 NeoCloud，发布组织和仓库继续使用 `reina0721/neocloud`。源码使用 `github.com/reina0721/neocloud` 和 `@neocloud/*`。协议版本、API 路径、数据库迁移历史、账号 ID、文件 ID 和内容对象键沿用原值。
+v0.4.0 起使用 NeoCloud 发行契约。Go module 为 `github.com/reina0721/neocloud`，前端使用 `@neocloud/*`。命令为 `neocloud`、`neocloud-host` 和 `neocloud-maintenance`。归档、配套镜像、默认实例目录、Compose 项目、Cookie 和浏览器存储均使用 NeoCloud 标识。Go 配置覆盖采用 `NEOCLOUD_APP_`，其他产品环境变量采用 `NEOCLOUD_` 或 `NEXT_PUBLIC_NEOCLOUD_`。
 
-旧原生宿主验证归档名称、归档内路径及 Go BuildInfo，旧 Docker 工具同时验证归档及其镜像标签。第一个正式版本使用桥接发布格式。桥接归档保留旧 Go 模块和旧二进制的实际入口，内含能够读取两个签名格式的工具。随后发出的切换版使用 NeoCloud 产物格式，原生兼容清单绑定桥接版 tag 和 commit。双格式校验只在约定的签名清单与内容匹配时通过。
+v0.3.4 曾交付桥接包。v0.4.0 移除桥接分发、双命名读取和实例改名工具，以全新实例为安装边界。GitHub 已公开的版本与附件仍保留在各自标签下。已有数据、配置和备份应继续保留在原实例。切换至 NeoCloud 的安装步骤见[部署手册](../../operations/neocloud-deployment.md)。
 
-原生在线升级只替换业务进程。桥接版的稳定宿主需从验签包提取并在停服窗口换入原实例。可选 Docker 网页运维工具由已有 `update-maintenance` 路径升级。迁移与普通在线换版分别执行。
+## 保持数据身份
 
-## 运行兼容
+API 路径、数据库迁移历史、账号 ID、文件 ID 和对象存储键继续沿用。用于持久化数据或互斥协调的既有标识保持稳定，避免替换源码时丢失业务状态或取得第二组写入锁。NeoCloud 浏览器端使用同源的 NeoCloud 存储，旧会话需要重新登录。
 
-新配置覆盖使用 `NEOCLOUD_APP_`。品牌化环境变量使用 `NEOCLOUD_` 及 `NEXT_PUBLIC_NEOCLOUD_`，旧等价键继续读取。新旧冲突必须报错并隐藏值。SQLite 写租约、外部 SQL 所有权与 Redis 调度键沿用旧身份，避免旧宿主和新宿主同时取得所有权。
+保留的持久化身份包括 MySQL 在线迁移记录、SQLite 和 MySQL 工作负载锁、数据库迁移互斥锁、Redis 调度命名空间与租约标识，以及文件库内已保存的分享快捷方式媒体类型。
 
-现有 Cookie 会话、CSRF、维护和浏览器状态在兼容窗口可由同源的新旧版本识别。浏览器需要同时支持旧标签页写入和删除，已有配置以旧存储为仲裁来源，镜像到新存储。账号隔离、偏好导入与上传重选行为保持一致。
+## 发布与验证
 
-## 实例名和路径
-
-新实例使用 NeoCloud 默认目录和 Compose 项目名。已有实例按[改名与升级](../../operations/neocloud-rename.md)停机操作。复制和校验在打开入口前完成。原生本地 SQLite 副本需要在单一事务中重绑定内容及暂存位置，tus 适配器需更新已复制的会话绝对路径。既有数据和回退用的副本持续保留。
-
-验收需覆盖旧版到桥接再到切换的签名链、原生 Windows/Linux 和 Docker 上的迁移及回退、同源浏览器会话与本地数据。发布先验证桥接版，再允许切换版上线。
+v0.4.0 的原生托管包没有可在线换版的前序版本。后续 NeoCloud 版本继续使用签名兼容清单锁定前序版本与提交，继续提供相同格式内的升级、回退和备份恢复。签名验证保持原 GitHub 工作流发布者、可信根、摘要校验、版本、提交和二进制或镜像身份验证。正式发布前，在 Windows、Linux 和 Docker 目标平台用签名附件检查新实例启动。发布工作流与附件清单见[发布手册](../../operations/release.md)。

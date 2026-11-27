@@ -8,7 +8,7 @@ import {
   type RegisterInput,
 } from './contract';
 
-/** Cookie session transport backed by the clouddrive IAM projection. */
+/** Cookie session transport backed by the NeoCloud IAM projection. */
 export function createBackendAuthService(
   apiBaseUrl: string,
   request: typeof fetch = fetch,

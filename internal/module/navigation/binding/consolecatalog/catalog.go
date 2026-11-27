@@ -17,11 +17,11 @@ import (
 //go:embed catalog.json
 var source []byte
 
-// 该对目录版本只改变菜单图标、API 工作台的默认父级和默认顺序。
-// 保留旧策略版本写入兼容，回滚时旧二进制仍能读取此版本写入的策略。
+// 菜单图标、默认位置和新增的更新入口不改变已保存的菜单项 ID 或策略结构。
+// 当前目录沿用已有持久策略的版本，保留这些菜单项上的用户覆写。
 const (
 	previousPolicyRevision = "71b1e8f16b4b55c335ded8adf0de79c1c6e846d2d81db5b78e7b702711158ee6"
-	presentationRevision   = "ac4588884d725df00a5c5ea47cdd30861d7a1dd4d89ac12e5def214a58c7f773"
+	presentationRevision   = "f6a8d03db57c0a28bdd83c94bbdf45227a9d20fb1e20c7d6a39bfee4a5c8a170"
 )
 
 type Catalog struct{ snapshot service.CatalogSnapshot }

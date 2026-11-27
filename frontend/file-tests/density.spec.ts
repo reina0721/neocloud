@@ -1,3 +1,4 @@
+import { readPreviewAccess } from './reading-fixture';
 import { test, expect, type Page } from './preview-test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFile } from 'node:fs/promises';
@@ -6,15 +7,7 @@ import { randomUUID } from 'node:crypto';
 
 const readAccess = async () =>
   JSON.parse(
-    (
-      await readFile(
-        resolve(
-          __dirname,
-          process.env.CLOUDDRIVE_FILE_TEST_ACCESS ?? '../../.data/preview-access.json',
-        ),
-        'utf8',
-      )
-    ).replace(/^\uFEFF/, ''),
+    (await readFile(resolve(__dirname, readPreviewAccess().path), 'utf8')).replace(/^\uFEFF/, ''),
   ) as { url: string; username: string; password: string };
 async function login(page: Page) {
   const access = await readAccess();
@@ -91,7 +84,7 @@ test('F301–308：桌面独立滚动、稳定工具、可见存储与完整品�
   const before = await header.boundingBox();
   const main = page.locator('[data-file-scroll-region]');
   await expect(page.getByRole('region', { name: '存储空间', exact: true })).toBeInViewport();
-  const brand = page.getByRole('link', { name: 'clouddrive', exact: true });
+  const brand = page.getByRole('link', { name: 'NeoCloud', exact: true });
   await expect(brand).toBeVisible();
   await expect.poll(() => brand.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true);
   await main.hover();

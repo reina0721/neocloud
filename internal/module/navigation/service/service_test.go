@@ -104,12 +104,18 @@ func TestPresentationCatalogPreservesPoliciesAcrossUpgradeAndRollback(t *testing
 	previous := catalog.Snapshot()
 	previous.Revision = previousRevision
 	previous.PolicyRevision = ""
-	for index := range previous.Definitions {
-		if previous.Definitions[index].ID == workbenchID {
-			previous.Definitions[index].DefaultParentID = "group:development"
-			previous.Definitions[index].DefaultOrder = 45
+	definitions := previous.Definitions[:0]
+	for _, definition := range previous.Definitions {
+		if definition.ID == "system-tools.update" {
+			continue
 		}
+		if definition.ID == workbenchID {
+			definition.DefaultParentID = "group:development"
+			definition.DefaultOrder = 45
+		}
+		definitions = append(definitions, definition)
 	}
+	previous.Definitions = definitions
 	rollbackCatalog := &fakeCatalog{snapshot: previous}
 	older, resource := newService(t, rollbackCatalog)
 	defer resource.Close()

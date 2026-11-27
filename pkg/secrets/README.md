@@ -19,7 +19,7 @@
 ```go
 package datasource
 
-import "github.com/reina0721/clouddrive/pkg/secrets"
+import "github.com/reina0721/neocloud/pkg/secrets"
 
 type Config struct {
 	DSN secrets.Secret

@@ -1,5 +1,4 @@
 import { AuthError } from './contract';
-import { compatibleEnv } from '../../runtime/environment.mjs';
 
 export type AuthConfig =
   Readonly<{ mode: 'mock' }> | Readonly<{ mode: 'backend'; apiBaseUrl: string }>;
@@ -40,16 +39,8 @@ export function parseAuthConfig(
 /** Next public variables are build-time values, not deployment-time runtime overrides. */
 export function readAuthConfig(): AuthConfig {
   return parseAuthConfig(
-    compatibleEnv(
-      'NEXT_PUBLIC_NEOCLOUD_AUTH_MODE',
-      process.env.NEXT_PUBLIC_NEOCLOUD_AUTH_MODE,
-      process.env.NEXT_PUBLIC_AUTH_MODE,
-    ),
-    compatibleEnv(
-      'NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL',
-      process.env.NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL,
-      process.env.NEXT_PUBLIC_AUTH_API_BASE_URL,
-    ),
+    process.env.NEXT_PUBLIC_NEOCLOUD_AUTH_MODE,
+    process.env.NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL,
     process.env.NODE_ENV === 'production',
   );
 }

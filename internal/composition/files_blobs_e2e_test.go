@@ -34,7 +34,7 @@ func verifyBlobCatalog(t *testing.T, owner, member *consoleTestClient, roleID, p
 	version := owner.request(t, "GET", permissions, nil, 200)["roleVersion"]
 	owner.request(t, "PUT", permissions, map[string]any{"expectedRoleVersion": version, "permissionKeys": []string{"files:blob:read"}}, 200)
 	member.request(t, "GET", "/auth/csrf", nil, 200)
-	member.request(t, "POST", "/auth/login", map[string]string{"email": "files-other@clouddrive.test", "password": password}, 200)
+	member.request(t, "POST", "/auth/login", map[string]string{"email": "files-other@neocloud.test", "password": password}, 200)
 	member.request(t, "GET", files+"/inventory", nil, 403)
 	member.request(t, "GET", files+"/"+source+"/content", nil, 403)
 	read := func(id string) map[string]any {

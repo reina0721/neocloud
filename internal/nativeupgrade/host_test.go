@@ -86,7 +86,7 @@ func TestManagedNativeProcessUpgrade(t *testing.T) {
 	previous := strings.Repeat("1", 40)
 	for index, version := range []string{firstVersion, secondVersion} {
 		commit := strings.Repeat(fmt.Sprint(index+1), 40)
-		executable := filepath.Join(builds, version+"-clouddrive")
+		executable := filepath.Join(builds, version+"-neocloud")
 		if runtime.GOOS == "windows" {
 			executable += ".exe"
 		}
@@ -109,8 +109,8 @@ func TestManagedNativeProcessUpgrade(t *testing.T) {
 	}
 	drivers := []struct{ name, dsn string }{
 		{"sqlite", ""},
-		{"postgres", os.Getenv("CLOUDDRIVE_TEST_POSTGRES_DSN")},
-		{"mysql", os.Getenv("CLOUDDRIVE_TEST_MYSQL_DSN")},
+		{"postgres", os.Getenv("NEOCLOUD_TEST_POSTGRES_DSN")},
+		{"mysql", os.Getenv("NEOCLOUD_TEST_MYSQL_DSN")},
 	}
 	for _, driver := range drivers {
 		t.Run(driver.name, func(t *testing.T) {
@@ -178,7 +178,7 @@ func exerciseManagedProcess(t *testing.T, releases testReleases, driver, dsn str
 	t.Helper()
 	for _, entry := range os.Environ() {
 		name, _, _ := strings.Cut(entry, "=")
-		if strings.HasPrefix(strings.ToUpper(name), "APP_") {
+		if strings.HasPrefix(strings.ToUpper(name), "NEOCLOUD_APP_") {
 			t.Setenv(name, "")
 			if err := os.Unsetenv(name); err != nil {
 				t.Fatal(err)
@@ -192,13 +192,13 @@ func exerciseManagedProcess(t *testing.T, releases testReleases, driver, dsn str
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(root) })
 	public := [2]string{unusedAddress(t), unusedAddress(t)}
-	t.Setenv("APP_HTTP__ADDR", public[0])
-	t.Setenv("APP_MANAGEMENT__ADDR", public[1])
-	t.Setenv("APP_IAM__LOCAL__SETUPTOKEN", fixtureSetupToken)
-	t.Setenv("APP_IAM__LOCAL__ALLOWINSECUREHTTP", "true")
-	t.Setenv("APP_DATABASE__DRIVER", driver)
+	t.Setenv("NEOCLOUD_APP_HTTP__ADDR", public[0])
+	t.Setenv("NEOCLOUD_APP_MANAGEMENT__ADDR", public[1])
+	t.Setenv("NEOCLOUD_APP_IAM__LOCAL__SETUPTOKEN", fixtureSetupToken)
+	t.Setenv("NEOCLOUD_APP_IAM__LOCAL__ALLOWINSECUREHTTP", "true")
+	t.Setenv("NEOCLOUD_APP_DATABASE__DRIVER", driver)
 	if dsn != "" {
-		t.Setenv("APP_DATABASE__DSN", dsn)
+		t.Setenv("NEOCLOUD_APP_DATABASE__DSN", dsn)
 	}
 	for _, args := range [][]string{{"config", "init"}, {"db", "migrate", "up"}} {
 		// #nosec G204 -- Test starts only its compiled fixture worker.
@@ -456,7 +456,7 @@ func openFixtureSession(t *testing.T, address string) *fixtureBusinessClient {
 		client.csrf = fixtureID(t, client.json(t, http.MethodGet, "/auth/csrf", nil), "token")
 		return client
 	}
-	const email = "native-upgrade@clouddrive.test"
+	const email = "native-upgrade@neocloud.test"
 	const password = "native-upgrade-fixture-owner-password"
 	open().json(t, http.MethodPost, "/auth/setup", map[string]string{
 		"setupToken": fixtureSetupToken, "email": email, "password": password, "name": "Native upgrade fixture",

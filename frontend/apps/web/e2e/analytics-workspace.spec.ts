@@ -76,7 +76,7 @@ test.describe('workspace', () => {
     await page.keyboard.press('Space');
     await expect(todo).toBeChecked();
 
-    // 刷新后仍保持（Plugin 私有 store：clouddrive.plugin.workspace）。
+    // 刷新后仍保持（Plugin 私有 store：neocloud.plugin.workspace）。
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
     const restored = label

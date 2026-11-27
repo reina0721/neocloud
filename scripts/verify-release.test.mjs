@@ -47,7 +47,7 @@ test("自动源码检查收敛到主分支和 PR，完整矩阵由维护者按�
   }
 });
 
-test("正式 tag 只执行发布构建和实际附件检查", async () => {
+test("正式 tag 先验证源码，再构建和检查实际附件", async () => {
   const release = await readWorkflow("release");
   assert.deepEqual(triggers(release), ["push"]);
   assert.match(release, /^    tags:\n      - "v\*"$/m);
@@ -57,14 +57,19 @@ test("正式 tag 只执行发布构建和实际附件检查", async () => {
   assert.match(release, /contains\(github\.ref_name, '-'\) \|\| needs\.managed-go-bundles\.result == 'success'/);
   assert.doesNotMatch(
     release,
-    /wait-release-gates|\/actions\/runs|node --test|playwright|managed-go-acceptance|test-offline-(?:release|transition)|test-docker-maintenance/,
+    /wait-release-gates|\/actions\/runs|playwright|managed-go-acceptance|test-offline-(?:release|transition)|test-docker-maintenance/,
   );
   assert.equal([...release.matchAll(/\bsign-blob\b/g)].length, 1);
-  assert.equal([...release.matchAll(/\bgo test\b/g)].length, 1);
+  assert.equal([...release.matchAll(/\bgo test\b/g)].length, 2);
+  assert.match(release, /Verify annotated tag[^\n]*[\s\S]+go test -p 2 \.\/\.\.\. -count=1\n[ \t]+node --test[^\n]+scripts\/verify-release\.test\.mjs[^\n]*\n[\s\S]+Build draft release/);
   assert.match(release, /go test[^\n]+TestSignedFullReleaseBoot/);
-  assert.match(release, /\$env:CLOUDDRIVE_COSIGN = \$cosign[\s\S]+go test[^\n]+TestSignedFullReleaseBoot/);
-  assert.equal([...release.matchAll(/test-docker-release\.mjs/g)].length, 1);
-  assert.match(release, /--artifact-smoke/);
+  assert.match(release, /\$env:NEOCLOUD_COSIGN = \$cosign[\s\S]+go test[^\n]+TestSignedFullReleaseBoot/);
+  assert.equal([...release.matchAll(/test-docker-release\.mjs/g)].length, 2);
+  assert.match(release, /test-docker-release\.mjs --artifact-smoke --release-dir/);
+  assert.doesNotMatch(release, /NEOCLOUD_RELEASE_PROFILE|clouddrive_/);
+  const managed = /baseline_assets=([\s\S]*?)node scripts\/build-managed-go-release\.mjs/.exec(release)?.[1];
+  assert.match(managed ?? "", /grep -Eq '\^neocloud_/);
+  assert.match(managed ?? "", /for profile in managed-go managed-full/);
 
   const publish = /^  publish:\n([\s\S]+)$/m.exec(release)?.[1];
   assert.ok(publish, "缺少正式发布任务");
@@ -73,6 +78,7 @@ test("正式 tag 只执行发布构建和实际附件检查", async () => {
   assert.match(publish, /verify-release\.mjs assets[\s\S]+verify-blob[\s\S]+gh release edit/);
   assert.match(publish, /--certificate-identity "https:\/\/github\.com\/\$GITHUB_REPOSITORY\/\.github\/workflows\/release\.yml@\$GITHUB_REF"/);
   assert.match(publish, /gh release edit[^\n]+--draft=false[^\n]+--latest/);
+  assert.match(publish, /gh release edit[\s\S]+cmp -- "[^"]+\/release-assets\/install\.sh" "[^"]+\/public-install\.sh"[\s\S]+test-docker-release\.mjs --artifact-smoke --public-installer/);
 });
 test("从完整分页列表读取 draft，保留 REST 附件元数据", () => {
   const draft = {
@@ -118,19 +124,19 @@ test("预发布标签不能自动提升为正式版本", () => {
   assert.throws(() => requiredAssets("v0.1.0-rc.1"), /仅正式版本/);
 });
 
-async function fixture(t, { armSha = sha, layout = true, armToolMachine = 183, family = "neocloud" } = {}) {
+async function fixture(t, { armSha = sha, layout = true, armToolMachine = 183 } = {}) {
   const directory = await mkdtemp(join(tmpdir(), "release-assets-unit-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const installerPath = join(directory, "source-installer");
   await writeFile(installerPath, "#!/usr/bin/env bash\necho fixture\n");
-  for (const name of requiredAssets(tag, family)) {
+  for (const name of requiredAssets(tag)) {
     let bytes = "fixture-archive";
     if (name.endsWith(".spdx.json"))
       bytes = JSON.stringify({
         spdxVersion: "SPDX-2.3",
         packages: [{ name: "fixture" }],
       });
-    if (name.startsWith(family + "-maintenance_")) {
+    if (name.startsWith("neocloud-maintenance_")) {
       bytes = Buffer.alloc(20);
       bytes.set([127, 69, 76, 70, 2, 1, 1]);
       bytes.writeUInt16LE(name.endsWith("arm64") ? armToolMachine : 62, 18);
@@ -147,7 +153,7 @@ async function fixture(t, { armSha = sha, layout = true, armToolMachine = 183, f
     await writeFile(join(stage, "install.sh"), await readFile(installerPath));
     await writeFile(
       join(stage, "images.env"),
-      `API_IMAGE=${family}-api:${tag}-${arch}\nWEB_IMAGE=${family}-web:${tag}-${arch}\n`,
+      `API_IMAGE=neocloud-api:${tag}-${arch}\nWEB_IMAGE=neocloud-web:${tag}-${arch}\n`,
     );
     await writeFile(
       join(stage, "manifest.txt"),
@@ -155,7 +161,7 @@ async function fixture(t, { armSha = sha, layout = true, armToolMachine = 183, f
     );
     execFileSync("tar", [
       "-czf",
-      join(directory, `${family}_${tag}_linux_${arch}_docker.tar.gz`),
+      join(directory, `neocloud_${tag}_linux_${arch}_docker.tar.gz`),
       "-C",
       stage,
       "compose.yaml",
@@ -166,7 +172,7 @@ async function fixture(t, { armSha = sha, layout = true, armToolMachine = 183, f
     ]);
   }
   const lines = [];
-  for (const name of requiredAssets(tag, family))
+  for (const name of requiredAssets(tag))
     if (!["checksums.txt", "checksums.txt.sigstore.json"].includes(name))
       lines.push(
         createHash("sha256")
@@ -177,24 +183,23 @@ async function fixture(t, { armSha = sha, layout = true, armToolMachine = 183, f
       );
   await writeFile(join(directory, "checksums.txt"), lines.join("\n") + "\n");
   const release = { tag_name: tag, draft: true, prerelease: false, assets: [] };
-  for (const name of requiredAssets(tag, family))
+  for (const name of requiredAssets(tag))
     release.assets.push({
       name,
       size: (await stat(join(directory, name))).size,
       state: "uploaded",
     });
-  return { release, directory, tag, sha, installerPath, family };
+  return { release, directory, tag, sha, installerPath };
 }
 test("完整双架构产物及其清单可通过验收", async (t) =>
   verifyAssets(await fixture(t)));
 
-test("桥接版本验收旧资产并拒绝混合命名系列", async (t) => {
-  const f = await fixture(t, { family: "clouddrive" });
-  await verifyAssets(f);
-  const name = `neocloud_${tag}_linux_amd64_docker.tar.gz`;
+test("拒绝旧命名的发行附件", async (t) => {
+  const f = await fixture(t);
+  const name = `clouddrive_${tag}_linux_amd64_docker.tar.gz`;
   await writeFile(join(f.directory, name), "mixed");
   f.release.assets.push({ name, size: 5, state: "uploaded" });
-  await assert.rejects(verifyAssets(f), /混合了命名系列/);
+  await assert.rejects(verifyAssets(f), /不支持的发布附件/);
 });
 
 test("缺少自定义布局能力的草稿产物不能发布", async (t) => {

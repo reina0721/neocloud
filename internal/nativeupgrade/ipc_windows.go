@@ -30,7 +30,7 @@ func secureDirectory(path string, _ os.FileInfo) error {
 
 func pipePath(root string) string {
 	digest := sha256.Sum256([]byte(strings.ToLower(root)))
-	return fmt.Sprintf(`\\.\pipe\CloudDrive-%x`, digest[:16])
+	return fmt.Sprintf(`\\.\pipe\NeoCloud-%x`, digest[:16])
 }
 
 func listenControl(root string) (net.Listener, error) {

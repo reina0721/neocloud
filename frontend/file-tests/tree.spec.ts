@@ -5,11 +5,12 @@ import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 type Folder = { id: string; parentId: string; name: string; contentRevision: number };
-async function login(page: Page, accessPath = process.env.CLOUDDRIVE_FILE_TEST_ACCESS) {
+async function login(page: Page, accessPath = process.env.NEOCLOUD_FILE_TEST_ACCESS) {
   const access = JSON.parse(
-    (
-      await readFile(resolve(__dirname, accessPath ?? '../../.data/preview-access.json'), 'utf8')
-    ).replace(/^\uFEFF/, ''),
+    (await readFile(resolve(__dirname, accessPath ?? readPreviewAccess().path), 'utf8')).replace(
+      /^\uFEFF/,
+      '',
+    ),
   ) as { username: string; password: string };
   await page.goto('/login?returnTo=%2Fhome');
   await page.getByLabel('邮箱', { exact: true }).fill(access.username);
@@ -196,7 +197,7 @@ test('F349/350/360：设备开关、旧偏好迁移与账号隔离', async ({ pa
   await page.reload();
   await openRoot(page, root.name);
   await expect(page.getByLabel('自动展开当前目录', { exact: true })).not.toBeChecked();
-  const adminPath = process.env.CLOUDDRIVE_FILE_TEST_ADMIN_ACCESS;
+  const adminPath = process.env.NEOCLOUD_FILE_TEST_ADMIN_ACCESS;
   if (!adminPath) throw Error('An isolated administrator access file is required');
   const other = await browser.newContext();
   try {
@@ -208,22 +209,22 @@ test('F349/350/360：设备开关、旧偏好迁移与账号隔离', async ({ pa
     await other.close();
   }
   const access = JSON.parse(
-    (await readFile(resolve(process.env.CLOUDDRIVE_FILE_TEST_ACCESS!), 'utf8')).replace(
+    (await readFile(resolve(process.env.NEOCLOUD_FILE_TEST_ACCESS!), 'utf8')).replace(
       /^\uFEFF/,
       '',
     ),
   ) as { userId: string };
   await page.evaluate((account) => {
-    localStorage.removeItem('clouddrive.files.sidebar.v2.' + account);
-    localStorage.setItem('clouddrive.files.sidebar.v1.' + account, 'true');
+    localStorage.removeItem('neocloud.files.sidebar.v2.' + account);
+    localStorage.setItem('neocloud.files.sidebar.v1.' + account, 'true');
   }, access.userId);
   await page.reload();
   await expect(page.getByRole('button', { name: '展开文件导航', exact: true })).toBeVisible();
   const saved = await page.evaluate(
     (account) => ({
-      old: localStorage.getItem('clouddrive.files.sidebar.v1.' + account),
+      old: localStorage.getItem('neocloud.files.sidebar.v1.' + account),
       current: JSON.parse(
-        localStorage.getItem('clouddrive.files.sidebar.v2.' + account) ?? 'null',
+        localStorage.getItem('neocloud.files.sidebar.v2.' + account) ?? 'null',
       ) as unknown,
     }),
     access.userId,
@@ -420,4 +421,4 @@ test('F345/357：目录树导航保留同一真实上传及原目标', async ({ 
     release?.();
   }
 });
-import { fileCollectionAction } from './reading-fixture';
+import { readPreviewAccess, fileCollectionAction } from './reading-fixture';

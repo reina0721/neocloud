@@ -254,13 +254,13 @@ func TestTorrentProductSelectionIsolationAndAtomicPublication(t *testing.T) {
 	})
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "torrent-owner@clouddrive.test", "name": "种子验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "torrent-owner@neocloud.test", "name": "种子验收", "password": password}, 200)
 	role := owner.request(t, "POST", "/roles", map[string]any{"name": "Torrent users", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	owner.request(t, "PUT", "/native/iam/roles/"+role["id"].(string)+"/permissions", map[string]any{"expectedRoleVersion": 1, "permissionKeys": []string{"files:read", "files:write"}}, 200)
-	owner.request(t, "POST", "/users", map[string]any{"email": "torrent-other@clouddrive.test", "name": "独立账号", "password": password, "roleIds": []string{role["id"].(string)}, "status": "active"}, 200)
+	owner.request(t, "POST", "/users", map[string]any{"email": "torrent-other@neocloud.test", "name": "独立账号", "password": password, "roleIds": []string{role["id"].(string)}, "status": "active"}, 200)
 	other := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
 	other.request(t, "GET", "/auth/csrf", nil, 200)
-	other.request(t, "POST", "/auth/login", map[string]string{"email": "torrent-other@clouddrive.test", "password": password}, 200)
+	other.request(t, "POST", "/auth/login", map[string]string{"email": "torrent-other@neocloud.test", "password": password}, 200)
 	const nodePath = "/native/files/worker-nodes"
 	other.request(t, "GET", nodePath, nil, 403)
 	other.request(t, "GET", nodePath+"/local/check", nil, 403)

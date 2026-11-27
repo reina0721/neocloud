@@ -1,9 +1,4 @@
 import {
-  readProductStorage,
-  removeProductStorage,
-  writeProductStorage,
-} from '@neocloud/state-foundation';
-import {
   defaultFileSidebarPreferences,
   fileSidebarPreferencesSchema,
   FilesError,
@@ -20,16 +15,15 @@ export function createFileSidebarPreferences(account: string | null, assertCurre
     loadSidebarPreferences(): FileSidebarPreferences {
       assertCurrent();
       try {
-        const saved = readProductStorage(localStorage, key);
+        const saved = localStorage.getItem(key);
         if (saved !== null) return fileSidebarPreferencesSchema.parse(JSON.parse(saved));
-        const previous = readProductStorage(localStorage, previousSidebarKey + '.' + account);
+        const previous = localStorage.getItem(previousSidebarKey + '.' + account);
         const collapsed: unknown =
           previous === null ? defaultFileSidebarPreferences.collapsed : JSON.parse(previous);
         if (typeof collapsed !== 'boolean') throw new FilesError('invalid');
         const preferences = { ...defaultFileSidebarPreferences, collapsed };
-        writeProductStorage(localStorage, key, JSON.stringify(preferences));
-        if (previous !== null)
-          removeProductStorage(localStorage, previousSidebarKey + '.' + account);
+        localStorage.setItem(key, JSON.stringify(preferences));
+        if (previous !== null) localStorage.removeItem(previousSidebarKey + '.' + account);
         return preferences;
       } catch (error) {
         throw new FilesError('invalid', { cause: error });
@@ -38,11 +32,7 @@ export function createFileSidebarPreferences(account: string | null, assertCurre
     saveSidebarPreferences(input: FileSidebarPreferences) {
       assertCurrent();
       try {
-        writeProductStorage(
-          localStorage,
-          key,
-          JSON.stringify(fileSidebarPreferencesSchema.parse(input)),
-        );
+        localStorage.setItem(key, JSON.stringify(fileSidebarPreferencesSchema.parse(input)));
       } catch (error) {
         throw new FilesError('unavailable', { cause: error });
       }

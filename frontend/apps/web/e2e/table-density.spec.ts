@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 /** 设 dataDisplay.tableDensity 为指定值。 */
 async function setTableDensity(page: Page, density: 'compact' | 'standard') {
   await page.goto('/settings/data-display');
-  await page.evaluate(() => window.localStorage.removeItem('clouddrive.shell'));
+  await page.evaluate(() => window.localStorage.removeItem('neocloud.shell'));
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   const group = page.getByRole('radiogroup', { name: '表格密度' });

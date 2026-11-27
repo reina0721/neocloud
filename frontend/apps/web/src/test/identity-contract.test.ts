@@ -1,4 +1,3 @@
-import { legacyStorageKey } from '@neocloud/state-foundation';
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { webcrypto } from 'node:crypto';
 import {
@@ -20,13 +19,11 @@ import { createBrowserMockRepository } from '../auth/mock-repository';
 import { withMockDirectory } from '../identity/mock-auth';
 import { createJsonClient } from '../api/json-client';
 
-const MOCK_DATABASE_LEGACY_KEY = legacyStorageKey(MOCK_DATABASE_KEY);
-
 let owner = 'mock-demo';
 beforeEach(async () => {
   vi.stubGlobal('crypto', webcrypto);
   owner = 'mock-demo';
-  window.localStorage.removeItem(MOCK_DATABASE_LEGACY_KEY);
+  window.localStorage.removeItem(MOCK_DATABASE_KEY);
   await createDatabaseAuthRepository().saveSession({
     user: { id: owner, name: 'Rin', email: 'demo@community.test' },
     expiresAt: Date.now() + 60000,
@@ -34,7 +31,7 @@ beforeEach(async () => {
 });
 afterEach(() => {
   vi.unstubAllGlobals();
-  window.localStorage.removeItem(MOCK_DATABASE_LEGACY_KEY);
+  window.localStorage.removeItem(MOCK_DATABASE_KEY);
 });
 
 function contractRequest(service: IdentityOperations): typeof fetch {
@@ -672,7 +669,7 @@ it('migrates v2 records without replacing accounts, sessions or user changes', a
     users: prior.users,
     sequence: 12,
   };
-  window.localStorage.setItem(MOCK_DATABASE_LEGACY_KEY, JSON.stringify({ version: 2, state }));
+  window.localStorage.setItem(MOCK_DATABASE_KEY, JSON.stringify({ version: 2, state }));
   const migrated = await readMockDatabase();
   expect(migrated.users).toEqual(state.users);
   expect(migrated.session).toEqual(state.session);
@@ -688,7 +685,7 @@ it('migrates v1 accounts/session in place and preserves corrupt/unknown versions
     expiresAt: Date.now() + 60000,
   };
   window.localStorage.setItem(
-    MOCK_DATABASE_LEGACY_KEY,
+    MOCK_DATABASE_KEY,
     JSON.stringify({
       version: 1,
       state: { accounts: [{ user: session.user, salt: 'salt', digest: 'a'.repeat(64) }], session },
@@ -700,13 +697,13 @@ it('migrates v1 accounts/session in place and preserves corrupt/unknown versions
     roleIds: ['viewer'],
   });
   expect(migrated.accounts).toHaveLength(1);
-  window.localStorage.setItem(MOCK_DATABASE_LEGACY_KEY, 'corrupt');
+  window.localStorage.setItem(MOCK_DATABASE_KEY, 'corrupt');
   await expect(readMockDatabase()).rejects.toMatchObject({ code: 'protocol' });
-  expect(window.localStorage.getItem(MOCK_DATABASE_LEGACY_KEY)).toBe('corrupt');
+  expect(window.localStorage.getItem(MOCK_DATABASE_KEY)).toBe('corrupt');
   const newer = JSON.stringify({ version: 100, state: migrated });
-  window.localStorage.setItem(MOCK_DATABASE_LEGACY_KEY, newer);
+  window.localStorage.setItem(MOCK_DATABASE_KEY, newer);
   await expect(readMockDatabase()).rejects.toMatchObject({ code: 'protocol' });
-  expect(window.localStorage.getItem(MOCK_DATABASE_LEGACY_KEY)).toBe(newer);
+  expect(window.localStorage.getItem(MOCK_DATABASE_KEY)).toBe(newer);
 });
 it('migrates v3 in place without replacing users, role grants, notifications or audit', async () => {
   const database = await readMockDatabase();
@@ -719,10 +716,7 @@ it('migrates v3 in place without replacing users, role grants, notifications or 
       permissions: role.permissions.filter((permission) => !permission.startsWith('settings.')),
     })),
   };
-  window.localStorage.setItem(
-    MOCK_DATABASE_LEGACY_KEY,
-    JSON.stringify({ version: 3, state: original }),
-  );
+  window.localStorage.setItem(MOCK_DATABASE_KEY, JSON.stringify({ version: 3, state: original }));
   const migrated = await readMockDatabase();
   expect(migrated.registrationSettings).toMatchObject({
     enabled: true,

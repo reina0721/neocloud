@@ -1,10 +1,4 @@
 import {
-  legacyStorageKey,
-  readProductStorage,
-  removeProductStorage,
-  writeProductStorage,
-} from '@neocloud/state-foundation';
-import {
   epubBookmarkLimit,
   epubFontScales,
   FilesError,
@@ -33,7 +27,7 @@ const recordSchema = z.object({
 });
 
 function readRecord(storage: Storage, key: string) {
-  const value = readProductStorage(storage, key);
+  const value = storage.getItem(key);
   if (value === null) return undefined;
   try {
     const parsed = recordSchema.safeParse(JSON.parse(value));
@@ -72,22 +66,20 @@ export function createEpubReadingPreferences(
           updatedAtMs: Date.now(),
           reading,
         });
-        writeProductStorage(storage, key, JSON.stringify(record));
+        storage.setItem(key, JSON.stringify(record));
         if (previous) return;
         const others: { key: string; updatedAtMs: number }[] = [];
-        const legacyPrefix = legacyStorageKey(prefix);
         const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index));
         for (const candidate of keys) {
-          if (candidate?.startsWith(legacyPrefix) && candidate !== legacyStorageKey(key)) {
-            const productKey = prefix + candidate.slice(legacyPrefix.length);
+          if (candidate?.startsWith(prefix) && candidate !== key) {
             others.push({
-              key: productKey,
-              updatedAtMs: readRecord(storage, productKey)?.updatedAtMs ?? 0,
+              key: candidate,
+              updatedAtMs: readRecord(storage, candidate)?.updatedAtMs ?? 0,
             });
           }
         }
         others.sort((left, right) => right.updatedAtMs - left.updatedAtMs);
-        for (const old of others.slice(historyLimit - 1)) removeProductStorage(storage, old.key);
+        for (const old of others.slice(historyLimit - 1)) storage.removeItem(old.key);
       } catch (error) {
         throw new FilesError('unavailable', { cause: error });
       }

@@ -2,13 +2,13 @@
 
 ## 版本与变更记录
 
-产品继续采用 `v0.MINOR.PATCH` annotated tag；修复递增 PATCH，新增能力或需要明确升级说明的兼容变化递增 MINOR。0.x 仍须说明不兼容影响，不因版本阶段而重置数据。预发布使用 `-rc.N`；本地快照从当前版本派生为下一 PATCH 的 `-next.<commit>`，不能当成正式发布。前端私有包版本是包元数据，不表示独立产品发布。
+产品采用 `v0.MINOR.PATCH` annotated tag。修复递增 PATCH，新增能力或不兼容变化递增 MINOR。0.x 仍须说明不兼容影响并保留已有数据。预发布使用 `-rc.N`；本地快照从当前版本派生为下一 PATCH 的 `-next.<commit>`，不能当成正式发布。前端私有包版本是包元数据，不表示独立产品发布。
 
 [GitHub Releases](https://github.com/reina0721/neocloud/releases) 是产品版本变更的唯一来源。正式版由 GoReleaser 从上一公开正式版至当前 tag 的真实 Git 提交生成记录，分为功能、修复和其他维护，包含直接提交；维护者须审阅用户影响、迁移、升级和已知限制。不维护重复的 CHANGELOG，不补写未经核验的历史发布内容。
 
 ## 仓库设置与发布前提
 
-截至 2026-11-17，`reina0721/neocloud` 为公开仓库，Issues 开启、Discussions 关闭；已配置产品简介及 Topics，私密漏洞报告已启用。协作入口见[贡献指南](../../CONTRIBUTING.md)、[支持指南](../../SUPPORT.md)和[安全政策](../../SECURITY.md)。NeoCloud 发布沿用该仓库地址。桥接版与切换版的产物契约和升级顺序见[改名决策](../architecture/adr/145-neocloud-identity.md)及[运维说明](neocloud-rename.md)。
+`reina0721/neocloud` 是正式发布仓库。协作入口见[贡献指南](../../CONTRIBUTING.md)、[支持指南](../../SUPPORT.md)和[安全政策](../../SECURITY.md)。NeoCloud 产物命名与升级边界见[发布和运行标识决策](../architecture/adr/145-neocloud-identity.md)。
 
 发布使用 GitHub 的 `release` environment。人工审批取决于仓库实际配置。维护者确认目标提交的本地验收结果后，按现有授权推送发布标签。
 
@@ -31,7 +31,7 @@ Linux 使用 `scripts/install-tools.sh` 与 `scripts/release-local.sh`。工具�
 
 ## 正式发布
 
-正式流程由指向本地已验收提交的 annotated `v*` tag 触发。工作流核对标签指向的 SHA、提交属于 `main` 的历史，以及上一正式版的提交关系。运行摘要记录实际构建的 tag 与 SHA。Release 直接进入构建，以本地验收为源码功能门槛。
+正式流程由指向本地已验收提交的 annotated `v*` tag 触发。工作流核对标签指向的 SHA、提交属于 `main` 的历史，以及上一正式版的提交关系。运行摘要记录实际构建的 tag 与 SHA。正式包发布前还执行 Linux Go 测试和发布控制脚本测试。
 
 应在同一 tag 和源提交上核对以下证据。
 
@@ -49,11 +49,11 @@ Linux 使用 `scripts/install-tools.sh` 与 `scripts/release-local.sh`。工具�
 
 手动 `Quality` 保留 govulncheck、gosec 与完整 Git 历史的 Gitleaks。协议规定的 SHA-1、随机 nonce API、公开权限标识和工具生成源码权限等静态误报，必须在对应语句说明依据，规则仍按全局范围执行。Gitleaks 对公开迁移摘要、RFC 测试向量与固定测试 UUID 的例外同时约束路径和值。
 
-发布包含独立 Go、原生 Go 与 Web 整包，以及配对的 Docker 镜像。构建和迁移分别见 [原生部署](backend-archive.md) 和 [Docker 安装](clouddrive-deployment.md)。
+发布包含独立 Go、原生 Go 与 Web 整包，以及配对的 Docker 镜像。构建和迁移分别见 [原生部署](backend-archive.md) 和 [Docker 安装](neocloud-deployment.md)。
 
 ## 原生 Go 托管包
 
-正式版同时提供 Windows amd64、Linux amd64、Linux arm64 的托管 ZIP。每包包含稳定宿主、Go 业务进程、平台与源码清单。GitHub Workflow 发版时读取上一托管正式版的 tag 与 commit，并将它们写入本版的已签名兼容清单。第一个托管版可以没有前序版本。
+正式版同时提供 Windows amd64、Linux amd64、Linux arm64 的托管 ZIP。每包包含稳定宿主、Go 业务进程、平台与源码清单。GitHub Workflow 发版时读取上一 NeoCloud 托管正式版的 tag 与 commit，并将它们写入本版的已签名兼容清单。v0.4.0 是首个 NeoCloud 托管版，清单无前序版本。
 
 同一发布还提供对应的 `_managed-full.zip`，包含同一提交产出的真实静态 Web。签名绑定静态文件清单、构建标识和 Go 版本。整包在目标平台直接运行，验收确认主机无需启动 Node 或容器。[原生整包使用说明](backend-archive.md#运行原生-go-与-web-整包)
 
@@ -65,7 +65,7 @@ Windows amd64、Linux amd64、Linux arm64 各启动一次实际签名整包，�
 
 正式工作流分别使用 `ubuntu-24.04` 和 `ubuntu-24.04-arm` 原生 runner 构建 Docker 包，并各对签名正式包执行一次安装与健康检查。配套镜像具有同一版本和源提交，包内固定镜像 ID、架构和标签。ARM64 运行证据来自原生平台。
 
-正式构建从干净的 tag checkout 生成附件。非回环、浏览器、持久化、旧版断网迁移和完整恢复验收继续由现有脚本按需运行。
+正式构建从干净的 tag checkout 生成附件。非回环、浏览器、持久化、NeoCloud 版本间断网升级和完整恢复验收继续由现有脚本按需运行。
 
 维护者可在本地构建候选（不会创建 tag、上传镜像或发布 Release）：
 
@@ -75,25 +75,25 @@ bash scripts/build-docker-release.sh --version v1.0.0-rc.1 --arch arm64 --out di
 node --test scripts/install.test.mjs scripts/verify-release.test.mjs scripts/release-config.test.mjs scripts/verify-elf-platform.test.mjs scripts/docker-image-config-id.test.mjs
 ```
 
-需要免密 sudo Docker 的开发机，可显式设置 `CLOUDDRIVE_DOCKER_SUDO=1`。常规安装使用当前账户的 Docker 权限，注册或更新网页运维服务需要宿主机管理权限。已有配套镜像可用 `--api-image` 与 `--web-image` 重新打包，版本、架构、源码及镜像配置摘要必须通过校验。
+需要免密 sudo Docker 的开发机，可显式设置 `NEOCLOUD_DOCKER_SUDO=1`。常规安装使用当前账户的 Docker 权限，注册或更新网页运维服务需要宿主机管理权限。已有配套镜像可用 `--api-image` 与 `--web-image` 重新打包，版本、架构、源码及镜像配置摘要必须通过校验。
 
 包内 `API_ID`、`WEB_ID` 固定记录原始镜像配置 JSON 的 SHA-256；配置还引用各层的 `rootfs.diff_ids`。Docker 传统存储与 containerd 存储的显示 ID 定义不同，安装器在显示 ID 不匹配时仅从本地导出已载入的对应平台镜像，核对原始配置内容摘要，再继续检查架构、版本和源码。该步骤不访问镜像仓库、不增加目标机 Node 依赖，也不把版本 label 当成内容身份校验。
 
 安装包以 `NETWORK=1` 和 `ENTRYPOINT=1` 标记网络和自动同源入口能力。完整验收可以给 `scripts/test-docker-release.mjs` 添加 `--network-host <当前机器IPv4>`，核对非回环监听、Cookie、文件、WebDAV、Origin/CSRF、会话与重启。普通 HTTP 的浏览器行为使用真实浏览器复验。
 
-`manifest.txt` 中的 `INSTANCE_LAYOUT=1` 标记支持自定义 Compose 项目名和数据目录，`OFFLINE_MAINTENANCE=1` 标记有配套的离线维护工具。该版本升级旧实例时沿用已有布局。使用自定义布局的实例须选择具有该标记的版本。[自定义实例与安装检查](clouddrive-deployment.md#自定义实例与安装检查)
+`manifest.txt` 中的 `INSTANCE_LAYOUT=1` 标记支持自定义 Compose 项目名和数据目录，`OFFLINE_MAINTENANCE=1` 标记有配套的离线维护工具。该版本升级旧实例时沿用已有布局。使用自定义布局的实例须选择具有该标记的版本。[自定义实例与安装检查](neocloud-deployment.md#自定义实例与安装检查)
 
 在已准备好独立信任目录的 Linux 主机上，用两个完整签名附件目录执行真实升级验收。`build-docker-release.sh` 生成的本地构建产物由发布流程签名后进入这一验收。
 
 ```bash
-CLOUDDRIVE_OFFLINE_TRUST_DIR=/path/to/trust node scripts/test-docker-release.mjs \
+NEOCLOUD_OFFLINE_TRUST_DIR=/path/to/trust node scripts/test-docker-release.mjs \
   --release-dir /path/to/signed-v1 --version v1.0.0 \
   --upgrade-dir /path/to/signed-v2 --upgrade-version v1.1.0 --faults
 ```
 
 该脚本只创建和清理自己拥有的临时实例，验证管理员与角色、文件摘要、存储绑定、重启、备份和升级；损坏包、端口冲突及备份失败使用实际容器和文件权限验证。`--faults` 在独立数据库副本制造脏迁移，确认拒绝自动降级，再明确恢复该测试副本并核对文件内容。控制流程夹具的独立单元测试不冒充真实集成。`--keep` 可保留成功实例用于浏览器审查，失败现场始终保留；`--emulated-arch arm64` 仅用于已有 QEMU 的本地运行验收，并明确标注 daemon 架构选择夹具与模拟环境。
 
-Docker 工作流为两种镜像生成 SPDX SBOM。最终签名清单同时涵盖独立 Go 归档、托管 ZIP、镜像包、维护程序和对应的 SBOM。专项断网验收可用 `scripts/test-offline-release.sh` 和 `scripts/test-offline-transition.sh` 执行。信任材料通过 Sigstore TUF 单独准备。[离线信任准备](clouddrive-deployment.md#自动化与离线安装)
+Docker 工作流为两种镜像生成 SPDX SBOM。最终签名清单同时涵盖独立 Go 归档、托管 ZIP、镜像包、维护程序和对应的 SBOM。专项断网验收可用 `scripts/test-offline-release.sh` 执行。信任材料通过 Sigstore TUF 单独准备。[离线信任准备](neocloud-deployment.md#自动化与离线安装)
 
 签名可用既有固定版本 cosign 验证：
 
@@ -103,13 +103,13 @@ cosign verify-blob --bundle checksums.txt.sigstore.json \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com checksums.txt
 ```
 
-上例版本应替换为实际下载的 tag。目标机安装、更新及失败处理见[下载版部署](clouddrive-deployment.md#release-下载版安装与升级)。
+上例版本应替换为实际下载的 tag。目标机安装、更新及失败处理见[下载版部署](neocloud-deployment.md#release-下载版安装与升级)。
 
 安装和升级验收使用独立的临时目录与数据库副本。架构覆盖以实际 ELF 与目标平台运行结果为准。公开安装入口读取已发布的正式 Release 及其完整签名附件。
 
 
 ### 网页运维附件与验收
 
-每个平台同时构建 `clouddrive-maintenance_<tag>_linux_<arch>`。最终签名清单覆盖维护工具，发布门禁检查真实 ELF 架构。维护工具具有独立进程和版本周期，普通应用升级期间由原工具继续持有实例锁和网关端口。
+每个平台同时构建 `neocloud-maintenance_<tag>_linux_<arch>`。最终签名清单覆盖维护工具，发布门禁检查真实 ELF 架构。维护工具具有独立进程和版本周期，普通应用升级期间由原工具继续持有实例锁和网关端口。
 
-网页运维变更可按需运行 `scripts/test-docker-maintenance.mjs`，使用上一正式版及签名候选验证 systemd 接管、Chromium 维护页、WebDAV、数据保留、授权、回退和恢复。旧版缺少所有者校验接口时，首次跨版验收使用宿主恢复凭据。所有步骤使用独立临时实例。
+网页运维变更可按需运行 `scripts/test-docker-maintenance.mjs`，使用上一 NeoCloud 正式版及签名候选验证 systemd 接管、Chromium 维护页、WebDAV、数据保留、授权、回退和恢复。所有步骤使用独立临时实例。

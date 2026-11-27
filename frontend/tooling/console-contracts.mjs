@@ -516,7 +516,6 @@ const output =
             type: 'apiKey',
             in: 'cookie',
             name: '__Host-neocloud_iam_session',
-            description: 'The CloudDrive session cookie remains readable for upgrades.',
           },
         },
       },

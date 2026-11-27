@@ -208,7 +208,7 @@ func TestConsoleSQLiteDataIsolationAndRestart(t *testing.T) {
 	defer func() { stop() }()
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	session := owner.request(t, "POST", "/auth/setup", map[string]any{"setupToken": "console-setup-secret", "email": "owner@clouddrive.test", "name": "Owner", "password": "owner-password-long"}, 200)
+	session := owner.request(t, "POST", "/auth/setup", map[string]any{"setupToken": "console-setup-secret", "email": "owner@neocloud.test", "name": "Owner", "password": "owner-password-long"}, 200)
 	ownerID := session["user"].(map[string]any)["id"].(string)
 	// 142：真实HTTP复核不创建/撤销Cookie会话；错误一次后可重试。
 	beforeVerify := owner.request(t, "GET", "/auth/session", nil, 200)
@@ -278,7 +278,7 @@ func TestConsoleSQLiteDataIsolationAndRestart(t *testing.T) {
 	preferenceDraft := map[string]any{"version": ownerPreferences["version"], "language": "zh-CN", "timeZone": "Asia/Shanghai", "themeMode": "dark", "themePreset": "green", "density": "compact"}
 	owner.request(t, "PATCH", "/native/iam/self/preferences", preferenceDraft, 200)
 	owner.request(t, "PATCH", "/native/iam/self/preferences", preferenceDraft, 409)
-	member.request(t, "POST", "/auth/register", map[string]any{"name": "Member", "email": "member@clouddrive.test", "password": "member-password-long"}, 200)
+	member.request(t, "POST", "/auth/register", map[string]any{"name": "Member", "email": "member@neocloud.test", "password": "member-password-long"}, 200)
 	member.request(t, "GET", "/users", nil, 403)
 	member.request(t, "GET", "/roles?scope=self", nil, 200)
 	member.request(t, "GET", "/system/runtime", nil, 403)
@@ -289,7 +289,7 @@ func TestConsoleSQLiteDataIsolationAndRestart(t *testing.T) {
 		t.Fatal("cross-user account preferences leak")
 	}
 	me := member.request(t, "GET", "/me", nil, 200)["user"].(map[string]any)
-	draft := map[string]any{"name": "Member renamed", "email": "member@clouddrive.test", "version": me["version"]}
+	draft := map[string]any{"name": "Member renamed", "email": "member@neocloud.test", "version": me["version"]}
 	member.request(t, "PATCH", "/me", draft, 200)
 	member.request(t, "PATCH", "/me", draft, 409)
 	inbox := member.request(t, "GET", "/notifications", nil, 200)["items"].([]any)
@@ -362,7 +362,7 @@ func TestConsoleSQLiteDataIsolationAndRestart(t *testing.T) {
 	offset := digest[len(digest)-1] & 15
 	code := fmt.Sprintf("%06d", (binary.BigEndian.Uint32(digest[offset:offset+4])&0x7fffffff)%1000000)
 	codes := owner.request(t, "POST", "/native/iam/self/mfa/confirm", map[string]any{"code": code}, 200)["recoveryCodes"].([]any)
-	challenge := owner.request(t, "POST", "/auth/login", map[string]any{"email": "owner@clouddrive.test", "password": "owner-password-long"}, 200)
+	challenge := owner.request(t, "POST", "/auth/login", map[string]any{"email": "owner@neocloud.test", "password": "owner-password-long"}, 200)
 	if challenge["mfaRequired"] != true {
 		t.Fatal("MFA challenge missing")
 	}
@@ -379,7 +379,7 @@ func TestConsoleSQLiteDataIsolationAndRestart(t *testing.T) {
 	owner.request(t, "POST", "/native/iam/accounts/"+memberID+"/password-reset", map[string]any{"password": "temporary-password-long"}, 409, map[string]string{"If-Match": "\"1\""})
 	owner.request(t, "POST", "/native/iam/accounts/"+memberID+"/password-reset", map[string]any{"password": "temporary-password-long"}, 204, map[string]string{"If-Match": fmt.Sprintf("\"%.0f\"", owner.request(t, "GET", "/users/"+memberID, nil, 200)["user"].(map[string]any)["version"])})
 	member.request(t, "GET", "/auth/csrf", nil, 200)
-	restricted := member.request(t, "POST", "/auth/login", map[string]any{"email": "member@clouddrive.test", "password": "temporary-password-long"}, 200)
+	restricted := member.request(t, "POST", "/auth/login", map[string]any{"email": "member@neocloud.test", "password": "temporary-password-long"}, 200)
 	if restricted["mustChangePassword"] != true {
 		t.Fatal("reset password did not restrict the new session")
 	}
@@ -389,16 +389,16 @@ func TestConsoleSQLiteDataIsolationAndRestart(t *testing.T) {
 	if problem := expired["error"].(map[string]any); problem["code"] != "unauthenticated" || problem["reason"] != nil {
 		t.Fatalf("真实会话失效的响应意外：%v", problem)
 	}
-	member.request(t, "POST", "/auth/login", map[string]any{"email": "member@clouddrive.test", "password": "replacement-password-long"}, 200)
+	member.request(t, "POST", "/auth/login", map[string]any{"email": "member@neocloud.test", "password": "replacement-password-long"}, 200)
 	other := &consoleTestClient{base: member.base, cookies: map[string]string{}}
 	other.request(t, "GET", "/auth/csrf", nil, 200)
-	other.request(t, "POST", "/auth/login", map[string]any{"email": "member@clouddrive.test", "password": "replacement-password-long"}, 200)
+	other.request(t, "POST", "/auth/login", map[string]any{"email": "member@neocloud.test", "password": "replacement-password-long"}, 200)
 	member.request(t, "POST", "/auth/sessions/revoke-others", map[string]any{}, 204)
 	other.request(t, "GET", "/auth/session", nil, 401)
 	confirmation := member.request(t, "POST", "/native/iam/self/archive", map[string]any{}, 200)
 	member.request(t, "POST", "/native/iam/self/archive/confirm", map[string]any{"confirmationId": confirmation["confirmationId"]}, 204)
 	member.request(t, "GET", "/auth/session", nil, 401)
-	member.request(t, "POST", "/auth/login", map[string]any{"email": "member@clouddrive.test", "password": "replacement-password-long"}, 403)
+	member.request(t, "POST", "/auth/login", map[string]any{"email": "member@neocloud.test", "password": "replacement-password-long"}, 403)
 }
 
 func verifyConsoleRegistrationRoleOptions(t *testing.T, owner *consoleTestClient) {
@@ -472,7 +472,7 @@ func verifyConsoleRegistrationRoleOptions(t *testing.T, owner *consoleTestClient
 	member := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
 	member.request(t, "GET", "/auth/csrf", nil, http.StatusOK)
 	registration := map[string]string{
-		"name": "File reader", "email": "registration-reader@clouddrive.test", "password": "registration-password-long",
+		"name": "File reader", "email": "registration-reader@neocloud.test", "password": "registration-password-long",
 	}
 	member.request(t, "POST", "/auth/register", registration, http.StatusOK)
 	member.request(t, "GET", optionsRoute, nil, http.StatusForbidden)
@@ -488,7 +488,7 @@ func verifyConsoleRegistrationRoleOptions(t *testing.T, owner *consoleTestClient
 		t.Fatalf("已配置的归档角色缺少失效状态：%v", inactive)
 	}
 	anonymous.request(t, "GET", "/auth/csrf", nil, http.StatusOK)
-	registration["email"] = "registration-blocked@clouddrive.test"
+	registration["email"] = "registration-blocked@neocloud.test"
 	blocked := anonymous.request(t, "POST", "/auth/register", registration, http.StatusForbidden)["error"].(map[string]any)
 	if blocked["code"] != "forbidden" || blocked["reason"] != nil {
 		t.Fatalf("匿名注册暴露内部角色拒绝原因：%v", blocked)

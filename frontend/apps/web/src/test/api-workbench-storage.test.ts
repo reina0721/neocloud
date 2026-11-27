@@ -6,7 +6,7 @@ import {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  localStorage.removeItem('clouddrive.api-workbench.workspace.v1');
+  localStorage.removeItem('neocloud.api-workbench.workspace.v1');
 });
 
 describe('Workbench durable storage', () => {
@@ -23,8 +23,8 @@ describe('Workbench durable storage', () => {
     expect((await port.workspace.load()).projects).toEqual(initial.projects);
   });
   it('does not overwrite invalid persisted user data with demo data', async () => {
-    localStorage.setItem('clouddrive.api-workbench.workspace.v1', 'invalid JSON');
+    localStorage.setItem('neocloud.api-workbench.workspace.v1', 'invalid JSON');
     await expect(createMockApiWorkbenchService().workspace.load()).rejects.toThrow();
-    expect(localStorage.getItem('clouddrive.api-workbench.workspace.v1')).toBe('invalid JSON');
+    expect(localStorage.getItem('neocloud.api-workbench.workspace.v1')).toBe('invalid JSON');
   });
 });

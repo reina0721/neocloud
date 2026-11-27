@@ -1,4 +1,3 @@
-import { legacyStorageKey, writeProductStorage } from '@neocloud/state-foundation';
 /**
  * Host —— Preferences Port 实现（composition root 装配）。
  *
@@ -87,7 +86,7 @@ function toPersistResult(fn: () => void): PersistResult {
 function persistSnapshot(): void {
   const state = persistedShellPreferences(useShellStore.getState());
   const envelope = JSON.stringify({ state, version: PREFERENCES_VERSION });
-  writeProductStorage(window.localStorage, PERSIST_KEY, envelope);
+  window.localStorage.setItem(PERSIST_KEY, envelope);
 }
 
 type AccountPreferenceIntent = (before: Preferences, after: Preferences) => boolean;
@@ -157,8 +156,7 @@ export function createHostPreferencesPort(): PreferencesPort<Preferences> & {
   /** 跨窗口：另一 tab 写入完整快照后，本窗口校验并应用（不静默覆盖损坏/不完整快照）。 */
   function startCrossWindowSync(): () => void {
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== legacyStorageKey(PERSIST_KEY) || event.storageArea !== window.localStorage)
-        return;
+      if (event.key !== PERSIST_KEY || event.storageArea !== window.localStorage) return;
       const incoming = parseStoredSnapshot(event.newValue);
       if (!incoming) return; // 损坏/不完整 → 忽略，保留本窗口会话
       const current = useShellStore.getState();

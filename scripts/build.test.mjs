@@ -29,7 +29,7 @@ childProcess.spawn = (command, args, options) => {
           await mkdir(join(output, 'cache'), { recursive: true });
           await writeFile(join(output, 'cache', 'turbopack'), '模拟缓存');
         }
-        if (process.env.CLOUDDRIVE_TEST_WEB_FAILURE === '1') {
+        if (process.env.NEOCLOUD_TEST_WEB_FAILURE === '1') {
           child.emit('exit', 29);
           return;
         }
@@ -50,7 +50,7 @@ syncBuiltinESMExports();
 `;
 
 async function fixture(t) {
-  const root = await mkdtemp(join(tmpdir(), 'clouddrive-native-test-'));
+  const root = await mkdtemp(join(tmpdir(), 'neocloud-native-test-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   for (const file of [
     'scripts/build.mjs', 'scripts/start-native-web.mjs', 'frontend/tooling/copy-standalone.mjs',
@@ -77,7 +77,7 @@ async function fixture(t) {
       process.execPath, ['--import', pathToFileURL(preload).href, join(root, 'scripts', 'build.mjs'), ...args],
       {
         encoding: 'utf8', timeout: 15_000,
-        env: { ...process.env, CLOUDDRIVE_TEST_WEB_FAILURE: failWeb ? '1' : '0' },
+        env: { ...process.env, NEOCLOUD_TEST_WEB_FAILURE: failWeb ? '1' : '0' },
       },
     ),
   };

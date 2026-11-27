@@ -60,5 +60,5 @@ test('Backend account security revokes other sessions and changes password witho
     method: 'POST',
     csrf: 'product-csrf',
   });
-  expect(await page.evaluate(() => localStorage.getItem('clouddrive.auth-mock'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('neocloud.auth-mock'))).toBeNull();
 });

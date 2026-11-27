@@ -20,20 +20,13 @@ import (
 // DefaultEnvironmentPrefix 是正式进程选取配置覆盖值的环境变量前缀。
 const DefaultEnvironmentPrefix = "NEOCLOUD_APP_"
 
-const legacyEnvironmentPrefix = "APP_"
-
 // configurationSource 统一服务与单次命令的实例选择、配置合并顺序和校验规则。
 func (a *Application) configurationSource() (*config.Loader, []config.Binding, error) {
 	bindings, err := composed.ConfigurationBindings(applicationOwnedConfigurationBindings()...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("compose instance configuration bindings: %w", err)
 	}
-	prefix := a.config.EnvironmentPrefix
-	var aliases []string
-	if prefix == DefaultEnvironmentPrefix {
-		aliases = []string{legacyEnvironmentPrefix}
-	}
-	return config.New(config.FileSource(a.config.ConfigPath), config.EnvSource(prefix, aliases...)), bindings, nil
+	return config.New(config.FileSource(a.config.ConfigPath), config.EnvSource(a.config.EnvironmentPrefix)), bindings, nil
 }
 
 // requireReloadableConfiguration 在创建候选之前保护持久化身份与进程级资源。

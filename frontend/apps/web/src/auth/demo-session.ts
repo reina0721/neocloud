@@ -1,8 +1,3 @@
-import {
-  readProductStorage,
-  removeProductStorage,
-  writeProductStorage,
-} from '@neocloud/state-foundation';
 /**
  * 演示身份记忆（Host、非敏感）。
  *
@@ -22,7 +17,7 @@ type DemoMemory = Readonly<{ version: number; lastAccountId: string | null }>;
 function readMemory(): DemoMemory {
   if (typeof window === 'undefined') return { version: DEMO_MEMORY_VERSION, lastAccountId: null };
   try {
-    const raw = readProductStorage(window.localStorage, DEMO_MEMORY_KEY);
+    const raw = window.localStorage.getItem(DEMO_MEMORY_KEY);
     if (!raw) return { version: DEMO_MEMORY_VERSION, lastAccountId: null };
     const parsed: unknown = JSON.parse(raw);
     if (parsed === null || typeof parsed !== 'object')
@@ -47,8 +42,7 @@ export function rememberDemoAccount(id: string): void {
   if (typeof window === 'undefined') return;
   if (!demoAccounts.some((account) => account.id === id)) return;
   try {
-    writeProductStorage(
-      window.localStorage,
+    window.localStorage.setItem(
       DEMO_MEMORY_KEY,
       JSON.stringify({ version: DEMO_MEMORY_VERSION, lastAccountId: id }),
     );
@@ -61,7 +55,7 @@ export function rememberDemoAccount(id: string): void {
 export function forgetDemoAccount(): void {
   if (typeof window === 'undefined') return;
   try {
-    removeProductStorage(window.localStorage, DEMO_MEMORY_KEY);
+    window.localStorage.removeItem(DEMO_MEMORY_KEY);
   } catch {
     /* ignore */
   }

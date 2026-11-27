@@ -58,9 +58,6 @@ func Enable(ctx context.Context, root, trustedProxy, cosign, dockerHost string) 
 	if err != nil || !locked {
 		return errors.Join(err, ErrBusy)
 	}
-	if err := requireNoDockerRename(root); err != nil {
-		return err
-	}
 	cfg := Config{Project: project, TrustedProxy: trustedProxy}
 	e := engine{root: root, dataDir: dataDir, cfg: cfg}
 	configPath := filepath.Join(e.control(), "gateway.json")
@@ -120,7 +117,7 @@ func Enable(ctx context.Context, root, trustedProxy, cosign, dockerHost string) 
 				undo = errors.Join(undo, err, ErrBusy)
 			} else if err = e.run(recovery, version, "_stop"); err == nil {
 				direct := e.tool(recovery, version, "_start")
-				direct.Env = append(direct.Env, "CLOUDDRIVE_MAINTENANCE_COMPOSE=")
+				direct.Env = append(direct.Env, "NEOCLOUD_MAINTENANCE_COMPOSE=")
 				err = direct.Run()
 				if err == nil {
 					err = e.run(recovery, version, "_probe")
@@ -262,7 +259,7 @@ func gatewayReady(ctx context.Context, cfg Config) bool {
 		return false
 	}
 	defer res.Body.Close()
-	return res.StatusCode == 200 && res.Header.Get("X-CloudDrive-Maintenance") == "1"
+	return res.StatusCode == 200 && res.Header.Get("X-NeoCloud-Maintenance") == "1"
 }
 
 func waitFor(ctx context.Context, check func(context.Context) bool) error {
@@ -303,7 +300,7 @@ func unitWords(values ...string) string {
 func units(cfg Config, root, owner, executable, configRoot, cosign, dockerHost string) (string, string) {
 	config := filepath.Join(configRoot, "gateway.json")
 	worker := fmt.Sprintf(`[Unit]
-Description=CloudDrive deployment worker (%s)
+Description=NeoCloud deployment worker (%s)
 After=docker.service network-online.target
 Wants=network-online.target
 
@@ -322,10 +319,10 @@ TimeoutStopSec=40s
 
 [Install]
 WantedBy=multi-user.target
-`, cfg.Project, owner, gatewayGroup(cfg.Project), cfg.Project, unitWords("DOCKER_HOST="+dockerHost, "DOCKER_CONTEXT=", "CLOUDDRIVE_COSIGN="+cosign),
+`, cfg.Project, owner, gatewayGroup(cfg.Project), cfg.Project, unitWords("DOCKER_HOST="+dockerHost, "DOCKER_CONTEXT=", "NEOCLOUD_COSIGN="+cosign),
 		unitWords(executable, "worker", "--root", root, "--config", config))
 	gateway := fmt.Sprintf(`[Unit]
-Description=CloudDrive same-origin gateway (%s)
+Description=NeoCloud same-origin gateway (%s)
 After=network.target
 
 [Service]

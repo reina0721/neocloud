@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"golang.org/x/sys/windows/svc"
 )
@@ -25,9 +23,6 @@ func runService(ctx context.Context, name string, run func(context.Context) erro
 	}
 	if name == "" {
 		name = "NeoCloudNative"
-		if strings.EqualFold(filepath.Base(os.Args[0]), "clouddrive-host.exe") {
-			name = "CloudDriveNative"
-		}
 	}
 	return svc.Run(name, handler{ctx: ctx, run: run})
 }

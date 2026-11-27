@@ -4,14 +4,11 @@ import { execFileSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { releaseFamily } from "./release-go-source.mjs";
 const placeholder = 'dist: "{{ .Env.GORELEASER_DIST }}"';
 export function renderReleaseConfig(
   source,
   directory,
   root = resolve(import.meta.dirname, ".."),
-  family = releaseFamily(),
-  goRoot,
 ) {
   assert.ok(
     typeof directory === "string" &&
@@ -26,16 +23,7 @@ export function renderReleaseConfig(
   );
   // GoReleaser 的归档 glob 使用相对路径；绝对路径会被 glob 库错误拼接。
   const archiveGlob = `${relative(root, directory).split(sep).join("/")}/licenses/{{ .Os }}_{{ .Arch }}/**`;
-  if (family === "clouddrive") {
-    assert.ok(goRoot && resolve(goRoot) !== resolve(root), "旧版 Go 构建需要独立源目录");
-  }
-  const profile = family === "clouddrive" ? source
-    .replace("project_name: neocloud", "project_name: clouddrive")
-    .replace("binary: neocloud", "binary: clouddrive")
-    .replace("    main: ./cmd/app", `    main: ./cmd/app\n    dir: ${JSON.stringify(relative(root, goRoot).split(sep).join("/"))}`)
-    .replace("cmd: node scripts/prepare-go-licenses.mjs", `cmd: node "${join(root, "scripts/prepare-go-licenses.mjs").split(sep).join("/")}"`)
-    : source;
-  return profile
+  return source
     .replace(placeholder, "dist: " + JSON.stringify(directory))
     .replace(
       'src: "{{ .Env.GORELEASER_DIST }}/licenses/{{ .Os }}_{{ .Arch }}/**"',
@@ -61,7 +49,7 @@ if (
     const source = await readFile(join(root, ".goreleaser.yaml"), "utf8");
     await writeFile(
       resolve(process.argv[3]),
-      renderReleaseConfig(source, directory, root, releaseFamily(), process.env.NEOCLOUD_RELEASE_GO_ROOT),
+      renderReleaseConfig(source, directory),
       { mode: 0o600 },
     );
   } catch (error) {

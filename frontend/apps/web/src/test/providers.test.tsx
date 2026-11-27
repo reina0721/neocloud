@@ -13,7 +13,7 @@ function LocaleProbe() {
   return <p>{locale}</p>;
 }
 
-describe('AppProviders hydration（clouddrive.shell v0 → v1）', () => {
+describe('AppProviders hydration（neocloud.shell v0 → v1）', () => {
   beforeEach(async () => {
     localStorage.clear();
     useShellStore.setState({
@@ -50,7 +50,7 @@ describe('AppProviders hydration（clouddrive.shell v0 → v1）', () => {
     expect(container).toHaveTextContent('正在加载应用 / Loading application');
     // v0 平铺记录（迁移前形状）：显式 dark/en/collapsed 应保真映射进嵌套偏好。
     localStorage.setItem(
-      'clouddrive.shell',
+      'neocloud.shell',
       JSON.stringify({
         state: { theme: 'dark', locale: 'en', sidebarCollapsed: true },
         version: 0,
@@ -71,7 +71,7 @@ describe('AppProviders hydration（clouddrive.shell v0 → v1）', () => {
     expect(prefs.localeRegion.language).toBe('en');
     expect(prefs.navigation.sidebarBehavior).toBe('collapsed');
     // migrate 后 zustand persist 以 version 1 回写（下次读取不再 migrate）。
-    const stored = JSON.parse(localStorage.getItem('clouddrive.shell') ?? 'null') as {
+    const stored = JSON.parse(localStorage.getItem('neocloud.shell') ?? 'null') as {
       version?: number;
     } | null;
     expect(stored?.version).toBe(PREFERENCES_VERSION);
@@ -85,7 +85,7 @@ describe('AppProviders hydration（clouddrive.shell v0 → v1）', () => {
     } as never);
     await waitFor(() => expect(document.documentElement).toHaveAttribute('data-theme', 'light'));
     expect(document.documentElement).toHaveAttribute('data-accent', 'pink');
-    const updated = JSON.parse(localStorage.getItem('clouddrive.shell') ?? 'null') as {
+    const updated = JSON.parse(localStorage.getItem('neocloud.shell') ?? 'null') as {
       state?: { preferences?: { appearance?: { themeMode?: string; accent?: string } } };
     } | null;
     expect(updated?.state?.preferences?.appearance?.themeMode).toBe('light');

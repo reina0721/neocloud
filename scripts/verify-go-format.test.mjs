@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { verifyGoFormat } from './verify-go-format.mjs';
 
 function fixture(t) {
-  const root = mkdtempSync(join(tmpdir(), 'clouddrive-format-'));
+  const root = mkdtempSync(join(tmpdir(), 'neocloud-format-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   execFileSync('git', ['init', '-q', root]);
   return root;

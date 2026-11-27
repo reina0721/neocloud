@@ -8,7 +8,6 @@ import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { verifyHeader } from "./verify-elf-platform.mjs";
-import { releaseFamily } from "./release-go-source.mjs";
 
 export function selectDraft(pages, tag) {
   assert.match(tag, /^v\d+\.\d+\.\d+$/, "仅正式版本允许自动发布");
@@ -23,17 +22,16 @@ export function selectDraft(pages, tag) {
   return matches[0];
 }
 
-export function requiredAssets(tag, family = releaseFamily()) {
+export function requiredAssets(tag) {
   assert.match(tag, /^v\d+\.\d+\.\d+$/, "仅正式版本允许自动发布");
-  assert.ok(["neocloud", "clouddrive"].includes(family), "未知发布命名系列");
   const version = tag.slice(1);
   const goArchives = [
-    `${family}_${version}_linux_amd64.tar.gz`,
-    `${family}_${version}_windows_amd64.zip`,
+    `neocloud_${version}_linux_amd64.tar.gz`,
+    `neocloud_${version}_windows_amd64.zip`,
   ];
   const managedArchives = [["windows", "amd64"], ["linux", "amd64"], ["linux", "arm64"]].flatMap(
     ([os, arch]) => ["managed-go", "managed-full"].map(
-      (profile) => `${family}_${tag}_${os}_${arch}_${profile}.zip`,
+      (profile) => `neocloud_${tag}_${os}_${arch}_${profile}.zip`,
     ),
   );
   return [
@@ -42,10 +40,10 @@ export function requiredAssets(tag, family = releaseFamily()) {
     ...managedArchives,
     ...managedArchives.map((name) => name + ".spdx.json"),
     ...["amd64", "arm64"].flatMap((arch) => [
-      `${family}_${tag}_linux_${arch}_docker.tar.gz`,
-      `${family}-maintenance_${tag}_linux_${arch}`,
+      `neocloud_${tag}_linux_${arch}_docker.tar.gz`,
+      `neocloud-maintenance_${tag}_linux_${arch}`,
       ...["api", "web"].map(
-        (kind) => `${family}-${kind}_${tag}_${arch}.spdx.json`,
+        (kind) => `neocloud-${kind}_${tag}_${arch}.spdx.json`,
       ),
     ]),
     "install.sh",
@@ -67,7 +65,6 @@ export async function verifyAssets({
   tag,
   sha,
   installerPath,
-  family = releaseFamily(),
 }) {
   assert.match(sha, /^[a-f0-9]{40}$/);
   assert.equal(release.tag_name, tag);
@@ -87,12 +84,11 @@ export async function verifyAssets({
     );
     assets.set(asset.name, asset);
   }
-  const required = new Set(requiredAssets(tag, family));
+  const required = new Set(requiredAssets(tag));
   for (const name of required)
     assert.ok(assets.has(name), `缺少附件：${name}`);
-  for (const name of requiredAssets(tag, family === "neocloud" ? "clouddrive" : "neocloud")) {
-    if (!required.has(name)) assert.ok(!assets.has(name), `发行版本混合了命名系列：${name}`);
-  }
+  for (const name of assets.keys())
+    assert.ok(required.has(name), `不支持的发布附件：${name}`);
   const checksums = new Map();
   const lines = (await readFile(join(directory, "checksums.txt"), "utf8"))
     .trim()
@@ -131,7 +127,7 @@ export async function verifyAssets({
   );
   for (const arch of ["amd64", "arm64"]) {
     const tool = await open(
-      join(directory, `${family}-maintenance_${tag}_linux_${arch}`),
+      join(directory, `neocloud-maintenance_${tag}_linux_${arch}`),
       "r",
     );
     try {
@@ -143,7 +139,7 @@ export async function verifyAssets({
     }
     const path = join(
       directory,
-      `${family}_${tag}_linux_${arch}_docker.tar.gz`,
+      `neocloud_${tag}_linux_${arch}_docker.tar.gz`,
     );
     const names = execFileSync("tar", ["-tzf", path], { encoding: "utf8" })
       .trim()
@@ -183,7 +179,7 @@ export async function verifyAssets({
       assert.match(manifest.get(key), /^sha256:[a-f0-9]{64}$/);
     assert.equal(
       execFileSync("tar", ["-xOzf", path, "images.env"], { encoding: "utf8" }),
-      `API_IMAGE=${family}-api:${tag}-${arch}\nWEB_IMAGE=${family}-web:${tag}-${arch}\n`,
+      `API_IMAGE=neocloud-api:${tag}-${arch}\nWEB_IMAGE=neocloud-web:${tag}-${arch}\n`,
     );
     assert.deepEqual(
       execFileSync("tar", ["-xOzf", path, "install.sh"]),

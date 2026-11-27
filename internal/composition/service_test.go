@@ -116,7 +116,7 @@ func TestExampleConfigSatisfiesApplicationBindings(t *testing.T) {
 		t.Fatalf("logging.New() error = %v", err)
 	}
 	application, err := New(Config{
-		Name: "clouddrive", Description: "test application",
+		Name: "neocloud", Description: "test application",
 		ConfigPath:        configPath,
 		EnvironmentPrefix: "GO_SCAFFOLD2_TEST_014_EXAMPLE_", Logging: manager,
 	})

@@ -44,10 +44,10 @@ test("启动前拒绝无效或重复端口", async () => {
 
 test("启动前拒绝不精确的网页应用 Origin", async () => {
   const result = await cli([], {
-    env: { ...process.env, CLOUDDRIVE_ALLOWED_ORIGINS: '["https://viewer.test/path"]' },
+    env: { ...process.env, NEOCLOUD_ALLOWED_ORIGINS: '["https://viewer.test/path"]' },
   });
   assert.equal(result.code, 1);
-  assert.match(result.output, /CLOUDDRIVE_ALLOWED_ORIGINS/);
+  assert.match(result.output, /NEOCLOUD_ALLOWED_ORIGINS/);
 });
 
 test("端口冲突不终止占用者，也不启动 Go 或迁移", async () => {
@@ -72,7 +72,7 @@ test("端口冲突不终止占用者，也不启动 Go 或迁移", async () => {
 });
 
 test("已有 node_modules 也先按锁文件同步，安装失败不启动后端", async (t) => {
-  const root = await mkdtemp(join(tmpdir(), "clouddrive dev "));
+  const root = await mkdtemp(join(tmpdir(), "neocloud dev "));
   t.after(() => rm(root, { recursive: true, force: true }));
   const frontend = join(root, "frontend");
   const bin = join(root, "bin");

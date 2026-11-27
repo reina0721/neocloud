@@ -50,10 +50,10 @@ func TestAdminSharesModerateAcrossAccounts(t *testing.T) {
 	const files = "/native/files"
 	const catalog = files + "/admin-shares"
 	const console = "/api/console/v1"
-	const memberEmail = "share-catalog-member@clouddrive.test"
+	const memberEmail = "share-catalog-member@neocloud.test"
 	admin := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	admin.request(t, "GET", "/auth/csrf", nil, 200)
-	admin.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setupToken, "email": "share-catalog-admin@clouddrive.test", "name": "管理测试", "password": password}, 200)
+	admin.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setupToken, "email": "share-catalog-admin@neocloud.test", "name": "管理测试", "password": password}, 200)
 	role := admin.request(t, "POST", "/roles", map[string]any{"name": "Share catalog observer", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	roleID := role["id"].(string)
 	rolePath := "/native/iam/roles/" + roleID + "/permissions"

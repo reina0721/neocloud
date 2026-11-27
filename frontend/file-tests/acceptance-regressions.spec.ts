@@ -218,7 +218,7 @@ for (const restoreAll of [false, true]) {
         Storage['setItem'] | undefined;
       if (!original) throw new Error('Missing browser storage setter');
       Storage.prototype.setItem = function (key, value) {
-        if (this === localStorage && key === 'clouddrive.shell')
+        if (this === localStorage && key === 'neocloud.shell')
           throw new DOMException('Fixture temporary quota error', 'QuotaExceededError');
         original.call(this, key, value);
       };
@@ -260,7 +260,7 @@ test('偏好导入部分失败后重试该批设置并刷新读回', async ({ pa
       ?.value as Storage['setItem'];
     let fail = true;
     Storage.prototype.setItem = function (key, value) {
-      if (fail && this === localStorage && key === 'clouddrive.shell') {
+      if (fail && this === localStorage && key === 'neocloud.shell') {
         fail = false;
         throw new DOMException('Fixture temporary quota error', 'QuotaExceededError');
       }

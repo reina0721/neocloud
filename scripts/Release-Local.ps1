@@ -29,7 +29,7 @@ try {
     goreleaser release --snapshot --clean '--skip=sign,publish,announce' --config $temporaryConfigFile.FullName
     if ($LASTEXITCODE -ne 0) { throw 'GoReleaser snapshot failed' }
 
-    $temporaryKeyDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ("clouddrive-cosign-" + [guid]::NewGuid())
+    $temporaryKeyDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ("neocloud-cosign-" + [guid]::NewGuid())
     New-Item -ItemType Directory -Path $temporaryKeyDirectory | Out-Null
     try {
         $random = [byte[]]::new(32)
@@ -47,7 +47,7 @@ try {
         if (Test-Path -LiteralPath $temporaryKeyDirectory) {
             $resolvedKeyDirectory = (Resolve-Path -LiteralPath $temporaryKeyDirectory -ErrorAction Stop).Path
             $resolvedTempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd('\')
-            $expectedPrefix = $resolvedTempRoot + '\clouddrive-cosign-'
+            $expectedPrefix = $resolvedTempRoot + '\neocloud-cosign-'
             if (-not $resolvedKeyDirectory.StartsWith($expectedPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
                 throw "Refusing to remove unexpected temporary directory: $resolvedKeyDirectory"
             }

@@ -5,11 +5,11 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe('runtime backend routing', () => {
   it('reads the deployment upstream without rebuilding or changing the requested resource', () => {
-    vi.stubEnv('CLOUDDRIVE_BACKEND_URL', 'http://backend:8120');
+    vi.stubEnv('NEOCLOUD_BACKEND_URL', 'http://backend:8120');
     expect(backendDestination('https://files.example/api/files/a%2Fb?download=1').href).toBe(
       'http://backend:8120/api/files/a%2Fb?download=1',
     );
-    vi.stubEnv('CLOUDDRIVE_BACKEND_URL', 'https://another-backend.example');
+    vi.stubEnv('NEOCLOUD_BACKEND_URL', 'https://another-backend.example');
     expect(backendDestination('https://files.example/wopi/files/id?access_token=test').href).toBe(
       'https://another-backend.example/wopi/files/id?access_token=test',
     );
@@ -58,7 +58,6 @@ describe('browser authority boundary', () => {
       origin: 'http://192.0.2.10:4173',
       cookie: 'session=kept',
       'x-csrf-token': 'kept',
-      'x-clouddrive-web-origin': 'https://evil.example',
       'x-neocloud-web-origin': 'https://evil.example',
       'x-forwarded-host': 'evil.example',
       'x-forwarded-proto': 'https',
@@ -66,7 +65,6 @@ describe('browser authority boundary', () => {
     expect(result.get('origin')).toBe(destination.origin);
     expect(result.get('cookie')).toBe('session=kept');
     expect(result.get('x-csrf-token')).toBe('kept');
-    expect(result.get('x-clouddrive-web-origin')).toBe('http://192.0.2.10:4173');
     expect(result.get('x-neocloud-web-origin')).toBe('http://192.0.2.10:4173');
     expect(result.has('x-forwarded-host')).toBe(false);
     expect(result.has('x-forwarded-proto')).toBe(false);
@@ -112,7 +110,6 @@ describe('browser authority boundary', () => {
       'https://drive.example/api/test',
     );
     expect(result.get('origin')).toBe(destination.origin);
-    expect(result.get('x-clouddrive-web-origin')).toBe('https://drive.example');
   });
 
   it('normalizes same-authority DAV destinations while leaving foreign targets for backend rejection', () => {

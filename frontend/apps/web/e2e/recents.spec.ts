@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('最近访问记录：页面入口导航写入 workbench recents（LRU 去重）', async ({ page }) => {
   // 清空 workbench（保持确定性）。
   await page.goto('/settings');
-  await page.evaluate(() => window.localStorage.removeItem('clouddrive.workbench'));
+  await page.evaluate(() => window.localStorage.removeItem('neocloud.workbench'));
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
 
@@ -12,7 +12,7 @@ test('最近访问记录：页面入口导航写入 workbench recents（LRU 去�
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   await expect(page.getByRole('heading', { level: 1, name: '外观', exact: true })).toBeVisible();
   await expect
-    .poll(() => page.evaluate(() => localStorage.getItem('clouddrive.workbench')))
+    .poll(() => page.evaluate(() => localStorage.getItem('neocloud.workbench')))
     .toContain('"/settings"');
   await page.goto('/reference-resources');
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
@@ -22,11 +22,11 @@ test('最近访问记录：页面入口导航写入 workbench recents（LRU 去�
 
   // workbench localStorage：recents 含最近访问（reference-resources 在前）。
   await expect
-    .poll(() => page.evaluate(() => localStorage.getItem('clouddrive.workbench')))
+    .poll(() => page.evaluate(() => localStorage.getItem('neocloud.workbench')))
     .toContain('"/reference-resources"');
   // state-foundation 持久化信封：{ state: {...}, version }。
   const workbench = await page.evaluate(() => {
-    const raw = window.localStorage.getItem('clouddrive.workbench');
+    const raw = window.localStorage.getItem('neocloud.workbench');
     return raw
       ? (JSON.parse(raw) as { state?: { recents?: Array<{ pathname: string; title: string }> } })
       : null;

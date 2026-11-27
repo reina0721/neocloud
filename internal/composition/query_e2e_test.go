@@ -45,7 +45,7 @@ func TestAdvancedQueryHTTPOptionalBoundsOwnershipAndDatabaseBudget(t *testing.T)
 	}()
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "query-owner@clouddrive.test", "name": "查询验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "query-owner@neocloud.test", "name": "查询验收", "password": password}, 200)
 	folder := owner.request(t, "POST", "/native/files/folders", map[string]string{"name": "查询根目录", "parentId": ""}, 200)["id"].(string)
 	nested := owner.request(t, "POST", "/native/files/folders", map[string]string{"name": "后代目录", "parentId": folder}, 200)["id"].(string)
 	alpha := owner.request(t, "POST", "/native/files/text", map[string]string{"name": "Alpha-report,final.TXT", "parentId": folder, "text": "abcdefghij", "key": "advanced-query-alpha-key"}, 200)["id"].(string)
@@ -114,10 +114,10 @@ func TestAdvancedQueryHTTPOptionalBoundsOwnershipAndDatabaseBudget(t *testing.T)
 	role := owner.request(t, "POST", "/roles", map[string]any{"name": "检索成员", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	roleID := role["id"].(string)
 	owner.request(t, "PUT", "/native/iam/roles/"+roleID+"/permissions", map[string]any{"expectedRoleVersion": 1, "permissionKeys": []string{"files:read", "files:write"}}, 200)
-	owner.request(t, "POST", "/users", map[string]any{"email": "query-member@clouddrive.test", "name": "检索成员", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
+	owner.request(t, "POST", "/users", map[string]any{"email": "query-member@neocloud.test", "name": "检索成员", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
 	member := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
 	member.request(t, "GET", "/auth/csrf", nil, 200)
-	member.request(t, "POST", "/auth/login", map[string]string{"email": "query-member@clouddrive.test", "password": password}, 200)
+	member.request(t, "POST", "/auth/login", map[string]string{"email": "query-member@neocloud.test", "password": password}, 200)
 	if len(member.request(t, "GET", "/native/files?scope=all&keywords=report", nil, 200)["items"].([]any)) != 0 {
 		t.Fatal("查询跨owner")
 	}

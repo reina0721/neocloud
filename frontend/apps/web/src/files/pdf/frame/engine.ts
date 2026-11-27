@@ -19,7 +19,6 @@ import {
   emptyPdfState,
   pdfProtocolVersion,
   pdfWorkerReadyKind,
-  legacyPdfWorkerReadyKind,
   pdfOutlineTitleMaxLength,
   pdfHistoryLimit,
   pdfMinScale,
@@ -93,7 +92,7 @@ async function waitForWorker(owned: Worker, signal: AbortSignal) {
         typeof event.data === 'object' &&
         event.data !== null &&
         'kind' in event.data &&
-        (event.data.kind === pdfWorkerReadyKind || event.data.kind === legacyPdfWorkerReadyKind)
+        event.data.kind === pdfWorkerReadyKind
       ) {
         cleanup();
         resolve();

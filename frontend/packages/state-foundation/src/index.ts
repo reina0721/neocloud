@@ -17,13 +17,6 @@ export type { PersistConfig, PersistNamespace } from './contract/persist';
 
 export { definePersistConfig } from './persist/config';
 export {
-  isProductStorageKey,
-  legacyStorageKey,
-  readProductStorage,
-  removeProductStorage,
-  writeProductStorage,
-} from './storage/product-key';
-export {
   createNamespace,
   createPersistKey,
   isManagedKey,

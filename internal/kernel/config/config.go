@@ -357,14 +357,13 @@ func decodeJSONValue(decoder *json.Decoder) (any, error) {
 	}
 }
 
-// EnvSource 从同一环境映射读取配置，双下划线表示嵌套路径。别名前缀可提供相同的键值。
-func EnvSource(prefix string, aliases ...string) Source {
-	return envSource{prefix: prefix, aliases: append([]string(nil), aliases...)}
+// EnvSource 从环境变量读取配置，双下划线表示嵌套路径。
+func EnvSource(prefix string) Source {
+	return envSource{prefix: prefix}
 }
 
 type envSource struct {
-	prefix  string
-	aliases []string
+	prefix string
 }
 
 func (s envSource) Name() string {
@@ -372,7 +371,7 @@ func (s envSource) Name() string {
 }
 
 func (s envSource) Load(ctx context.Context) (map[string]any, error) {
-	return loadEnvironment(ctx, s.prefix, os.Environ(), s.aliases...)
+	return loadEnvironment(ctx, s.prefix, os.Environ())
 }
 
 type configPathErrorKind string
@@ -382,13 +381,11 @@ const (
 	configPathErrorDuplicate     configPathErrorKind = "duplicate-path"
 	configPathErrorEmptySegment  configPathErrorKind = "empty-segment"
 	configPathErrorShapeConflict configPathErrorKind = "shape-conflict"
-	configPathErrorAliasConflict configPathErrorKind = "alias-conflict"
 )
 
 type configPathError struct {
 	kind configPathErrorKind
 	path string
-	keys [2]string
 }
 
 func (e *configPathError) Error() string {
@@ -405,16 +402,12 @@ func (e *configPathError) Error() string {
 		return fmt.Sprintf("config path %s contains an empty segment", path)
 	case configPathErrorShapeConflict:
 		return fmt.Sprintf("config path %s changes between object and non-object", path)
-	case configPathErrorAliasConflict:
-		return fmt.Sprintf("environment keys %q and %q conflict", e.keys[0], e.keys[1])
 	default:
 		return fmt.Sprintf("config path %s is invalid", path)
 	}
 }
 
 type environmentRecord struct {
-	key      string
-	prefix   string
 	rawPath  string
 	path     string
 	parts    []string
@@ -422,7 +415,7 @@ type environmentRecord struct {
 	hasEmpty bool
 }
 
-func loadEnvironment(ctx context.Context, prefix string, entries []string, aliases ...string) (map[string]any, error) {
+func loadEnvironment(ctx context.Context, prefix string, entries []string) (map[string]any, error) {
 	if ctx == nil {
 		return nil, fmt.Errorf("environment config source context is nil")
 	}
@@ -430,22 +423,15 @@ func loadEnvironment(ctx context.Context, prefix string, entries []string, alias
 		return nil, err
 	}
 	records := make([]environmentRecord, 0)
-	prefixes := append([]string{prefix}, aliases...)
 	for _, item := range entries {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
 		key, value, ok := strings.Cut(item, "=")
-		if !ok {
+		if !ok || !strings.HasPrefix(key, prefix) {
 			continue
 		}
-		var trimmed, matched string
-		for _, candidate := range prefixes {
-			if suffix, match := strings.CutPrefix(key, candidate); match {
-				trimmed, matched = suffix, candidate
-				break
-			}
-		}
+		trimmed := strings.TrimPrefix(key, prefix)
 		if trimmed == "" {
 			continue
 		}
@@ -457,8 +443,6 @@ func loadEnvironment(ctx context.Context, prefix string, entries []string, alias
 			hasEmpty = hasEmpty || part == ""
 		}
 		records = append(records, environmentRecord{
-			key:      key,
-			prefix:   matched,
 			rawPath:  strings.Join(rawParts, "."),
 			path:     strings.Join(parts, "."),
 			parts:    parts,
@@ -468,7 +452,7 @@ func loadEnvironment(ctx context.Context, prefix string, entries []string, alias
 	}
 	sort.Slice(records, func(i, j int) bool {
 		if records[i].path == records[j].path {
-			return records[i].key < records[j].key
+			return records[i].rawPath < records[j].rawPath
 		}
 		return records[i].path < records[j].path
 	})
@@ -476,16 +460,10 @@ func loadEnvironment(ctx context.Context, prefix string, entries []string, alias
 		return nil, err
 	}
 	out := map[string]any{}
-	seen := make(map[string]bool, len(records))
 	for _, record := range records {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		key := strings.Join(record.parts, "__")
-		if seen[key] {
-			continue // 验证后仅剩不同前缀下同值的别名。
-		}
-		seen[key] = true
 		if err := insertPath(out, record.parts, record.value, ""); err != nil {
 			return nil, err
 		}
@@ -519,30 +497,23 @@ func validateEnvironmentRecords(ctx context.Context, records []environmentRecord
 			if records[right].hasEmpty {
 				continue
 			}
-			a, b := records[left], records[right]
-			common := commonPathPrefix(a.parts, b.parts)
+			common := commonPathPrefix(records[left].parts, records[right].parts)
 			if common == 0 {
 				continue
 			}
-			leftComplete := common == len(a.parts)
-			rightComplete := common == len(b.parts)
-			if a.prefix != b.prefix && (leftComplete || rightComplete) {
-				if !leftComplete || !rightComplete || a.value != b.value {
-					consider(&configPathError{kind: configPathErrorAliasConflict, path: a.path, keys: [2]string{a.key, b.key}})
-				}
-				continue
-			}
+			leftComplete := common == len(records[left].parts)
+			rightComplete := common == len(records[right].parts)
 			switch {
 			case leftComplete && rightComplete:
 				kind := configPathErrorDuplicate
-				if a.rawPath != b.rawPath {
+				if records[left].rawPath != records[right].rawPath {
 					kind = configPathErrorCaseCollision
 				}
-				consider(&configPathError{kind: kind, path: a.path})
+				consider(&configPathError{kind: kind, path: records[left].path})
 			case leftComplete || rightComplete:
-				path := a.path
+				path := records[left].path
 				if rightComplete {
-					path = b.path
+					path = records[right].path
 				}
 				consider(&configPathError{kind: configPathErrorShapeConflict, path: path})
 			}

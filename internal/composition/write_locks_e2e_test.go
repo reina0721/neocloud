@@ -49,7 +49,7 @@ func writeLockServer(t *testing.T) (*consoleTestClient, string, map[string]any, 
 	})
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "locks@clouddrive.test", "name": "锁验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "locks@neocloud.test", "name": "锁验收", "password": password}, 200)
 	root := owner.request(t, "POST", "/native/files/folders", map[string]string{"name": "locks", "parentId": ""}, 200)["id"].(string)
 	connection := owner.request(t, "POST", "/native/files/connections", map[string]any{"name": "editor", "rootId": root, "readOnly": false, "blockSystemFiles": true}, 200)
 	restart := func() {
@@ -374,10 +374,10 @@ func TestWebDAVConcurrentExclusiveLockAndOwnerIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	owner.request(t, "POST", "/users", map[string]any{"email": "other-lock-owner@clouddrive.test", "name": "另一用户", "password": password, "roleIds": []string{role["id"].(string)}, "status": "active"}, 200)
+	owner.request(t, "POST", "/users", map[string]any{"email": "other-lock-owner@neocloud.test", "name": "另一用户", "password": password, "roleIds": []string{role["id"].(string)}, "status": "active"}, 200)
 	member := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
 	member.request(t, "GET", "/auth/csrf", nil, 200)
-	member.request(t, "POST", "/auth/login", map[string]string{"email": "other-lock-owner@clouddrive.test", "password": password}, 200)
+	member.request(t, "POST", "/auth/login", map[string]string{"email": "other-lock-owner@neocloud.test", "password": password}, 200)
 	if len(member.request(t, "GET", "/native/files/write-locks", nil, 200)["items"].([]any)) != 0 {
 		t.Fatal("另一个用户读到私有锁")
 	}

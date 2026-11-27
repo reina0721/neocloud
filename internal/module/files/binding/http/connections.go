@@ -27,13 +27,8 @@ func connectionOrigin(ctx context.Context, h *handler.Handler) string {
 // connectionRequestOrigin 只提供响应中的展示地址，不参与 Origin、CSRF、Cookie 或 DAV 授权。
 // Web Host 会覆盖客户端同名头；独立 Go 入口仍按实际 HTTP 请求生成地址。
 func connectionRequestOrigin(request *http.Request) string {
-	current := request.Header.Values("X-NeoCloud-Web-Origin")
-	legacy := request.Header.Values("X-CloudDrive-Web-Origin")
-	if len(current) == 0 {
-		current = legacy
-	}
-	if len(current) == 1 && (len(legacy) == 0 || len(legacy) == 1 && current[0] == legacy[0]) {
-		value := current[0]
+	if values := request.Header.Values("X-NeoCloud-Web-Origin"); len(values) == 1 {
+		value := values[0]
 		if parsed, err := url.Parse(value); err == nil && (parsed.Scheme == "http" || parsed.Scheme == "https") && parsed.Host != "" && parsed.User == nil && value == parsed.Scheme+"://"+parsed.Host {
 			return value
 		}

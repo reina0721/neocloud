@@ -48,10 +48,10 @@ func TestAdminTasksRetainPublishedFiles(t *testing.T) {
 	const files = "/native/files"
 	const catalog = files + "/admin-tasks"
 	const console = "/api/console/v1"
-	const memberEmail = "task-catalog-member@clouddrive.test"
+	const memberEmail = "task-catalog-member@neocloud.test"
 	admin := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	admin.request(t, "GET", "/auth/csrf", nil, 200)
-	admin.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setupToken, "email": "task-catalog-admin@clouddrive.test", "name": "管理任务测试", "password": password}, 200)
+	admin.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setupToken, "email": "task-catalog-admin@neocloud.test", "name": "管理任务测试", "password": password}, 200)
 	role := admin.request(t, "POST", "/roles", map[string]any{"name": "Task catalog observer", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	roleID := role["id"].(string)
 	rolePath := "/native/iam/roles/" + roleID + "/permissions"

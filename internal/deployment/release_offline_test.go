@@ -23,7 +23,7 @@ func offlineTestArchive(t *testing.T, version, arch, installer string) []byte {
 		version, arch, strings.Repeat("a", 40), strings.Repeat("b", 64), strings.Repeat("c", 64))
 	for name, data := range map[string]string{
 		"compose.yaml": "services: {}", "images.tar": "fake-docker-image",
-		"images.env": "API_IMAGE=clouddrive-api:" + tag + "\nWEB_IMAGE=clouddrive-web:" + tag + "\n",
+		"images.env": "API_IMAGE=neocloud-api:" + tag + "\nWEB_IMAGE=neocloud-web:" + tag + "\n",
 		"install.sh": installer, "manifest.txt": manifest,
 	} {
 		if err := archive.WriteHeader(&tar.Header{Name: name, Mode: 0600, Size: int64(len(data)), Typeflag: tar.TypeReg}); err != nil {
@@ -57,14 +57,14 @@ func TestOfflineArchiveVerifiesIdentityAndInstaller(t *testing.T) {
 		version: version,
 		digests: map[string]string{"install.sh": fmt.Sprintf("%x", sha256.Sum256([]byte(installer)))},
 	}
-	if err := verifyOfflineArchive(t.Context(), bytes.NewReader(data), release, "amd64", legacyRelease); err != nil {
+	if err := verifyOfflineArchive(t.Context(), bytes.NewReader(data), release, "amd64"); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyOfflineArchive(t.Context(), bytes.NewReader(data), release, "arm64", legacyRelease); err == nil {
+	if err := verifyOfflineArchive(t.Context(), bytes.NewReader(data), release, "arm64"); err == nil {
 		t.Fatal("接受了不同平台的离线包")
 	}
 	release.digests["install.sh"] = strings.Repeat("0", 64)
-	if err := verifyOfflineArchive(t.Context(), bytes.NewReader(data), release, "amd64", legacyRelease); err == nil {
+	if err := verifyOfflineArchive(t.Context(), bytes.NewReader(data), release, "amd64"); err == nil {
 		t.Fatal("接受了包内与签名安装器不一致的离线包")
 	}
 }
@@ -81,7 +81,7 @@ case "$*" in *"--new-bundle-format --trusted-root"*) ;; *) exit 2 ;; esac
 case "$*" in *"https://github.com/reina0721/neocloud/.github/workflows/release.yml@refs/tags/v1.2.3"*) ;; *) exit 3 ;; esac
 cat >/dev/null
 `))
-	t.Setenv("CLOUDDRIVE_COSIGN", verifier)
+	t.Setenv("NEOCLOUD_COSIGN", verifier)
 	source, trust, instance := t.TempDir(), t.TempDir(), t.TempDir()
 	material := filepath.Join(trust, "trusted_root.json")
 	writeOfflineTestAsset(t, material, []byte("trusted snapshot"))
@@ -109,17 +109,8 @@ cat >/dev/null
 	if _, err = ImportOfflineRelease(t.Context(), instance, source, version, ""); err != nil {
 		t.Fatalf("重复导入未保持幂等: %v", err)
 	}
-	legacy := t.TempDir()
-	for _, name := range []string{"fulcio.pem", "rekor.pub", "ctfe.pub"} {
-		writeOfflineTestAsset(t, filepath.Join(legacy, name), []byte(name))
-	}
-	if _, err = ImportOfflineRelease(t.Context(), instance, source, version, legacy); err != nil {
-		t.Fatalf("不能追加独立提供的旧格式信任材料: %v", err)
-	}
-	for _, name := range []string{"fulcio.pem", "rekor.pub", "ctfe.pub", "trusted_root.json"} {
-		if _, err = os.Stat(filepath.Join(localTrust, name)); err != nil {
-			t.Fatal(err)
-		}
+	if _, err = os.Stat(filepath.Join(localTrust, "trusted_root.json")); err != nil {
+		t.Fatal(err)
 	}
 	putPackage("same tag different contents")
 	if _, err = ImportOfflineRelease(t.Context(), instance, source, version, ""); err == nil {

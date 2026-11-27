@@ -177,7 +177,7 @@ func (a *Application) Run(ctx context.Context, args []string) error {
 		DisableInteractiveHome: true,
 	}, kernelcomposition.BootstrapOptions{
 		Configuration:     applicationOwnedConfigurationBindings(),
-		Commands:          []kernelcli.Contract{todoContract, migrationContract, iamContract, kernelcli.ContractFunc(nativeupgrade.Commands), kernelcli.ContractFunc(a.renameCommands)},
+		Commands:          []kernelcli.Contract{todoContract, migrationContract, iamContract, kernelcli.ContractFunc(nativeupgrade.Commands)},
 		DefaultConfigPath: a.config.ConfigPath,
 	})
 	if err != nil {

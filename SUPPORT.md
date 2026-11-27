@@ -1,6 +1,6 @@
 # 获取帮助
 
-先查[使用手册](docs/README.md)、[安装与升级](docs/operations/clouddrive-deployment.md)及目标版本的 [Release 说明](https://github.com/reina0721/neocloud/releases)。源码启动问题见[本地开发](docs/getting-started/local-development.md)，功能限制见[项目范围](docs/repository-scope.md)。
+先查[使用手册](docs/README.md)、[安装与升级](docs/operations/neocloud-deployment.md)及目标版本的 [Release 说明](https://github.com/reina0721/neocloud/releases)。源码启动问题见[本地开发](docs/getting-started/local-development.md)，功能限制见[项目范围](docs/repository-scope.md)。
 
 ## 选择入口
 

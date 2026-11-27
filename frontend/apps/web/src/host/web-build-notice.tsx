@@ -5,13 +5,7 @@ import { useFrontendTranslation } from '@neocloud/i18n';
 import { AlertBanner } from '@neocloud/ui-adapter/feedback';
 import { RotateCw } from 'lucide-react';
 
-import { compatibleEnv } from '../../runtime/environment.mjs';
-
-const loadedBuild = compatibleEnv(
-  'NEXT_PUBLIC_NEOCLOUD_WEB_BUILD_ID',
-  process.env.NEXT_PUBLIC_NEOCLOUD_WEB_BUILD_ID,
-  process.env.NEXT_PUBLIC_CLOUDDRIVE_WEB_BUILD_ID,
-);
+const loadedBuild = process.env.NEXT_PUBLIC_NEOCLOUD_WEB_BUILD_ID;
 
 /** Go 托管的静态页面显示部署更新提醒，用户可在保存后自行刷新。 */
 export function WebBuildNotice() {

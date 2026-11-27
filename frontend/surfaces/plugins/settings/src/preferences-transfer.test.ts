@@ -63,15 +63,6 @@ describe('preferences-transfer 配置信封', () => {
     expect(parsed.value.appearance.colorWeak).toBe(true);
   });
 
-  it('接受旧 CloudDrive 导出并写出 NeoCloud 标识', () => {
-    const exported = serializePreferences(customizedPreferences, fixedNow);
-    expect(exported).toContain('neocloud.preferences');
-    const imported = parseImportedPreferences(
-      exported.replace('neocloud.preferences', 'clouddrive.preferences'),
-    );
-    expect(imported).toMatchObject({ ok: true, value: customizedPreferences });
-  });
-
   it('导入后相对当前偏好只列出真正变化的分类', () => {
     const parsed = parseImportedPreferences(serializePreferences(customizedPreferences, fixedNow));
     expect(parsed.ok).toBe(true);

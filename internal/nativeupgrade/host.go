@@ -181,11 +181,6 @@ func runProfile(ctx context.Context, root string, initial Bootstrap, releases re
 	if err != nil || !locked {
 		return errors.Join(errors.New("实例已有原生宿主进程"), err)
 	}
-	if _, err := os.Lstat(filepath.Join(root, renameFence)); err == nil {
-		return errors.New("此实例目录正在改名或已退役，请查看 rename-instance status")
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
 	j, state, err := openJournal(ctx, filepath.Join(directory, "state.db"))
 	if err != nil {
 		return err

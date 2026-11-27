@@ -74,7 +74,7 @@ func TestWebDAVConnectionsFilesAndRevocation(t *testing.T) {
 	})
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "dav-owner@clouddrive.test", "name": "挂载验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "dav-owner@neocloud.test", "name": "挂载验收", "password": password}, 200)
 	root := owner.request(t, "POST", "/native/files/folders", map[string]string{"name": "授权目录", "parentId": ""}, 200)["id"].(string)
 	create := func(name string, readonly bool) map[string]any {
 		return owner.request(t, "POST", "/native/files/connections", map[string]any{"name": name, "rootId": root, "readOnly": readonly, "blockSystemFiles": true}, 200)
@@ -254,10 +254,10 @@ func verifyDAVCurrentAuthority(t *testing.T, owner *consoleTestClient, root, pas
 	role := owner.request(t, "POST", "/roles", map[string]any{"name": "DAV members", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	roleID := role["id"].(string)
 	owner.request(t, "PUT", "/native/iam/roles/"+roleID+"/permissions", map[string]any{"expectedRoleVersion": 1, "permissionKeys": []string{"files:read", "files:write"}}, 200)
-	created := owner.request(t, "POST", "/users", map[string]any{"email": "dav-member@clouddrive.test", "name": "挂载成员", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
+	created := owner.request(t, "POST", "/users", map[string]any{"email": "dav-member@neocloud.test", "name": "挂载成员", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
 	member := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
 	member.request(t, "GET", "/auth/csrf", nil, 200)
-	member.request(t, "POST", "/auth/login", map[string]string{"email": "dav-member@clouddrive.test", "password": password}, 200)
+	member.request(t, "POST", "/auth/login", map[string]string{"email": "dav-member@neocloud.test", "password": password}, 200)
 	// 有同等权限也不能借用另一个owner的目录或管理其凭据。
 	member.request(t, "POST", "/native/files/connections", map[string]any{"name": "跨账号目录", "rootId": root, "readOnly": false, "blockSystemFiles": true}, 404)
 	credential := member.request(t, "POST", "/native/files/connections", map[string]any{"name": "成员连接", "rootId": "", "readOnly": false, "blockSystemFiles": true}, 200)

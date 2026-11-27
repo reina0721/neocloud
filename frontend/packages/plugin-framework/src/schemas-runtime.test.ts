@@ -60,7 +60,7 @@ describe('plugin-framework/schemas/runtime（Node 装配方入口）', () => {
 
   it('Node 入口源码不访问 schemas 内部文件路径', async () => {
     const source = await readFile(join(here, 'schemas-runtime.ts'), 'utf8');
-    expect(source).not.toMatch(/@(?:neocloud|clouddrive)\/schemas\/src\//);
+    expect(source).not.toMatch(/@neocloud\/schemas\/src\//);
     expect(source).not.toMatch(/packages\/schemas\/src/);
     // 只 re-export 公共子路径。
     expect(source).toMatch(/@neocloud\/schemas\/runtime/);

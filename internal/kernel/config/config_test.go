@@ -221,19 +221,19 @@ func TestEnvironmentSourceRejectsAmbiguousPathsDeterministically(t *testing.T) {
 		wantKind configPathErrorKind
 		wantPath string
 	}{
-		{name: "scalar before object", entries: []string{"APP_DATABASE=value", "APP_DATABASE__DSN=db"}, wantKind: configPathErrorShapeConflict, wantPath: "database"},
-		{name: "object before scalar", entries: []string{"APP_DATABASE__DSN=db", "APP_DATABASE=value"}, wantKind: configPathErrorShapeConflict, wantPath: "database"},
-		{name: "three level ancestor first", entries: []string{"APP_CACHE__REDIS=value", "APP_CACHE__REDIS__ADDR=localhost"}, wantKind: configPathErrorShapeConflict, wantPath: "cache.redis"},
-		{name: "three level descendant first", entries: []string{"APP_CACHE__REDIS__ADDR=localhost", "APP_CACHE__REDIS=value"}, wantKind: configPathErrorShapeConflict, wantPath: "cache.redis"},
-		{name: "duplicate logical path", entries: []string{"APP_DATABASE__DSN=one", "APP_DATABASE__DSN=two"}, wantKind: configPathErrorDuplicate, wantPath: "database.dsn"},
-		{name: "case collision", entries: []string{"APP_DATABASE__DSN=one", "APP_database__dsn=two"}, wantKind: configPathErrorCaseCollision, wantPath: "database.dsn"},
-		{name: "leading empty segment", entries: []string{"APP___DATABASE=value"}, wantKind: configPathErrorEmptySegment, wantPath: ".database"},
-		{name: "middle empty segment", entries: []string{"APP_DATABASE____DSN=value"}, wantKind: configPathErrorEmptySegment, wantPath: "database..dsn"},
-		{name: "trailing empty segment", entries: []string{"APP_DATABASE__=value"}, wantKind: configPathErrorEmptySegment, wantPath: "database."},
+		{name: "scalar before object", entries: []string{"NEOCLOUD_APP_DATABASE=value", "NEOCLOUD_APP_DATABASE__DSN=db"}, wantKind: configPathErrorShapeConflict, wantPath: "database"},
+		{name: "object before scalar", entries: []string{"NEOCLOUD_APP_DATABASE__DSN=db", "NEOCLOUD_APP_DATABASE=value"}, wantKind: configPathErrorShapeConflict, wantPath: "database"},
+		{name: "three level ancestor first", entries: []string{"NEOCLOUD_APP_CACHE__REDIS=value", "NEOCLOUD_APP_CACHE__REDIS__ADDR=localhost"}, wantKind: configPathErrorShapeConflict, wantPath: "cache.redis"},
+		{name: "three level descendant first", entries: []string{"NEOCLOUD_APP_CACHE__REDIS__ADDR=localhost", "NEOCLOUD_APP_CACHE__REDIS=value"}, wantKind: configPathErrorShapeConflict, wantPath: "cache.redis"},
+		{name: "duplicate logical path", entries: []string{"NEOCLOUD_APP_DATABASE__DSN=one", "NEOCLOUD_APP_DATABASE__DSN=two"}, wantKind: configPathErrorDuplicate, wantPath: "database.dsn"},
+		{name: "case collision", entries: []string{"NEOCLOUD_APP_DATABASE__DSN=one", "NEOCLOUD_APP_database__dsn=two"}, wantKind: configPathErrorCaseCollision, wantPath: "database.dsn"},
+		{name: "leading empty segment", entries: []string{"NEOCLOUD_APP___DATABASE=value"}, wantKind: configPathErrorEmptySegment, wantPath: ".database"},
+		{name: "middle empty segment", entries: []string{"NEOCLOUD_APP_DATABASE____DSN=value"}, wantKind: configPathErrorEmptySegment, wantPath: "database..dsn"},
+		{name: "trailing empty segment", entries: []string{"NEOCLOUD_APP_DATABASE__=value"}, wantKind: configPathErrorEmptySegment, wantPath: "database."},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := loadEnvironment(t.Context(), "APP_", test.entries)
+			_, err := loadEnvironment(t.Context(), "NEOCLOUD_APP_", test.entries)
 			requireConfigPathError(t, err, test.wantKind, test.wantPath)
 		})
 	}
@@ -242,12 +242,12 @@ func TestEnvironmentSourceRejectsAmbiguousPathsDeterministically(t *testing.T) {
 func TestEnvironmentSourceReturnsSameFirstConflictAcrossEntryOrders(t *testing.T) {
 	const secretValue = "env-secret-payload"
 	orders := [][]string{
-		{"APP_Z=" + secretValue, "APP_Z__CHILD=child", "APP_A=parent", "APP_A__CHILD=child"},
-		{"APP_A__CHILD=child", "APP_A=parent", "APP_Z__CHILD=child", "APP_Z=" + secretValue},
-		{"APP_Z__CHILD=child", "APP_A=parent", "APP_Z=" + secretValue, "APP_A__CHILD=child"},
+		{"NEOCLOUD_APP_Z=" + secretValue, "NEOCLOUD_APP_Z__CHILD=child", "NEOCLOUD_APP_A=parent", "NEOCLOUD_APP_A__CHILD=child"},
+		{"NEOCLOUD_APP_A__CHILD=child", "NEOCLOUD_APP_A=parent", "NEOCLOUD_APP_Z__CHILD=child", "NEOCLOUD_APP_Z=" + secretValue},
+		{"NEOCLOUD_APP_Z__CHILD=child", "NEOCLOUD_APP_A=parent", "NEOCLOUD_APP_Z=" + secretValue, "NEOCLOUD_APP_A__CHILD=child"},
 	}
 	for index, entries := range orders {
-		_, err := loadEnvironment(t.Context(), "APP_", entries)
+		_, err := loadEnvironment(t.Context(), "NEOCLOUD_APP_", entries)
 		requireConfigPathError(t, err, configPathErrorShapeConflict, "a")
 		if strings.Contains(err.Error(), secretValue) {
 			t.Fatalf("order %d error leaked environment value: %v", index, err)
@@ -256,11 +256,11 @@ func TestEnvironmentSourceReturnsSameFirstConflictAcrossEntryOrders(t *testing.T
 }
 
 func TestEnvironmentSourcePreservesEmptyAndEqualsValues(t *testing.T) {
-	values, err := loadEnvironment(t.Context(), "APP_", []string{
+	values, err := loadEnvironment(t.Context(), "NEOCLOUD_APP_", []string{
 		"UNRELATED=value",
-		"APP_=ignored",
-		"APP_DATABASE__DSN=",
-		"APP_TOKEN=part=with=equals",
+		"NEOCLOUD_APP_=ignored",
+		"NEOCLOUD_APP_DATABASE__DSN=",
+		"NEOCLOUD_APP_TOKEN=part=with=equals",
 	})
 	if err != nil {
 		t.Fatalf("loadEnvironment() error = %v", err)
@@ -280,46 +280,8 @@ func TestEnvironmentSourcePreservesEmptyAndEqualsValues(t *testing.T) {
 func TestEnvironmentSourcePreservesCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	if _, err := loadEnvironment(ctx, "APP_", nil); !errors.Is(err, context.Canceled) {
+	if _, err := loadEnvironment(ctx, "NEOCLOUD_APP_", nil); !errors.Is(err, context.Canceled) {
 		t.Fatalf("loadEnvironment(cancelled) error = %v, want context.Canceled", err)
-	}
-}
-
-func TestEnvironmentSourceAliasesShareOneMapping(t *testing.T) {
-	const prefix = "NEOCLOUD_APP_"
-	entries := []string{
-		"APP_DATABASE__DSN=legacy.db",
-		"NEOCLOUD_APP_DATABASE__DRIVER=sqlite",
-		"APP_HTTP__ADDR=127.0.0.1:8080",
-		"NEOCLOUD_APP_http__addr=127.0.0.1:8080",
-	}
-	values, err := loadEnvironment(t.Context(), prefix, entries, "APP_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := map[string]any{
-		"database": map[string]any{"dsn": "legacy.db", "driver": "sqlite"},
-		"http":     map[string]any{"addr": "127.0.0.1:8080"},
-	}
-	if !reflect.DeepEqual(values, want) {
-		t.Fatalf("环境变量未映射到同一配置：%v", values)
-	}
-	for _, pair := range [][2]string{
-		{"APP_DATABASE__DSN", "NEOCLOUD_APP_DATABASE__dsn"},
-		{"APP_DATABASE", "NEOCLOUD_APP_DATABASE__DSN"},
-	} {
-		const firstSecret = "do-not-output-secret-one"
-		const secondSecret = "do-not-output-secret-two"
-		for _, order := range [][2]string{pair, {pair[1], pair[0]}} {
-			_, err := loadEnvironment(t.Context(), prefix, []string{order[0] + "=" + firstSecret, order[1] + "=" + secondSecret}, "APP_")
-			if err == nil {
-				t.Fatalf("环境变量冲突未被拒绝：%v", pair)
-			}
-			message := err.Error()
-			if !strings.Contains(message, pair[0]) || !strings.Contains(message, pair[1]) || strings.Contains(message, firstSecret) || strings.Contains(message, secondSecret) {
-				t.Fatal("环境变量冲突应仅包含发生冲突的键名")
-			}
-		}
 	}
 }
 

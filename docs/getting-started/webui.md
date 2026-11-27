@@ -1,4 +1,4 @@
-# clouddrive 前端启动
+# neocloud 前端启动
 
 当前只运行 frontend/ 下的 console-web 工作区。旧 Vite WebUI 的静态托管、5173 端口、webui build/generate 命令及模块内浏览器源码已退出运行链。
 
@@ -6,4 +6,4 @@
 
 在管理侧栏打开“接口调试”进入 API 工作台。查找账号使用“用户”，打开详情后可执行当前权限允许的账号操作。原账号管理地址也进入同一用户列表。“权限目录”用于查阅原生权限，在角色详情修改授权。
 
-[生产部署](../operations/clouddrive-deployment.md)；[前端工程说明](../../frontend/README.md)。
+[生产部署](../operations/neocloud-deployment.md)；[前端工程说明](../../frontend/README.md)。

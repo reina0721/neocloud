@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://clouddrive.dev/schemas/design-system/v1",
+  "$id": "https://neocloud.dev/schemas/design-system/v1",
   "title": "Design System Authority Schema",
   "description": "Design System Token 与 Motion Language 事实的唯一 Schema-Controlled Source；生成物 tokens.css（受控区段）与 motion.css（整文件）由 @neocloud/schemas/runtime 内置 Generator 产出。x-neocloud 是正式注册的 extension keyword，实例结构由 $defs.authorityMeta / $defs.authoritySource 定义。",
   "type": "object",

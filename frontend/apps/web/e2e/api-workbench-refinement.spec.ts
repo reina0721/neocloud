@@ -67,7 +67,7 @@ for (const profile of profiles) {
     await page.addInitScript(
       ({ preferences, profile }) => {
         localStorage.setItem(
-          'clouddrive.shell',
+          'neocloud.shell',
           JSON.stringify({
             version: 1,
             state: {
@@ -156,7 +156,7 @@ test('long configuration, pending, response scrolling and failures remain usable
   await page.goto('/api-workbench');
   const url = page.getByRole('textbox', { name: '请求 URL', exact: true });
   await expect(url).toBeVisible();
-  const key = 'clouddrive.api-workbench.workspace.v1';
+  const key = 'neocloud.api-workbench.workspace.v1';
   const raw = await page.evaluate((key) => localStorage.getItem(key), key);
   const input: unknown = JSON.parse(raw ?? '{}');
   const parsed = safeParseWorkspaceSnapshot(input);

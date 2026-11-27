@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { readNeoCloudEnv } from '../apps/web/runtime/environment.mjs';
 import { verifyFilesOverflow } from './files-overflow';
 import { verifyRegistrationPolicy } from './registration-policy';
 
@@ -8,9 +7,9 @@ test('empty SQLite setup, real business writes, protected native pages and logou
   page,
 }) => {
   test.setTimeout(180_000);
-  const token = readNeoCloudEnv('TEST_SETUP_TOKEN');
-  const password = readNeoCloudEnv('TEST_PASSWORD');
-  const apiUrl = readNeoCloudEnv('TEST_API_URL') ?? 'http://127.0.0.1:8088';
+  const token = process.env.NEOCLOUD_TEST_SETUP_TOKEN;
+  const password = process.env.NEOCLOUD_TEST_PASSWORD;
+  const apiUrl = process.env.NEOCLOUD_TEST_API_URL ?? 'http://127.0.0.1:8088';
   const policyUrl = apiUrl + '/api/console/v1/auth/registration-policy';
   if (!token || !password)
     throw new Error('Run node scripts/dev.mjs --acceptance to create an isolated backend.');
@@ -18,7 +17,7 @@ test('empty SQLite setup, real business writes, protected native pages and logou
   page.on('pageerror', (error) => failures.push(error.message));
   await page.goto('/setup');
   await page.getByLabel('姓名', { exact: true }).fill('验收管理员');
-  await page.getByLabel('邮箱', { exact: true }).fill('acceptance@clouddrive.test');
+  await page.getByLabel('邮箱', { exact: true }).fill('acceptance@neocloud.test');
   const passwordField = page.getByLabel('密码', { exact: true });
   const tokenField = page.getByLabel('设置令牌', { exact: true });
   const setupButton = page.getByRole('button', { name: '创建管理员', exact: true });
@@ -51,7 +50,7 @@ test('empty SQLite setup, real business writes, protected native pages and logou
     await guest.goto(new URL('/login', page.url()).href);
     await guest.getByRole('button', { name: '无法登录？' }).click();
     await expect(guest.getByText(/iam recover-owner/)).toBeVisible();
-    await expect(guest.getByText('acceptance@clouddrive.test', { exact: true })).toHaveCount(0);
+    await expect(guest.getByText('acceptance@neocloud.test', { exact: true })).toHaveCount(0);
   } finally {
     await guest.close();
   }
@@ -72,11 +71,11 @@ test('empty SQLite setup, real business writes, protected native pages and logou
   await expect(minimum).toHaveValue('8');
   await page.goto('/users');
   await expect(
-    page.getByRole('gridcell', { name: 'acceptance@clouddrive.test', exact: true }),
+    page.getByRole('gridcell', { name: 'acceptance@neocloud.test', exact: true }),
   ).toBeVisible();
   await page.goto('/users/administration');
   await expect(
-    page.getByRole('gridcell', { name: 'acceptance@clouddrive.test', exact: true }),
+    page.getByRole('gridcell', { name: 'acceptance@neocloud.test', exact: true }),
   ).toBeVisible();
   await page.goto('/roles/catalog');
   await expect(page.getByText('iam:permission:read', { exact: true })).toBeVisible();
@@ -347,7 +346,7 @@ test('empty SQLite setup, real business writes, protected native pages and logou
   ).toBe(401);
   async function signIn(value: string) {
     await page.goto('/login');
-    await page.getByLabel(/邮箱/).fill('acceptance@clouddrive.test');
+    await page.getByLabel(/邮箱/).fill('acceptance@neocloud.test');
     await page.getByLabel('密码', { exact: true }).fill(value);
     await page.getByRole('button', { name: '登录', exact: true }).click();
   }

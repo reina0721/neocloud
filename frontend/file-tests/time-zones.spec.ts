@@ -34,9 +34,9 @@ test.afterAll(async () => {
   );
 });
 async function login(page: Page) {
-  if (!process.env.CLOUDDRIVE_FILE_TEST_ACCESS) throw new Error('需要隔离账号文件');
+  if (!process.env.NEOCLOUD_FILE_TEST_ACCESS) throw new Error('需要隔离账号文件');
   const access = JSON.parse(
-    (await readFile(process.env.CLOUDDRIVE_FILE_TEST_ACCESS, 'utf8')).replace(/^\uFEFF/, ''),
+    (await readFile(process.env.NEOCLOUD_FILE_TEST_ACCESS, 'utf8')).replace(/^\uFEFF/, ''),
   ) as { username: string; password: string };
   await page.goto('/login?returnTo=%2Fhome');
   await page.getByLabel('邮箱', { exact: true }).fill(access.username);

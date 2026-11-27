@@ -83,7 +83,7 @@ func TestOwnerRecoveryRejectsNonTerminalBeforeOpeningInstance(t *testing.T) {
 	executor := &recoveryExecutorStub{}
 	contract := Contract{executor: executor}
 	err := contract.recoverOwnerCommand().Run(&cli.Context{
-		Context: t.Context(), CommandPath: "clouddrive iam recover-owner", Stdin: strings.NewReader("y\n"), Stdout: io.Discard,
+		Context: t.Context(), CommandPath: "neocloud iam recover-owner", Stdin: strings.NewReader("y\n"), Stdout: io.Discard,
 	})
 	var usage *cli.UsageError
 	if !errors.As(err, &usage) || executor.recoveryCalled {

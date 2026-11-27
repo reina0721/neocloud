@@ -1,4 +1,4 @@
-// 在自有隔离目录验收实际 Linux amd64 归档，不消费宿主 APP_* 配置。
+// 在自有隔离目录验收实际 Linux amd64 归档，不消费宿主 NEOCLOUD_APP_* 配置。
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
@@ -13,7 +13,7 @@ const { values } = parseArgs({ options: { archive: { type: "string" } } });
 assert.ok(values.archive, "需要 --archive");
 assert.equal(process.platform, "linux");
 assert.equal(process.arch, "x64");
-const directory = await mkdtemp(join(tmpdir(), "clouddrive-go-archive-"));
+const directory = await mkdtemp(join(tmpdir(), "neocloud-go-archive-"));
 await writeFile(join(directory, ".test-owner"), "go-archive-test-v1", {
   mode: 0o600,
 });
@@ -54,11 +54,11 @@ try {
   );
   await mkdir(join(directory, ".data"), { mode: 0o700 });
   const env = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith("APP_")),
+    Object.entries(process.env).filter(([key]) => !key.startsWith("NEOCLOUD_APP_")),
   );
-  env.APP_HTTP__ADDR = `127.0.0.1:${await freePort()}`;
-  env.APP_MANAGEMENT__ADDR = `127.0.0.1:${await freePort()}`;
-  const binary = join(directory, "clouddrive");
+  env.NEOCLOUD_APP_HTTP__ADDR = `127.0.0.1:${await freePort()}`;
+  env.NEOCLOUD_APP_MANAGEMENT__ADDR = `127.0.0.1:${await freePort()}`;
+  const binary = join(directory, "neocloud");
   assert.match(
     execFileSync(binary, ["--help"], { cwd: directory, env, encoding: "utf8" }),
     /自托管文件管理与分享协作工作区/,
@@ -93,7 +93,7 @@ try {
     if (child.exitCode !== null) throw new Error(`归档服务提前退出：${errors}`);
     try {
       const response = await fetch(
-        `http://${env.APP_MANAGEMENT__ADDR}/readyz`,
+        `http://${env.NEOCLOUD_APP_MANAGEMENT__ADDR}/readyz`,
         { signal: AbortSignal.timeout(1000) },
       );
       if (response.ok) {

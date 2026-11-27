@@ -27,7 +27,7 @@ assert.ok(
 );
 // Outside the repository: missing traced dependencies cannot resolve through the
 // developer's node_modules. Preserve the trace's relative symlinks on relocation.
-const temporary = await mkdtemp(join(tmpdir(), 'clouddrive-runtime-'));
+const temporary = await mkdtemp(join(tmpdir(), 'neocloud-runtime-'));
 const runtime = join(temporary, 'runtime');
 const resources = [];
 
@@ -176,7 +176,7 @@ try {
       assert.equal(echo.method, 'POST');
       assert.equal(echo.headers.cookie, 'session=test');
       assert.equal(echo.headers.origin, new URL(echo.name === 'a' ? upstreamA : upstreamB).origin);
-      assert.equal(echo.headers['x-clouddrive-web-origin'], origin);
+      assert.equal(echo.headers['x-neocloud-web-origin'], origin);
       assert.equal(echo.headers['x-csrf-token'], 'test');
       assert.equal(echo.body, 'streamed-body-' + 'x'.repeat(32 * 1024));
     }

@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/health"
+	"github.com/reina0721/neocloud/pkg/health"
 )
 
 func BuildRegistry(dbPing func(context.Context) error) (*health.Registry, error) {

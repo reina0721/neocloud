@@ -1,7 +1,7 @@
 import { test, expect, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { openReadingFixtureFolder } from './reading-fixture';
+import { readPreviewAccess, openReadingFixtureFolder } from './reading-fixture';
 
 async function newAction(page: Page, label: string) {
   await page.getByRole('button', { name: '新建', exact: true }).click();
@@ -16,10 +16,7 @@ async function fileAction(page: Page, name: string, label: string) {
   await expect(page.getByRole('dialog', { name: name + ' 的操作', exact: true })).toHaveCount(0);
 }
 
-const accessPath = resolve(
-  __dirname,
-  process.env.CLOUDDRIVE_FILE_TEST_ACCESS ?? '../../.data/preview-access.json',
-);
+const accessPath = resolve(__dirname, readPreviewAccess().path);
 test.beforeEach(async ({ page }) => {
   const access = JSON.parse((await readFile(accessPath, 'utf8')).replace(/^\uFEFF/, '')) as {
     username: string;

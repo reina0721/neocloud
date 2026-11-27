@@ -5,7 +5,7 @@ test('损坏的设置记录：显示原因与恢复动作，恢复后回到默�
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   // 预置非法 JSON → 重载。
   await page.evaluate(() => {
-    window.localStorage.setItem('clouddrive.shell', '{not-valid-json');
+    window.localStorage.setItem('neocloud.shell', '{not-valid-json');
   });
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
@@ -16,7 +16,7 @@ test('损坏的设置记录：显示原因与恢复动作，恢复后回到默�
   await page.waitForTimeout(600);
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
   await expect(page.getByText('本地设置记录无法读取')).not.toBeVisible();
-  const shell = await page.evaluate(() => window.localStorage.getItem('clouddrive.shell'));
+  const shell = await page.evaluate(() => window.localStorage.getItem('neocloud.shell'));
   expect(shell).not.toBeNull();
   expect(() => {
     const parsed: unknown = JSON.parse(shell!);

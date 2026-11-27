@@ -142,7 +142,7 @@ func TestOfflineDownloadPersistentPauseResumePublicationAndRecordRemoval(t *test
 	})
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "offline-owner@clouddrive.test", "name": "离线验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "offline-owner@neocloud.test", "name": "离线验收", "password": password}, 200)
 	created := owner.request(t, "POST", "/native/files/downloads", map[string]string{"uri": source.URL + "/file?signature=never-log", "parentId": "", "name": "saved.bin", "clientKey": "offline-persistent-fixture"}, 200)
 	path := "/native/files/downloads/" + created["id"].(string)
 	encoded, err := json.Marshal(created)
@@ -155,10 +155,10 @@ func TestOfflineDownloadPersistentPauseResumePublicationAndRecordRemoval(t *test
 	role := owner.request(t, "POST", "/roles", map[string]any{"name": "Offline users", "permissions": []string{"account.update"}}, 200)["role"].(map[string]any)
 	roleID := role["id"].(string)
 	owner.request(t, "PUT", "/native/iam/roles/"+roleID+"/permissions", map[string]any{"expectedRoleVersion": 1, "permissionKeys": []string{"files:read", "files:write"}}, 200)
-	owner.request(t, "POST", "/users", map[string]any{"email": "offline-other@clouddrive.test", "name": "隔离验收", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
+	owner.request(t, "POST", "/users", map[string]any{"email": "offline-other@neocloud.test", "name": "隔离验收", "password": password, "roleIds": []string{roleID}, "status": "active"}, 200)
 	other := &consoleTestClient{base: owner.base, cookies: map[string]string{}}
 	other.request(t, "GET", "/auth/csrf", nil, 200)
-	other.request(t, "POST", "/auth/login", map[string]string{"email": "offline-other@clouddrive.test", "password": password}, 200)
+	other.request(t, "POST", "/auth/login", map[string]string{"email": "offline-other@neocloud.test", "password": password}, 200)
 	other.request(t, "GET", path, nil, 404)
 	other.request(t, "GET", path+"/source", nil, 404)
 	other.request(t, "POST", path+"/cancel", map[string]any{"revision": 1}, 404)
@@ -327,7 +327,7 @@ func TestOfflineDownloadFailureRetargetUnknownSizeBatchAndCancel(t *testing.T) {
 	})
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "offline-controls@clouddrive.test", "name": "离线控制验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "offline-controls@neocloud.test", "name": "离线控制验收", "password": password}, 200)
 	create := func(route, name, key string) map[string]any {
 		return owner.request(t, "POST", "/native/files/downloads", map[string]string{"uri": source.URL + route, "parentId": "", "name": name, "clientKey": key}, 200)
 	}
@@ -428,7 +428,7 @@ func TestOfflineMetadataBudgetAndDisabledDispatcherStillAllowCleanup(t *testing.
 	})
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "offline-budget@clouddrive.test", "name": "预算清理验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "offline-budget@neocloud.test", "name": "预算清理验收", "password": password}, 200)
 	created := owner.request(t, "POST", "/native/files/downloads", map[string]string{"uri": source.URL + "/hold", "parentId": "", "name": "held.txt", "clientKey": "offline-tree-budget-fixture"}, 200)
 	path := "/native/files/downloads/" + created["id"].(string)
 	owner.request(t, "POST", path+"/pause", map[string]any{"revision": created["revision"]}, 200)
@@ -517,7 +517,7 @@ func TestOfflineAutomaticCleanupStopsAtAttemptBudgetAndManualRemovalRecovers(t *
 	})
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "cleanup-budget@clouddrive.test", "name": "有界清理验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "cleanup-budget@neocloud.test", "name": "有界清理验收", "password": password}, 200)
 	offlineFixtureSQL(t, dbPath, func(db *gorm.DB) error {
 		return db.Exec("CREATE TRIGGER cleanup_budget_fault BEFORE UPDATE OF cleanup_pending ON files_transfers WHEN OLD.cleanup_pending = 1 AND NEW.cleanup_pending = 0 AND OLD.source = 'offline' BEGIN SELECT RAISE(ABORT, 'fixture cleanup budget'); END").Error
 	})

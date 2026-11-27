@@ -47,7 +47,7 @@ HTTP/BT 下载、后台压缩及清理由 files 的持久任务与现有调度�
 
 PDF.js、媒体 SDK、Worker、frame 与临时 URL 归 Web Host；Surface 只表达文档及编辑意图。每次打开的阅读会话独立拥有资源，传输队列则按账号跨页面保持。PDF 使用本地固定资产和独立预算，不将解析器加入主应用初始负载；[PDF ADR](adr/134-local-pdf-components.md)保存选择理由，具体能力与限制只在[文件手册](../operations/file-management.md#本人-pdf-阅读与临时批注)维护。
 
-生产交付采用可迁移的 Next standalone 和独立 Go 服务；构建产物不嵌入运行期后端地址。开发编排位于应用之外，持有进程树、就绪检查与失败清理。编译缓存、生成和资产准备属于工程工具，不能扩大为业务生命周期资源。详见[部署](../operations/clouddrive-deployment.md)与[本地运行](../getting-started/local-development.md)。
+生产交付采用可迁移的 Next standalone 和独立 Go 服务；构建产物不嵌入运行期后端地址。开发编排位于应用之外，持有进程树、就绪检查与失败清理。编译缓存、生成和资产准备属于工程工具，不能扩大为业务生命周期资源。详见[部署](../operations/neocloud-deployment.md)与[本地运行](../getting-started/local-development.md)。
 
 ### 日志、观测与过载
 

@@ -98,9 +98,9 @@ describe('文件条件、偏好和选择契约', () => {
     ).toBe(false);
     let account: string | null = 'owner';
     const runtime = createFilesRuntime('/api', () => account, vi.fn(), vi.fn());
-    localStorage.setItem('clouddrive.files.view.v1.owner', 'broken');
+    localStorage.setItem('neocloud.files.view.v1.owner', 'broken');
     await expect(runtime.port.loadPreferences()).rejects.toThrow(FilesError);
-    localStorage.removeItem('clouddrive.files.view.v1.owner');
+    localStorage.removeItem('neocloud.files.view.v1.owner');
     const snapshot = await runtime.port.loadPreferences();
     expect(snapshot.configuration.defaults.pageSize).toBe(defaultFileViewPreferences.pageSize);
     account = 'other';

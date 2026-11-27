@@ -30,8 +30,8 @@ describe('memory storage', () => {
 
   it('initial 初值透传', () => {
     const backend = createMemoryBackend({
-      'clouddrive.test': '{"state":{"theme":"dark"},"version":1}',
+      'neocloud.test': '{"state":{"theme":"dark"},"version":1}',
     });
-    expect(backend.getItem('clouddrive.test')).toContain('"theme":"dark"');
+    expect(backend.getItem('neocloud.test')).toContain('"theme":"dark"');
   });
 });

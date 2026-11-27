@@ -2,8 +2,8 @@ import { expect, test, type Page } from './preview-test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-const accessFile = process.env.CLOUDDRIVE_FILE_TEST_ACCESS ?? '';
-test.skip(!process.env.CLOUDDRIVE_TRASH_FIXTURE, '清空验收需要专用一次性测试账号。');
+const accessFile = process.env.NEOCLOUD_FILE_TEST_ACCESS ?? '';
+test.skip(!process.env.NEOCLOUD_TRASH_FIXTURE, '清空验收需要专用一次性测试账号。');
 
 async function request<T>(page: Page, path: string, body?: unknown): Promise<T> {
   return page.evaluate(

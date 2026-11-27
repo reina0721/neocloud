@@ -198,7 +198,7 @@ export function IdentityRuntime({ children }: Readonly<{ children: ReactNode }>)
   }, [runtime, auth.session?.user.id]);
   useEffect(() => {
     const changed = (event: StorageEvent) => {
-      if (event.key === 'clouddrive.auth-mock') runtime.invalidate();
+      if (event.key === 'neocloud.auth-mock') runtime.invalidate();
     };
     window.addEventListener('storage', changed);
     window.addEventListener('focus', runtime.invalidate);

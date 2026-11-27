@@ -93,7 +93,7 @@ func TestManagedHTTPSIngressConsoleAndDAV(t *testing.T) {
 		}, http.StatusOK)
 	}
 	post(console+"/auth/setup", map[string]any{
-		"setupToken": setupToken, "name": "HTTPS ingress fixture", "email": "ingress-fixture@clouddrive.test", "password": "ingress-fixture-password",
+		"setupToken": setupToken, "name": "HTTPS ingress fixture", "email": "ingress-fixture@neocloud.test", "password": "ingress-fixture-password",
 	})
 	post(owner, nil)
 	request(http.MethodPost, owner, nil, map[string]string{"Origin": origin}, http.StatusForbidden)

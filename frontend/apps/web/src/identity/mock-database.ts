@@ -3,7 +3,6 @@ import {
   createPersistStore,
   createLocalStorage,
   createHydrationLifecycle,
-  legacyStorageKey,
 } from '@neocloud/state-foundation';
 import {
   userSchema,
@@ -330,7 +329,7 @@ export async function mutateMockDatabase<T>(
   };
   const operation = pendingMutation.then(async () => {
     if (typeof navigator !== 'undefined' && navigator.locks)
-      return await navigator.locks.request(legacyStorageKey(MOCK_DATABASE_KEY), perform);
+      return await navigator.locks.request(MOCK_DATABASE_KEY, perform);
     return await perform();
   });
   pendingMutation = operation.then(

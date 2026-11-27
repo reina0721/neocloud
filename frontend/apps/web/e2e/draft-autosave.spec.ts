@@ -4,8 +4,8 @@ import { expect, test } from '@playwright/test';
 async function resetAll(page: Page) {
   await page.goto('/reference-resources/create');
   await page.evaluate(() => {
-    window.localStorage.removeItem('clouddrive.shell');
-    window.localStorage.removeItem('clouddrive.workspace');
+    window.localStorage.removeItem('neocloud.shell');
+    window.localStorage.removeItem('neocloud.workspace');
   });
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
@@ -35,7 +35,7 @@ test('本地草稿自动保存并恢复（操作偏好 autosaveDrafts 开）：�
   await page.getByRole('button', { name: '创建' }).click();
   await expect(page).toHaveURL(/\/reference-resources$/);
   const stored = await page.evaluate(() => {
-    const raw = window.localStorage.getItem('clouddrive.workspace');
+    const raw = window.localStorage.getItem('neocloud.workspace');
     const parsed: unknown = raw ? JSON.parse(raw) : null;
     if (!parsed || typeof parsed !== 'object' || !('state' in parsed)) return false;
     const state = parsed.state;
@@ -53,7 +53,7 @@ test('autosaveDrafts 关（默认）：输入不写草稿', async ({ page }) => 
   await page.getByLabel('名称').fill('不应保存的草稿');
   await page.waitForTimeout(500);
   const stored = await page.evaluate(() => {
-    const raw = window.localStorage.getItem('clouddrive.workspace');
+    const raw = window.localStorage.getItem('neocloud.workspace');
     const parsed: unknown = raw ? JSON.parse(raw) : null;
     if (!parsed || typeof parsed !== 'object' || !('state' in parsed)) return false;
     const state = parsed.state;

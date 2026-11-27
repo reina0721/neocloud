@@ -17,8 +17,8 @@ const defaultPolicy = {
 };
 
 function renderSetup(readPolicy: () => Response, submit = vi.fn<() => Response>()) {
-  vi.stubEnv('NEXT_PUBLIC_AUTH_MODE', 'backend');
-  vi.stubEnv('NEXT_PUBLIC_AUTH_API_BASE_URL', '/api/console/v1');
+  vi.stubEnv('NEXT_PUBLIC_NEOCLOUD_AUTH_MODE', 'backend');
+  vi.stubEnv('NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL', '/api/console/v1');
   vi.stubGlobal(
     'fetch',
     vi.fn<typeof fetch>((input) => {

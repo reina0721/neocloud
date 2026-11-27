@@ -27,36 +27,22 @@ const { values } = parseArgs({
     baseline: { type: "string" },
     "baseline-version": { type: "string" },
     tool: { type: "string" },
-    "legacy-candidate": { type: "boolean", default: false },
   },
 });
 assert.equal(process.getuid(), 0, "需要宿主机 systemd 管理权限");
 assert.ok(values.candidate && values.version);
 assert.equal(Boolean(values.baseline), Boolean(values["baseline-version"]));
-assert.ok(
-  !values["legacy-candidate"] || (values.tool && values.baseline),
-  "旧版候选仅用于本地跨版验证",
-);
 const candidate = resolve(values.candidate);
 const version = values.version;
 const baseline = values.baseline && resolve(values.baseline);
 const baselineVersion = values["baseline-version"] ?? version;
-const trustDir = process.env.NEOCLOUD_OFFLINE_TRUST_DIR ?? process.env.CLOUDDRIVE_OFFLINE_TRUST_DIR;
+const trustDir = process.env.NEOCLOUD_OFFLINE_TRUST_DIR;
 assert.ok(trustDir, "需要独立提供 NEOCLOUD_OFFLINE_TRUST_DIR");
-const cosign = process.env.NEOCLOUD_COSIGN ?? process.env.CLOUDDRIVE_COSIGN ?? "cosign";
+const cosign = process.env.NEOCLOUD_COSIGN ?? "cosign";
 const arch = process.arch === "x64" ? "amd64" : process.arch;
 assert.match(arch, /^(amd64|arm64)$/);
-let tool = values.tool;
-async function dockerArchiveFamily(directory, tag) {
-  const checksums = (await readFile(join(directory, "checksums.txt"), "utf8")).split(/\r?\n/);
-  const names = ["neocloud", "clouddrive"].map((family) => `${family}_${tag}_linux_${arch}_docker.tar.gz`);
-  const matching = checksums.map((line) => line.trim().split(/\s+/)[1]?.replace(/^\*/, "")).filter((name) => names.includes(name));
-  assert.equal(matching.length, 1, "镜像归档必须对应唯一发布命名系列");
-  return matching[0].split("_")[0];
-}
-if (!tool) tool = join(candidate, `${await dockerArchiveFamily(candidate, version)}-maintenance_${version}_linux_${arch}`);
-tool = resolve(tool);
-const sandbox = await mkdtemp(join(tmpdir(), "clouddrive-maintenance-test-"));
+const tool = resolve(values.tool ?? join(candidate, `neocloud-maintenance_${version}_linux_${arch}`));
+const sandbox = await mkdtemp(join(tmpdir(), "neocloud-maintenance-test-"));
 const root = join(sandbox, "instance");
 const ctrl = join(root, ".control", "maintenance");
 const socket = createServer();
@@ -84,8 +70,8 @@ function airgap(command, args) {
   return run("unshare", ["--net", "--", command, ...args]);
 }
 
-const imageRefs = (tag, family) =>
-  ["api", "web"].map((part) => `${family}-${part}:${tag}-${arch}`);
+const imageRefs = (tag) =>
+  ["api", "web"].map((part) => `neocloud-${part}:${tag}-${arch}`);
 
 function baselineImageExists(ref) {
   const result = spawnSync("docker", ["image", "inspect", ref], {
@@ -117,7 +103,7 @@ async function isolateWorker() {
   const unit = project + "-maintenance.service";
   const directory = join("/run/systemd/system", unit + ".d");
   await mkdir(directory, { mode: 0o755 });
-  workerOverride = join(directory, "90-clouddrive-offline-test.conf");
+  workerOverride = join(directory, "90-neocloud-offline-test.conf");
   // Docker 和网关通过路径 Unix Socket 通信。就绪检查在容器内执行。
   await writeFile(workerOverride, "[Service]\nPrivateNetwork=yes\n", {
     flag: "wx",
@@ -201,7 +187,7 @@ async function finishedJob(id, action) {
 try {
   const initialBundle = baseline ?? candidate;
   const installer = join(initialBundle, "install.sh");
-  const previousRefs = baseline ? imageRefs(baselineVersion, await dockerArchiveFamily(baseline, baselineVersion)) : [];
+  const previousRefs = baseline ? imageRefs(baselineVersion) : [];
   const ownsPreviousImages =
     baseline && previousRefs.every((ref) => !baselineImageExists(ref));
   if (baseline) {
@@ -234,12 +220,12 @@ try {
     baselineVersion,
   ]);
   project = await read(join(root, ".control", "project"));
-  assert.match(project, /^(neocloud|clouddrive)-[0-9a-f]{12}$/);
+  assert.match(project, /^neocloud-[0-9a-f]{12}$/);
   const imageID = (ref) =>
     run("docker", ["image", "inspect", "--format", "{{.Id}}", ref]);
   const previousImageIDs = previousRefs.map(imageID);
   const account = {
-    email: "maintenance-owner@clouddrive.test",
+    email: "maintenance-owner@neocloud.test",
     password: randomBytes(24).toString("base64url"),
   };
   csrf = (await api("/auth/csrf")).token;
@@ -301,7 +287,7 @@ try {
     method: "HEAD",
     headers: { Connection: "close" },
   });
-  assert.equal(gateway.headers.get("X-CloudDrive-Maintenance"), "1");
+  assert.equal(gateway.headers.get("X-NeoCloud-Maintenance"), "1");
   console.log("同址网关已启动，开始真实 Chromium 操作");
   const cfg = JSON.parse(await read(join(ctrl, "gateway.json")));
   assert.match(cfg.upstream, /^127\.0\.0\.1:\d+$/);
@@ -309,7 +295,7 @@ try {
   await isolateWorker();
 
   browser = await chromium.launch({
-    executablePath: process.env.CLOUDDRIVE_CHROMIUM,
+    executablePath: process.env.NEOCLOUD_CHROMIUM,
     args: ["--no-sandbox"],
   });
   const owner = await browser.newContext();
@@ -426,15 +412,11 @@ try {
     assert.equal(await api("/native/files/" + sample.id + "/content"), content);
     await verifyShare();
     // Discard recovery cookies; the new application must authorize its owner itself.
-    if (!values["legacy-candidate"]) {
-      await owner.clearCookies({ name: /^(neocloud|clouddrive)_maintenance_recovery$/ });
-    }
+    await owner.clearCookies({ name: "neocloud_maintenance_recovery" });
   }
-  if (values["legacy-candidate"]) {
-    await page.goto(origin + "/maintenance");
-  } else {
+  {
     const ordinary = {
-      email: "maintenance-member@clouddrive.test",
+      email: "maintenance-member@neocloud.test",
       password: randomBytes(24).toString("base64url"),
     };
     const memberRole = (
@@ -604,13 +586,11 @@ try {
     ]);
     for (const unit of units)
       await rm(join("/etc/systemd/system", unit), { force: true });
-    for (const family of ["neocloud", "clouddrive"]) {
-      await rm(join("/etc", family, project), { force: true, recursive: true });
-      await rm(join("/usr/local/lib", family, project), { force: true, recursive: true });
-    }
+    await rm(join("/etc/neocloud", project), { force: true, recursive: true });
+    await rm(join("/usr/local/lib/neocloud", project), { force: true, recursive: true });
     spawnSync("groupdel", [project + "-gw"]);
     run("systemctl", ["daemon-reload"]);
   }
-  assert.ok(sandbox.startsWith(join(tmpdir(), "clouddrive-maintenance-test-")));
+  assert.ok(sandbox.startsWith(join(tmpdir(), "neocloud-maintenance-test-")));
   await rm(sandbox, { recursive: true, force: true });
 }

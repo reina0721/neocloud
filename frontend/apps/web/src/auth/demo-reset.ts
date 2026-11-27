@@ -1,9 +1,7 @@
-import { isProductStorageKey, legacyStorageKey } from '@neocloud/state-foundation';
 import { forgetDemoAccount } from './demo-session';
 
 /** 账号作用域内、重置演示数据时保留的设备级 key（界面偏好）。 */
 const preservedKeys = new Set(['neocloud.shell', 'neocloud.auth-demo']);
-for (const key of [...preservedKeys]) preservedKeys.add(legacyStorageKey(key));
 
 /**
  * 重置演示数据（显式 Mock 部署专用）。
@@ -20,7 +18,7 @@ export function resetDemoData(): void {
   for (const storage of [window.localStorage, window.sessionStorage]) {
     const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index));
     for (const key of keys) {
-      if (key && isProductStorageKey(key) && !preservedKeys.has(key)) storage.removeItem(key);
+      if (key?.startsWith('neocloud.') && !preservedKeys.has(key)) storage.removeItem(key);
     }
   }
   forgetDemoAccount();

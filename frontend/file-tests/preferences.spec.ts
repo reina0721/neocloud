@@ -4,13 +4,12 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { defaultFilePreferences, type FilePreferences } from '../surfaces/src/files/preferences';
-import { assertPreviewOrigin } from './reading-fixture';
+import { readPreviewAccess, assertPreviewOrigin } from './reading-fixture';
 
 async function login(page: Page, admin = false) {
   const path = admin
-    ? (process.env.CLOUDDRIVE_FILE_TEST_ADMIN_ACCESS ??
-      process.env.CLOUDDRIVE_FILE_TEST_SECOND_ACCESS)
-    : (process.env.CLOUDDRIVE_FILE_TEST_ACCESS ?? '../../.data/136-isolated-access.json');
+    ? (process.env.NEOCLOUD_FILE_TEST_ADMIN_ACCESS ?? process.env.NEOCLOUD_FILE_TEST_SECOND_ACCESS)
+    : readPreviewAccess().path;
   if (!path) throw new Error('Account isolation requires a second preview account.');
   const access = JSON.parse(
     (await readFile(resolve(__dirname, path), 'utf8')).replace(/^\uFEFF/, ''),
@@ -257,11 +256,11 @@ test('F330–F332：设全局默认、重置单目录、清除全部覆盖', asy
 test('F334：旧本机设置保留并迁移', async ({ page }) => {
   await page.evaluate(() => {
     for (const key of Object.keys(localStorage))
-      if (key.startsWith('clouddrive.files.view.v2.')) {
-        const account = key.slice('clouddrive.files.view.v2.'.length);
+      if (key.startsWith('neocloud.files.view.v2.')) {
+        const account = key.slice('neocloud.files.view.v2.'.length);
         const value = JSON.parse(localStorage.getItem(key)!) as { configuration: FilePreferences };
         localStorage.setItem(
-          'clouddrive.files.view.v1.' + account,
+          'neocloud.files.view.v1.' + account,
           JSON.stringify({ ...value.configuration.defaults, view: 'list', pageSize: 100 }),
         );
         localStorage.removeItem(key);
@@ -271,7 +270,7 @@ test('F334：旧本机设置保留并迁移', async ({ page }) => {
   await expect.poll(() => currentView(page)).toBe('list');
   expect(
     await page.evaluate(() =>
-      Object.keys(localStorage).some((key) => key.startsWith('clouddrive.files.view.v1.')),
+      Object.keys(localStorage).some((key) => key.startsWith('neocloud.files.view.v1.')),
     ),
   ).toBe(false);
 });

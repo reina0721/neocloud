@@ -78,7 +78,7 @@ Host 的 remember 在原 v1 key 中追加可选上次模式字段，缺字段旧
   混合布局由 Host 在 `vertical` 网格内只渲染当前分组，不新增第三套网格。
 - 三种布局（侧边 / 顶部 / 混合）共用同一 Navigation 模型、权限过滤和路由；导航正文仍由
   `ShellNavigation` 拥有，顶部导航只做分组入口重组。
-- **菜单标题/可见性/排序/权限码覆盖属于 Host 运行期业务数据**（`clouddrive.navigation-admin`
+- **菜单标题/可见性/排序/权限码覆盖属于 Host 运行期业务数据**（`neocloud.navigation-admin`
   - `@neocloud/plugin-framework/navigation-admin` Port），不是 Surface Foundation 契约；
     Surface 只消费已经决定好的 groups。部署期 Plugin Registry 仍是路由与组件唯一真相。
 - 水印与锁屏属于 Host Shell 表现（需要当前身份与全局遮挡），不下沉到 Foundation；

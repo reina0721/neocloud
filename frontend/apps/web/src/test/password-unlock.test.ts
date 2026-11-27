@@ -7,8 +7,8 @@ afterEach(() => {
 });
 
 function backend(status: number, payload: unknown) {
-  vi.stubEnv('NEXT_PUBLIC_AUTH_MODE', 'backend');
-  vi.stubEnv('NEXT_PUBLIC_AUTH_API_BASE_URL', '/api/console/v1');
+  vi.stubEnv('NEXT_PUBLIC_NEOCLOUD_AUTH_MODE', 'backend');
+  vi.stubEnv('NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL', '/api/console/v1');
   const request = vi.fn((url: string, init?: RequestInit) => {
     void init;
     return Promise.resolve(

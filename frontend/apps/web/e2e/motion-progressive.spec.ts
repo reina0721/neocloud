@@ -197,7 +197,7 @@ for (const width of [320, 2048]) {
     await page.addInitScript(
       ({ preferences, version }) => {
         localStorage.setItem(
-          'clouddrive.shell',
+          'neocloud.shell',
           JSON.stringify({
             version,
             state: {

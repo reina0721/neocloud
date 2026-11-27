@@ -6,7 +6,7 @@
 
 ## 运行路径
 
-1. [安装与部署](clouddrive-deployment.md)：选择部署方式，准备依赖并完成安装、首次设置、访问配置和日常管理。
+1. [安装与部署](neocloud-deployment.md)：选择部署方式，准备依赖并完成安装、首次设置、访问配置和日常管理。
    发布附件见[原生整包与后端归档](backend-archive.md)，构建和测试见[构建与容器](build-and-container.md)。
 2. [数据库迁移与回滚](migration-and-rollback.md)：迁移状态、前滚、回滚、dirty 处理和生产约束。
 3. [本地候选与正式发布](release.md)：本地候选、发布约束、Release 证据和不允许冒充的门禁。

@@ -59,7 +59,7 @@ export async function verifyRegistrationPolicy(page: Page, browser: Browser) {
     await member.getByRole('textbox', { name: '姓名', exact: true }).fill('注册验收成员');
     await member
       .getByRole('textbox', { name: '邮箱', exact: true })
-      .fill('registration@clouddrive.test');
+      .fill('registration@neocloud.test');
     await member.getByLabel('密码', { exact: true }).fill('RegistrationAcceptance2026!');
     await member.getByLabel('确认密码', { exact: true }).fill('RegistrationAcceptance2026!');
     await member.getByRole('button', { name: '创建账户', exact: true }).click();

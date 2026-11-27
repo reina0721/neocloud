@@ -18,12 +18,11 @@ import (
 )
 
 type engine struct {
-	root       string
-	dataDir    string
-	cfg        Config
-	releases   *Releases
-	local      bool
-	dockerHost string
+	root     string
+	dataDir  string
+	cfg      Config
+	releases *Releases
+	local    bool
 }
 
 func (e engine) control() string     { return filepath.Join(e.root, ".control", "maintenance") }
@@ -59,7 +58,7 @@ func (e engine) restoreStash(journal string) string {
 		return journal
 	}
 	// 数据换入和换回的重命名都必须留在数据目录所在的文件系统。
-	return filepath.Join(filepath.Dir(e.dataDir), ".clouddrive-"+filepath.Base(journal))
+	return filepath.Join(filepath.Dir(e.dataDir), ".neocloud-"+filepath.Base(journal))
 }
 
 func (e engine) tool(ctx context.Context, version, action string, params ...string) *exec.Cmd {
@@ -72,12 +71,9 @@ func (e engine) tool(ctx context.Context, version, action string, params ...stri
 	// #nosec G204 -- engine.sh 来自已安装发布包，操作名由执行器选取，参数按 argv 传递。
 	cmd := exec.CommandContext(ctx, "bash", append(arguments, params...)...)
 	cmd.WaitDelay = 5 * time.Second
-	cmd.Env = append(os.Environ(), "CLOUDDRIVE_MAINTENANCE_ENGINE=1",
-		"CLOUDDRIVE_MAINTENANCE_COMPOSE="+override,
-		"CLOUDDRIVE_MAINTENANCE_STAGE=", "CLOUDDRIVE_MAINTENANCE_CONFIG=")
-	if e.dockerHost != "" {
-		cmd.Env = append(cmd.Env, "DOCKER_HOST="+e.dockerHost, "DOCKER_CONTEXT=")
-	}
+	cmd.Env = append(os.Environ(), "NEOCLOUD_MAINTENANCE_ENGINE=1",
+		"NEOCLOUD_MAINTENANCE_COMPOSE="+override,
+		"NEOCLOUD_MAINTENANCE_STAGE=", "NEOCLOUD_MAINTENANCE_CONFIG=")
 	return cmd
 }
 
@@ -114,7 +110,7 @@ func (e engine) prepare(ctx context.Context, version string, offline bool) error
 			if err != nil {
 				return err
 			}
-			_, asset, err := release.dockerAsset(runtime.GOARCH)
+			asset, err := release.dockerAsset(runtime.GOARCH)
 			if err != nil {
 				return err
 			}
@@ -399,13 +395,13 @@ func (e engine) prepareRestore(ctx context.Context, meta Snapshot, stage string)
 	}
 	defer f.Close()
 	tool := e.tool(ctx, meta.Version, "_extract")
-	tool.Env = append(tool.Env, "CLOUDDRIVE_MAINTENANCE_STAGE="+stage)
+	tool.Env = append(tool.Env, "NEOCLOUD_MAINTENANCE_STAGE="+stage)
 	tool.Stdin = f
 	if err = tool.Run(); err != nil {
 		return err
 	}
 	tool = e.tool(ctx, meta.Version, "_compat")
-	tool.Env = append(tool.Env, "CLOUDDRIVE_MAINTENANCE_STAGE="+stage, "CLOUDDRIVE_MAINTENANCE_CONFIG="+filepath.Join(e.backupDir(meta.ID), "runtime.env"))
+	tool.Env = append(tool.Env, "NEOCLOUD_MAINTENANCE_STAGE="+stage, "NEOCLOUD_MAINTENANCE_CONFIG="+filepath.Join(e.backupDir(meta.ID), "runtime.env"))
 	if err = tool.Run(); err != nil {
 		return errors.New("恢复点与目标程序的数据库结构不兼容")
 	}

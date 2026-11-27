@@ -21,7 +21,7 @@ func main() {
 	adopt := flag.Bool("adopt-full", false, "接管已有 Go-only 实例并启动签名整包")
 	prepare := flag.Bool("prepare-full", false, "提前验签整包并只读检查实例")
 	webAddress := flag.String("web-addr", "", "沿用已有站点的监听地址，默认使用 Go 业务地址")
-	serviceName := flag.String("service-name", "", "Windows 服务注册名；桥接时可指定 CloudDriveNative")
+	serviceName := flag.String("service-name", "", "Windows 服务注册名，默认 NeoCloudNative")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		flag.Usage()

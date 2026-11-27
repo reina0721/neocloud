@@ -10,15 +10,15 @@
 FileSource -> EnvSource
 ```
 
-因此环境变量覆盖文件。环境变量使用 `APP_` 前缀，嵌套字段用双下划线分隔，例如：
+因此环境变量覆盖文件。环境变量使用 `NEOCLOUD_APP_` 前缀，嵌套字段用双下划线分隔，例如：
 
 ```powershell
-$env:APP_DATABASE__DSN = '.data/app.db'
-$env:APP_LOGGER__LEVEL = 'debug'
-$env:APP_HTTP__ADDR = '127.0.0.1:8081'
-$env:APP_IAM__LOCAL__SETUPTOKEN = '<从密钥管理系统注入>'
-$env:APP_SCHEDULER__ENABLED = 'true'
-$env:APP_MESSAGING__PROVIDERS__PRIMARY__RABBITMQ__URI = 'amqps://<user>:<password>@broker.example:5671/'
+$env:NEOCLOUD_APP_DATABASE__DSN = '.data/app.db'
+$env:NEOCLOUD_APP_LOGGER__LEVEL = 'debug'
+$env:NEOCLOUD_APP_HTTP__ADDR = '127.0.0.1:8081'
+$env:NEOCLOUD_APP_IAM__LOCAL__SETUPTOKEN = '<从密钥管理系统注入>'
+$env:NEOCLOUD_APP_SCHEDULER__ENABLED = 'true'
+$env:NEOCLOUD_APP_MESSAGING__PROVIDERS__PRIMARY__RABBITMQ__URI = 'amqps://<user>:<password>@broker.example:5671/'
 ```
 
 配置解析是 strict 的：未知配置节、未知字段、重复逻辑路径、大小写别名和错误类型都会在创建资源或绑定 listener 前失败。
@@ -26,7 +26,7 @@ $env:APP_MESSAGING__PROVIDERS__PRIMARY__RABBITMQ__URI = 'amqps://<user>:<passwor
 字符串列表通过 JSON 数组覆盖，保持元素类型，不按逗号切分。例如：
 
 ```bash
-export APP_HTTP__CORS__ALLOWEDORIGINS='["http://127.0.0.1:4173"]'
+export NEOCLOUD_APP_HTTP__CORS__ALLOWEDORIGINS='["http://127.0.0.1:4173"]'
 ```
 
 `[]` 显式清空默认列表；普通逗号文本、顶层 `null`、`null` 元素和混合类型会被拒绝。此规则只适用于字符串列表，不启用全局弱类型转换。统一开发启动器只为本次子进程设置实际本地 Origin，保留配置文件中的部署值。
@@ -114,9 +114,9 @@ memory backend 只在单进程内可见，记录同步写入，不提供外部�
 
 长期 Service 监听配置文件变化，并把文件与进程启动时继承的环境变量重新合并成候选配置。被环境变量覆盖的字段即使文件发生变化，也不会改变最终有效值。修改 `database`、`storage`、`iam`、`auth`、`files`、`scheduler`、`messaging`、`http.addr` 或 `management.addr` 后需要重启服务。在同一次修改中，其他字段也随重启生效。候选准备只读取现有 IAM 和文件设置，所有者目录协调、存储身份检查及上传和种子暂存准备在启动时执行。reload 的底层机制见 [Kernel 运行与配置](../../internal/kernel/README.md)。
 
-## clouddrive 控制台
+## neocloud 控制台
 
-前端由 Next 独立启动，不读取 Go 静态托管配置。环境变量、同源代理与请求目标白名单见 [部署说明](../operations/clouddrive-deployment.md)。console 配置控制请求预算；数据库迁移显式执行。
+前端由 Next 独立启动，不读取 Go 静态托管配置。环境变量、同源代理与请求目标白名单见 [部署说明](../operations/neocloud-deployment.md)。console 配置控制请求预算；数据库迁移显式执行。
 
 ## 密码强度
 

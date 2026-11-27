@@ -15,7 +15,7 @@ func TestComposeProcessDiagnosticsMapsTypedResponsibilitiesAndPendingUnits(t *te
 	kernelState := CoordinatorDiagnostics{
 		State: LifecycleCleanupPending, Ready: false,
 		ConfigGeneration: 3, ConfigDigest: "sha256:abc",
-		ConfigProvenance: []string{"config.yaml", "APP_"},
+		ConfigProvenance: []string{"config.yaml", "NEOCLOUD_APP_"},
 		RestartRequired:  true, CleanupRequired: true,
 		LastFailureType: "*kernel.DrainIncompleteError", Since: now,
 		Ownerships: []app.OwnershipSnapshot{

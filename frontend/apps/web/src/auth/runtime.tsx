@@ -34,24 +34,18 @@ export function AuthRuntime({ children }: Readonly<{ children: ReactNode }>) {
     void controller.getState().restore();
     const synchronize = (event: StorageEvent) => {
       // Restore checks identity/status; only an actual owner switch reloads private modules.
-      if (event.key === 'clouddrive.auth-mock') void controller.getState().restore();
+      if (event.key === 'neocloud.auth-mock') void controller.getState().restore();
     };
     window.addEventListener('storage', synchronize);
     return () => window.removeEventListener('storage', synchronize);
   }, [controller]);
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
-    const channels = ['neocloud.auth-session', 'clouddrive.auth-session'].map(
-      (name) => new BroadcastChannel(name),
-    );
-    let reloading = false;
+    const channel = new BroadcastChannel('neocloud.auth-session');
     // A signal invalidates this document; it never supplies or authorizes an identity.
-    for (const channel of channels)
-      channel.onmessage = (event: MessageEvent<unknown>) => {
-        if (event.data !== 'session-changed' || reloading) return;
-        reloading = true;
-        window.location.reload();
-      };
+    channel.onmessage = (event: MessageEvent<unknown>) => {
+      if (event.data === 'session-changed') window.location.reload();
+    };
     const unsubscribe = controller.subscribe((next, previous) => {
       if (!previous.busy || next.busy) return;
       if (
@@ -60,11 +54,11 @@ export function AuthRuntime({ children }: Readonly<{ children: ReactNode }>) {
           (next.authenticatedFrom === 'login' || next.authenticatedFrom === 'register')) ||
         (next.status === 'anonymous' && next.endReason === 'logout')
       )
-        for (const channel of channels) channel.postMessage('session-changed');
+        channel.postMessage('session-changed');
     });
     return () => {
       unsubscribe();
-      for (const channel of channels) channel.close();
+      channel.close();
     };
   }, [controller]);
   useEffect(() => {

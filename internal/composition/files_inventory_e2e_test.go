@@ -16,7 +16,7 @@ func verifyFileInventory(t *testing.T, owner, member *consoleTestClient, roleID,
 	login := func() {
 		t.Helper()
 		member.request(t, "GET", "/auth/csrf", nil, 200)
-		member.request(t, "POST", "/auth/login", map[string]string{"email": "files-other@clouddrive.test", "password": password}, 200)
+		member.request(t, "POST", "/auth/login", map[string]string{"email": "files-other@neocloud.test", "password": password}, 200)
 	}
 	login()
 	parent := owner.request(t, "POST", files+"/folders", map[string]string{"parentId": "", "name": "Inventory parent"}, 200)["id"].(string)

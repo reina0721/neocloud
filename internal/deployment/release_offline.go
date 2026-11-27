@@ -7,11 +7,8 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -34,7 +31,7 @@ const (
 	offlineImagesTar = 24 << 30
 )
 
-var offlineTrustNames = []string{"trusted_root.json", "fulcio.pem", "rekor.pub", "ctfe.pub"}
+var offlineTrustNames = []string{nativeTrustFile}
 
 type signedOfflineRelease struct {
 	version   string
@@ -65,7 +62,7 @@ func VerifyOfflineReleaseForArch(ctx context.Context, dir, version, trustDir, ar
 // VerifyOfflineTooling verifies an installer or the native host maintenance executable.
 func VerifyOfflineTooling(ctx context.Context, dir, version, trustDir, asset string) error {
 	switch asset {
-	case "install.sh", legacyRelease.maintenanceAsset(version, runtime.GOARCH), neoRelease.maintenanceAsset(version, runtime.GOARCH):
+	case "install.sh", maintenanceAssetName(version, runtime.GOARCH):
 	default:
 		return fmt.Errorf("不支持的离线工具：%s", asset)
 	}
@@ -80,15 +77,6 @@ func VerifyOfflineTooling(ctx context.Context, dir, version, trustDir, asset str
 	}
 	limit := int64(offlineSmallFile)
 	if asset != "install.sh" {
-		_, expected, err := selectSignedAsset(release.digests, func(family releaseFamily) string {
-			return family.maintenanceAsset(version, runtime.GOARCH)
-		})
-		if err != nil {
-			return err
-		}
-		if expected != asset {
-			return errors.New("维护工具与签名清单的命名系列不一致")
-		}
 		limit = 128 << 20
 	}
 	verified, err := release.openVerified(ctx, source, asset, limit)
@@ -371,56 +359,34 @@ func parseReleaseDigests(checksums []byte) (map[string]string, error) {
 	return digests, scanner.Err()
 }
 
-func verifyBundleFormat(bundle []byte) (modern bool, err error) {
+func verifyBundleFormat(bundle []byte) error {
 	var header struct {
-		MediaType       string          `json:"mediaType"`
-		Cert            string          `json:"cert"`
-		Base64Signature string          `json:"base64Signature"`
-		RekorBundle     json.RawMessage `json:"rekorBundle"`
+		MediaType string `json:"mediaType"`
 	}
 	if err := json.Unmarshal(bundle, &header); err != nil {
-		return false, fmt.Errorf("签名包格式无效: %w", err)
+		return fmt.Errorf("签名包格式无效: %w", err)
 	}
-	if strings.HasPrefix(header.MediaType, "application/vnd.dev.sigstore.bundle") {
-		return true, nil
+	if !strings.HasPrefix(header.MediaType, "application/vnd.dev.sigstore.bundle.") {
+		return errors.New("需要 Sigstore 签名包")
 	}
-	certificate := []byte(header.Cert)
-	if decoded, err := base64.StdEncoding.DecodeString(header.Cert); err == nil {
-		certificate = decoded
-	}
-	block, _ := pem.Decode(certificate)
-	if header.MediaType != "" || header.Base64Signature == "" || len(header.RekorBundle) == 0 ||
-		header.RekorBundle[0] != '{' || block == nil || block.Type != "CERTIFICATE" {
-		return false, errors.New("旧格式签名包须包含 X.509 证书、签名及 Rekor 记录")
-	}
-	if _, err := x509.ParseCertificate(block.Bytes); err != nil {
-		return false, fmt.Errorf("旧格式签名包的 X.509 证书无效: %w", err)
-	}
-	return false, nil
+	return nil
 }
 
 func verifyOfflineBundle(ctx context.Context, release signedOfflineRelease, trust map[string][]byte) error {
-	modern, err := verifyBundleFormat(release.bundle)
-	if err != nil {
+	if err := verifyBundleFormat(release.bundle); err != nil {
 		return err
 	}
-	materials := []string{"trusted_root.json"}
-	if !modern {
-		materials = []string{"fulcio.pem", "rekor.pub", "ctfe.pub"}
+	if len(trust[nativeTrustFile]) == 0 {
+		return fmt.Errorf("离线信任目录缺少 %s", nativeTrustFile)
 	}
-	staging, err := os.MkdirTemp("", "clouddrive-offline-signature-")
+	staging, err := os.MkdirTemp("", "neocloud-offline-signature-")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(staging)
-	for _, name := range materials {
-		if len(trust[name]) == 0 {
-			return fmt.Errorf("离线信任目录缺少 %s", name)
-		}
-		// #nosec G306 -- 验证只使用私有临时目录中复制的宿主机信任材料。
-		if err = os.WriteFile(filepath.Join(staging, name), trust[name], 0600); err != nil {
-			return err
-		}
+	trustedRoot := filepath.Join(staging, nativeTrustFile)
+	if err = os.WriteFile(trustedRoot, trust[nativeTrustFile], 0600); err != nil {
+		return err
 	}
 	bundle := filepath.Join(staging, offlineBundle)
 	if err = os.WriteFile(bundle, release.bundle, 0600); err != nil {
@@ -430,23 +396,14 @@ func verifyOfflineBundle(ctx context.Context, release signedOfflineRelease, trus
 		"verify-blob", "--offline", "--bundle", bundle,
 		"--certificate-identity", releaseOrigin + "/.github/workflows/release.yml@refs/tags/" + release.version,
 		"--certificate-oidc-issuer", "https://token.actions.githubusercontent.com",
-	}
-	environment := []string{"PATH=" + os.Getenv("PATH")}
-	if modern {
-		args = append(args, "--new-bundle-format", "--trusted-root", filepath.Join(staging, "trusted_root.json"))
-	} else {
-		environment = append(environment,
-			"SIGSTORE_ROOT_FILE="+filepath.Join(staging, "fulcio.pem"),
-			"SIGSTORE_REKOR_PUBLIC_KEY="+filepath.Join(staging, "rekor.pub"),
-			"SIGSTORE_CT_LOG_PUBLIC_KEY_FILE="+filepath.Join(staging, "ctfe.pub"),
-		)
+		"--new-bundle-format", "--trusted-root", trustedRoot,
 	}
 	cosign := releaseCosign()
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	// #nosec G204 G702 -- 安装者配置 cosign；产物标签已限定，校验清单原始字节经标准输入传入。
 	command := exec.CommandContext(ctx, cosign, append(args, "-")...)
-	command.Env = environment
+	command.Env = []string{"PATH=" + os.Getenv("PATH")}
 	command.Stdin = bytes.NewReader(release.checksums)
 	if output, err := command.CombinedOutput(); err != nil {
 		return fmt.Errorf("正式产物离线签名验证失败: %w: %s", errors.Join(err, ctx.Err()), strings.TrimSpace(string(output)))
@@ -475,20 +432,26 @@ func (r signedOfflineRelease) openVerified(ctx context.Context, root *os.Root, n
 }
 
 func dockerAssetName(version, arch string) string {
-	return legacyRelease.dockerAsset(version, arch)
+	return fmt.Sprintf("neocloud_%s_linux_%s_docker.tar.gz", version, arch)
 }
 
-func (r signedOfflineRelease) dockerAsset(arch string) (releaseFamily, string, error) {
-	return selectSignedAsset(r.digests, func(family releaseFamily) string {
-		return family.dockerAsset(r.version, arch)
-	})
+func maintenanceAssetName(version, arch string) string {
+	return fmt.Sprintf("neocloud-maintenance_%s_linux_%s", version, arch)
+}
+
+func (r signedOfflineRelease) dockerAsset(arch string) (string, error) {
+	name := dockerAssetName(r.version, arch)
+	if r.digests[name] == "" {
+		return "", fmt.Errorf("已签名的校验清单缺少附件：%s", name)
+	}
+	return name, nil
 }
 
 func (r signedOfflineRelease) verifyPackage(ctx context.Context, dir *os.Root, arch string) error {
 	if arch != "amd64" && arch != "arm64" {
 		return fmt.Errorf("不支持的 Linux 镜像架构：%s", arch)
 	}
-	family, asset, err := r.dockerAsset(arch)
+	asset, err := r.dockerAsset(arch)
 	if err != nil {
 		return err
 	}
@@ -497,7 +460,7 @@ func (r signedOfflineRelease) verifyPackage(ctx context.Context, dir *os.Root, a
 		return err
 	}
 	defer archive.Close()
-	if err = verifyOfflineArchive(ctx, archive, r, arch, family); err != nil {
+	if err = verifyOfflineArchive(ctx, archive, r, arch); err != nil {
 		return err
 	}
 	if _, err = dir.Lstat("version.txt"); errors.Is(err, os.ErrNotExist) {
@@ -518,7 +481,7 @@ func (r signedOfflineRelease) verifyPackage(ctx context.Context, dir *os.Root, a
 	return err
 }
 
-func verifyOfflineArchive(ctx context.Context, input io.Reader, release signedOfflineRelease, arch string, family releaseFamily) error {
+func verifyOfflineArchive(ctx context.Context, input io.Reader, release signedOfflineRelease, arch string) error {
 	gzipReader, err := gzip.NewReader(input)
 	if err != nil {
 		return fmt.Errorf("无法读取离线 Docker 归档: %w", err)
@@ -585,7 +548,8 @@ func verifyOfflineArchive(ctx context.Context, input io.Reader, release signedOf
 			return fmt.Errorf("离线 Docker 归档的 %s 标记无效", flag)
 		}
 	}
-	if string(files["images.env"]) != family.dockerImageEnvironment(release.version, arch) {
+	tag := release.version + "-" + arch
+	if string(files["images.env"]) != "API_IMAGE=neocloud-api:"+tag+"\nWEB_IMAGE=neocloud-web:"+tag+"\n" {
 		return errors.New("离线 Docker 归档的镜像引用不匹配")
 	}
 	if digest := release.digests["install.sh"]; digest != "" {
@@ -606,7 +570,7 @@ func lowerHex(text string, bytes int) bool {
 }
 
 func (r signedOfflineRelease) copyAssets(ctx context.Context, source, stage *os.Root, arch string) ([]string, error) {
-	family, asset, err := r.dockerAsset(arch)
+	asset, err := r.dockerAsset(arch)
 	if err != nil {
 		return nil, err
 	}
@@ -624,7 +588,7 @@ func (r signedOfflineRelease) copyAssets(ctx context.Context, source, stage *os.
 		return nil, err
 	}
 	names := []string{offlineChecksums, offlineBundle, asset}
-	maintenance := family.maintenanceAsset(r.version, arch)
+	maintenance := maintenanceAssetName(r.version, arch)
 	for _, name := range []string{"version.txt", "install.sh", maintenance} {
 		limit := int64(offlineSmallFile)
 		if name == maintenance {

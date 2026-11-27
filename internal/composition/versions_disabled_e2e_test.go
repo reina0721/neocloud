@@ -40,7 +40,7 @@ func TestVersionsDisabledRetentionWebDAVReplacement(t *testing.T) {
 	}()
 	owner := &consoleTestClient{base: "http://" + coordinator.Diagnostics().BoundAddress, cookies: map[string]string{}}
 	owner.request(t, "GET", "/auth/csrf", nil, 200)
-	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "annotation-owner@clouddrive.test", "name": "整理验收", "password": password}, 200)
+	owner.request(t, "POST", "/auth/setup", map[string]string{"setupToken": setup, "email": "annotation-owner@neocloud.test", "name": "整理验收", "password": password}, 200)
 
 	target := owner.request(t, "POST", "/native/files/text", map[string]string{"name": "target.txt", "parentId": "", "key": "disabled-target-fixture", "text": "longer target bytes"}, 200)["id"].(string)
 	owner.request(t, "POST", "/native/files/text", map[string]string{"name": "source.txt", "parentId": "", "key": "disabled-source-fixture", "text": "abc"}, 200)
