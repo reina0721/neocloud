@@ -62,6 +62,7 @@ test("正式 tag 只执行发布构建和实际附件检查", async () => {
   assert.equal([...release.matchAll(/\bsign-blob\b/g)].length, 1);
   assert.equal([...release.matchAll(/\bgo test\b/g)].length, 1);
   assert.match(release, /go test[^\n]+TestSignedFullReleaseBoot/);
+  assert.match(release, /\$env:CLOUDDRIVE_COSIGN = \$cosign[\s\S]+go test[^\n]+TestSignedFullReleaseBoot/);
   assert.equal([...release.matchAll(/test-docker-release\.mjs/g)].length, 1);
   assert.match(release, /--artifact-smoke/);
 

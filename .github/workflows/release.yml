@@ -405,6 +405,8 @@ jobs:
           $env:TUF_ROOT = Join-Path $root 'tuf'
           Remove-Item Env:TUF_ROOT_JSON, Env:TUF_MIRROR -ErrorAction SilentlyContinue
           $cosign = Join-Path $tools ($IsWindows ? 'cosign.exe' : 'cosign')
+          # 原生整包启动验收会清空被测宿主进程的 PATH。
+          $env:CLOUDDRIVE_COSIGN = $cosign
           & $cosign initialize --mirror https://tuf-repo-cdn.sigstore.dev
           Copy-Item -LiteralPath (Join-Path $env:TUF_ROOT 'tuf-repo-cdn.sigstore.dev/targets/trusted_root.json') -Destination $trust
           $env:CLOUDDRIVE_TEST_NATIVE_RELEASE_DIR = $release
