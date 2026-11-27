@@ -10,7 +10,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import {
   fileApplicationDevice,
   type FileApplicationID,

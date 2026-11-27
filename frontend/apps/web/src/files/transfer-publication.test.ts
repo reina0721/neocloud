@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FilesError, type ServerTransfer } from '@clouddrive/surface/files';
+import { FilesError, type ServerTransfer } from '@neocloud/surface/files';
 import type { createJsonClient } from '../api/json-client';
 import { createTransferRuntime } from './transfer-runtime';
 

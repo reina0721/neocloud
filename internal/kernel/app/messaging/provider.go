@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	pkgclock "github.com/reina0721/clouddrive/pkg/clock"
-	pkglogger "github.com/reina0721/clouddrive/pkg/logger"
-	pkgmessaging "github.com/reina0721/clouddrive/pkg/messaging"
+	pkgclock "github.com/reina0721/neocloud/pkg/clock"
+	pkglogger "github.com/reina0721/neocloud/pkg/logger"
+	pkgmessaging "github.com/reina0721/neocloud/pkg/messaging"
 )
 
 // Capabilities 描述 Provider 能够可靠满足的公共消息语义。

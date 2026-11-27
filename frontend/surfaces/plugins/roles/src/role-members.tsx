@@ -1,18 +1,18 @@
 'use client';
 import { useState, useRef } from 'react';
-import { useFrontendTranslation, formatNumber } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
-import { SelectField } from '@clouddrive/ui-adapter/form-field';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
+import { useFrontendTranslation, formatNumber } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
+import { SelectField } from '@neocloud/ui-adapter/form-field';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { route, RouteLink } from '@neocloud/plugin-framework/plugin';
 import {
   useIdentityPort,
   IdentityError,
   defaultUserQuery,
   type DirectoryUser,
-} from '@clouddrive/surface/identity/runtime';
+} from '@neocloud/surface/identity/runtime';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import { IdentityQueryState, IdentityMutationError } from '../../../src/identity/query-state';
 export function RoleMembers({ roleId, allowed }: Readonly<{ roleId: string; allowed: boolean }>) {

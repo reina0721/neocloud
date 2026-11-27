@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	messagingapp "github.com/reina0721/clouddrive/internal/kernel/app/messaging"
-	pkgclock "github.com/reina0721/clouddrive/pkg/clock"
-	pkgmessaging "github.com/reina0721/clouddrive/pkg/messaging"
+	messagingapp "github.com/reina0721/neocloud/internal/kernel/app/messaging"
+	pkgclock "github.com/reina0721/neocloud/pkg/clock"
+	pkgmessaging "github.com/reina0721/neocloud/pkg/messaging"
 )
 
 func TestFactoryKeepsTwoNamedProvidersIsolated(t *testing.T) {

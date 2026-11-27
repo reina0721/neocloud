@@ -1,27 +1,27 @@
 'use client';
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { useFrontendTranslation, formatDate, formatTimeOfDay } from '@clouddrive/i18n';
+import { useFrontendTranslation, formatDate, formatTimeOfDay } from '@neocloud/i18n';
 import {
   FoundationForm,
   FoundationControlledField,
   useFoundationForm,
-} from '@clouddrive/form-foundation';
-import { Section } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { PasswordField } from '@clouddrive/ui-adapter/form-field';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
+} from '@neocloud/form-foundation';
+import { Section } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { PasswordField } from '@neocloud/ui-adapter/form-field';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
 import { LogOut, Monitor, RefreshCw } from '../../../src/action-icons';
 import {
   useAccountSecurityPort,
   IdentityError,
   type AccountSession,
-} from '@clouddrive/surface/identity/runtime';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { useRegisterDirtySource } from '@clouddrive/plugin-framework/leave-confirm';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
+} from '@neocloud/surface/identity/runtime';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { useRegisterDirtySource } from '@neocloud/plugin-framework/leave-confirm';
+import type { Preferences } from '@neocloud/surface/preferences-model';
 import { IdentityQueryState, IdentityMutationError } from '../../../src/identity/query-state';
 import { useRemote } from '../../../src/administration/resource-state';
 

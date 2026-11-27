@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 type consoleTestClient struct {
@@ -378,6 +378,7 @@ func TestConsoleSQLiteDataIsolationAndRestart(t *testing.T) {
 	memberID := me["id"].(string)
 	owner.request(t, "POST", "/native/iam/accounts/"+memberID+"/password-reset", map[string]any{"password": "temporary-password-long"}, 409, map[string]string{"If-Match": "\"1\""})
 	owner.request(t, "POST", "/native/iam/accounts/"+memberID+"/password-reset", map[string]any{"password": "temporary-password-long"}, 204, map[string]string{"If-Match": fmt.Sprintf("\"%.0f\"", owner.request(t, "GET", "/users/"+memberID, nil, 200)["user"].(map[string]any)["version"])})
+	member.request(t, "GET", "/auth/csrf", nil, 200)
 	restricted := member.request(t, "POST", "/auth/login", map[string]any{"email": "member@clouddrive.test", "password": "temporary-password-long"}, 200)
 	if restricted["mustChangePassword"] != true {
 		t.Fatal("reset password did not restrict the new session")

@@ -48,11 +48,13 @@ const environment = {
   ...process.env,
   NEXT_DIST_DIR: "out",
   WEB_DEPLOYMENT_MODE: "static",
-  NEXT_PUBLIC_AUTH_MODE: "backend",
-  NEXT_PUBLIC_AUTH_API_BASE_URL: "/api/console/v1",
-  NEXT_PUBLIC_CLOUDDRIVE_WEB_BUILD_ID: buildId,
-  CLOUDDRIVE_NATIVE_BUILD_CACHE: "0",
+  NEXT_PUBLIC_NEOCLOUD_AUTH_MODE: "backend",
+  NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL: "/api/console/v1",
+  NEXT_PUBLIC_NEOCLOUD_WEB_BUILD_ID: buildId,
+  NEOCLOUD_NATIVE_BUILD_CACHE: "0",
 };
+for (const legacy of ["NEXT_PUBLIC_AUTH_MODE", "NEXT_PUBLIC_AUTH_API_BASE_URL", "NEXT_PUBLIC_CLOUDDRIVE_WEB_BUILD_ID", "CLOUDDRIVE_NATIVE_BUILD_CACHE"])
+  delete environment[legacy];
 // Next uses .next for intermediate export files, even when distDir names the export destination.
 // A private application copy keeps those files and next-env.d.ts away from running dev servers.
 const scratch = join(frontend, ".next");

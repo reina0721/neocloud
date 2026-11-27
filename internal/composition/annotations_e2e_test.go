@@ -3,14 +3,14 @@ package composition
 import (
 	"context"
 	"encoding/json"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/pkg/idgen"
 	"net/url"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestAnnotationsHTTPPersistencePrivacyAndAtomicity(t *testing.T) {

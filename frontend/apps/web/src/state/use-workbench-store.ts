@@ -1,9 +1,9 @@
-import { createPersistStore, createLocalStorage } from '@clouddrive/state-foundation';
+import { createPersistStore, createLocalStorage } from '@neocloud/state-foundation';
 
 /**
  * Workbench Store（Host 拥有）—— 收藏与最近访问（SET-005-004）。
  *
- * - 独立 Store（key `clouddrive.workbench`），不混入设置记录（107 §2 持久化规则）；
+ * - 独立 Store（key `neocloud.workbench`），不混入设置记录（107 §2 持久化规则）；
  * - recents：LRU（最近在前），上限固定；带时间戳；
  * - favorites：稳定页面引用（resolved pathname + 记录时的标题），去重；
  * - 记录/显示开关分别由偏好字段控制（navigation.rememberRecents / showRecents /
@@ -91,7 +91,7 @@ export const useWorkbenchStore = createPersistStore<WorkbenchState, WorkbenchPer
     setRememberFavorites: (rememberFavorites) => set({ rememberFavorites }),
   }),
   {
-    name: 'clouddrive.workbench',
+    name: 'neocloud.workbench',
     version: 1,
     skipHydration: true,
     storage: createLocalStorage(),

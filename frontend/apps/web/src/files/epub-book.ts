@@ -7,7 +7,7 @@ import {
   type EpubChapter,
   type EpubNode,
   type EpubTag,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import { epubDestination, parseEpubXML, readEpubPackage, resolveEpubPath } from './epub-package';
 import { rasterType } from './media-signatures';
 

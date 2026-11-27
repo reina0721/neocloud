@@ -1,8 +1,8 @@
 'use client';
 
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { Card, CardContent } from '@clouddrive/ui-adapter/card';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+import { Card, CardContent } from '@neocloud/ui-adapter/card';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
 import { OctagonAlert } from 'lucide-react';
 
 import { appI18n } from '../i18n/i18n';

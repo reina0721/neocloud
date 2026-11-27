@@ -8,10 +8,10 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/reina0721/clouddrive/internal/module/files/handler"
-	"github.com/reina0721/clouddrive/internal/module/files/model"
-	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/internal/module/files/handler"
+	"github.com/reina0721/neocloud/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/transport/http/humabinding"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 // contentResponse 在租约内写原始内容；发送后失败中止连接，不能追加 JSON 冒充成功文件。

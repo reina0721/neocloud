@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	pkgalerting "github.com/reina0721/clouddrive/pkg/alerting"
-	"github.com/reina0721/clouddrive/pkg/logger"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	pkgalerting "github.com/reina0721/neocloud/pkg/alerting"
+	"github.com/reina0721/neocloud/pkg/logger"
 )
 
 // AlertingID 是 alerting App 组件的稳定 ID。

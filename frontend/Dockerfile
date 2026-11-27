@@ -1,6 +1,6 @@
 FROM node:24-bookworm AS build
-ENV NEXT_PUBLIC_AUTH_MODE=backend
-ENV NEXT_PUBLIC_AUTH_API_BASE_URL=/api/console/v1
+ENV NEXT_PUBLIC_NEOCLOUD_AUTH_MODE=backend
+ENV NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL=/api/console/v1
 ENV WEB_DEPLOYMENT_MODE=server
 WORKDIR /app/frontend
 COPY frontend/ ./
@@ -18,14 +18,14 @@ LABEL org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.licenses="Apache-2.0"
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV CLOUDDRIVE_BACKEND_URL=http://backend:8080
+ENV NEOCLOUD_DEFAULT_BACKEND_URL=http://backend:8080
 ENV HOSTNAME=0.0.0.0
 ENV PORT=4173
 WORKDIR /app
-COPY --chown=node:node LICENSE NOTICE SOURCES.json /usr/share/licenses/clouddrive/
-COPY --chown=node:node frontend/apps/web/public/fonts/licenses/ /usr/share/licenses/clouddrive/fonts/
+COPY --chown=node:node LICENSE NOTICE SOURCES.json /usr/share/licenses/neocloud/
+COPY --chown=node:node frontend/apps/web/public/fonts/licenses/ /usr/share/licenses/neocloud/fonts/
 COPY --from=build --chown=node:node /app/frontend/apps/web/dist/standalone/ ./
-COPY --from=build --chown=node:node /app/frontend/apps/web/dist/standalone/licenses/ /usr/share/licenses/clouddrive/third-party/
+COPY --from=build --chown=node:node /app/frontend/apps/web/dist/standalone/licenses/ /usr/share/licenses/neocloud/third-party/
 WORKDIR /app/apps/web
 USER node
 EXPOSE 4173

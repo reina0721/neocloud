@@ -1,11 +1,11 @@
-import { formatDate, useFrontendTranslation } from '@clouddrive/i18n';
-import { usePluginLocale } from '@clouddrive/plugin-framework/plugin';
-import { SectionBody } from '@clouddrive/surface-foundation/layout';
-import { TabsView } from '@clouddrive/ui-adapter/data-display';
-import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
-import { UserIdentity } from '@clouddrive/ui-adapter/identity';
-import { Panel } from '@clouddrive/ui-adapter/panel';
-import { StatusPill, type StatusTone } from '@clouddrive/ui-adapter/status-pill';
+import { formatDate, useFrontendTranslation } from '@neocloud/i18n';
+import { usePluginLocale } from '@neocloud/plugin-framework/plugin';
+import { SectionBody } from '@neocloud/surface-foundation/layout';
+import { TabsView } from '@neocloud/ui-adapter/data-display';
+import { DescriptionList } from '@neocloud/ui-adapter/description-list';
+import { UserIdentity } from '@neocloud/ui-adapter/identity';
+import { Panel } from '@neocloud/ui-adapter/panel';
+import { StatusPill, type StatusTone } from '@neocloud/ui-adapter/status-pill';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import type { ReferenceRecord, ReferenceStatus } from './reference-scenarios';
 const statusTone: Record<ReferenceStatus, StatusTone> = {

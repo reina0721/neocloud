@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/internal/module/files/model"
+	"github.com/reina0721/neocloud/pkg/idgen"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestGlobalFilePropertyDefinitions(t *testing.T) {

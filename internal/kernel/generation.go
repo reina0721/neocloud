@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	pkglogger "github.com/reina0721/clouddrive/pkg/logger"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	pkglogger "github.com/reina0721/neocloud/pkg/logger"
 )
 
 // ActiveGeneration 是已经获得生产连接 admission 的不可变应用对象图。

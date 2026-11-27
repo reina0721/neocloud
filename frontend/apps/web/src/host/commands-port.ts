@@ -2,10 +2,10 @@
  * Host —— Commands Port 实现（composition root 装配）。
  *
  * 统一注册表：命令的按钮入口、命令菜单、快捷键与常用操作引用同一执行函数与可用性
- * （`@clouddrive/plugin-framework/commands` 契约）。页面/组件卸载时注销（不泄漏）；
+ * （`@neocloud/plugin-framework/commands` 契约）。页面/组件卸载时注销（不泄漏）；
  * runCommand 校验可用性（不可用不执行并返回原因）。
  */
-import type { CommandsPort, CommandDefinition } from '@clouddrive/plugin-framework/commands';
+import type { CommandsPort, CommandDefinition } from '@neocloud/plugin-framework/commands';
 
 const registry = new Map<string, CommandDefinition>();
 const listeners = new Set<() => void>();

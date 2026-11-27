@@ -33,7 +33,7 @@ describe('Schema Protocol 校验（真实 fixture）', () => {
   it('contractRef.pointer 未转义 "/" 时拒绝', async () => {
     const { schema, contracts } = await loadFixture();
     const doc = asMutableDocument(clone(schema));
-    doc['x-clouddrive'].contractRef.pointer = '/contracts/@clouddrive/design-system'; // 未转义
+    doc['x-neocloud'].contractRef.pointer = '/contracts/@neocloud/design-system'; // 未转义
     const issues = validateAuthorityDocument(doc, contracts);
     expect(issues.some((i) => i.includes('RFC 6901 escaping'))).toBe(true);
   });
@@ -41,8 +41,8 @@ describe('Schema Protocol 校验（真实 fixture）', () => {
   it('重新声明 registry-owned 字段（owner/maturity/layer/exports）→ fail', async () => {
     const { schema, contracts } = await loadFixture();
     const doc = asMutableDocument(clone(schema));
-    doc['x-clouddrive'].maturity = 'stable';
-    doc['x-clouddrive'].owner = 'x';
+    doc['x-neocloud'].maturity = 'stable';
+    doc['x-neocloud'].owner = 'x';
     const issues = validateAuthorityDocument(doc, contracts);
     expect(issues.some((i) => i.includes('registry-owned'))).toBe(true);
   });
@@ -50,7 +50,7 @@ describe('Schema Protocol 校验（真实 fixture）', () => {
   it('contractRef entry 错配（authorityId 不在 registry）→ fail', async () => {
     const { schema } = await loadFixture();
     const doc = asMutableDocument(clone(schema));
-    doc['x-clouddrive'].authorityId = '@clouddrive/nonexistent';
+    doc['x-neocloud'].authorityId = '@neocloud/nonexistent';
     const issues = validateAuthorityDocument(doc, {});
     expect(issues.some((i) => i.includes('registry entry 与 authorityId 不匹配'))).toBe(true);
   });
@@ -58,7 +58,7 @@ describe('Schema Protocol 校验（真实 fixture）', () => {
   it('facts 悬空 sourcePointer → fail', async () => {
     const { schema, contracts } = await loadFixture();
     const doc = asMutableDocument(clone(schema));
-    doc['x-clouddrive'].facts = [{ id: 'x', sourcePointer: '/x-clouddrive/source/nonexistent' }];
+    doc['x-neocloud'].facts = [{ id: 'x', sourcePointer: '/x-neocloud/source/nonexistent' }];
     const issues = validateAuthorityDocument(doc, contracts);
     expect(issues.some((i) => i.includes('悬空'))).toBe(true);
   });
@@ -66,8 +66,8 @@ describe('Schema Protocol 校验（真实 fixture）', () => {
   it('fact 携带值副本（额外字段）→ fail', async () => {
     const { schema, contracts } = await loadFixture();
     const doc = asMutableDocument(clone(schema));
-    doc['x-clouddrive'].facts = [
-      { id: 'x', sourcePointer: '/x-clouddrive/source/tokens/colors', value: '#fff' },
+    doc['x-neocloud'].facts = [
+      { id: 'x', sourcePointer: '/x-neocloud/source/tokens/colors', value: '#fff' },
     ];
     const issues = validateAuthorityDocument(doc, contracts);
     expect(issues.some((i) => i.includes('facts 不保存值副本'))).toBe(true);
@@ -76,10 +76,10 @@ describe('Schema Protocol 校验（真实 fixture）', () => {
   it('artifact mapping 内嵌 fallback/value → fail', async () => {
     const { schema, contracts } = await loadFixture();
     const doc = asMutableDocument(clone(schema));
-    const regions = doc['x-clouddrive'].artifacts[0]!.options.regions;
+    const regions = doc['x-neocloud'].artifacts[0]!.options.regions;
     regions![0]!.bindings.push({
       kind: 'scalar',
-      sourcePointer: '/x-clouddrive/source/tokens/theme/fontSans',
+      sourcePointer: '/x-neocloud/source/tokens/theme/fontSans',
       value: '#fff',
     });
     const issues = validateAuthorityDocument(doc, contracts);
@@ -89,7 +89,7 @@ describe('Schema Protocol 校验（真实 fixture）', () => {
   it('source 内出现 var( → fail（引用必须结构化 ref）', async () => {
     const { schema, contracts } = await loadFixture();
     const doc = asMutableDocument(clone(schema));
-    doc['x-clouddrive'].source.tokens.rootMotion.durationBase.fast = 'var(--x)';
+    doc['x-neocloud'].source.tokens.rootMotion.durationBase.fast = 'var(--x)';
     const issues = validateAuthorityDocument(doc, contracts);
     expect(issues.some((i) => i.includes('CSS var()'))).toBe(true);
   });
@@ -97,17 +97,17 @@ describe('Schema Protocol 校验（真实 fixture）', () => {
   it('patchableSourcePointers 指向 source 之外 → fail', async () => {
     const { schema, contracts } = await loadFixture();
     const doc = asMutableDocument(clone(schema));
-    doc['x-clouddrive'].authoring.patchableSourcePointers = ['/x-clouddrive/facts'];
+    doc['x-neocloud'].authoring.patchableSourcePointers = ['/x-neocloud/facts'];
     const issues = validateAuthorityDocument(doc, contracts);
-    expect(issues.some((i) => i.includes('必须位于 /x-clouddrive/source 之下'))).toBe(true);
+    expect(issues.some((i) => i.includes('必须位于 /x-neocloud/source 之下'))).toBe(true);
   });
 
   it('facts 多条指向同一 sourcePointer → fail（一个事实只有一个值 Source）', async () => {
     const { schema, contracts } = await loadFixture();
     const doc = asMutableDocument(clone(schema));
-    doc['x-clouddrive'].facts.push({
+    doc['x-neocloud'].facts.push({
       id: 'dup',
-      sourcePointer: '/x-clouddrive/source/tokens/colors',
+      sourcePointer: '/x-neocloud/source/tokens/colors',
     });
     const issues = validateAuthorityDocument(doc, contracts);
     expect(issues.some((i) => i.includes('sourcePointer 重复'))).toBe(true);
@@ -116,7 +116,7 @@ describe('Schema Protocol 校验（真实 fixture）', () => {
   it('$defs.authoritySource 校验 source 实例结构（缺 required 字段 → fail）', async () => {
     const { schema, contracts } = await loadFixture();
     const doc = asMutableDocument(clone(schema));
-    delete doc['x-clouddrive'].source.tokens.colors.dark;
+    delete doc['x-neocloud'].source.tokens.colors.dark;
     const issues = validateAuthorityDocument(doc, contracts);
     expect(issues.some((i) => i.includes('required property'))).toBe(true);
   });
@@ -132,13 +132,13 @@ describe('Schema Protocol 校验（真实 fixture）', () => {
     expect(computeEtag(a)).toBe(computeEtag(b));
     // 值变化 → etag 不同。
     const docB = asMutableDocument(b);
-    docB['x-clouddrive'].source.tokens.colors.light.brand = '#000000';
+    docB['x-neocloud'].source.tokens.colors.light.brand = '#000000';
     expect(computeEtag(a)).not.toBe(computeEtag(b));
   });
 });
 
 describe('Draft 2020-12 meta（Ajv strict）', () => {
-  it('引入未知关键字 → strict 报错（x-clouddrive 是唯一注册的扩展）', async () => {
+  it('引入未知关键字 → strict 报错（x-neocloud 是唯一注册的扩展）', async () => {
     const { schema } = await loadFixture();
     const doc = asMutableDocument(clone(schema));
     doc.someUnknownKeyword = true;

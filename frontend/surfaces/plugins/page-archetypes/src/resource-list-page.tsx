@@ -7,21 +7,21 @@ import {
   type ReferenceRecord,
   type ReferenceStatus,
 } from './reference-scenarios';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { AsyncRegion } from '@clouddrive/ui-adapter/async-region';
-import { BusyIndicator } from '@clouddrive/ui-adapter/busy-indicator';
-import { DataTable, type DataColumn } from '@clouddrive/ui-adapter/data-display';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { SelectField } from '@clouddrive/ui-adapter/form-field';
-import { UserIdentity } from '@clouddrive/ui-adapter/identity';
-import { PaginationControl } from '@clouddrive/ui-adapter/navigation';
-import { DialogSurface, DrawerSurface } from '@clouddrive/ui-adapter/overlays';
-import { Panel } from '@clouddrive/ui-adapter/panel';
-import { ProgressMeter } from '@clouddrive/ui-adapter/progress-meter';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
-import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { StatusPill, type StatusTone } from '@clouddrive/ui-adapter/status-pill';
+import { Action } from '@neocloud/ui-adapter/action';
+import { AsyncRegion } from '@neocloud/ui-adapter/async-region';
+import { BusyIndicator } from '@neocloud/ui-adapter/busy-indicator';
+import { DataTable, type DataColumn } from '@neocloud/ui-adapter/data-display';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { SelectField } from '@neocloud/ui-adapter/form-field';
+import { UserIdentity } from '@neocloud/ui-adapter/identity';
+import { PaginationControl } from '@neocloud/ui-adapter/navigation';
+import { DialogSurface, DrawerSurface } from '@neocloud/ui-adapter/overlays';
+import { Panel } from '@neocloud/ui-adapter/panel';
+import { ProgressMeter } from '@neocloud/ui-adapter/progress-meter';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
+import { Skeleton } from '@neocloud/ui-adapter/skeleton';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { StatusPill, type StatusTone } from '@neocloud/ui-adapter/status-pill';
 import {
   AlertTriangle,
   CloudOff,
@@ -33,7 +33,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { formatDate, formatNumber, useFrontendTranslation } from '@clouddrive/i18n';
+import { formatDate, formatNumber, useFrontendTranslation } from '@neocloud/i18n';
 
 import {
   isReferenceRefreshPaused,
@@ -47,14 +47,14 @@ import {
   Section,
   Toolbar,
   SplitView,
-} from '@clouddrive/surface-foundation/layout';
-import { usePluginLocale } from '@clouddrive/plugin-framework/plugin';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { useWorkspacePort } from '@clouddrive/plugin-framework/workspace';
-import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
-import { createHydrationLifecycle, rehydrateStore } from '@clouddrive/state-foundation';
-import { usePeriodicRefresh } from '@clouddrive/surface-foundation/use-periodic-refresh';
-import { formatDateOnly, type Preferences } from '@clouddrive/surface/preferences-model';
+} from '@neocloud/surface-foundation/layout';
+import { usePluginLocale } from '@neocloud/plugin-framework/plugin';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { useWorkspacePort } from '@neocloud/plugin-framework/workspace';
+import { AlertBanner } from '@neocloud/ui-adapter/feedback';
+import { createHydrationLifecycle, rehydrateStore } from '@neocloud/state-foundation';
+import { usePeriodicRefresh } from '@neocloud/surface-foundation/use-periodic-refresh';
+import { formatDateOnly, type Preferences } from '@neocloud/surface/preferences-model';
 
 import { useSearchHistoryStore } from '../stores/search-history';
 import { normalizeColumnLayout, useColumnLayoutStore } from '../stores/column-layout';
@@ -73,7 +73,7 @@ const ColumnSettingsDialog = lazy(() =>
   import('./column-settings-dialog').then((module) => ({ default: module.ColumnSettingsDialog })),
 );
 const ConfirmDialog = lazy(() =>
-  import('@clouddrive/ui-adapter/overlays').then((module) => ({ default: module.ConfirmDialog })),
+  import('@neocloud/ui-adapter/overlays').then((module) => ({ default: module.ConfirmDialog })),
 );
 const WorkbenchDetail = lazy(() =>
   import('./workbench-detail').then((module) => ({ default: module.WorkbenchDetail })),

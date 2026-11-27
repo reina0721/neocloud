@@ -24,7 +24,7 @@ const apiConfig =
 const apiID = "sha256:" + createHash("sha256").update(apiConfig).digest("hex"),
   webID = "sha256:" + createHash("sha256").update(webConfig).digest("hex");
 const projectFor = (path) =>
-  `clouddrive-${createHash("sha256").update(path).digest("hex").slice(0, 12)}`;
+  `neocloud-${createHash("sha256").update(path).digest("hex").slice(0, 12)}`;
 const offlineBundle = '{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}\n';
 const checksum = (name, body) =>
   `${createHash("sha256").update(body).digest("hex")}  ${name}\n`;
@@ -120,7 +120,7 @@ case "$1" in
  image)
    case "$2" in
      load) true ;;
-     inspect) ref=\${!#}; v=\${ref#*:}; v=\${v%-amd64}; id='${webID}'; [[ $ref != clouddrive-api:* ]] || id='${apiID}'; [[ \${FAKE_MANIFEST_IDS:-0} != 1 ]] || id='sha256:${"3".repeat(64)}'; echo "$id|linux|amd64|$v|${commit}" ;;
+     inspect) ref=\${!#}; v=\${ref#*:}; v=\${v%-amd64}; id='${webID}'; [[ $ref != clouddrive-api:* && $ref != neocloud-api:* ]] || id='${apiID}'; [[ \${FAKE_MANIFEST_IDS:-0} != 1 ]] || id='sha256:${"3".repeat(64)}'; echo "$id|linux|amd64|$v|${commit}" ;;
      save) if [[ \${3:-} == --help ]]; then echo '--platform'; else tar -cf - -C "$FAKE_BASE/exported" blobs; fi ;;
    esac ;;
  compose)
@@ -196,7 +196,7 @@ fi
     });
   async function bundle(
     version,
-    { network = true, entrypoint = true, layout = true, tooling = false } = {},
+    { network = true, entrypoint = true, layout = true, tooling = false, family = "clouddrive" } = {},
   ) {
     const source = join(base, version),
       stage = join(source, "stage");
@@ -206,13 +206,13 @@ fi
     await writeFile(join(stage, "images.tar"), "fixture-image-archive");
     await writeFile(
       join(stage, "images.env"),
-      `API_IMAGE=clouddrive-api:${version}-amd64\nWEB_IMAGE=clouddrive-web:${version}-amd64\n`,
+      `API_IMAGE=${family}-api:${version}-amd64\nWEB_IMAGE=${family}-web:${version}-amd64\n`,
     );
     await writeFile(
       join(stage, "manifest.txt"),
       `FORMAT=1\n${network ? "NETWORK=1\n" : ""}${entrypoint ? "ENTRYPOINT=1\n" : ""}${layout ? "INSTANCE_LAYOUT=1\n" : ""}${tooling ? "OFFLINE_MAINTENANCE=1\n" : ""}VERSION=${version}\nARCH=amd64\nCOMMIT=${commit}\nAPI_ID=${apiID}\nWEB_ID=${webID}\n`,
     );
-    const name = `clouddrive_${version}_linux_amd64_docker.tar.gz`;
+    const name = `${family}_${version}_linux_amd64_docker.tar.gz`;
     const packed = spawnSync("tar", [
       "-czf",
       join(source, name),
@@ -229,7 +229,7 @@ fi
     await writeFile(join(source, "version.txt"), `${version}\n`);
     const files = [name, "install.sh", "version.txt"];
     if (tooling) {
-      const binary = `clouddrive-maintenance_${version}_linux_amd64`;
+      const binary = `${family}-maintenance_${version}_linux_amd64`;
       await writeFile(join(source, binary), `#!/usr/bin/env bash\nset -eu\nprintf '%s\\n' "$*"\n`);
       files.push(binary);
     }
@@ -286,8 +286,8 @@ test("部署计划显示自定义入口和精确资源路径，且不调用 Dock
     ["Compose 项目", project],
     ["容器", `${project}-backend-1`],
     ["容器", `${project}-web-1`],
-    ["镜像", `clouddrive-api:v1.0.0-${arch}`],
-    ["镜像", `clouddrive-web:v1.0.0-${arch}`],
+    ["镜像", `neocloud-api:v1.0.0-${arch}`],
+    ["镜像", `neocloud-web:v1.0.0-${arch}`],
     ["网络", `${project}_default`],
     ["端口", "127.0.0.1:44217"],
     ["访问地址", "https://drive.example.test"],
@@ -941,7 +941,7 @@ test("无终端不等待输入；--yes 使用 HOME 下默认目录", async (t) =
   assert.equal(installed.status, 0, installed.stderr);
   assert.equal(
     (
-      await readFile(join(f.base, "clouddrive/.control/current"), "utf8")
+      await readFile(join(f.base, "neocloud/.control/current"), "utf8")
     ).trim(),
     "v1.0.0",
   );

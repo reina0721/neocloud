@@ -65,7 +65,14 @@ if (new Set([webPort, apiPort, managementPort]).size !== 3)
 const acceptanceRoot = join(repo, ".data", "acceptance");
 let data = values.acceptance ? acceptanceRoot : join(repo, ".data", values["legacy-preview"] ? "file-preview" : values.preview ? "preview" : "dev");
 const base = `http://127.0.0.1:${webPort}`;
-const viewerOrigins = JSON.parse(process.env.CLOUDDRIVE_ALLOWED_ORIGINS ?? "[]");
+function brandedEnvironment(name) {
+  const canonical = process.env["NEOCLOUD_" + name];
+  const legacy = process.env["CLOUDDRIVE_" + name];
+  if (canonical !== undefined && legacy !== undefined && canonical !== legacy)
+    throw new Error("NEOCLOUD_" + name + " 与 CLOUDDRIVE_" + name + " 的值冲突。");
+  return canonical ?? legacy;
+}
+const viewerOrigins = JSON.parse(brandedEnvironment("ALLOWED_ORIGINS") ?? "[]");
 if (
   !Array.isArray(viewerOrigins) ||
   !viewerOrigins.every((value) => {
@@ -78,7 +85,7 @@ if (
     }
   })
 )
-  throw new Error("CLOUDDRIVE_ALLOWED_ORIGINS 须为精确 HTTP(S) Origin 的 JSON 数组。");
+  throw new Error("NEOCLOUD_ALLOWED_ORIGINS 须为精确 HTTP(S) Origin 的 JSON 数组。");
 const allowedOrigins = JSON.stringify([...new Set([base, ...viewerOrigins])]);
 
 const backend = `http://127.0.0.1:${apiPort}`;
@@ -268,7 +275,7 @@ try {
   const workdir = isolated ? data : repo;
   const binary = join(
     values.acceptance ? data : join(repo, ".tools"),
-    `clouddrive-${values.acceptance ? "acceptance" : values["legacy-preview"] ? "file-preview" : values.preview ? "preview" : "dev"}${process.platform === "win32" ? ".exe" : ""}`,
+    `neocloud-${values.acceptance ? "acceptance" : values["legacy-preview"] ? "file-preview" : values.preview ? "preview" : "dev"}${process.platform === "win32" ? ".exe" : ""}`,
   );
   if (process.platform !== "win32") {
     await chmod(join(repo, ".data"), 0o700);
@@ -317,7 +324,7 @@ try {
   const backendOptions = {
     cwd: workdir,
     env: environment,
-    baseEnv: isolated ? Object.fromEntries(Object.entries(process.env).filter(([name]) => !/^app_/i.test(name))) : process.env,
+    baseEnv: isolated ? Object.fromEntries(Object.entries(process.env).filter(([name]) => !/^(?:neocloud_)?app_/i.test(name))) : process.env,
   };
   const configPath = join(workdir, "config.yaml");
   let accessPath;
@@ -329,7 +336,7 @@ try {
       const legacy = values["legacy-preview"] && preview.environment === undefined &&
         typeof preview.username === "string" && typeof preview.setupToken === "string" &&
         typeof preview.dataDirectory === "string" && resolve(preview.dataDirectory) === data;
-      if ((!legacy && preview.environment !== "clouddrive-node-preview-v1") || typeof preview.password !== "string")
+      if ((!legacy && !["clouddrive-node-preview-v1", "neocloud-node-preview-v1"].includes(preview.environment)) || typeof preview.password !== "string")
         throw new Error("预览目录不是本工具创建的环境，已保留其内容。");
       if (legacy) {
         setupToken = preview.setupToken;
@@ -341,7 +348,7 @@ try {
         throw new Error("预览目录已有配置，已保留其内容。");
       preview = {
         environment: "clouddrive-node-preview-v1",
-        username: "preview@clouddrive.test",
+        username: "preview@neocloud.test",
         password: randomBytes(24).toString("base64url"),
       };
     }
@@ -385,11 +392,11 @@ try {
         WEB_DEPLOYMENT_MODE: "server",
         WEB_HOST: "127.0.0.1",
         WEB_PORT: String(webPort),
-        CLOUDDRIVE_BACKEND_URL: backend,
-        CLOUDDRIVE_ALLOWED_ORIGINS: allowedOrigins,
+        NEOCLOUD_BACKEND_URL: backend,
+        NEOCLOUD_ALLOWED_ORIGINS: allowedOrigins,
         NEXT_DIST_DIR: values.acceptance ? `.next/acceptance-${webPort}` : values["legacy-preview"] ? ".next/file-preview" : values.preview ? ".next/preview" : ".next",
         ...(values.webpack
-          ? { CLOUDDRIVE_DEV_BUNDLER: "webpack", WATCHPACK_POLLING: "true" }
+          ? { NEOCLOUD_DEV_BUNDLER: "webpack", WATCHPACK_POLLING: "true" }
           : {}),
       },
     },

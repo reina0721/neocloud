@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/reina0721/clouddrive/internal/kernel"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	pkgcli "github.com/reina0721/clouddrive/pkg/cli"
+	"github.com/reina0721/neocloud/internal/kernel"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	pkgcli "github.com/reina0721/neocloud/pkg/cli"
 )
 
 func TestKernelNewDoesNotComposeCapabilities(t *testing.T) {

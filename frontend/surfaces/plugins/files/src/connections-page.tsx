@@ -1,11 +1,11 @@
 'use client';
 import { Cloud, RefreshCw } from '../../../src/files/icons';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import { useFileTime } from './use-file-time';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type {
   ConnectionIssued,

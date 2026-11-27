@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	"github.com/reina0721/neocloud/internal/kernel/config"
 )
 
 // LifecycleState 表示配置协调者拥有的 Kernel 进程状态。

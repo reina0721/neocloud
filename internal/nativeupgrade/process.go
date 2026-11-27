@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/deployment"
-	"github.com/reina0721/clouddrive/internal/nativeupgrade/control"
+	"github.com/reina0721/neocloud/internal/deployment"
+	"github.com/reina0721/neocloud/internal/nativeupgrade/control"
 )
 
 type child struct {

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { FilesError, type FileEntry } from '@clouddrive/surface/files';
+import { FilesError, type FileEntry } from '@neocloud/surface/files';
 import { FileMediaView } from './media-view';
 
-vi.mock('@clouddrive/i18n', () => {
+vi.mock('@neocloud/i18n', () => {
   const t = (key: string) => key;
   return { useFrontendTranslation: () => ({ t }) };
 });

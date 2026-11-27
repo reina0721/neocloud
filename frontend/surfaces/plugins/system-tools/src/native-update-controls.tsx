@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
 import {
   RuntimeReadError,
   type NativeUpdateStatus,

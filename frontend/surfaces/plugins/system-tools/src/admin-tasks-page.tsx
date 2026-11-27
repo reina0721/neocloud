@@ -1,17 +1,17 @@
 'use client';
 
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
-import { FrontendMessages, formatNumber, useFrontendTranslation } from '@clouddrive/i18n';
-import { formatInstant } from '@clouddrive/i18n/format';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { DatePickerField } from '@clouddrive/ui-adapter/date-picker-field';
-import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
-import { CheckboxField, SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
+import { FrontendMessages, formatNumber, useFrontendTranslation } from '@neocloud/i18n';
+import { formatInstant } from '@neocloud/i18n/format';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { DatePickerField } from '@neocloud/ui-adapter/date-picker-field';
+import { DescriptionList } from '@neocloud/ui-adapter/description-list';
+import { CheckboxField, SelectField, TextField } from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
 import {
   adminTaskKinds,
   adminTaskOrigins,

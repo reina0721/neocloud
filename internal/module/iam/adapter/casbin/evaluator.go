@@ -16,7 +16,7 @@ import (
 	"github.com/casbin/casbin/v3"
 	casbinlog "github.com/casbin/casbin/v3/log"
 	casbinmodel "github.com/casbin/casbin/v3/model"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
 )
 
 // coreRBACModelText 是 IAM 固定的 Core RBAC model。

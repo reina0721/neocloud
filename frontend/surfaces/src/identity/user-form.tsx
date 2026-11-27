@@ -4,22 +4,22 @@ import {
   FoundationForm,
   FoundationControlledField,
   useFoundationForm,
-} from '@clouddrive/form-foundation';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { useRegisterDirtySource } from '@clouddrive/plugin-framework/leave-confirm';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { route, usePluginNavigation } from '@clouddrive/plugin-framework/plugin';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
-import { Section } from '@clouddrive/surface-foundation/layout';
-import { FormActions } from '@clouddrive/surface-foundation/form-actions';
-import { Action } from '@clouddrive/ui-adapter/action';
+} from '@neocloud/form-foundation';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { useRegisterDirtySource } from '@neocloud/plugin-framework/leave-confirm';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { route, usePluginNavigation } from '@neocloud/plugin-framework/plugin';
+import type { Preferences } from '@neocloud/surface/preferences-model';
+import { Section } from '@neocloud/surface-foundation/layout';
+import { FormActions } from '@neocloud/surface-foundation/form-actions';
+import { Action } from '@neocloud/ui-adapter/action';
 import {
   TextField,
   CheckboxField,
   SelectField,
   PasswordField,
-} from '@clouddrive/ui-adapter/form-field';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
+} from '@neocloud/ui-adapter/form-field';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
 import type { CreateUserInput, DirectoryUser, DirectoryRole, IdentityAccess } from './model';
 import { IdentityError } from './errors';
 import { useIdentityPort } from './context';

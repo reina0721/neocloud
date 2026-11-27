@@ -1,5 +1,5 @@
-import { FilesError, type FileEntry, type FilesPort } from '@clouddrive/surface/files';
-import type { FileMediaProps } from '@clouddrive/surface/files/runtime';
+import { FilesError, type FileEntry, type FilesPort } from '@neocloud/surface/files';
+import type { FileMediaProps } from '@neocloud/surface/files/runtime';
 import { withFileIOAdmissionRetry } from './file-io-retry';
 import type { createVersionsPort } from './versions';
 

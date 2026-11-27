@@ -1,6 +1,6 @@
 'use client';
 
-import { formatDate, formatNumber, useFrontendTranslation } from '@clouddrive/i18n';
+import { formatDate, formatNumber, useFrontendTranslation } from '@neocloud/i18n';
 import {
   ArrowDown,
   ArrowUp,
@@ -10,24 +10,24 @@ import {
   EyeOff,
   RotateCcw,
   Trash2,
-} from '@clouddrive/surface/action-icons';
-import { generatedRouteCatalog } from '@clouddrive/surface/generated/catalog';
-import { NavigationIcon } from '@clouddrive/surface/icon-presentation';
-import { useProductAccess } from '@clouddrive/surface/identity/runtime';
-import { Collection } from '@clouddrive/surface-foundation/collection';
-import { Page, PageHeader, Toolbar } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { AsyncRegion } from '@clouddrive/ui-adapter/async-region';
-import { DataTable, type DataColumn } from '@clouddrive/ui-adapter/data-display';
-import { AlertBanner, Badge } from '@clouddrive/ui-adapter/feedback';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { CheckboxField } from '@clouddrive/ui-adapter/form-field';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
-import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
+} from '@neocloud/surface/action-icons';
+import { generatedRouteCatalog } from '@neocloud/surface/generated/catalog';
+import { NavigationIcon } from '@neocloud/surface/icon-presentation';
+import { useProductAccess } from '@neocloud/surface/identity/runtime';
+import { Collection } from '@neocloud/surface-foundation/collection';
+import { Page, PageHeader, Toolbar } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { AsyncRegion } from '@neocloud/ui-adapter/async-region';
+import { DataTable, type DataColumn } from '@neocloud/ui-adapter/data-display';
+import { AlertBanner, Badge } from '@neocloud/ui-adapter/feedback';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { CheckboxField } from '@neocloud/ui-adapter/form-field';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
+import { Skeleton } from '@neocloud/ui-adapter/skeleton';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useMenuOverlayStore, type MenuOverlayResult } from '../stores/menu-overrides';

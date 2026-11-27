@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 
-	migrationbinding "github.com/reina0721/clouddrive/internal/module/todo/binding/migration"
-	"github.com/reina0721/clouddrive/internal/module/todo/model"
-	"github.com/reina0721/clouddrive/internal/module/todo/repo"
-	"github.com/reina0721/clouddrive/internal/module/todo/service"
-	"github.com/reina0721/clouddrive/pkg/database"
-	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
-	"github.com/reina0721/clouddrive/pkg/fault"
+	migrationbinding "github.com/reina0721/neocloud/internal/module/todo/binding/migration"
+	"github.com/reina0721/neocloud/internal/module/todo/model"
+	"github.com/reina0721/neocloud/internal/module/todo/repo"
+	"github.com/reina0721/neocloud/internal/module/todo/service"
+	"github.com/reina0721/neocloud/pkg/database"
+	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
+	"github.com/reina0721/neocloud/pkg/fault"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestRepositorySQLiteContract(t *testing.T) {

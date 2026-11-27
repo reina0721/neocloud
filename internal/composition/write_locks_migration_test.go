@@ -1,9 +1,9 @@
 package composition
 
 import (
-	filesmigration "github.com/reina0721/clouddrive/internal/module/files/binding/migration"
-	"github.com/reina0721/clouddrive/internal/module/files/model"
-	"github.com/reina0721/clouddrive/pkg/database"
+	filesmigration "github.com/reina0721/neocloud/internal/module/files/binding/migration"
+	"github.com/reina0721/neocloud/internal/module/files/model"
+	"github.com/reina0721/neocloud/pkg/database"
 	"gorm.io/gorm"
 	"io/fs"
 	"path/filepath"
@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestWOPIV27PreservesDAVRowsAndGuardsRollback(t *testing.T) {

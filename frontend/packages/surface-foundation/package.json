@@ -1,5 +1,5 @@
 {
-  "name": "@clouddrive/surface-foundation",
+  "name": "@neocloud/surface-foundation",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -22,10 +22,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@clouddrive/core": "workspace:*",
-    "@clouddrive/form-foundation": "workspace:*",
-    "@clouddrive/types": "workspace:*",
-    "@clouddrive/ui-adapter": "workspace:*",
+    "@neocloud/core": "workspace:*",
+    "@neocloud/form-foundation": "workspace:*",
+    "@neocloud/types": "workspace:*",
+    "@neocloud/ui-adapter": "workspace:*",
     "react": "^19.2.8"
   },
   "devDependencies": {

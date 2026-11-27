@@ -20,9 +20,11 @@ export function configuredHttpOrigin(value, name) {
 /** The upstream is server configuration; request paths must never choose its host. */
 export function backendDestination(
   requestUrl,
-  backend = process.env.CLOUDDRIVE_BACKEND_URL ?? 'http://127.0.0.1:8080',
+  backend = readNeoCloudEnv('BACKEND_URL') ??
+    readNeoCloudEnv('DEFAULT_BACKEND_URL') ??
+    'http://127.0.0.1:8080',
 ) {
-  const destination = configuredHttpOrigin(backend, 'CLOUDDRIVE_BACKEND_URL');
+  const destination = configuredHttpOrigin(backend, 'NEOCLOUD_BACKEND_URL');
   const incoming = new URL(requestUrl);
   destination.pathname = incoming.pathname;
   destination.search = incoming.search;
@@ -31,11 +33,11 @@ export function backendDestination(
 
 export function isBackendOriginAllowed(
   origin,
-  allowedOrigins = process.env.CLOUDDRIVE_ALLOWED_ORIGINS ?? '[]',
+  allowedOrigins = readNeoCloudEnv('ALLOWED_ORIGINS') ?? '[]',
 ) {
   const allowed = JSON.parse(allowedOrigins);
   if (!Array.isArray(allowed) || !allowed.every((value) => typeof value === 'string'))
-    throw new Error('CLOUDDRIVE_ALLOWED_ORIGINS must be an array of origins.');
+    throw new Error('NEOCLOUD_ALLOWED_ORIGINS must be an array of origins.');
   return allowed.includes(origin);
 }
 
@@ -68,6 +70,9 @@ export function backendRequestHeaders(requestUrl, incoming, destination, allowed
   for (const name of ['forwarded', 'x-forwarded-host', 'x-forwarded-proto', 'x-forwarded-port'])
     headers.delete(name);
   // Presentation metadata only: the backend uses this for displayed connection URLs, never auth.
+  headers.delete('x-neocloud-web-origin');
+  headers.delete('x-clouddrive-web-origin');
+  headers.set('x-neocloud-web-origin', external.origin);
   headers.set('x-clouddrive-web-origin', external.origin);
   const davDestination = incoming.get('destination');
   if ((request.pathname === '/dav' || request.pathname.startsWith('/dav/')) && davDestination) {
@@ -80,3 +85,4 @@ export function backendRequestHeaders(requestUrl, incoming, destination, allowed
   }
   return headers;
 }
+import { readNeoCloudEnv } from './environment.mjs';

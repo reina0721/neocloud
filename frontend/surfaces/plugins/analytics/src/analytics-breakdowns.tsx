@@ -1,9 +1,9 @@
 'use client';
 
-import { formatNumber, useFrontendTranslation } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
-import { BarChart, DonutChart, type ChartSegment } from '@clouddrive/ui-adapter/charts';
-import { ProgressMeter } from '@clouddrive/ui-adapter/progress-meter';
+import { formatNumber, useFrontendTranslation } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
+import { BarChart, DonutChart, type ChartSegment } from '@neocloud/ui-adapter/charts';
+import { ProgressMeter } from '@neocloud/ui-adapter/progress-meter';
 
 import type { AnalyticsDataset } from './analytics-data';
 

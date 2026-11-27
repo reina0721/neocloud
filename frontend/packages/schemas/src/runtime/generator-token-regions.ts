@@ -14,9 +14,9 @@ import { readPointer } from './json-pointer.ts';
 
 export const TOKEN_REGION_MARKER_PREFIX = '@ds-region:';
 /** 文档绝对指针前缀（Source 区）。 */
-export const SOURCE_DOC_PREFIX = '/x-clouddrive/source';
+export const SOURCE_DOC_PREFIX = '/x-neocloud/source';
 
-/** 文档绝对指针 → 相对 source 节点的指针（生成器收到的是 /x-clouddrive/source 节点）。 */
+/** 文档绝对指针 → 相对 source 节点的指针（生成器收到的是 /x-neocloud/source 节点）。 */
 export function toSourceRelativePointer(pointer: string): string {
   if (pointer.startsWith(`${SOURCE_DOC_PREFIX}/`)) {
     return pointer.slice(SOURCE_DOC_PREFIX.length);

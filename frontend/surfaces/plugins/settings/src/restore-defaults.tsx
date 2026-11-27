@@ -1,9 +1,9 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { usePreferencesPort, type PersistResult } from '@clouddrive/plugin-framework/preferences';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { usePreferencesPort, type PersistResult } from '@neocloud/plugin-framework/preferences';
+import type { Preferences } from '@neocloud/surface/preferences-model';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
 
 /**
  * 恢复默认（双层）：

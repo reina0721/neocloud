@@ -1,5 +1,5 @@
-import { FilesError } from '@clouddrive/surface/files';
-import type { SiteAddresses } from '@clouddrive/surface/administration';
+import { FilesError } from '@neocloud/surface/files';
+import type { SiteAddresses } from '@neocloud/surface/administration';
 import { fileDestinationHrefs } from './destinations';
 
 export const shareTokenPattern = /^[A-Za-z0-9_-]{43}$/;

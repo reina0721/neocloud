@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	kernelcli "github.com/reina0721/clouddrive/internal/kernel/cli"
-	"github.com/reina0721/clouddrive/internal/module/migration"
-	"github.com/reina0721/clouddrive/pkg/cli"
+	kernelcli "github.com/reina0721/neocloud/internal/kernel/cli"
+	"github.com/reina0721/neocloud/internal/module/migration"
+	"github.com/reina0721/neocloud/pkg/cli"
 )
 
 // Executor 把命令解析结果交给 invocation-scoped composition。

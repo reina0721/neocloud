@@ -13,9 +13,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/reina0721/clouddrive/internal/module/files/adapter/metainfo"
-	"github.com/reina0721/clouddrive/internal/module/files/service"
-	"github.com/reina0721/clouddrive/pkg/logger"
+	"github.com/reina0721/neocloud/internal/module/files/adapter/metainfo"
+	"github.com/reina0721/neocloud/internal/module/files/service"
+	"github.com/reina0721/neocloud/pkg/logger"
 )
 
 func protocolClient(t *testing.T, handler http.HandlerFunc) *Client {

@@ -5,23 +5,23 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/reina0721/clouddrive/internal/module/auth"
-	authconfig "github.com/reina0721/clouddrive/internal/module/auth/binding/config"
-	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	authrepo "github.com/reina0721/clouddrive/internal/module/auth/repo"
-	authservice "github.com/reina0721/clouddrive/internal/module/auth/service"
-	"github.com/reina0721/clouddrive/internal/module/iam"
-	"github.com/reina0721/clouddrive/internal/module/iam/authorization"
-	iamconfig "github.com/reina0721/clouddrive/internal/module/iam/binding/config"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
-	"github.com/reina0721/clouddrive/internal/module/iam/service"
-	organizationservice "github.com/reina0721/clouddrive/internal/module/organization/service"
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
-	"github.com/reina0721/clouddrive/internal/transport/http"
-	pkgalerting "github.com/reina0721/clouddrive/pkg/alerting"
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/idgen"
-	"github.com/reina0721/clouddrive/pkg/logger"
+	"github.com/reina0721/neocloud/internal/module/auth"
+	authconfig "github.com/reina0721/neocloud/internal/module/auth/binding/config"
+	authmodel "github.com/reina0721/neocloud/internal/module/auth/model"
+	authrepo "github.com/reina0721/neocloud/internal/module/auth/repo"
+	authservice "github.com/reina0721/neocloud/internal/module/auth/service"
+	"github.com/reina0721/neocloud/internal/module/iam"
+	"github.com/reina0721/neocloud/internal/module/iam/authorization"
+	iamconfig "github.com/reina0721/neocloud/internal/module/iam/binding/config"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
+	"github.com/reina0721/neocloud/internal/module/iam/service"
+	organizationservice "github.com/reina0721/neocloud/internal/module/organization/service"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
+	"github.com/reina0721/neocloud/internal/transport/http"
+	pkgalerting "github.com/reina0721/neocloud/pkg/alerting"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/idgen"
+	"github.com/reina0721/neocloud/pkg/logger"
 )
 
 // asAuthDatabaseAccess 把 IAM 使用的数据库租约窄接口适配为 Auth 审计
@@ -103,7 +103,7 @@ func composeIdentityAccess(ctx context.Context, input identityAccessInput) (iden
 	if err := iamModule.Administration.Compatible(ctx); err != nil {
 		return identityAccess{}, fmt.Errorf("verify iam catalog compatibility: %w", err)
 	}
-	sessionSource, err := newIAMSessionAuthAdapter(iamModule.Sessions, iamModule.SessionCookieName())
+	sessionSource, err := newIAMSessionAuthAdapter(iamModule.Sessions, iamModule.SessionCookieName(), iamModule.LegacySessionCookieName())
 	if err != nil {
 		return identityAccess{}, err
 	}

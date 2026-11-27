@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	pkghttpx "github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	pkghttpx "github.com/reina0721/neocloud/pkg/httpx"
 )
 
 const (

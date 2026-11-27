@@ -6,7 +6,7 @@
  * 因此在这里以集成方式验证：行展开语义（aria-expanded / data-tree-depth）、缩进几何与
  * sticky 偏移（来自显式列宽的几何累加，而非设计 Token）。
  */
-import { DataTable, type DataColumn } from '@clouddrive/ui-adapter/data-display';
+import { DataTable, type DataColumn } from '@neocloud/ui-adapter/data-display';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

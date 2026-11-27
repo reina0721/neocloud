@@ -13,6 +13,7 @@ const { values } = parseArgs({
     "go-executable": { type: "string", default: "go" },
     "from-module": { type: "boolean", default: false },
     "managed-host": { type: "boolean", default: false },
+    source: { type: "string" },
   },
 });
 assert.ok(values.output, "需要 --output");
@@ -20,8 +21,11 @@ assert.ok(["linux", "windows", "darwin"].includes(values.goos), "不支持的 GO
 assert.ok(["amd64", "arm64"].includes(values.goarch), "不支持的 GOARCH");
 const output = resolve(values.output);
 const go = values["go-executable"];
+const source = resolve(values.source || process.env.NEOCLOUD_RELEASE_GO_ROOT || ".");
+const module = /^module github\.com\/reina0721\/(neocloud|clouddrive)\r?$/m.exec(await readFile(join(source, "go.mod"), "utf8"))?.[1];
+assert.ok(module, "Go 许可来源必须属于已知命名系列");
 const packages = values["managed-host"]
-  ? ["./cmd/app", "./cmd/clouddrive-host"]
+  ? ["./cmd/app", `./cmd/${module}-host`]
   : ["./cmd/app"];
 const args = ["save", ...packages, "--save_path=" + output];
 let command = "go-licenses";
@@ -33,6 +37,7 @@ if (values["from-module"]) {
   args.unshift("run", "github.com/google/go-licenses/v2@" + version);
 }
 execFileSync(command, args, {
+  cwd: source,
   stdio: "inherit",
   env: {
     ...process.env,

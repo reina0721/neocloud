@@ -9,7 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	storageclient "github.com/reina0721/clouddrive/pkg/storage/client"
+	storageclient "github.com/reina0721/neocloud/pkg/storage/client"
 )
 
 // WithReader 仅在同步回调内开放 Range 读取；关闭和回调错误同时向上传递。

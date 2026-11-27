@@ -3,8 +3,8 @@
 package webui
 
 import (
-	"github.com/reina0721/clouddrive/internal/module"
-	webuicontract "github.com/reina0721/clouddrive/internal/webui"
+	"github.com/reina0721/neocloud/internal/module"
+	webuicontract "github.com/reina0721/neocloud/internal/webui"
 )
 
 // Binding 返回 OpenAPI 契约可视化页面的 WebUI 声明：`/openapi` 单路由承载工作台，

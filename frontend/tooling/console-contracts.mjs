@@ -502,7 +502,7 @@ const output =
     {
       openapi: '3.0.3',
       info: {
-        title: 'clouddrive console API',
+        title: 'NeoCloud Console API',
         version: '1.0.0',
         description:
           'Generated from Go Console contracts, native Huma contracts, and legacy Console validators. Writes require Origin and console CSRF; native forwarding repeats native authorization.',
@@ -512,7 +512,12 @@ const output =
         ...native.components,
         securitySchemes: {
           ...native.components.securitySchemes,
-          ConsoleCookie: { type: 'apiKey', in: 'cookie', name: '__Host-clouddrive_iam_session' },
+          ConsoleCookie: {
+            type: 'apiKey',
+            in: 'cookie',
+            name: '__Host-neocloud_iam_session',
+            description: 'The CloudDrive session cookie remains readable for upgrades.',
+          },
         },
       },
     },

@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { CheckboxField } from '@clouddrive/ui-adapter/form-field';
-import { Tree, type TreeNode } from '@clouddrive/ui-adapter/tree';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { CheckboxField } from '@neocloud/ui-adapter/form-field';
+import { Tree, type TreeNode } from '@neocloud/ui-adapter/tree';
 import { FileGlyph } from '../../../src/files/icons';
 import { useFiles } from '../../../src/files/runtime';
 import {

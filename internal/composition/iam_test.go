@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/service"
+	"github.com/reina0721/neocloud/internal/module/iam/service"
 )
 
 func TestIAMMutationGuardRequiresAllowedOriginResolvedSessionAndCSRF(t *testing.T) {

@@ -1,9 +1,9 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
-import { PasswordField } from '@clouddrive/ui-adapter/form-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { AlertBanner } from '@neocloud/ui-adapter/feedback';
+import { PasswordField } from '@neocloud/ui-adapter/form-field';
 import { AlertTriangle, Eye, EyeOff, LockKeyhole } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 

@@ -1,4 +1,4 @@
-import type { ApiRequestDefinition, ResolvedRequest } from '@clouddrive/surface/api-workbench';
+import type { ApiRequestDefinition, ResolvedRequest } from '@neocloud/surface/api-workbench';
 import { interpolateString } from './interpolate';
 import { base64Encode } from './crypto';
 

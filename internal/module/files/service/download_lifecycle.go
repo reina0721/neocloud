@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // downloadMonitor 仅属于一次Dispatch；stop取消并等待，两个监视器都不能逃逸到下一代。

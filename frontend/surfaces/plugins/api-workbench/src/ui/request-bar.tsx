@@ -1,9 +1,9 @@
 'use client';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import type { ApiRequestDefinition, HttpMethod } from '@clouddrive/surface/api-workbench';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import type { ApiRequestDefinition, HttpMethod } from '@neocloud/surface/api-workbench';
+import { Action } from '@neocloud/ui-adapter/action';
+import { SelectField, TextField } from '@neocloud/ui-adapter/form-field';
 import { CheckCheck, Save, Send } from 'lucide-react';
 import { parseCurl } from '../model/curl';
 

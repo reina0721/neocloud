@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/reina0721/clouddrive/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/kernel/config"
 )
 
 // Definition 是一个无安装副作用的底层组件声明。

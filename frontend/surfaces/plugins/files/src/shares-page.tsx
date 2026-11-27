@@ -1,13 +1,13 @@
 'use client';
 import { Cloud, RefreshCw, Share2 } from '../../../src/files/icons';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader, Toolbar } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { SelectField } from '@clouddrive/ui-adapter/form-field';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader, Toolbar } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { SelectField } from '@neocloud/ui-adapter/form-field';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {

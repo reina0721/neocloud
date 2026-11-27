@@ -3,7 +3,7 @@ import {
   FilesError,
   type EpubDestination,
   type EpubTocEntry,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 
 export type EpubResource = Readonly<{ path: string; mediaType: string; properties: string }>;
 type ReadMember = (path: string, maxBytes: number, signal: AbortSignal) => Promise<Uint8Array>;

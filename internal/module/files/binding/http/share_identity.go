@@ -2,9 +2,9 @@ package httpbinding
 
 import (
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/reina0721/clouddrive/internal/module/files/handler"
-	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/internal/module/files/handler"
+	"github.com/reina0721/neocloud/internal/transport/http/humabinding"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 func optionalShareIdentity(h *handler.Handler) func(huma.Context, func(huma.Context)) {

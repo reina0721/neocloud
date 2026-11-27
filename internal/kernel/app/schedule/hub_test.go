@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/reina0721/clouddrive/pkg/health"
-	pkgschedule "github.com/reina0721/clouddrive/pkg/schedule"
+	"github.com/reina0721/neocloud/pkg/health"
+	pkgschedule "github.com/reina0721/neocloud/pkg/schedule"
 )
 
 func TestHubCommitClosesOldAdmissionBeforeOpeningCandidate(t *testing.T) {

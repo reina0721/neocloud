@@ -1,14 +1,14 @@
 'use client';
 
-import { Action } from '@clouddrive/ui-adapter/action';
-import { AlertBanner, Badge, NotificationCard } from '@clouddrive/ui-adapter/feedback';
-import { FeedbackPresence } from '@clouddrive/ui-adapter/feedback-presence';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
+import { Action } from '@neocloud/ui-adapter/action';
+import { AlertBanner, Badge, NotificationCard } from '@neocloud/ui-adapter/feedback';
+import { FeedbackPresence } from '@neocloud/ui-adapter/feedback-presence';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
 import { AlertTriangle, Bell, CheckCircle2, ChevronRight, Info, XCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
 import { ComponentPreview } from './component-preview';
 import { UiElementsFamilyPage } from './family-page';
 export function FeedbackPage() {

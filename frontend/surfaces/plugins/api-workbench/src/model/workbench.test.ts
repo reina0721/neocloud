@@ -5,14 +5,14 @@ import { createExpectation } from './assertions';
 import { evaluateJsonPath, runExtractors } from './extractors';
 import { buildResolvedRequest } from './build-request';
 import { parseCurl } from './curl';
-import { dispatchMockRoute } from '@clouddrive/surface/api-workbench';
-import { safeParseWorkspaceSnapshot } from '@clouddrive/surface/api-workbench';
+import { dispatchMockRoute } from '@neocloud/surface/api-workbench';
+import { safeParseWorkspaceSnapshot } from '@neocloud/surface/api-workbench';
 import { runCollectionBatch } from './runner';
 import type {
   ApiRequestDefinition,
   ExecutedResponse,
   RequestTransport,
-} from '@clouddrive/surface/api-workbench';
+} from '@neocloud/surface/api-workbench';
 
 describe('API Workbench - interpolate', () => {
   it('resolves variables with env overriding globals and built-in variables', () => {

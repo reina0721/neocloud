@@ -4,9 +4,9 @@ import {
   ShellNavigation,
   type NavigationPresenter,
   type RouterPort,
-} from '@clouddrive/surface-foundation/shell-navigation';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import type { NavigationGroup } from '@clouddrive/types';
+} from '@neocloud/surface-foundation/shell-navigation';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import type { NavigationGroup } from '@neocloud/types';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createElement } from 'react';

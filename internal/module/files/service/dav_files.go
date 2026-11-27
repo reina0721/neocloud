@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // DAVScope 保存认证连接与协议条件，每次业务调用重新核对当前事实。

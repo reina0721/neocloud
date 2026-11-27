@@ -3,7 +3,7 @@ package httpbinding
 import (
 	"context"
 	"errors"
-	permission "github.com/reina0721/clouddrive/internal/permission"
+	permission "github.com/reina0721/neocloud/internal/permission"
 	"net/http"
 	"time"
 )

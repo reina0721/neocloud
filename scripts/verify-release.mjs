@@ -8,6 +8,7 @@ import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { verifyHeader } from "./verify-elf-platform.mjs";
+import { releaseFamily } from "./release-go-source.mjs";
 
 export function selectDraft(pages, tag) {
   assert.match(tag, /^v\d+\.\d+\.\d+$/, "仅正式版本允许自动发布");
@@ -22,16 +23,17 @@ export function selectDraft(pages, tag) {
   return matches[0];
 }
 
-export function requiredAssets(tag) {
+export function requiredAssets(tag, family = releaseFamily()) {
   assert.match(tag, /^v\d+\.\d+\.\d+$/, "仅正式版本允许自动发布");
+  assert.ok(["neocloud", "clouddrive"].includes(family), "未知发布命名系列");
   const version = tag.slice(1);
   const goArchives = [
-    `clouddrive_${version}_linux_amd64.tar.gz`,
-    `clouddrive_${version}_windows_amd64.zip`,
+    `${family}_${version}_linux_amd64.tar.gz`,
+    `${family}_${version}_windows_amd64.zip`,
   ];
   const managedArchives = [["windows", "amd64"], ["linux", "amd64"], ["linux", "arm64"]].flatMap(
     ([os, arch]) => ["managed-go", "managed-full"].map(
-      (profile) => `clouddrive_${tag}_${os}_${arch}_${profile}.zip`,
+      (profile) => `${family}_${tag}_${os}_${arch}_${profile}.zip`,
     ),
   );
   return [
@@ -40,10 +42,10 @@ export function requiredAssets(tag) {
     ...managedArchives,
     ...managedArchives.map((name) => name + ".spdx.json"),
     ...["amd64", "arm64"].flatMap((arch) => [
-      `clouddrive_${tag}_linux_${arch}_docker.tar.gz`,
-      `clouddrive-maintenance_${tag}_linux_${arch}`,
+      `${family}_${tag}_linux_${arch}_docker.tar.gz`,
+      `${family}-maintenance_${tag}_linux_${arch}`,
       ...["api", "web"].map(
-        (kind) => `clouddrive-${kind}_${tag}_${arch}.spdx.json`,
+        (kind) => `${family}-${kind}_${tag}_${arch}.spdx.json`,
       ),
     ]),
     "install.sh",
@@ -65,6 +67,7 @@ export async function verifyAssets({
   tag,
   sha,
   installerPath,
+  family = releaseFamily(),
 }) {
   assert.match(sha, /^[a-f0-9]{40}$/);
   assert.equal(release.tag_name, tag);
@@ -84,8 +87,12 @@ export async function verifyAssets({
     );
     assets.set(asset.name, asset);
   }
-  for (const name of requiredAssets(tag))
+  const required = new Set(requiredAssets(tag, family));
+  for (const name of required)
     assert.ok(assets.has(name), `缺少附件：${name}`);
+  for (const name of requiredAssets(tag, family === "neocloud" ? "clouddrive" : "neocloud")) {
+    if (!required.has(name)) assert.ok(!assets.has(name), `发行版本混合了命名系列：${name}`);
+  }
   const checksums = new Map();
   const lines = (await readFile(join(directory, "checksums.txt"), "utf8"))
     .trim()
@@ -124,7 +131,7 @@ export async function verifyAssets({
   );
   for (const arch of ["amd64", "arm64"]) {
     const tool = await open(
-      join(directory, `clouddrive-maintenance_${tag}_linux_${arch}`),
+      join(directory, `${family}-maintenance_${tag}_linux_${arch}`),
       "r",
     );
     try {
@@ -136,11 +143,11 @@ export async function verifyAssets({
     }
     const path = join(
       directory,
-      `clouddrive_${tag}_linux_${arch}_docker.tar.gz`,
+      `${family}_${tag}_linux_${arch}_docker.tar.gz`,
     );
     const names = execFileSync("tar", ["-tzf", path], { encoding: "utf8" })
       .trim()
-      .split("\n")
+      .split(/\r?\n/)
       .sort();
     assert.deepEqual(names, [
       "compose.yaml",
@@ -154,7 +161,7 @@ export async function verifyAssets({
       encoding: "utf8",
     })
       .trim()
-      .split("\n")) {
+      .split(/\r?\n/)) {
       const at = line.indexOf("=");
       assert.ok(at > 0 && !manifest.has(line.slice(0, at)), "镜像清单无效");
       manifest.set(line.slice(0, at), line.slice(at + 1));
@@ -176,7 +183,7 @@ export async function verifyAssets({
       assert.match(manifest.get(key), /^sha256:[a-f0-9]{64}$/);
     assert.equal(
       execFileSync("tar", ["-xOzf", path, "images.env"], { encoding: "utf8" }),
-      `API_IMAGE=clouddrive-api:${tag}-${arch}\nWEB_IMAGE=clouddrive-web:${tag}-${arch}\n`,
+      `API_IMAGE=${family}-api:${tag}-${arch}\nWEB_IMAGE=${family}-web:${tag}-${arch}\n`,
     );
     assert.deepEqual(
       execFileSync("tar", ["-xOzf", path, "install.sh"]),

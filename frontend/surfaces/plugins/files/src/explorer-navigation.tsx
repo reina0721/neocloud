@@ -1,6 +1,6 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { DrawerSurface } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { DrawerSurface } from '@neocloud/ui-adapter/overlays';
 import { useEffect, useRef, type ReactNode } from 'react';
 
 export function ExplorerNavigation({

@@ -1,4 +1,4 @@
-import { createLocalStorage, createPersistStore } from '@clouddrive/state-foundation';
+import { createLocalStorage, createPersistStore } from '@neocloud/state-foundation';
 
 import {
   createDemoDepartments,
@@ -16,10 +16,10 @@ import {
  * departments 插件私有 store（surfaces/plugins/departments/stores）。
  *
  * 本地演示业务数据（无后端）；每个节点带 version 做乐观并发，删除前检查下级与
- * 成员数量。持久化 key：`clouddrive.plugin.departments`。
+ * 成员数量。持久化 key：`neocloud.plugin.departments`。
  */
 
-export const DEPARTMENTS_STORAGE_KEY = 'clouddrive.plugin.departments';
+export const DEPARTMENTS_STORAGE_KEY = 'neocloud.plugin.departments';
 export const DEPARTMENTS_STORAGE_VERSION = 1;
 
 export type DepartmentsFailureCode = 'conflict' | 'readonly' | 'invalid';

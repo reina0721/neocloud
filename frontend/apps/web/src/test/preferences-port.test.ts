@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { defaultPreferences, type Preferences } from '@clouddrive/surface/preferences-model';
+import { defaultPreferences, type Preferences } from '@neocloud/surface/preferences-model';
 
 import { createHostPreferencesPort } from '../host/preferences-port';
 import { useShellStore } from '../state/use-shell-store';

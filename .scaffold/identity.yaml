@@ -1,12 +1,12 @@
 schema_version: 1
 ownership: copy-owned
 source:
-  repository: github.com/reina0721/clouddrive
-  module: github.com/reina0721/clouddrive
-  application_name: clouddrive
+  repository: github.com/reina0721/neocloud
+  module: github.com/reina0721/neocloud
+  application_name: neocloud
   application_description: 自托管文件管理与分享协作工作区
-  binary_name: clouddrive
-  environment_prefix: APP_
+  binary_name: neocloud
+  environment_prefix: NEOCLOUD_APP_
   config_filename: config.yaml
 required_identity_changes:
   - id: module

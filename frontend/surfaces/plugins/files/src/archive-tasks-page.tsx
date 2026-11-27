@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { SelectField, SwitchField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { SelectField, SwitchField, TextField } from '@neocloud/ui-adapter/form-field';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
 import type { ArchiveTask } from '../../../src/files/archives';
 import {
   backgroundTaskKinds,

@@ -1,4 +1,4 @@
-import { useContainerBreakpoint } from '@clouddrive/ui-adapter/container-layout';
+import { useContainerBreakpoint } from '@neocloud/ui-adapter/container-layout';
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

@@ -13,11 +13,11 @@ import {
   permissionSchema,
   passwordPolicySchema,
   type AdministrationPort,
-} from '@clouddrive/surface/administration';
+} from '@neocloud/surface/administration';
 import { refreshServerNavigation } from '../state/use-server-navigation';
 import { createJsonClient, ApiError } from '../api/json-client';
 import { createRuntimePort, readRuntimeInformation } from './runtime-backend';
-import { IdentityError } from '@clouddrive/surface/identity/runtime';
+import { IdentityError } from '@neocloud/surface/identity/runtime';
 import { createAccountRequest } from '../api/account-request';
 
 export function createAdministrationPort(

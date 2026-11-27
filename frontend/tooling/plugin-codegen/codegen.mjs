@@ -30,7 +30,7 @@
  *   单文件完整发布不等于整批模块的一致快照；本工具不提供 mutation 开始后的
  *   整批 transaction commit/rollback。
  *
- * Registry（Sidebar Group→Parent→Child resolution）由 @clouddrive/plugin-framework
+ * Registry（Sidebar Group→Parent→Child resolution）由 @neocloud/plugin-framework
  * registry 在运行时完成，Generator 不复制该逻辑，只序列化静态 aliases/contributions。
  * Framework 不平行建模 Next Route Tree：routeId→descriptor 只是 Plugin 管理功能
  * （Navigation target 校验、Route Target、冲突诊断）需要的 Page Route 索引。
@@ -47,7 +47,7 @@ import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import prettier from 'prettier';
 
-import { loadConfig } from '@clouddrive/config/node';
+import { loadConfig } from '@neocloud/config/node';
 import { isPublicationTemporaryFile, publishArtifacts } from './publish-artifacts.mjs';
 
 const frontendRoot = resolve(import.meta.dirname, '..', '..');
@@ -55,17 +55,17 @@ const surfaceRoot = join(frontendRoot, 'surfaces');
 const pluginsRoot = join(surfaceRoot, 'plugins');
 const generatedRoot = join(surfaceRoot, 'generated');
 const hostAppRoot = join(frontendRoot, 'apps', 'web', 'src', 'app');
-const surfacePackageName = '@clouddrive/surface';
+const surfacePackageName = '@neocloud/surface';
 const navigationGroupsPath = join(pluginsRoot, 'navigation-groups.ts');
 const surfaceIconVocabularyPath = join(surfaceRoot, 'src', 'navigation-icon.ts');
 
 /* ------------------------------------------------------------------ */
-/* Host Deployment Mode（构建期配置，由 @clouddrive/config 统一解析） */
+/* Host Deployment Mode（构建期配置，由 @neocloud/config 统一解析） */
 /* ------------------------------------------------------------------ */
 
 /**
  * 从 apps/web/.env 加载配置进 process.env（若尚未设置）。
- * 委托至 @clouddrive/config/node 的 loadConfig() 保证单一事实来源。
+ * 委托至 @neocloud/config/node 的 loadConfig() 保证单一事实来源。
  */
 export function loadHostEnv() {
   loadConfig();
@@ -77,7 +77,7 @@ export function loadHostEnv() {
  * - static-enumerated：仍 output:"export"，允许 [param] 动态段，动态 page 须自带
  *   generateStaticParams（Next build 是最终 authority）；
  * - server：真实 Next Runtime Server，动态/request-time 按 Next 原生规则开放。
- * 缺省 = static。由 @clouddrive/config 统一校验与解析。
+ * 缺省 = static。由 @neocloud/config 统一校验与解析。
  */
 export function getDeploymentMode() {
   const config = loadConfig();
@@ -535,7 +535,7 @@ async function collectSurface() {
 
 function buildCatalogText(plugins, allRoutes, aliases) {
   const lines = [
-    "import type { RouteCatalog } from '@clouddrive/plugin-framework';",
+    "import type { RouteCatalog } from '@neocloud/plugin-framework';",
     '',
     'export const generatedRouteCatalog: RouteCatalog = {',
     '  plugins: [',
@@ -608,9 +608,9 @@ function buildCatalogText(plugins, allRoutes, aliases) {
 function buildCompositionText(plugins) {
   const i18nPlugins = plugins.filter((plugin) => plugin.hasI18n);
   const lines = [
-    "import { createRegistry } from '@clouddrive/plugin-framework';",
-    "import type { RegistryModel } from '@clouddrive/plugin-framework';",
-    "import type { TranslationResources } from '@clouddrive/i18n';",
+    "import { createRegistry } from '@neocloud/plugin-framework';",
+    "import type { RegistryModel } from '@neocloud/plugin-framework';",
+    "import type { TranslationResources } from '@neocloud/i18n';",
     "import { generatedRouteCatalog } from '../catalog/catalog';",
     "import { assertValidSurfaceRegistry, mergeTranslationResources, type SurfaceComposition } from '../../src/composition';",
     "import { surfaceShellI18nResources } from '../../src/i18n';",

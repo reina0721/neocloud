@@ -1,4 +1,4 @@
-import type { ProductState } from '@clouddrive/types';
+import type { ProductState } from '@neocloud/types';
 import type { ReactNode } from 'react';
 
 import { Action } from './action';

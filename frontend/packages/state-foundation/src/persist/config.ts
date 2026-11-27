@@ -25,7 +25,7 @@ export function definePersistConfig<S, P = Partial<S>>(
   // 默认 namespace 管控：key 必须以受管前缀开头，防裸 key 散落。
   if (!isManagedKey(config.name)) {
     throw new Error(
-      `Persist config: name 必须以受管 namespace 前缀开头（clouddrive.*），收到 ${config.name}`,
+      `Persist config: name 必须以受管 namespace 前缀开头（neocloud.*），收到 ${config.name}`,
     );
   }
   if (config.migrate !== undefined && typeof config.migrate !== 'function') {

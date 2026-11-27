@@ -12,14 +12,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	pkgclock "github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/coordination"
-	pkgexecution "github.com/reina0721/clouddrive/pkg/execution"
-	"github.com/reina0721/clouddrive/pkg/health"
-	"github.com/reina0721/clouddrive/pkg/logger"
-	pkgobservability "github.com/reina0721/clouddrive/pkg/observability"
-	pkgschedule "github.com/reina0721/clouddrive/pkg/schedule"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	pkgclock "github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/coordination"
+	pkgexecution "github.com/reina0721/neocloud/pkg/execution"
+	"github.com/reina0721/neocloud/pkg/health"
+	"github.com/reina0721/neocloud/pkg/logger"
+	pkgobservability "github.com/reina0721/neocloud/pkg/observability"
+	pkgschedule "github.com/reina0721/neocloud/pkg/schedule"
 )
 
 const scheduledWorkKind = "scheduled-task"

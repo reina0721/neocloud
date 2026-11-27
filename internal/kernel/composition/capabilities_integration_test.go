@@ -9,16 +9,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel"
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	cacheapp "github.com/reina0721/clouddrive/internal/kernel/app/cache"
-	storageapp "github.com/reina0721/clouddrive/internal/kernel/app/storage"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	pkgcache "github.com/reina0721/clouddrive/pkg/cache"
-	pkgi18n "github.com/reina0721/clouddrive/pkg/i18n"
-	pkgstorage "github.com/reina0721/clouddrive/pkg/storage"
+	"github.com/reina0721/neocloud/internal/kernel"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	cacheapp "github.com/reina0721/neocloud/internal/kernel/app/cache"
+	storageapp "github.com/reina0721/neocloud/internal/kernel/app/storage"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	pkgcache "github.com/reina0721/neocloud/pkg/cache"
+	pkgi18n "github.com/reina0721/neocloud/pkg/i18n"
+	pkgstorage "github.com/reina0721/neocloud/pkg/storage"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestComposeSwapsI18nAndStorageAndPreflightsCacheRestart(t *testing.T) {

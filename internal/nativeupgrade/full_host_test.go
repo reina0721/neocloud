@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/deployment"
+	"github.com/reina0721/neocloud/internal/deployment"
 )
 
 func TestManagedFullProcessHandoff(t *testing.T) {

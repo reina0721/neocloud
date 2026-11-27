@@ -3,11 +3,11 @@ package composition
 import (
 	"fmt"
 
-	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
-	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
-	webuicontract "github.com/reina0721/clouddrive/internal/webui"
-	pkgobservability "github.com/reina0721/clouddrive/pkg/observability"
+	authmodel "github.com/reina0721/neocloud/internal/module/auth/model"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
+	"github.com/reina0721/neocloud/internal/transport/http/humabinding"
+	webuicontract "github.com/reina0721/neocloud/internal/webui"
+	pkgobservability "github.com/reina0721/neocloud/pkg/observability"
 )
 
 // applicationBlueprint 冻结只依赖代码声明的应用目录；它不持有配置、资源或运行期 Handler。

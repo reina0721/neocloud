@@ -4,10 +4,10 @@ import {
   FoundationControlledField,
   FoundationForm,
   useFoundationForm,
-} from '@clouddrive/form-foundation';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { TabsView } from '@clouddrive/ui-adapter/data-display';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
+} from '@neocloud/form-foundation';
+import { Action } from '@neocloud/ui-adapter/action';
+import { TabsView } from '@neocloud/ui-adapter/data-display';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
 import {
   CheckboxField,
   ComboField,
@@ -16,15 +16,15 @@ import {
   SwitchField,
   TextAreaField,
   TextField,
-} from '@clouddrive/ui-adapter/form-field';
-import { Panel } from '@clouddrive/ui-adapter/panel';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
+} from '@neocloud/ui-adapter/form-field';
+import { Panel } from '@neocloud/ui-adapter/panel';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
 import { CheckCircle2, Save, ShieldCheck } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import type { Preferences } from '@neocloud/surface/preferences-model';
 
 import {
   StickyActions,
@@ -32,12 +32,12 @@ import {
   Page,
   Section,
   SplitView,
-} from '@clouddrive/surface-foundation/layout';
+} from '@neocloud/surface-foundation/layout';
 import type { ReferenceFormInput } from '../../src/schemas';
 import { useLocalSaveSimulation } from '../../src/browser-local-save';
 
 const DatePickerField = dynamic(
-  () => import('@clouddrive/ui-adapter/date-picker-field').then((module) => module.DatePickerField),
+  () => import('@neocloud/ui-adapter/date-picker-field').then((module) => module.DatePickerField),
   { ssr: false },
 );
 

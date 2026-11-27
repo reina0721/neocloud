@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	storageclient "github.com/reina0721/clouddrive/pkg/storage/client"
+	storageclient "github.com/reina0721/neocloud/pkg/storage/client"
 )
 
 // Config configures the local object-storage adapter.

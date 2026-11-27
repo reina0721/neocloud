@@ -1,5 +1,5 @@
 import { parseAuditColumnLayoutPersisted } from '../src/column-layout-schema';
-import { createPersistStore, createLocalStorage } from '@clouddrive/state-foundation';
+import { createPersistStore, createLocalStorage } from '@neocloud/state-foundation';
 
 /**
  * 审计日志列布局（audit 插件私有 store）。
@@ -28,7 +28,7 @@ export const useAuditColumnLayoutStore = createPersistStore<
     resetVisibleOrder: () => set({ visibleOrder: null }),
   }),
   {
-    name: 'clouddrive.plugin.audit.column-layout',
+    name: 'neocloud.plugin.audit.column-layout',
     version: 1,
     skipHydration: true,
     storage: createLocalStorage(),

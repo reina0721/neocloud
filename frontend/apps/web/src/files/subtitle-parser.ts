@@ -1,4 +1,4 @@
-import { FilesError } from '@clouddrive/surface/files';
+import { FilesError } from '@neocloud/surface/files';
 import {
   subtitleLimits,
   type SubtitleCue,

@@ -8,16 +8,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel"
-	kernelcomposition "github.com/reina0721/clouddrive/internal/kernel/composition"
-	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	fileswebdav "github.com/reina0721/clouddrive/internal/module/files/binding/webdav"
-	httpbinding "github.com/reina0721/clouddrive/internal/module/ops/binding/http"
-	opsmodel "github.com/reina0721/clouddrive/internal/module/ops/model"
-	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
-	"github.com/reina0721/clouddrive/pkg/httpx"
-	"github.com/reina0721/clouddrive/pkg/logger"
-	"github.com/reina0721/clouddrive/pkg/supervisor"
+	"github.com/reina0721/neocloud/internal/kernel"
+	kernelcomposition "github.com/reina0721/neocloud/internal/kernel/composition"
+	authmodel "github.com/reina0721/neocloud/internal/module/auth/model"
+	fileswebdav "github.com/reina0721/neocloud/internal/module/files/binding/webdav"
+	httpbinding "github.com/reina0721/neocloud/internal/module/ops/binding/http"
+	opsmodel "github.com/reina0721/neocloud/internal/module/ops/model"
+	"github.com/reina0721/neocloud/internal/transport/http/humabinding"
+	"github.com/reina0721/neocloud/pkg/httpx"
+	"github.com/reina0721/neocloud/pkg/logger"
+	"github.com/reina0721/neocloud/pkg/supervisor"
 )
 
 func (a *Application) runService(ctx context.Context) error {

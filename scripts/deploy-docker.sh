@@ -82,7 +82,12 @@ elif [[ -n $INSTALL_DIR ]]; then
 elif [[ -f $legacy_state/runtime.env ]]; then
   state=$legacy_state
 else
-  state=$(resolve_path "${HOME:?}/clouddrive-deploy" "$PWD")
+  state=$(resolve_path "${HOME:?}/neocloud-deploy" "$PWD")
+  previous_state=$(resolve_path "$HOME/clouddrive-deploy" "$PWD")
+  if [[ -f $previous_state/.control/instance || -f $previous_state/deploy.env ]]; then
+    [[ ! -f $state/.control/instance && ! -f $state/deploy.env ]] || fail '同时检测到旧版和新版源码部署，请通过 --dir 指定实例目录'
+    state=$previous_state
+  fi
 fi
 [[ $state != / ]] || fail '安装目录不能是 /'
 if [[ $state == "$legacy_state" && -f $state/runtime.env ]]; then legacy=true; fi
@@ -150,6 +155,7 @@ unset COMPOSE_COMPATIBILITY
 export SETUP_TOKEN=
 export API_IMAGE="$project-api:local" WEB_IMAGE="$project-web:local"
 export CLOUDDRIVE_SOURCE_PROJECT="$project" WEB_BIND WEB_PORT PUBLIC_ORIGIN ALLOW_INSECURE_HTTP
+export NEOCLOUD_SOURCE_PROJECT="$project"
 export ALLOWED_ORIGINS
 volume="$project-data"
 access=$PUBLIC_ORIGIN
@@ -195,6 +201,7 @@ if [[ -z $daemon || -n ${DOCKER_CONTEXT:-} ]]; then daemon=$(docker context insp
 [[ $(docker info --format '{{.OSType}}') == linux ]] || fail '需要正在运行的 Linux Docker Engine'
 if [[ $new == true ]]; then owner=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n'); fi
 export CLOUDDRIVE_SOURCE_OWNER="$owner"
+export NEOCLOUD_SOURCE_OWNER="$owner"
 
 compose() {
   docker compose --project-name "$project" --env-file /dev/null \
@@ -411,6 +418,7 @@ case $action in
     [[ $SETUP_TOKEN =~ ^[a-f0-9]{64}$ ]] || fail '初始化令牌文件损坏'
     CLOUDDRIVE_SOURCE_COMMIT=$(git -C "$root" rev-parse HEAD 2>/dev/null || printf unknown)
     export SETUP_TOKEN CLOUDDRIVE_SOURCE_COMMIT
+    export NEOCLOUD_SOURCE_COMMIT="$CLOUDDRIVE_SOURCE_COMMIT"
     compose build backend web
     verify_data_directory
     check_port

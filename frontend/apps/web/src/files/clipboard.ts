@@ -5,7 +5,7 @@ import {
   type FileClipboardPort,
   type FileClipboardSnapshot,
   type FilePasteResult,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 
 /** createFileClipboard 将有限待处理目录项留在单账号运行域，不写系统剪贴板或磁盘。 */
 export function createFileClipboard(

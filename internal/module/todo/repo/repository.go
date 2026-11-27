@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/todo/model"
-	"github.com/reina0721/clouddrive/internal/module/todo/service"
-	"github.com/reina0721/clouddrive/pkg/database"
-	"github.com/reina0721/clouddrive/pkg/fault"
+	"github.com/reina0721/neocloud/internal/module/todo/model"
+	"github.com/reina0721/neocloud/internal/module/todo/service"
+	"github.com/reina0721/neocloud/pkg/database"
+	"github.com/reina0721/neocloud/pkg/fault"
 	"gorm.io/gorm"
 )
 

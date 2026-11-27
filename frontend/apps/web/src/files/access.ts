@@ -3,7 +3,7 @@ import {
   audienceTargetSchema,
   effectiveFileAccessSchema,
   type FileAccessPort,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import type { createJsonClient } from '../api/json-client';
 
 /** createFileAccessPort 复用同一文件客户端与账号围栏，不创建新认证或身份缓存。 */

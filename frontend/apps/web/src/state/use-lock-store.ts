@@ -1,4 +1,4 @@
-import { createPersistStore, createSessionStorage } from '@clouddrive/state-foundation';
+import { createPersistStore, createSessionStorage } from '@neocloud/state-foundation';
 
 /**
  * 锁屏状态（Host 拥有，会话级持久化）。
@@ -32,7 +32,7 @@ export const useLockStore = createPersistStore<
     unlock: () => set({ locked: false, lockedAt: null, reason: null, userId: null }),
   }),
   {
-    name: 'clouddrive.lock',
+    name: 'neocloud.lock',
     version: 1,
     skipHydration: false,
     storage: createSessionStorage(),

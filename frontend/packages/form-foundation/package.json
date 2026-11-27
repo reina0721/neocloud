@@ -1,5 +1,5 @@
 {
-  "name": "@clouddrive/form-foundation",
+  "name": "@neocloud/form-foundation",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@clouddrive/schemas": "workspace:*",
+    "@neocloud/schemas": "workspace:*",
     "@hookform/resolvers": "^5.9.1",
     "react": "^19.2.8",
     "react-hook-form": "^7.86.0"

@@ -1,6 +1,6 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 
 /**
  * 水印层（Host Shell 表现）。

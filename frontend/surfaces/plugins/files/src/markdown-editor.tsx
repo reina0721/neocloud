@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { TextAreaField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { useContainerBreakpoint } from '@clouddrive/ui-adapter/container-layout';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { TextAreaField, TextField } from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { useContainerBreakpoint } from '@neocloud/ui-adapter/container-layout';
 import {
   Bold,
   Code,

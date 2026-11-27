@@ -10,19 +10,19 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { FilesError, type FileEntry } from '@clouddrive/surface/files';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { FilesError, type FileEntry } from '@neocloud/surface/files';
 import {
   useReaderDraftAutosave,
   type ImageCopyDestination,
   type ReaderDraft,
-} from '@clouddrive/surface/files/runtime';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { CheckboxField, SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { RangeSlider } from '@clouddrive/ui-adapter/range-slider';
+} from '@neocloud/surface/files/runtime';
+import { Action } from '@neocloud/ui-adapter/action';
+import { CheckboxField, SelectField, TextField } from '@neocloud/ui-adapter/form-field';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { MenuButton } from '@neocloud/ui-adapter/menu-button';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { RangeSlider } from '@neocloud/ui-adapter/range-slider';
 import {
   Crop,
   FlipHorizontal2,

@@ -1,31 +1,31 @@
 'use client';
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
-import { formatDate, formatNumber, useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
+import { formatDate, formatNumber, useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
 import {
   Collection,
   CollectionPagination,
   CollectionQuery,
   type CollectionActiveFilter,
-} from '@clouddrive/surface-foundation/collection';
+} from '@neocloud/surface-foundation/collection';
 import {
   CollectionToolbar,
   type ColumnSettingsText,
   type DensityLevel,
-} from '@clouddrive/surface-foundation/collection-tools';
-import { normalizeColumnLayout, toCsv, type CsvColumn } from '@clouddrive/core';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { PaginationControl } from '@clouddrive/ui-adapter/navigation';
-import { DataTable, type DataColumn } from '@clouddrive/ui-adapter/data-display';
-import { SelectField, CheckboxField } from '@clouddrive/ui-adapter/form-field';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import type { BatchStatusResult } from '@clouddrive/surface/identity/runtime';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
-import { NavigationIcon } from '@clouddrive/surface/icon-presentation';
+} from '@neocloud/surface-foundation/collection-tools';
+import { normalizeColumnLayout, toCsv, type CsvColumn } from '@neocloud/core';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { PaginationControl } from '@neocloud/ui-adapter/navigation';
+import { DataTable, type DataColumn } from '@neocloud/ui-adapter/data-display';
+import { SelectField, CheckboxField } from '@neocloud/ui-adapter/form-field';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import type { BatchStatusResult } from '@neocloud/surface/identity/runtime';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
+import { NavigationIcon } from '@neocloud/surface/icon-presentation';
 import { Plus, RefreshCw, UserCheck, UserX } from '../../../src/action-icons';
 import {
   useIdentityPort,
@@ -33,11 +33,11 @@ import {
   defaultUserQuery,
   type UserQuery,
   type DirectoryUser,
-} from '@clouddrive/surface/identity/runtime';
-import { route, RouteLink, usePluginNavigation } from '@clouddrive/plugin-framework/plugin';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { rehydrateStore } from '@clouddrive/state-foundation';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
+} from '@neocloud/surface/identity/runtime';
+import { route, RouteLink, usePluginNavigation } from '@neocloud/plugin-framework/plugin';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { rehydrateStore } from '@neocloud/state-foundation';
+import type { Preferences } from '@neocloud/surface/preferences-model';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import {
   IdentityQueryState,

@@ -1,8 +1,8 @@
-import { Action } from '@clouddrive/ui-adapter/action';
-import { RadioGroupField } from '@clouddrive/ui-adapter/form-field';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { ToggleGroup } from '@clouddrive/ui-adapter/toggle-group';
+import { Action } from '@neocloud/ui-adapter/action';
+import { RadioGroupField } from '@neocloud/ui-adapter/form-field';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { ToggleGroup } from '@neocloud/ui-adapter/toggle-group';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

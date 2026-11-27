@@ -1,4 +1,4 @@
-import { createLocalStorage, createPersistStore } from '@clouddrive/state-foundation';
+import { createLocalStorage, createPersistStore } from '@neocloud/state-foundation';
 
 import { parseTodoPersisted } from '../src/todo-store-schema';
 import { WORKSPACE_TODO_IDS } from '../src/workspace-data';
@@ -29,7 +29,7 @@ export type WorkspaceTodoPersisted = {
   completedIds: readonly string[];
 };
 
-export const WORKSPACE_TODO_STORAGE_KEY = 'clouddrive.plugin.workspace';
+export const WORKSPACE_TODO_STORAGE_KEY = 'neocloud.plugin.workspace';
 export const WORKSPACE_TODO_STORAGE_VERSION = 1;
 
 const KNOWN_TODO_IDS: readonly string[] = WORKSPACE_TODO_IDS;

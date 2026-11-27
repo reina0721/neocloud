@@ -1,10 +1,10 @@
 # Web Host 认证与账户边界
 
-当前 CloudDrive 使用 Go IAM 的真实 Cookie 会话，Web Host 通过 `createBackendAuthService` 访问同源 `/api/console/v1`。身份、权限、注册策略和会话撤销由服务端决定；本目录拥有浏览器传输与应用生命周期，不实现另一套生产身份库。部署和 Cookie/Origin 边界见[部署说明](../../../../../docs/operations/clouddrive-deployment.md)。
+当前 NeoCloud 使用 Go IAM 的真实 Cookie 会话，Web Host 通过 `createBackendAuthService` 访问同源 `/api/console/v1`。身份、权限、注册策略和会话撤销由服务端决定；本目录拥有浏览器传输与应用生命周期，不实现另一套生产身份库。部署和 Cookie/Origin 边界见[部署说明](../../../../../docs/operations/clouddrive-deployment.md)。
 
 ## 入口与配置
 
-`NEXT_PUBLIC_AUTH_MODE=backend` 选择当前真实适配器，`NEXT_PUBLIC_AUTH_API_BASE_URL=/api/console/v1` 使用 Next 同源代理。显式 `mock` 模式只用于确定性前端参考与测试，其本地账号和权限不能证明真实后端可用；Backend 失败不会回退模拟身份。完整契约见[API 说明](../../../../../api/README.md)。
+`NEXT_PUBLIC_NEOCLOUD_AUTH_MODE=backend` 选择当前真实适配器，`NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL=/api/console/v1` 使用 Next 同源代理。显式 `mock` 模式只用于确定性前端参考与测试，其本地账号和权限不能证明真实后端可用；Backend 失败不会回退模拟身份。完整契约见[API 说明](../../../../../api/README.md)。
 
 | 入口                  | 职责                                               |
 | --------------------- | -------------------------------------------------- |
@@ -20,7 +20,7 @@
 
 `/setup` 通过 `GET /auth/setup-policy` 读取密码长度、复杂度和初始化状态，读取失败时允许重试。密码长度按 Unicode 码点校验；提交时服务端仍复核当前策略和设置令牌。服务端返回的输入错误关联到对应字段，并发初始化或已经初始化时显示登录入口。
 
-真实后端登录接受邮箱和已有 IAM 用户名。登录页与已初始化的首次设置页共用「无法登录？」说明。普通用户联系实例管理员，主机维护者在运行当前实例的主机使用 `clouddrive iam recover-owner`。网页帮助仅展示操作指引。
+真实后端登录接受邮箱和已有 IAM 用户名。登录页与已初始化的首次设置页共用「无法登录？」说明。普通用户联系实例管理员，主机维护者在运行当前实例的主机使用 `neocloud iam recover-owner`。网页帮助仅展示操作指引。
 
 JSON 客户端统一处理 `credentials:include`、`cache:no-store`、CSRF、取消、超时与协议错误。恢复时的 401 表示无有效会话；登录凭据错误、限流、403、账号冲突及服务失败保留各自语义。不得把错误转换为模拟用户或认证成功。
 

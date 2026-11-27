@@ -7,7 +7,7 @@ import {
   FilesError,
   type ConnectionsPort,
   type FileConnection,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import type { createJsonClient } from '../api/json-client';
 
 /** createConnectionsPort 复用现有会话传输，端点由服务端提供，剪贴板由Host拥有。 */

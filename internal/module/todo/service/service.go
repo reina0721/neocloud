@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/reina0721/clouddrive/internal/module/todo/model"
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/fault"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/internal/module/todo/model"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/fault"
+	"github.com/reina0721/neocloud/pkg/idgen"
 )
 
 var ErrPermissionDenied = errors.New("todo actor is not authorized")

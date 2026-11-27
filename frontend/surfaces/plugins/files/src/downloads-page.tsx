@@ -1,17 +1,17 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import { useFileTime } from './use-file-time';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
 import {
   CheckboxField,
   SelectField,
   SwitchField,
   TextField,
-} from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface, DrawerSurface } from '@clouddrive/ui-adapter/overlays';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+} from '@neocloud/ui-adapter/form-field';
+import { DialogSurface, DrawerSurface } from '@neocloud/ui-adapter/overlays';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import {
   downloadBatchError,

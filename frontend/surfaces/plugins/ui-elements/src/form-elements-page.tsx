@@ -1,6 +1,6 @@
 'use client';
 
-import type { DatePickerFieldProps } from '@clouddrive/ui-adapter/date-picker-field';
+import type { DatePickerFieldProps } from '@neocloud/ui-adapter/date-picker-field';
 import type { ComponentType, ReactNode } from 'react';
 import {
   CheckboxField,
@@ -11,14 +11,14 @@ import {
   TextAreaField,
   TextField,
   PasswordField,
-} from '@clouddrive/ui-adapter/form-field';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
-import { RangeSlider } from '@clouddrive/ui-adapter/range-slider';
-import { FormErrorSummary } from '@clouddrive/ui-adapter/form-error-summary';
+} from '@neocloud/ui-adapter/form-field';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
+import { RangeSlider } from '@neocloud/ui-adapter/range-slider';
+import { FormErrorSummary } from '@neocloud/ui-adapter/form-error-summary';
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
 import { ComponentPreview } from './component-preview';
 import { UiElementsFamilyPage } from './family-page';
 import { Eye, EyeOff, Compass, Sparkles } from 'lucide-react';

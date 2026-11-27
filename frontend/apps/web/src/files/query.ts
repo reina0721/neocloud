@@ -1,4 +1,4 @@
-import { fileFiltersSchema, encodeFileFilters, type FileQuery } from '@clouddrive/surface/files';
+import { fileFiltersSchema, encodeFileFilters, type FileQuery } from '@neocloud/surface/files';
 
 /** fileListParameters 显式序列化有类型条件，关键词使用重复参数保留名称中的逗号。 */
 export function fileListParameters(query: FileQuery): URLSearchParams {

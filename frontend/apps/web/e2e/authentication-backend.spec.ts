@@ -141,10 +141,23 @@ test('Backend mode uses CSRF/session API for login, restore and logout without M
   const otherTab = await context.newPage();
   await otherTab.goto(`${e2eBackendBaseUrl}/settings`);
   await expect(otherTab.getByRole('button', { name: '当前用户', exact: true })).toBeVisible();
+  const legacyClient = await context.newPage();
+  await legacyClient.goto(`${e2eBackendBaseUrl}/api/auth/session`);
+  await legacyClient.evaluate(() => {
+    const channel = new BroadcastChannel('clouddrive.auth-session');
+    channel.onmessage = (event: MessageEvent<unknown>) => {
+      if (event.data === 'session-changed') {
+        document.body.dataset.sessionChanged = 'true';
+        channel.close();
+      }
+    };
+  });
   await page.getByRole('menuitem', { name: '退出登录', exact: true }).click();
   await expect(page).toHaveURL(`${e2eBackendBaseUrl}/login`);
   await expect(otherTab).toHaveURL(/\/login\?returnTo=/);
   await expect(otherTab.getByRole('button', { name: '当前用户', exact: true })).toHaveCount(0);
+  await expect(legacyClient.locator('body')).toHaveAttribute('data-session-changed', 'true');
+  await legacyClient.close();
   await otherTab.close();
   expect(writes.map((write) => write.path)).toEqual(['/api/auth/login', '/api/auth/logout']);
   expect(writes.every((write) => write.csrf === 'contract-csrf')).toBe(true);

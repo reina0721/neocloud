@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	pkgschedule "github.com/reina0721/clouddrive/pkg/schedule"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	pkgschedule "github.com/reina0721/neocloud/pkg/schedule"
 )
 
 func TestDecodeSchedulerConfiguration(t *testing.T) {

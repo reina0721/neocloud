@@ -17,7 +17,7 @@ import (
 	"testing"
 )
 
-const modulePath = "github.com/reina0721/clouddrive"
+const modulePath = "github.com/reina0721/neocloud"
 
 type packageNode struct {
 	ImportPath string
@@ -113,7 +113,7 @@ func TestAdminFoundationRulesRejectImplicitAggregation(t *testing.T) {
 		{name: "init registration", path: "internal/permission/catalog.go", content: "package permission\nfunc init() {}\n"},
 		{name: "runtime scan", path: "internal/module/migration/catalog.go", content: "package migration\nimport \"os\"\nfunc discover() { _, _ = os.ReadDir(\".\") }\n"},
 		{name: "global registry", path: "internal/permission/catalog.go", content: "package permission\ntype Registry struct{}\n"},
-		{name: "kernel dependency", path: "internal/permission/catalog.go", content: "package permission\nimport _ \"github.com/reina0721/clouddrive/internal/kernel\"\n"},
+		{name: "kernel dependency", path: "internal/permission/catalog.go", content: "package permission\nimport _ \"github.com/reina0721/neocloud/internal/kernel\"\n"},
 	}
 	for _, fixture := range fixtures {
 		t.Run(fixture.name, func(t *testing.T) {
@@ -204,7 +204,7 @@ func build() *zap.Logger { return zap.NewNop() }
 
 	noopRoot := t.TempDir()
 	writeModuleBoundaryFixture(t, noopRoot, "internal/example/example.go", `package example
-import projectlogger "github.com/reina0721/clouddrive/pkg/logger"
+import projectlogger "github.com/reina0721/neocloud/pkg/logger"
 func build() projectlogger.Logger { return projectlogger.Noop() }
 `)
 	if err := validateLoggingSourceOwnership(noopRoot); err == nil {
@@ -233,7 +233,7 @@ func report() { log.Print("bypass") }
 	writeModuleBoundaryFixture(t, rawErrorRoot, "internal/example/example.go", `package example
 import (
 	"errors"
-	projectlogger "github.com/reina0721/clouddrive/pkg/logger"
+	projectlogger "github.com/reina0721/neocloud/pkg/logger"
 )
 func report(log projectlogger.Logger) {
 	err := errors.New("unsafe detail")
@@ -268,7 +268,7 @@ func Client() *third.Client { return nil }
 
 	adapterLeak := t.TempDir()
 	writeModuleBoundaryFixture(t, adapterLeak, "internal/module/example/module.go", `package example
-import sdk "github.com/reina0721/clouddrive/internal/module/example/adapter/sdk"
+import sdk "github.com/reina0721/neocloud/internal/module/example/adapter/sdk"
 func Adapter() *sdk.Adapter { return nil }
 `)
 	if err := validateModuleExportBoundaries(adapterLeak); err == nil {

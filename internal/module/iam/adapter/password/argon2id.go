@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/service"
+	"github.com/reina0721/neocloud/internal/module/iam/service"
 	"golang.org/x/crypto/argon2"
 )
 

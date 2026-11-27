@@ -65,8 +65,8 @@ describe('Schema Runtime 集成（临时 workspace + 真实 fixture）', () => {
       expect(list).toHaveLength(1);
       expect(list[0]?.sourceId).toBe('design-system');
       const doc = await runtime.readSource('design-system');
-      const meta = doc['x-clouddrive'] as Record<string, unknown>;
-      expect(meta.authorityId).toBe('@clouddrive/design-system');
+      const meta = doc['x-neocloud'] as Record<string, unknown>;
+      expect(meta.authorityId).toBe('@neocloud/design-system');
       const result = await runtime.validate('design-system');
       expect(result.ok).toBe(true);
     } finally {
@@ -123,7 +123,7 @@ describe('Schema Runtime 集成（临时 workspace + 真实 fixture）', () => {
     try {
       const schemaFile = join(workspace, 'packages/design-system/design-system.schema.json');
       const doc = JSON.parse(await readFile(schemaFile, 'utf8')) as Record<string, unknown>;
-      const meta = doc['x-clouddrive'] as {
+      const meta = doc['x-neocloud'] as {
         source: { tokens: { theme: { radii: Record<string, string> } } };
       };
       const etagBefore = computeEtag(doc);
@@ -138,7 +138,7 @@ describe('Schema Runtime 集成（临时 workspace + 真实 fixture）', () => {
           patch: [
             {
               op: 'replace',
-              path: '/x-clouddrive/source/tokens/theme/radii/control',
+              path: '/x-neocloud/source/tokens/theme/radii/control',
               value: '2rem',
             },
           ],
@@ -153,7 +153,7 @@ describe('Schema Runtime 集成（临时 workspace + 真实 fixture）', () => {
         patch: [
           {
             op: 'replace',
-            path: '/x-clouddrive/source/tokens/theme/radii/control',
+            path: '/x-neocloud/source/tokens/theme/radii/control',
             value: '2rem',
           },
         ],
@@ -161,11 +161,11 @@ describe('Schema Runtime 集成（临时 workspace + 真实 fixture）', () => {
       });
       expect(typeof patched.etag).toBe('string');
       const after = JSON.parse(await readFile(schemaFile, 'utf8')) as {
-        'x-clouddrive': {
+        'x-neocloud': {
           source: { tokens: { theme: { radii: Record<string, string> } } };
         };
       };
-      expect(after['x-clouddrive'].source.tokens.theme.radii.control).toBe('2rem');
+      expect(after['x-neocloud'].source.tokens.theme.radii.control).toBe('2rem');
     } finally {
       await runtime.close();
     }
@@ -187,7 +187,7 @@ describe('Schema Runtime 集成（临时 workspace + 真实 fixture）', () => {
           patch: [
             {
               op: 'replace',
-              path: '/x-clouddrive/source/tokens/theme/radii/control',
+              path: '/x-neocloud/source/tokens/theme/radii/control',
               value: { nested: true },
             },
           ],

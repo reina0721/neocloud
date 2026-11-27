@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestSQLiteReadThenWriteTransactionsSerializeWithoutSnapshotFailures(t *testing.T) {

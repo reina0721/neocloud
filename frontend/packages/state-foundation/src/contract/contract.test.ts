@@ -37,26 +37,26 @@ describe('defineStoreContract', () => {
 });
 
 describe('persist namespace', () => {
-  const ns: PersistNamespace = { product: 'clouddrive', scope: 'shell', store: 'ui' };
+  const ns: PersistNamespace = { product: 'neocloud', scope: 'shell', store: 'ui' };
 
   it('formatPersistKey 三段展开', () => {
-    expect(formatPersistKey(ns)).toBe('clouddrive.shell.ui');
+    expect(formatPersistKey(ns)).toBe('neocloud.shell.ui');
   });
 
   it('缺 scope 时兼容单段历史 key', () => {
-    expect(formatPersistKey({ product: 'clouddrive', scope: '', store: 'shell' })).toBe(
-      'clouddrive.shell',
+    expect(formatPersistKey({ product: 'neocloud', scope: '', store: 'shell' })).toBe(
+      'neocloud.shell',
     );
   });
 
   it('createNamespace 默认 product 与空 scope', () => {
     expect(createNamespace('shell')).toEqual({
-      product: 'clouddrive',
+      product: 'neocloud',
       scope: '',
       store: 'shell',
     });
-    expect(namespaceKey(createNamespace('shell'))).toBe('clouddrive.shell');
-    expect(createPersistKey('shell', 'host')).toBe('clouddrive.host.shell');
+    expect(namespaceKey(createNamespace('shell'))).toBe('neocloud.shell');
+    expect(createPersistKey('shell', 'host')).toBe('neocloud.host.shell');
   });
 
   it('store 名不能为空', () => {
@@ -64,10 +64,10 @@ describe('persist namespace', () => {
   });
 
   it('isManagedKey 识别受管前缀', () => {
-    expect(isManagedKey('clouddrive.shell')).toBe(true);
+    expect(isManagedKey('neocloud.shell')).toBe(true);
     expect(isManagedKey('settings')).toBe(false);
-    expect(isManagedKey('clouddrive')).toBe(true);
+    expect(isManagedKey('neocloud')).toBe(true);
     expect(isManagedKey('community')).toBe(false);
-    expect(DEFAULT_PRODUCT).toBe('clouddrive');
+    expect(DEFAULT_PRODUCT).toBe('neocloud');
   });
 });

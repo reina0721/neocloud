@@ -31,9 +31,9 @@ jobs:
             --build-arg COMMIT="${COMMIT}" \
             --build-arg BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --build-arg DIRTY=false \
-            --tag clouddrive:ci .
+            --tag neocloud:ci .
       - name: Verify runtime profile
-        run: bash scripts/container-smoke.sh clouddrive:ci
+        run: bash scripts/container-smoke.sh neocloud:ci
   web-smoke:
     name: Standalone web runtime smoke
     runs-on: ubuntu-latest
@@ -41,15 +41,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Build and verify relocatable runtime
-        run: docker build --pull -f frontend/Dockerfile --tag clouddrive-web:ci .
+        run: docker build --pull -f frontend/Dockerfile --tag neocloud-web:ci .
       - name: Verify nonroot runtime entry
         run: >-
-          docker run --rm clouddrive-web:ci node -e
+          docker run --rm neocloud-web:ci node -e
           'if (process.getuid() === 0) throw new Error("runtime must be nonroot");
           const fs = require("node:fs");
           fs.accessSync("server.js");
           fs.accessSync("runtime/start-web.mjs");
           for (const file of ["LICENSE", "NOTICE", "SOURCES.json", "fonts/inter-OFL.txt", "fonts/noto-sans-sc-OFL.txt"])
-            if (fs.statSync("/usr/share/licenses/clouddrive/" + file).size === 0) throw new Error("empty license: " + file);
-          const inventory = JSON.parse(fs.readFileSync("/usr/share/licenses/clouddrive/third-party/node/inventory.json", "utf8"));
+            if (fs.statSync("/usr/share/licenses/neocloud/" + file).size === 0) throw new Error("empty license: " + file);
+          const inventory = JSON.parse(fs.readFileSync("/usr/share/licenses/neocloud/third-party/node/inventory.json", "utf8"));
           if (!inventory.some(pkg => pkg.name === "next" && pkg.files.length)) throw new Error("missing dependency licenses");'

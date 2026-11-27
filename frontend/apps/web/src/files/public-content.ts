@@ -1,4 +1,4 @@
-import { FilesError } from '@clouddrive/surface/files';
+import { FilesError } from '@neocloud/surface/files';
 import { BlobBodyError, readBoundedBlob } from '../api/blob-body';
 
 /** readPublicBlob 复用Host流式边界，并保持公开文件的错误契约。 */

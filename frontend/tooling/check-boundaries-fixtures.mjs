@@ -12,7 +12,7 @@ assert.deepEqual(safeSource, [], '项目语义 class 与项目 Action 应通过�
 assert(
   findImportPolicyViolations({
     localPath: 'apps/web/src/app/example.tsx',
-    specifier: `@clouddrive/${'ad' + 'min-'}framework`,
+    specifier: `@neocloud/${'ad' + 'min-'}framework`,
     workspace: 'apps/web',
   }).some(([rule]) => rule === 'Architecture naming'),
   '旧 package namespace 必须失败',
@@ -189,7 +189,7 @@ assert(
     specifier: 'zustand',
     workspace: 'apps/web',
   }).some(([rule]) => rule === 'State foundation'),
-  'apps/web 裸 import zustand 必须失败（应经 @clouddrive/state-foundation）',
+  'apps/web 裸 import zustand 必须失败（应经 @neocloud/state-foundation）',
 );
 assert(
   findImportPolicyViolations({
@@ -220,7 +220,7 @@ assert.deepEqual(
 assert(
   findImportPolicyViolations({
     localPath: 'apps/web/src/app/example.tsx',
-    specifier: '@clouddrive/state-foundation/testing',
+    specifier: '@neocloud/state-foundation/testing',
     workspace: 'apps/web',
   }).some(([rule]) => rule === 'State foundation'),
   'production 代码 import testing subpath 必须失败',
@@ -239,19 +239,19 @@ assert.deepEqual(
 assert(
   findImportPolicyViolations({
     localPath: 'apps/web/src/app/example.tsx',
-    specifier: '@clouddrive/config/node',
+    specifier: '@neocloud/config/node',
     workspace: 'apps/web',
   }).some(([rule]) => rule === 'Config foundation'),
-  'Feature 代码 import @clouddrive/config/node 必须失败',
+  'Feature 代码 import @neocloud/config/node 必须失败',
 );
 assert.deepEqual(
   findImportPolicyViolations({
     localPath: 'apps/web/next.config.ts',
-    specifier: '@clouddrive/config/node',
+    specifier: '@neocloud/config/node',
     workspace: 'apps/web',
   }),
   [],
-  'apps/web/next.config.ts import @clouddrive/config/node 应通过',
+  'apps/web/next.config.ts import @neocloud/config/node 应通过',
 );
 
 console.log(`Boundary fixtures passed: ${negativeFixtures.length + 6} cases.`);

@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // FileAccessPolicy 是维护入口使用的可读能力策略，不暴露内部位集合。

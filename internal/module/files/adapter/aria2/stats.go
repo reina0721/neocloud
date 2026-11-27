@@ -3,7 +3,7 @@ package aria2
 import (
 	"context"
 
-	"github.com/reina0721/clouddrive/internal/module/files/service"
+	"github.com/reina0721/neocloud/internal/module/files/service"
 )
 
 // GlobalStats 只投影管理界面所需的数字，拒绝畸形或超出浏览器整数精度的响应。

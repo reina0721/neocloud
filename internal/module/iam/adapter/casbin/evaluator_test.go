@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/adapter/casbin"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
+	"github.com/reina0721/neocloud/internal/module/iam/adapter/casbin"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
 )
 
 // fixtureEvaluator 构造覆盖 owner/reader/writer 角色与多角色合并的固定快照。

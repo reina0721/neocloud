@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { safeParseWorkspaceSnapshot } from '@clouddrive/surface/api-workbench';
+import { safeParseWorkspaceSnapshot } from '@neocloud/surface/api-workbench';
 import {
   defaultPreferences,
   type AppearancePreferences,
-} from '@clouddrive/surface/preferences-model';
+} from '@neocloud/surface/preferences-model';
 
 const profiles: readonly Readonly<{
   name: string;

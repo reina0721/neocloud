@@ -1,4 +1,4 @@
-import { FilesError, type FilesErrorCode, type TransfersPort } from '@clouddrive/surface/files';
+import { FilesError, type FilesErrorCode, type TransfersPort } from '@neocloud/surface/files';
 
 function publicationFailure(failure: string | undefined): FilesErrorCode {
   switch (failure) {

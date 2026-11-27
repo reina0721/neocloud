@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readNeoCloudEnv } from '../apps/web/runtime/environment.mjs';
 import { verifyFilesOverflow } from './files-overflow';
 import { verifyRegistrationPolicy } from './registration-policy';
 
@@ -7,9 +8,9 @@ test('empty SQLite setup, real business writes, protected native pages and logou
   page,
 }) => {
   test.setTimeout(180_000);
-  const token = process.env.CLOUDDRIVE_TEST_SETUP_TOKEN;
-  const password = process.env.CLOUDDRIVE_TEST_PASSWORD;
-  const apiUrl = process.env.CLOUDDRIVE_TEST_API_URL ?? 'http://127.0.0.1:8088';
+  const token = readNeoCloudEnv('TEST_SETUP_TOKEN');
+  const password = readNeoCloudEnv('TEST_PASSWORD');
+  const apiUrl = readNeoCloudEnv('TEST_API_URL') ?? 'http://127.0.0.1:8088';
   const policyUrl = apiUrl + '/api/console/v1/auth/registration-policy';
   if (!token || !password)
     throw new Error('Run node scripts/dev.mjs --acceptance to create an isolated backend.');

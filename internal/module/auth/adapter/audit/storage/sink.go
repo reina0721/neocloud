@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	"github.com/reina0721/clouddrive/internal/module/auth/repo"
-	"github.com/reina0721/clouddrive/internal/module/auth/service"
-	"github.com/reina0721/clouddrive/pkg/clock"
+	authmodel "github.com/reina0721/neocloud/internal/module/auth/model"
+	"github.com/reina0721/neocloud/internal/module/auth/repo"
+	"github.com/reina0721/neocloud/internal/module/auth/service"
+	"github.com/reina0721/neocloud/pkg/clock"
 )
 
 // Sink 是持久化 AuditSink：只保存脱敏字段，查询接口返回同一视图。

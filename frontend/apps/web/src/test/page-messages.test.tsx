@@ -5,7 +5,7 @@ import {
   FrontendI18nProvider,
   FrontendMessages,
   useFrontendTranslation,
-} from '@clouddrive/i18n';
+} from '@neocloud/i18n';
 
 const resources = {
   'zh-CN': { translation: { scoped: { title: '页面文案' } } },

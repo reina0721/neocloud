@@ -5,9 +5,9 @@ import {
   pinListingSchema,
   navigationRevisionSchema,
   type NavigationPort,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import type { createJsonClient } from '../api/json-client';
-import type { SiteAddresses } from '@clouddrive/surface/administration';
+import type { SiteAddresses } from '@neocloud/surface/administration';
 import { fileDestinationHrefs } from './destinations';
 import {
   parseFileShareAddress,

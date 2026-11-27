@@ -1,4 +1,4 @@
-import type { PluginDefinition } from '@clouddrive/plugin-framework/plugin';
+import type { PluginDefinition } from '@neocloud/plugin-framework/plugin';
 
 export const pluginDefinition = {
   pluginId: 'states',

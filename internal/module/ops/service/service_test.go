@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/reina0721/clouddrive/internal/module/ops/model"
+	"github.com/reina0721/neocloud/internal/module/ops/model"
 )
 
 type sourceFunc func(context.Context) (model.RuntimeSnapshot, error)

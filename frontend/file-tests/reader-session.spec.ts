@@ -183,8 +183,57 @@ for (const [extension, title] of [
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '保留草稿并关闭', exact: true }).click();
     await expect(launcher).toHaveCount(0);
+    if (extension === 'txt') {
+      // 模拟回退版本直接更新旧库，新的读取必须胜过先前镜像。
+      await page.evaluate(async (fileId) => {
+        const open = (name: string) =>
+          new Promise<IDBDatabase>((resolve, reject) => {
+            const request = indexedDB.open(name, 1);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error ?? new Error('Reader fixture database'));
+          });
+        const legacy = await open('clouddrive-file-readers');
+        const current = await open('neocloud-file-readers');
+        const read = (db: IDBDatabase) =>
+          new Promise<unknown[]>((resolve, reject) => {
+            const request = db.transaction('draft').objectStore('draft').getAll();
+            request.onsuccess = () => resolve(request.result as unknown[]);
+            request.onerror = () => reject(request.error ?? new Error('Reader fixture query'));
+          });
+        const byFile = (items: unknown[]) =>
+          items.find(
+            (item): item is { key: string; payload: string } =>
+              typeof item === 'object' &&
+              item !== null &&
+              'key' in item &&
+              typeof item.key === 'string' &&
+              item.key.includes(fileId) &&
+              'payload' in item &&
+              typeof item.payload === 'string',
+          );
+        try {
+          const before = byFile(await read(legacy));
+          const mirror = byFile(await read(current));
+          if (
+            !before ||
+            before.payload !== '本机草稿还原验证' ||
+            mirror?.payload !== before.payload
+          )
+            throw new Error('Reader edit was not committed to both data names');
+          await new Promise<void>((resolve, reject) => {
+            const tx = legacy.transaction('draft', 'readwrite');
+            tx.oncomplete = () => resolve();
+            tx.onabort = () => reject(tx.error ?? new Error('Reader fixture write'));
+            tx.objectStore('draft').put({ ...before, payload: '回退时编辑的草稿' });
+          });
+        } finally {
+          legacy.close();
+          current.close();
+        }
+      }, file.id);
+    }
     await openEditor();
-    await expectText('本机草稿还原验证');
+    await expectText(extension === 'txt' ? '回退时编辑的草稿' : '本机草稿还原验证');
     await namedReader.getByRole('button', { name: '关闭', exact: true }).click();
     await page.getByRole('button', { name: '放弃修改', exact: true }).click();
     await openEditor();

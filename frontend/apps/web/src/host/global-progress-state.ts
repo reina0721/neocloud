@@ -1,4 +1,4 @@
-import { createAppStore } from '@clouddrive/state-foundation';
+import { createAppStore } from '@neocloud/state-foundation';
 
 /**
  * 应用级 Global Pending 状态（Host 内模块单例）。

@@ -1,6 +1,6 @@
 package service
 
-import "github.com/reina0721/clouddrive/internal/module/files/model"
+import "github.com/reina0721/neocloud/internal/module/files/model"
 
 // SharePermissions 以客户可读的具名能力表示链接策略，存储使用受控位集。
 type SharePermissions struct {

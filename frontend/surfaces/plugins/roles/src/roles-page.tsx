@@ -1,21 +1,21 @@
 'use client';
 import { useId, useState } from 'react';
-import { useFrontendTranslation, formatNumber } from '@clouddrive/i18n';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
-import { Collection, CollectionQuery } from '@clouddrive/surface-foundation/collection';
-import { DataTable, type DataColumn } from '@clouddrive/ui-adapter/data-display';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
-import { SelectField } from '@clouddrive/ui-adapter/form-field';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
+import { useFrontendTranslation, formatNumber } from '@neocloud/i18n';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
+import { Collection, CollectionQuery } from '@neocloud/surface-foundation/collection';
+import { DataTable, type DataColumn } from '@neocloud/ui-adapter/data-display';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
+import { SelectField } from '@neocloud/ui-adapter/form-field';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { Action } from '@neocloud/ui-adapter/action';
+import { route, RouteLink } from '@neocloud/plugin-framework/plugin';
 import { KeyRound, Plus, RefreshCw, X } from '../../../src/action-icons';
 import {
   IdentityError,
   useIdentityPort,
   type RoleSummary,
-} from '@clouddrive/surface/identity/runtime';
+} from '@neocloud/surface/identity/runtime';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import {
   IdentityModeNotice,

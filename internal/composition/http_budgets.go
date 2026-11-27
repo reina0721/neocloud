@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/reina0721/clouddrive/internal/module/console"
-	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
+	"github.com/reina0721/neocloud/internal/module/console"
+	"github.com/reina0721/neocloud/internal/transport/http/humabinding"
 )
 
 // transferBudgetMatcher 由同一 operation catalog 派生原生与 console 投影的精确匹配。

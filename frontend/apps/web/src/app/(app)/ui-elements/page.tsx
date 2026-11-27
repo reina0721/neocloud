@@ -4,7 +4,7 @@
 
 import dynamic from 'next/dynamic';
 
-const PluginPage = dynamic(() => import('@clouddrive/surface/plugin-routes/ui-elements/page'), {
+const PluginPage = dynamic(() => import('@neocloud/surface/plugin-routes/ui-elements/page'), {
   loading: () => <div aria-hidden="true" className="h-64" />,
 });
 

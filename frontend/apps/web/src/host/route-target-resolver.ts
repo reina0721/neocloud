@@ -1,7 +1,7 @@
 'use client';
 
-import { generatedSurfaceRegistry } from '@clouddrive/surface/generated/composition';
-import { resolveRouteTarget, type RouteTarget } from '@clouddrive/plugin-framework';
+import { generatedSurfaceRegistry } from '@neocloud/surface/generated/composition';
+import { resolveRouteTarget, type RouteTarget } from '@neocloud/plugin-framework';
 
 /**
  * Host Route Target Resolver —— 唯一解析 Route Target → href 的地方。

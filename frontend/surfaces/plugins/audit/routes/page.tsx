@@ -1,10 +1,10 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
-import { IdentityError, defaultAuditQuery } from '@clouddrive/surface/identity/runtime';
+import { IdentityError, defaultAuditQuery } from '@neocloud/surface/identity/runtime';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import { IdentityQueryState } from '../../../src/identity/query-state';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import { AuditPage } from '../src/audit-page';
 export default function AuditRoute() {
   const params = useSearchParams();

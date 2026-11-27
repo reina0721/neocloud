@@ -3,7 +3,7 @@ import {
   siteProfileManagementSchema,
   SiteProfileError,
   type SiteProfileVersion,
-} from '@clouddrive/surface/administration';
+} from '@neocloud/surface/administration';
 import { ApiError, createJsonClient } from '../api/json-client';
 
 export function createSiteProfileClient(apiBaseUrl: string) {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // DownloadTo 在内容租约内完成原始响应，不让 reader 或共享资源关闭权逃逸。

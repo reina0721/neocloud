@@ -1,18 +1,18 @@
 'use client';
 import './install-translations';
-import { ShellNavigationViewProvider } from '@clouddrive/surface/shell/runtime';
+import { ShellNavigationViewProvider } from '@neocloud/surface/shell/runtime';
 
-import { flattenNavigationLeaves } from '@clouddrive/core';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { PluginLocaleProvider } from '@clouddrive/plugin-framework/plugin';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
-import { WorkspaceBrand, WorkspaceHeader } from '@clouddrive/surface-foundation/layout';
-import { ShellRoot } from '@clouddrive/surface-foundation/shell-navigation';
-import type { NavigationGroup, NavigationNode } from '@clouddrive/types';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { MobileNavigation } from '@clouddrive/ui-adapter/mobile-navigation';
-import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
+import { flattenNavigationLeaves } from '@neocloud/core';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { PluginLocaleProvider } from '@neocloud/plugin-framework/plugin';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import type { Preferences } from '@neocloud/surface/preferences-model';
+import { WorkspaceBrand, WorkspaceHeader } from '@neocloud/surface-foundation/layout';
+import { ShellRoot } from '@neocloud/surface-foundation/shell-navigation';
+import type { NavigationGroup, NavigationNode } from '@neocloud/types';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { MobileNavigation } from '@neocloud/ui-adapter/mobile-navigation';
+import { Skeleton } from '@neocloud/ui-adapter/skeleton';
 import {
   ArrowLeft,
   Cloud,
@@ -30,8 +30,8 @@ import type { ReactNode } from 'react';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { NotificationAlerts } from '../host/notification-alerts';
 
-import { useCommandsPort } from '@clouddrive/plugin-framework/commands';
-import { DrawerSurface } from '@clouddrive/ui-adapter/overlays';
+import { useCommandsPort } from '@neocloud/plugin-framework/commands';
+import { DrawerSurface } from '@neocloud/ui-adapter/overlays';
 import { useAuth } from '../auth/context';
 import { proceedAfterLeaveConfirm } from '../host/leave-confirm';
 import { HostNavigationPortProvider } from '../host/navigation-port';
@@ -42,7 +42,7 @@ import { markForwardRouteIntent, pageTransitionTypes } from '../host/route-trans
 import { resolveScrollOption } from '../host/scroll-preference';
 import { TopProgress } from '../host/top-progress';
 import { useShellStore } from '../state/use-shell-store';
-import { CurrentSiteLogo, useSiteProfile } from '@clouddrive/surface/administration/runtime';
+import { CurrentSiteLogo, useSiteProfile } from '@neocloud/surface/administration/runtime';
 import { HeaderNavigation } from './header-navigation';
 import { NotificationCenter } from './notification-center';
 import { usePageTabsRecorder } from './use-page-tabs-recorder';
@@ -70,7 +70,7 @@ const PageTabs = dynamic(() => import('./page-tabs').then((module) => module.Pag
 });
 
 const CommandMenu = dynamic(
-  () => import('@clouddrive/ui-adapter/command-menu').then((module) => module.CommandMenu),
+  () => import('@neocloud/ui-adapter/command-menu').then((module) => module.CommandMenu),
   { ssr: false },
 );
 
@@ -444,7 +444,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
                   compact={!desktopTools}
                   onNavigate={(destination) => {
                     if (destination === 'lock-screen') {
-                      window.dispatchEvent(new Event('clouddrive:lock'));
+                      window.dispatchEvent(new Event('neocloud:lock'));
                       return;
                     }
                     const href = routeTargetResolver.resolveHref({

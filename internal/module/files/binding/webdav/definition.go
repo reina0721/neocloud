@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	protocol "github.com/reina0721/clouddrive/internal/module/files/adapter/webdav"
-	"github.com/reina0721/clouddrive/internal/module/files/service"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	protocol "github.com/reina0721/neocloud/internal/module/files/adapter/webdav"
+	"github.com/reina0721/neocloud/internal/module/files/service"
+	"github.com/reina0721/neocloud/pkg/idgen"
 )
 
 const Prefix = "/dav/"

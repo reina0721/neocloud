@@ -24,10 +24,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/deployment"
-	"github.com/reina0721/clouddrive/internal/module/migration"
-	"github.com/reina0721/clouddrive/pkg/database"
-	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
+	"github.com/reina0721/neocloud/internal/deployment"
+	"github.com/reina0721/neocloud/internal/module/migration"
+	"github.com/reina0721/neocloud/pkg/database"
+	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
 )
 
 const firstVersion = "v0.9.10"

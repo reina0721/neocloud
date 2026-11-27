@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // ShareFileAction 是一次用例的意图，不能由任意字符串或请求owner扩大范围。

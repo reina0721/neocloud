@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	pkgcache "github.com/reina0721/clouddrive/pkg/cache"
-	"github.com/reina0721/clouddrive/pkg/cache/redisstore"
-	"github.com/reina0721/clouddrive/pkg/coordination"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	pkgcache "github.com/reina0721/neocloud/pkg/cache"
+	"github.com/reina0721/neocloud/pkg/cache/redisstore"
+	"github.com/reina0721/neocloud/pkg/coordination"
 )
 
 const (

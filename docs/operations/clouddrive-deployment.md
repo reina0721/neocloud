@@ -1,4 +1,6 @@
-# CloudDrive 安装与部署
+# NeoCloud 安装与部署
+
+已有 CloudDrive 实例的桥接升级及停机改名见[改名与升级](neocloud-rename.md)。历史命令按文中的正式标签解释。
 
 选择与目标机匹配的入口。Windows 和 Linux 可运行[原生整包](backend-archive.md#运行原生-go-与-web-整包)，也可[从源码构建 Go 与 Node 本机包](#构建与进程)。Linux 服务器可用 [Docker Release 安装脚本](#release-下载版安装与升级)下载配套包、将附件复制到[离线目标机](#自动化与离线安装)，或在本机[构建 Docker 镜像](#从源码部署)。
 

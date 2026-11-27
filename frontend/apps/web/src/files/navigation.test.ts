@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { FilesError, type PinListing } from '@clouddrive/surface/files';
+import { FilesError, type PinListing } from '@neocloud/surface/files';
 import { authPageHref, authReturnDestination } from '../auth/contract';
 import {
   fileShareAddress,
@@ -9,7 +9,7 @@ import {
   withoutShareSaveIntent,
 } from './share-address';
 import { createFileNavigationPort } from './navigation';
-import { publishedSiteOrigin } from '@clouddrive/surface/administration/runtime';
+import { publishedSiteOrigin } from '@neocloud/surface/administration/runtime';
 
 describe('保存分享与登录返回的Host边界', () => {
   const token = 'a'.repeat(43),

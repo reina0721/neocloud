@@ -1,5 +1,5 @@
 import { parseColumnLayoutPersisted } from '../src/column-layout-schema';
-import { createPersistStore, createLocalStorage } from '@clouddrive/state-foundation';
+import { createPersistStore, createLocalStorage } from '@neocloud/state-foundation';
 
 /**
  * 列布局（page-archetypes 插件私有 store，SET-002-005 分片）。
@@ -8,7 +8,7 @@ import { createPersistStore, createLocalStorage } from '@clouddrive/state-founda
  *   覆盖值"；全局默认 = 未保存时全列可见、canonical 顺序；
  * - 恢复时过滤已退役列（不在当前列集合的 id 丢弃）+ 保留必要标识列；
  * - 显示开关由调用方判断（dataDisplay.rememberColumnLayout，本 store 不读偏好）；
- * - 独立持久化（key `clouddrive.page-archetypes.column-layout`），不混入设置记录。
+ * - 独立持久化（key `neocloud.page-archetypes.column-layout`），不混入设置记录。
  */
 
 type PageColumnLayout = {
@@ -58,7 +58,7 @@ export const useColumnLayoutStore = createPersistStore<ColumnLayoutState, Column
       set((state) => ({ layouts: { ...state.layouts, [pageId]: layout } })),
   }),
   {
-    name: 'clouddrive.page-archetypes.column-layout',
+    name: 'neocloud.page-archetypes.column-layout',
     version: 2,
     skipHydration: true,
     storage: createLocalStorage(),

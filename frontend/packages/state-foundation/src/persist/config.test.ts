@@ -9,12 +9,12 @@ type DemoState = { theme: 'light' | 'dark'; transient: number };
 describe('definePersistConfig', () => {
   it('合法 config 通过（默认 storage 为 lazy local）', () => {
     const opts = definePersistConfig<DemoState, Partial<DemoState>>({
-      name: 'clouddrive.shell',
+      name: 'neocloud.shell',
       version: 1,
       partialize: (s) => ({ theme: s.theme }),
       skipHydration: true,
     });
-    expect(opts.name).toBe('clouddrive.shell');
+    expect(opts.name).toBe('neocloud.shell');
     expect(opts.version).toBe(1);
     expect(opts.skipHydration).toBe(true);
     expect(typeof opts.storage).toBe('object');
@@ -31,18 +31,18 @@ describe('definePersistConfig', () => {
   });
 
   it('非法 version（负/非整数）抛错', () => {
-    expect(() => definePersistConfig<DemoState>({ name: 'clouddrive.shell', version: -1 })).toThrow(
+    expect(() => definePersistConfig<DemoState>({ name: 'neocloud.shell', version: -1 })).toThrow(
       /version/,
     );
-    expect(() =>
-      definePersistConfig<DemoState>({ name: 'clouddrive.shell', version: 1.5 }),
-    ).toThrow(/version/);
+    expect(() => definePersistConfig<DemoState>({ name: 'neocloud.shell', version: 1.5 })).toThrow(
+      /version/,
+    );
   });
 
   it('显式 storage 优先（memory）', () => {
     const memory = createMemoryStorage<Partial<DemoState>>();
     const opts = definePersistConfig<DemoState, Partial<DemoState>>({
-      name: 'clouddrive.shell',
+      name: 'neocloud.shell',
       version: 1,
       storage: memory,
     });

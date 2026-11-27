@@ -65,7 +65,7 @@ func VerifyOfflineReleaseForArch(ctx context.Context, dir, version, trustDir, ar
 // VerifyOfflineTooling verifies an installer or the native host maintenance executable.
 func VerifyOfflineTooling(ctx context.Context, dir, version, trustDir, asset string) error {
 	switch asset {
-	case "install.sh", maintenanceAssetName(version, runtime.GOARCH):
+	case "install.sh", legacyRelease.maintenanceAsset(version, runtime.GOARCH), neoRelease.maintenanceAsset(version, runtime.GOARCH):
 	default:
 		return fmt.Errorf("不支持的离线工具：%s", asset)
 	}
@@ -80,6 +80,15 @@ func VerifyOfflineTooling(ctx context.Context, dir, version, trustDir, asset str
 	}
 	limit := int64(offlineSmallFile)
 	if asset != "install.sh" {
+		_, expected, err := selectSignedAsset(release.digests, func(family releaseFamily) string {
+			return family.maintenanceAsset(version, runtime.GOARCH)
+		})
+		if err != nil {
+			return err
+		}
+		if expected != asset {
+			return errors.New("维护工具与签名清单的命名系列不一致")
+		}
 		limit = 128 << 20
 	}
 	verified, err := release.openVerified(ctx, source, asset, limit)
@@ -341,20 +350,25 @@ func verifyOfflineSignature(ctx context.Context, source *os.Root, version string
 	if err = verifyOfflineBundle(ctx, release, trust); err != nil {
 		return release, err
 	}
-	release.digests = make(map[string]string)
-	scanner := bufio.NewScanner(bytes.NewReader(release.checksums))
+	release.digests, err = parseReleaseDigests(release.checksums)
+	return release, err
+}
+
+func parseReleaseDigests(checksums []byte) (map[string]string, error) {
+	digests := make(map[string]string)
+	scanner := bufio.NewScanner(bytes.NewReader(checksums))
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
 		if len(fields) != 2 || !lowerHex(fields[0], sha256.Size) {
-			return release, errors.New("已签名的校验清单格式无效")
+			return nil, errors.New("已签名的校验清单格式无效")
 		}
 		name := strings.TrimPrefix(fields[1], "*")
-		if !filepath.IsLocal(name) || filepath.Base(name) != name || strings.ContainsAny(name, "\\:") || release.digests[name] != "" {
-			return release, fmt.Errorf("已签名的校验清单含无效或重复附件：%s", name)
+		if !filepath.IsLocal(name) || filepath.Base(name) != name || strings.ContainsAny(name, "\\:") || digests[name] != "" {
+			return nil, fmt.Errorf("已签名的校验清单含无效或重复附件：%s", name)
 		}
-		release.digests[name] = fields[0]
+		digests[name] = fields[0]
 	}
-	return release, scanner.Err()
+	return digests, scanner.Err()
 }
 
 func verifyBundleFormat(bundle []byte) (modern bool, err error) {
@@ -427,10 +441,7 @@ func verifyOfflineBundle(ctx context.Context, release signedOfflineRelease, trus
 			"SIGSTORE_CT_LOG_PUBLIC_KEY_FILE="+filepath.Join(staging, "ctfe.pub"),
 		)
 	}
-	cosign := os.Getenv("CLOUDDRIVE_COSIGN")
-	if cosign == "" {
-		cosign = "cosign"
-	}
+	cosign := releaseCosign()
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	// #nosec G204 G702 -- 安装者配置 cosign；产物标签已限定，校验清单原始字节经标准输入传入。
@@ -464,23 +475,29 @@ func (r signedOfflineRelease) openVerified(ctx context.Context, root *os.Root, n
 }
 
 func dockerAssetName(version, arch string) string {
-	return fmt.Sprintf("clouddrive_%s_linux_%s_docker.tar.gz", version, arch)
+	return legacyRelease.dockerAsset(version, arch)
 }
 
-func maintenanceAssetName(version, arch string) string {
-	return fmt.Sprintf("clouddrive-maintenance_%s_linux_%s", version, arch)
+func (r signedOfflineRelease) dockerAsset(arch string) (releaseFamily, string, error) {
+	return selectSignedAsset(r.digests, func(family releaseFamily) string {
+		return family.dockerAsset(r.version, arch)
+	})
 }
 
 func (r signedOfflineRelease) verifyPackage(ctx context.Context, dir *os.Root, arch string) error {
 	if arch != "amd64" && arch != "arm64" {
 		return fmt.Errorf("不支持的 Linux 镜像架构：%s", arch)
 	}
-	archive, err := r.openVerified(ctx, dir, dockerAssetName(r.version, arch), offlineArchive)
+	family, asset, err := r.dockerAsset(arch)
+	if err != nil {
+		return err
+	}
+	archive, err := r.openVerified(ctx, dir, asset, offlineArchive)
 	if err != nil {
 		return err
 	}
 	defer archive.Close()
-	if err = verifyOfflineArchive(ctx, archive, r, arch); err != nil {
+	if err = verifyOfflineArchive(ctx, archive, r, arch, family); err != nil {
 		return err
 	}
 	if _, err = dir.Lstat("version.txt"); errors.Is(err, os.ErrNotExist) {
@@ -501,7 +518,7 @@ func (r signedOfflineRelease) verifyPackage(ctx context.Context, dir *os.Root, a
 	return err
 }
 
-func verifyOfflineArchive(ctx context.Context, input io.Reader, release signedOfflineRelease, arch string) error {
+func verifyOfflineArchive(ctx context.Context, input io.Reader, release signedOfflineRelease, arch string, family releaseFamily) error {
 	gzipReader, err := gzip.NewReader(input)
 	if err != nil {
 		return fmt.Errorf("无法读取离线 Docker 归档: %w", err)
@@ -568,8 +585,7 @@ func verifyOfflineArchive(ctx context.Context, input io.Reader, release signedOf
 			return fmt.Errorf("离线 Docker 归档的 %s 标记无效", flag)
 		}
 	}
-	tag := release.version + "-" + arch
-	if string(files["images.env"]) != "API_IMAGE=clouddrive-api:"+tag+"\nWEB_IMAGE=clouddrive-web:"+tag+"\n" {
+	if string(files["images.env"]) != family.dockerImageEnvironment(release.version, arch) {
 		return errors.New("离线 Docker 归档的镜像引用不匹配")
 	}
 	if digest := release.digests["install.sh"]; digest != "" {
@@ -590,12 +606,15 @@ func lowerHex(text string, bytes int) bool {
 }
 
 func (r signedOfflineRelease) copyAssets(ctx context.Context, source, stage *os.Root, arch string) ([]string, error) {
+	family, asset, err := r.dockerAsset(arch)
+	if err != nil {
+		return nil, err
+	}
 	for name, data := range map[string][]byte{offlineChecksums: r.checksums, offlineBundle: r.bundle} {
 		if err := writeOfflineFile(stage, name, bytes.NewReader(data)); err != nil {
 			return nil, err
 		}
 	}
-	asset := dockerAssetName(r.version, arch)
 	archive, err := openOfflineFile(source, asset, offlineArchive)
 	if err != nil {
 		return nil, err
@@ -605,9 +624,10 @@ func (r signedOfflineRelease) copyAssets(ctx context.Context, source, stage *os.
 		return nil, err
 	}
 	names := []string{offlineChecksums, offlineBundle, asset}
-	for _, name := range []string{"version.txt", "install.sh", maintenanceAssetName(r.version, arch)} {
+	maintenance := family.maintenanceAsset(r.version, arch)
+	for _, name := range []string{"version.txt", "install.sh", maintenance} {
 		limit := int64(offlineSmallFile)
-		if name == maintenanceAssetName(r.version, arch) {
+		if name == maintenance {
 			limit = 128 << 20
 		}
 		if _, err = source.Lstat(name); errors.Is(err, os.ErrNotExist) {

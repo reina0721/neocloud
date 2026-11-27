@@ -3,8 +3,8 @@ package kernel
 import (
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	"github.com/reina0721/clouddrive/pkg/supervisor"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	"github.com/reina0721/neocloud/pkg/supervisor"
 )
 
 // OwnerKind 表示统一诊断中的责任所有者种类。

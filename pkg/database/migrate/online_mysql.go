@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/reina0721/clouddrive/pkg/database"
+	"github.com/reina0721/neocloud/pkg/database"
 )
 
 // MySQL DDL 隐式提交。先持久记录意图，连接中断后按同一签名步骤回读实际结构。

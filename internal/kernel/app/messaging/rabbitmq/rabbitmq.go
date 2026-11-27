@@ -19,10 +19,10 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
-	messagingapp "github.com/reina0721/clouddrive/internal/kernel/app/messaging"
-	pkglogger "github.com/reina0721/clouddrive/pkg/logger"
-	pkgmessaging "github.com/reina0721/clouddrive/pkg/messaging"
-	pkgobservability "github.com/reina0721/clouddrive/pkg/observability"
+	messagingapp "github.com/reina0721/neocloud/internal/kernel/app/messaging"
+	pkglogger "github.com/reina0721/neocloud/pkg/logger"
+	pkgmessaging "github.com/reina0721/neocloud/pkg/messaging"
+	pkgobservability "github.com/reina0721/neocloud/pkg/observability"
 )
 
 const (

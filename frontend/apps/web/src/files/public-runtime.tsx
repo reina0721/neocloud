@@ -1,13 +1,13 @@
 'use client';
 import { lazy, Suspense, useContext } from 'react';
-import { BusyIndicator } from '@clouddrive/ui-adapter/busy-indicator';
+import { BusyIndicator } from '@neocloud/ui-adapter/busy-indicator';
 import { AuthContext, useAuth } from '../auth/context';
 import { AuthStatusSurface } from '../auth/status-surface';
 import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
-import { PublicFilesProvider, type FileMediaProps } from '@clouddrive/surface/files/runtime';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+import { PublicFilesProvider, type FileMediaProps } from '@neocloud/surface/files/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
 import { Cloud } from 'lucide-react';
 import { createPublicFilesRuntime } from './public-backend';
 import { AppLoadingSurface } from '../host/app-loading-surface';

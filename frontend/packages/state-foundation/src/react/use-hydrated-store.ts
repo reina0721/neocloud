@@ -4,7 +4,7 @@
  * 封装 store-scoped lifecycle：自动幂等触发一次 hydration，返回 hydrated 状态。
  * 供 Runtime/Surface boundary 做 loading 门控；业务组件不应各自写 `if (!hydrated)`。
  *
- * 注意：本文件属于 @clouddrive/state-foundation/react subpath；
+ * 注意：本文件属于 @neocloud/state-foundation/react subpath；
  * 纯 store/storage 消费者不应 import 它。
  */
 import { useSyncExternalStore } from 'react';

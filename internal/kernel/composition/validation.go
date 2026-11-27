@@ -3,9 +3,9 @@ package composition
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	validationapp "github.com/reina0721/clouddrive/internal/kernel/app/validation"
-	pkgvalidation "github.com/reina0721/clouddrive/pkg/validation"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	validationapp "github.com/reina0721/neocloud/internal/kernel/app/validation"
+	pkgvalidation "github.com/reina0721/neocloud/pkg/validation"
 )
 
 func composeValidator(plan *app.Plan) (app.Added[pkgvalidation.Validator], error) {

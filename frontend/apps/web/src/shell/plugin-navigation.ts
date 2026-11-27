@@ -1,6 +1,6 @@
-import { convertRegistryToShellNavigation } from '@clouddrive/surface/shell';
-import { generatedSurfaceRegistry } from '@clouddrive/surface/generated/composition';
-import type { NavigationGroup } from '@clouddrive/types';
+import { convertRegistryToShellNavigation } from '@neocloud/surface/shell';
+import { generatedSurfaceRegistry } from '@neocloud/surface/generated/composition';
+import type { NavigationGroup } from '@neocloud/types';
 
 /**
  * Plugin Navigation Bridge（本阶段最小实现）。

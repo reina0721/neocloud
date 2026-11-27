@@ -5,7 +5,7 @@ import {
   publicShareSchema,
   readOnlySharePermissions,
   editorSharePermissions,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import { createPublicFilesRuntime } from './public-backend';
 import { readPublicBlob } from './public-content';
 

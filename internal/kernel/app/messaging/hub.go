@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/reina0721/clouddrive/pkg/health"
-	pkgmessaging "github.com/reina0721/clouddrive/pkg/messaging"
+	"github.com/reina0721/neocloud/pkg/health"
+	pkgmessaging "github.com/reina0721/neocloud/pkg/messaging"
 )
 
 // Hub 是进程稳定的 Application Generation 消息准入切换点。

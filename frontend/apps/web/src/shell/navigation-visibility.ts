@@ -1,5 +1,5 @@
-import { flattenNavigationLeaves } from '@clouddrive/core';
-import type { NavigationGroup, NavigationNode } from '@clouddrive/types';
+import { flattenNavigationLeaves } from '@neocloud/core';
+import type { NavigationGroup, NavigationNode } from '@neocloud/types';
 import type { NavigationOverrides } from '../state/use-navigation-admin-store';
 import { regroupNavigation } from './regroup-navigation';
 

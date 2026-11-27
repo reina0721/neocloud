@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { safeParseWorkspaceSnapshot } from '@clouddrive/surface/api-workbench';
+import { safeParseWorkspaceSnapshot } from '@neocloud/surface/api-workbench';
 
 const workspaceKey = 'clouddrive.api-workbench.workspace.v1';
 async function denyWorkspaceWrites(page: Page) {

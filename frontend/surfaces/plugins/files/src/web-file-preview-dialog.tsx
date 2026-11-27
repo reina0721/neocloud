@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { publishedSiteOrigin, useSiteProfile } from '@clouddrive/surface/administration/runtime';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { HiddenField } from '@clouddrive/ui-adapter/form-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { publishedSiteOrigin, useSiteProfile } from '@neocloud/surface/administration/runtime';
+import { Action } from '@neocloud/ui-adapter/action';
+import { HiddenField } from '@neocloud/ui-adapter/form-field';
 import { ReaderSurface } from './reader-surface';
 import {
   maxWOPIEditBytes,

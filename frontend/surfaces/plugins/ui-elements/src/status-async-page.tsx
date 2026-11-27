@@ -1,12 +1,12 @@
 'use client';
 
-import { BusyIndicator } from '@clouddrive/ui-adapter/busy-indicator';
-import { LiveRegion, SkipLink } from '@clouddrive/ui-adapter/accessibility';
-import { TabsView } from '@clouddrive/ui-adapter/data-display';
-import { ProgressMeter } from '@clouddrive/ui-adapter/progress-meter';
-import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
+import { BusyIndicator } from '@neocloud/ui-adapter/busy-indicator';
+import { LiveRegion, SkipLink } from '@neocloud/ui-adapter/accessibility';
+import { TabsView } from '@neocloud/ui-adapter/data-display';
+import { ProgressMeter } from '@neocloud/ui-adapter/progress-meter';
+import { Skeleton } from '@neocloud/ui-adapter/skeleton';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -17,8 +17,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
 import { ComponentPreview } from './component-preview';
 import { UiElementsFamilyPage } from './family-page';
 

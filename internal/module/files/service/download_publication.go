@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // downloadPublication 是一次领取的发布许可，不能跨token复用；最终校验消费传输事务内的任务快照。

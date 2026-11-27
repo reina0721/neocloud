@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { SelectField } from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { SelectField } from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
 import { useFiles } from '../../../src/files/runtime';
 import { FilesError, type FileEntry } from '../../../src/files/model';
 import {

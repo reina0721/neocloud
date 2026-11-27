@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { NOTIFICATION_CATEGORIES } from '@clouddrive/plugin-framework/notifications';
+import { NOTIFICATION_CATEGORIES } from '@neocloud/plugin-framework/notifications';
 
 /** Navigable presentation query over the current account's complete inbox. */
 export const inboxQuerySchema = z

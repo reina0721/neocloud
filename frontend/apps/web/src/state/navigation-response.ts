@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { menuSchema } from '@clouddrive/surface/administration';
+import { menuSchema } from '@neocloud/surface/administration';
 import { createJsonClient } from '../api/json-client';
 
 const response = z.object({ items: z.array(menuSchema) });

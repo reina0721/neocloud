@@ -5,7 +5,7 @@
  * Navigation Child 与 File Route pattern。本模块不读取、不删除、不重写任何路由；
  * 只把注册表翻译成 overlay 的输入条目，交给 `applyMenuOverlay` 合并业务覆盖。
  */
-import type { NavigationChild, NavigationParent, RouteCatalog } from '@clouddrive/plugin-framework';
+import type { NavigationChild, NavigationParent, RouteCatalog } from '@neocloud/plugin-framework';
 
 import type { MenuOverlayEntry } from './menu-overlay';
 

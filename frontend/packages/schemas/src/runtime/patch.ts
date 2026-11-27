@@ -2,7 +2,7 @@
  * RFC 6902 JSON Patch —— 纯实现（无第三方依赖），带 Authority 只读边界。
  *
  * 可写性模型：**白名单优先**。调用方传 `patchablePointers`（RFC 6901 前缀，
- * 来自 `x-clouddrive.authoring.patchableSourcePointers`）；任何写操作
+ * 来自 `x-neocloud.authoring.patchableSourcePointers`）；任何写操作
  * （add/remove/replace/move/copy）的目标或移动来源，其完整路径必须位于某个
  * patchable 前缀之下，否则整次 Patch 失败。另可传 `readOnlyPointers`
  * （协议结构等绝对保护前缀）作为叠加黑名单。

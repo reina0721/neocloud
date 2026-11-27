@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	todohandler "github.com/reina0721/clouddrive/internal/module/todo/handler"
-	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	todohandler "github.com/reina0721/neocloud/internal/module/todo/handler"
+	"github.com/reina0721/neocloud/internal/transport/http/humabinding"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 type listTodosInput struct {

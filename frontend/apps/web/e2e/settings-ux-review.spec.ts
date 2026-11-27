@@ -2,7 +2,7 @@ import { saveEvidenceScreenshot } from './evidence-screenshot';
 import { waitForVisualReadiness } from './visual-readiness';
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { defaultPreferences, PREFERENCES_VERSION } from '@clouddrive/surface/preferences-model';
+import { defaultPreferences, PREFERENCES_VERSION } from '@neocloud/surface/preferences-model';
 
 async function setup(page: Page, pinned = true) {
   await page.addInitScript(

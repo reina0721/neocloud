@@ -285,6 +285,44 @@ func TestEnvironmentSourcePreservesCancellation(t *testing.T) {
 	}
 }
 
+func TestEnvironmentSourceAliasesShareOneMapping(t *testing.T) {
+	const prefix = "NEOCLOUD_APP_"
+	entries := []string{
+		"APP_DATABASE__DSN=legacy.db",
+		"NEOCLOUD_APP_DATABASE__DRIVER=sqlite",
+		"APP_HTTP__ADDR=127.0.0.1:8080",
+		"NEOCLOUD_APP_http__addr=127.0.0.1:8080",
+	}
+	values, err := loadEnvironment(t.Context(), prefix, entries, "APP_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]any{
+		"database": map[string]any{"dsn": "legacy.db", "driver": "sqlite"},
+		"http":     map[string]any{"addr": "127.0.0.1:8080"},
+	}
+	if !reflect.DeepEqual(values, want) {
+		t.Fatalf("环境变量未映射到同一配置：%v", values)
+	}
+	for _, pair := range [][2]string{
+		{"APP_DATABASE__DSN", "NEOCLOUD_APP_DATABASE__dsn"},
+		{"APP_DATABASE", "NEOCLOUD_APP_DATABASE__DSN"},
+	} {
+		const firstSecret = "do-not-output-secret-one"
+		const secondSecret = "do-not-output-secret-two"
+		for _, order := range [][2]string{pair, {pair[1], pair[0]}} {
+			_, err := loadEnvironment(t.Context(), prefix, []string{order[0] + "=" + firstSecret, order[1] + "=" + secondSecret}, "APP_")
+			if err == nil {
+				t.Fatalf("环境变量冲突未被拒绝：%v", pair)
+			}
+			message := err.Error()
+			if !strings.Contains(message, pair[0]) || !strings.Contains(message, pair[1]) || strings.Contains(message, firstSecret) || strings.Contains(message, secondSecret) {
+				t.Fatal("环境变量冲突应仅包含发生冲突的键名")
+			}
+		}
+	}
+}
+
 func TestLoaderRejectsObjectNonObjectShapeChanges(t *testing.T) {
 	object := map[string]any{"child": "value"}
 	tests := []struct {

@@ -1,16 +1,16 @@
 'use client';
 
-import { Action } from '@clouddrive/ui-adapter/action';
-import { Card, CardContent, CardFooter, CardHeader } from '@clouddrive/ui-adapter/card';
-import { TabsView } from '@clouddrive/ui-adapter/data-display';
-import { Badge } from '@clouddrive/ui-adapter/feedback';
-import { Panel } from '@clouddrive/ui-adapter/panel';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+import { Action } from '@neocloud/ui-adapter/action';
+import { Card, CardContent, CardFooter, CardHeader } from '@neocloud/ui-adapter/card';
+import { TabsView } from '@neocloud/ui-adapter/data-display';
+import { Badge } from '@neocloud/ui-adapter/feedback';
+import { Panel } from '@neocloud/ui-adapter/panel';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
 import { AlertTriangle, CheckCircle2, Inbox } from 'lucide-react';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
 import { ComponentPreview } from './component-preview';
 import { UiElementsFamilyPage } from './family-page';
 export function SurfacesPage() {

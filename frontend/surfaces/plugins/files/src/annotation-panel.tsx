@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useId, useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import { validateManagedProperty } from '../../../src/files/property-definitions';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { TextField } from '@clouddrive/ui-adapter/form-field';
-import { ConfirmDialog, DrawerSurface } from '@clouddrive/ui-adapter/overlays';
+import { Action } from '@neocloud/ui-adapter/action';
+import { TextField } from '@neocloud/ui-adapter/form-field';
+import { ConfirmDialog, DrawerSurface } from '@neocloud/ui-adapter/overlays';
 import { FilesError, type FileEntry } from '../../../src/files/model';
 import { useFiles } from '../../../src/files/runtime';
 import {

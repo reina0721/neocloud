@@ -1,14 +1,14 @@
 'use client';
 import { AdministrationRuntime } from '../administration/runtime';
 import { useEffect, useMemo, type ReactNode } from 'react';
-import { createAppStore } from '@clouddrive/state-foundation';
+import { createAppStore } from '@neocloud/state-foundation';
 import {
   AccountSecurityProvider,
   type AccountSecurityPort,
   IdentityProvider,
   IdentityError,
   type IdentityPort,
-} from '@clouddrive/surface/identity/runtime';
+} from '@neocloud/surface/identity/runtime';
 import { useAuth, AuthContext } from '../auth/context';
 import { useContext } from 'react';
 import { readAuthConfig } from '../auth/config';

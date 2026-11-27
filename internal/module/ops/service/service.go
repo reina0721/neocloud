@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/module/ops/model"
+	"github.com/reina0721/neocloud/internal/module/ops/model"
 )
 
 // RuntimeSource 是 Ops 使用方定义的只读进程状态端口。

@@ -8,18 +8,18 @@ import (
 	"io"
 	"runtime"
 
-	kernelcli "github.com/reina0721/clouddrive/internal/kernel/cli"
-	kernelcomposition "github.com/reina0721/clouddrive/internal/kernel/composition"
-	"github.com/reina0721/clouddrive/internal/kernel/logging"
-	"github.com/reina0721/clouddrive/internal/module/files"
-	iamcli "github.com/reina0721/clouddrive/internal/module/iam/binding/cli"
-	migrationcli "github.com/reina0721/clouddrive/internal/module/migration/binding/cli"
-	opsmodel "github.com/reina0721/clouddrive/internal/module/ops/model"
-	todocli "github.com/reina0721/clouddrive/internal/module/todo/binding/cli"
-	"github.com/reina0721/clouddrive/internal/nativeupgrade"
-	"github.com/reina0721/clouddrive/internal/nativeupgrade/control"
-	"github.com/reina0721/clouddrive/pkg/cli"
-	pkglogger "github.com/reina0721/clouddrive/pkg/logger"
+	kernelcli "github.com/reina0721/neocloud/internal/kernel/cli"
+	kernelcomposition "github.com/reina0721/neocloud/internal/kernel/composition"
+	"github.com/reina0721/neocloud/internal/kernel/logging"
+	"github.com/reina0721/neocloud/internal/module/files"
+	iamcli "github.com/reina0721/neocloud/internal/module/iam/binding/cli"
+	migrationcli "github.com/reina0721/neocloud/internal/module/migration/binding/cli"
+	opsmodel "github.com/reina0721/neocloud/internal/module/ops/model"
+	todocli "github.com/reina0721/neocloud/internal/module/todo/binding/cli"
+	"github.com/reina0721/neocloud/internal/nativeupgrade"
+	"github.com/reina0721/neocloud/internal/nativeupgrade/control"
+	"github.com/reina0721/neocloud/pkg/cli"
+	pkglogger "github.com/reina0721/neocloud/pkg/logger"
 )
 
 const (
@@ -177,7 +177,7 @@ func (a *Application) Run(ctx context.Context, args []string) error {
 		DisableInteractiveHome: true,
 	}, kernelcomposition.BootstrapOptions{
 		Configuration:     applicationOwnedConfigurationBindings(),
-		Commands:          []kernelcli.Contract{todoContract, migrationContract, iamContract, kernelcli.ContractFunc(nativeupgrade.Commands)},
+		Commands:          []kernelcli.Contract{todoContract, migrationContract, iamContract, kernelcli.ContractFunc(nativeupgrade.Commands), kernelcli.ContractFunc(a.renameCommands)},
 		DefaultConfigPath: a.config.ConfigPath,
 	})
 	if err != nil {

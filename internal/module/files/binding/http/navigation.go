@@ -6,9 +6,9 @@ import (
 	"net/url"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/reina0721/clouddrive/internal/module/files/handler"
-	"github.com/reina0721/clouddrive/internal/module/files/service"
-	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
+	"github.com/reina0721/neocloud/internal/module/files/handler"
+	"github.com/reina0721/neocloud/internal/module/files/service"
+	"github.com/reina0721/neocloud/internal/transport/http/humabinding"
 )
 
 const maxNavigationControlBytes int64 = 4096

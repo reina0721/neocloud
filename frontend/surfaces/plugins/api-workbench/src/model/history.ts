@@ -1,4 +1,4 @@
-import type { ApiRequestDefinition } from '@clouddrive/surface/api-workbench';
+import type { ApiRequestDefinition } from '@neocloud/surface/api-workbench';
 
 // History keeps variable references, but does not duplicate literal authentication secrets.
 const referenceOnly = (value: string) => (/^(\{\{[^{}]+\}\})$/.test(value.trim()) ? value : '');

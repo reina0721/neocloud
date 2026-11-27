@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import type { NavigationGroup } from '@clouddrive/types';
+import type { NavigationGroup } from '@neocloud/types';
 
 /** 路由/导航模式提交后定位一次；随后把滚动控制权交还给用户。 */
 export function useActiveNavigation(

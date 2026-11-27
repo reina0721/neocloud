@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	navigationhandler "github.com/reina0721/clouddrive/internal/module/navigation/handler"
-	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	navigationhandler "github.com/reina0721/neocloud/internal/module/navigation/handler"
+	"github.com/reina0721/neocloud/internal/transport/http/humabinding"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 type MutationGuard interface{ ValidateMutation(*http.Request) error }

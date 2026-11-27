@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	authservice "github.com/reina0721/clouddrive/internal/module/auth/service"
-	todohandler "github.com/reina0721/clouddrive/internal/module/todo/handler"
-	todoservice "github.com/reina0721/clouddrive/internal/module/todo/service"
+	authmodel "github.com/reina0721/neocloud/internal/module/auth/model"
+	authservice "github.com/reina0721/neocloud/internal/module/auth/service"
+	todohandler "github.com/reina0721/neocloud/internal/module/todo/handler"
+	todoservice "github.com/reina0721/neocloud/internal/module/todo/service"
 )
 
 // todoAuthorizerAdapter 只负责在两个项目自有模块契约之间映射。

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { defaultPreferences } from '@clouddrive/surface/preferences-model';
+import { defaultPreferences } from '@neocloud/surface/preferences-model';
 
 import { useShellStore } from '../state/use-shell-store';
 

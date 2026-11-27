@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/kernel/config"
 )
 
 const ConfigPath = "observability"
@@ -35,7 +35,7 @@ type Tracing struct {
 
 // DefaultConfig 返回默认关闭外部 exporter 的安全配置。
 func DefaultConfig() Config {
-	return Config{ServiceName: "clouddrive", Tracing: Tracing{
+	return Config{ServiceName: "neocloud", Tracing: Tracing{
 		SampleRatio: 0.1, QueueSize: 2048, BatchSize: 256,
 		BatchTimeout: 5 * time.Second, ExportTimeout: 3 * time.Second, ShutdownTimeout: 5 * time.Second,
 	}}

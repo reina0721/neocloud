@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import {
   CheckboxField,
   SelectField,
   TextAreaField,
   TextField,
-} from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+} from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
 import {
   maxWebApplicationBytes,
   maxWOPIExtensions,

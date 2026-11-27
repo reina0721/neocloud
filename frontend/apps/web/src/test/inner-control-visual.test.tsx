@@ -1,6 +1,6 @@
-import { Action } from '@clouddrive/ui-adapter/action';
-import { CheckboxField, RadioGroupField } from '@clouddrive/ui-adapter/form-field';
-import { ToggleGroup } from '@clouddrive/ui-adapter/toggle-group';
+import { Action } from '@neocloud/ui-adapter/action';
+import { CheckboxField, RadioGroupField } from '@neocloud/ui-adapter/form-field';
+import { ToggleGroup } from '@neocloud/ui-adapter/toggle-group';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 

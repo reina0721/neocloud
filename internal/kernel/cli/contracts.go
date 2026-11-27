@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	pkgcli "github.com/reina0721/clouddrive/pkg/cli"
+	pkgcli "github.com/reina0721/neocloud/pkg/cli"
 )
 
 // Contract 向启动前 CLI 贡献一个或多个项目自有命令声明。

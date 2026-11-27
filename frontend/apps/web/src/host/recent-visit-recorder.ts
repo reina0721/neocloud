@@ -1,7 +1,7 @@
 'use client';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
-import { generatedSurfaceRegistry } from '@clouddrive/surface/generated/composition';
+import { generatedSurfaceRegistry } from '@neocloud/surface/generated/composition';
 import { useWorkbenchStore } from '../state/use-workbench-store';
 
 /** Record committed catalog pages. Only entity identity is retained from search parameters. */

@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { ControlLocaleProvider } from '@clouddrive/ui-adapter/accessibility';
-import { DatePickerField } from '@clouddrive/ui-adapter/date-picker-field';
+import { ControlLocaleProvider } from '@neocloud/ui-adapter/accessibility';
+import { DatePickerField } from '@neocloud/ui-adapter/date-picker-field';
 
 it('opens English as the first locale and keeps the configured week start', async () => {
   render(

@@ -1,5 +1,5 @@
 import { parseUsersColumnLayoutPersisted } from '../src/column-layout-schema';
-import { createPersistStore, createLocalStorage } from '@clouddrive/state-foundation';
+import { createPersistStore, createLocalStorage } from '@neocloud/state-foundation';
 
 /**
  * 用户目录列布局（users 插件私有 store）。
@@ -7,7 +7,7 @@ import { createPersistStore, createLocalStorage } from '@clouddrive/state-founda
  * - 按登录用户 id 保存可见列顺序（同一浏览器多账号互不覆盖；不写服务端）；
  * - 恢复时由 `normalizeColumnLayout` 过滤退役列、必选列置首、丢弃未知 id；
  * - 未知/损坏记录在读取边界抛错（hydration lifecycle 记录失败），不静默接受；
- * - 独立持久化（key `clouddrive.plugin.users.column-layout`），不混入偏好记录。
+ * - 独立持久化（key `neocloud.plugin.users.column-layout`），不混入偏好记录。
  */
 
 export type UsersColumnLayout = Readonly<{ visibleOrder: readonly string[] }>;
@@ -40,7 +40,7 @@ export const useUsersColumnLayoutStore = createPersistStore<
       }),
   }),
   {
-    name: 'clouddrive.plugin.users.column-layout',
+    name: 'neocloud.plugin.users.column-layout',
     version: 1,
     skipHydration: true,
     storage: createLocalStorage(),

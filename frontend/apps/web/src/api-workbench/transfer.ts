@@ -1,4 +1,4 @@
-import type { ApiWorkbenchPort } from '@clouddrive/surface/api-workbench';
+import type { ApiWorkbenchPort } from '@neocloud/surface/api-workbench';
 
 /** Browser objects and file lifecycles stay in the Web Host. */
 export const browserWorkspaceTransfer: ApiWorkbenchPort['transfer'] = {

@@ -8,15 +8,15 @@ import (
 	"testing"
 	"time"
 
-	authmigration "github.com/reina0721/clouddrive/internal/module/auth/binding/migration"
-	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	authrepo "github.com/reina0721/clouddrive/internal/module/auth/repo"
-	authservice "github.com/reina0721/clouddrive/internal/module/auth/service"
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/database"
-	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
+	authmigration "github.com/reina0721/neocloud/internal/module/auth/binding/migration"
+	authmodel "github.com/reina0721/neocloud/internal/module/auth/model"
+	authrepo "github.com/reina0721/neocloud/internal/module/auth/repo"
+	authservice "github.com/reina0721/neocloud/internal/module/auth/service"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/database"
+	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 type noopAudit struct{}

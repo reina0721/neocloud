@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/reina0721/clouddrive/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/kernel/config"
 )
 
 // RuntimeComponent 是 Kernel 执行 FrozenPlan 时使用的组件状态机边界。

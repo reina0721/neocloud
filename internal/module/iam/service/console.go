@@ -5,9 +5,9 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
 )
 
 // RequireConsolePermission 在每次任务执行前读取账号状态和当前权限。

@@ -2,11 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://clouddrive.dev/schemas/design-system/v1",
   "title": "Design System Authority Schema",
-  "description": "Design System Token 与 Motion Language 事实的唯一 Schema-Controlled Source；生成物 tokens.css（受控区段）与 motion.css（整文件）由 @clouddrive/schemas/runtime 内置 Generator 产出。x-clouddrive 是正式注册的 extension keyword，实例结构由 $defs.authorityMeta / $defs.authoritySource 定义。",
+  "description": "Design System Token 与 Motion Language 事实的唯一 Schema-Controlled Source；生成物 tokens.css（受控区段）与 motion.css（整文件）由 @neocloud/schemas/runtime 内置 Generator 产出。x-neocloud 是正式注册的 extension keyword，实例结构由 $defs.authorityMeta / $defs.authoritySource 定义。",
   "type": "object",
-  "required": ["x-clouddrive"],
+  "required": ["x-neocloud"],
   "properties": {
-    "x-clouddrive": {
+    "x-neocloud": {
       "$ref": "#/$defs/authorityMeta"
     }
   },
@@ -66,7 +66,7 @@
               },
               "sourcePointer": {
                 "type": "string",
-                "pattern": "^/x-clouddrive/source/"
+                "pattern": "^/x-neocloud/source/"
               },
               "implementation": {
                 "type": "string"
@@ -86,7 +86,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "pattern": "^/x-clouddrive/source/"
+                "pattern": "^/x-neocloud/source/"
               }
             }
           }
@@ -430,7 +430,7 @@
     },
     "sourceRef": {
       "type": "string",
-      "pattern": "^/x-clouddrive/source/"
+      "pattern": "^/x-neocloud/source/"
     },
     "commentParagraphs": {
       "type": "array",
@@ -659,12 +659,12 @@
       }
     }
   },
-  "x-clouddrive": {
+  "x-neocloud": {
     "protocolVersion": 1,
-    "authorityId": "@clouddrive/design-system",
+    "authorityId": "@neocloud/design-system",
     "contractRef": {
       "file": "tooling/foundation-contracts.json",
-      "pointer": "/contracts/@clouddrive~1design-system"
+      "pointer": "/contracts/@neocloud~1design-system"
     },
     "source": {
       "tokens": {
@@ -890,21 +890,21 @@
           },
           "easeProduct": "cubic-bezier(0.2, 0, 0, 1)",
           "defaultTransitionDuration": {
-            "ref": "/x-clouddrive/source/tokens/rootMotion/durationPurpose/refs/control",
+            "ref": "/x-neocloud/source/tokens/rootMotion/durationPurpose/refs/control",
             "doc": "未显式 duration 的 transition-* 统一归 control 语义"
           },
           "transitionDurations": {
             "fast": {
-              "ref": "/x-clouddrive/source/tokens/rootMotion/durationBase/fast"
+              "ref": "/x-neocloud/source/tokens/rootMotion/durationBase/fast"
             },
             "standard": {
-              "ref": "/x-clouddrive/source/tokens/rootMotion/durationBase/standard"
+              "ref": "/x-neocloud/source/tokens/rootMotion/durationBase/standard"
             },
             "slow": {
-              "ref": "/x-clouddrive/source/tokens/rootMotion/durationBase/slow"
+              "ref": "/x-neocloud/source/tokens/rootMotion/durationBase/slow"
             },
             "page": {
-              "ref": "/x-clouddrive/source/tokens/rootMotion/durationPurpose/refs/page"
+              "ref": "/x-neocloud/source/tokens/rootMotion/durationPurpose/refs/page"
             }
           },
           "zIndices": {
@@ -926,10 +926,10 @@
             ],
             "values": {
               "forward": {
-                "ref": "/x-clouddrive/source/tokens/rootMotion/durationPurpose/refs/feedback"
+                "ref": "/x-neocloud/source/tokens/rootMotion/durationPurpose/refs/feedback"
               },
               "content": {
-                "ref": "/x-clouddrive/source/tokens/rootMotion/durationPurpose/refs/feedback"
+                "ref": "/x-neocloud/source/tokens/rootMotion/durationPurpose/refs/feedback"
               }
             }
           },
@@ -949,15 +949,15 @@
             ],
             "refs": {
               "control": {
-                "ref": "/x-clouddrive/source/tokens/rootMotion/durationBase/fast",
+                "ref": "/x-neocloud/source/tokens/rootMotion/durationBase/fast",
                 "doc": "组件自身状态动效（hover/press/switch 等）"
               },
               "feedback": {
-                "ref": "/x-clouddrive/source/tokens/rootMotion/durationBase/standard",
+                "ref": "/x-neocloud/source/tokens/rootMotion/durationBase/standard",
                 "doc": "反馈/异步状态动效（登记消费者：未来 FeedbackTransition）"
               },
               "page": {
-                "ref": "/x-clouddrive/source/tokens/rootMotion/durationBase/slow",
+                "ref": "/x-neocloud/source/tokens/rootMotion/durationBase/slow",
                 "doc": "页面级转场（消费者：motion.css 与未来页面容器）"
               }
             }
@@ -972,7 +972,7 @@
             ],
             "values": {
               "progress": {
-                "ref": "/x-clouddrive/source/tokens/rootMotion/durationPurpose/refs/feedback"
+                "ref": "/x-neocloud/source/tokens/rootMotion/durationPurpose/refs/feedback"
               },
               "progress-cycle": "1.1s"
             }
@@ -1097,7 +1097,7 @@
                   {
                     "op": "translate",
                     "axis": "y",
-                    "distanceRef": "/x-clouddrive/source/tokens/rootMotion/distances/values/reveal",
+                    "distanceRef": "/x-neocloud/source/tokens/rootMotion/distances/values/reveal",
                     "factor": 1
                   }
                 ]
@@ -1131,7 +1131,7 @@
                   {
                     "op": "translate",
                     "axis": "y",
-                    "distanceRef": "/x-clouddrive/source/tokens/rootMotion/distances/values/reveal",
+                    "distanceRef": "/x-neocloud/source/tokens/rootMotion/distances/values/reveal",
                     "factor": -0.5
                   }
                 ]
@@ -1203,41 +1203,41 @@
       {
         "id": "ds.semantic-colors",
         "description": "Light/Dark Semantic Color Roles 的单一事实（生成 tokens.css 的 --ds-* 与 --color-* 映射）。",
-        "sourcePointer": "/x-clouddrive/source/tokens/colors",
+        "sourcePointer": "/x-neocloud/source/tokens/colors",
         "implementation": "css-token-regions-v1",
         "evidence": "packages/design-system/src/tokens.css"
       },
       {
         "id": "ds.theme-scale",
         "description": "@theme 数值（radius/spacing/shadow/z-index）与 transition 引用。",
-        "sourcePointer": "/x-clouddrive/source/tokens/theme",
+        "sourcePointer": "/x-neocloud/source/tokens/theme",
         "implementation": "css-token-regions-v1",
         "evidence": "packages/design-system/src/tokens.css"
       },
       {
         "id": "ds.root-motion-tokens",
         "description": ":root Motion 档位（duration/delay/distance）与用途语义引用。",
-        "sourcePointer": "/x-clouddrive/source/tokens/rootMotion",
+        "sourcePointer": "/x-neocloud/source/tokens/rootMotion",
         "implementation": "css-token-regions-v1",
         "evidence": "packages/design-system/src/tokens.css"
       },
       {
         "id": "ds.accent-palettes",
         "description": "四套受控强调色（purple/blue/green/orange）的 light/dark brand 语义角色单一事实。",
-        "sourcePointer": "/x-clouddrive/source/tokens/accents",
+        "sourcePointer": "/x-neocloud/source/tokens/accents",
         "implementation": "css-token-regions-v1",
         "evidence": "packages/design-system/src/tokens.css"
       },
       {
         "id": "ds.motion-language",
         "description": "Universal Motion Language：recipes 与受控 operation keyframes（opacity/translate/width）。",
-        "sourcePointer": "/x-clouddrive/source/motionLanguage",
+        "sourcePointer": "/x-neocloud/source/motionLanguage",
         "implementation": "css-motion-language-v1",
         "evidence": "packages/design-system/src/motion.css"
       },
       {
         "id": "appearance-profiles",
-        "sourcePointer": "/x-clouddrive/source/tokens/appearanceProfiles",
+        "sourcePointer": "/x-neocloud/source/tokens/appearanceProfiles",
         "description": "Density, font scale, content width and contrast presets",
         "implementation": "packages/design-system/src/tokens.css",
         "evidence": "apps/web/e2e/ui-ux-109.spec.ts"
@@ -1245,11 +1245,11 @@
     ],
     "authoring": {
       "patchableSourcePointers": [
-        "/x-clouddrive/source/tokens/colors",
-        "/x-clouddrive/source/tokens/accents",
-        "/x-clouddrive/source/tokens/theme",
-        "/x-clouddrive/source/tokens/rootMotion",
-        "/x-clouddrive/source/motionLanguage"
+        "/x-neocloud/source/tokens/colors",
+        "/x-neocloud/source/tokens/accents",
+        "/x-neocloud/source/tokens/theme",
+        "/x-neocloud/source/tokens/rootMotion",
+        "/x-neocloud/source/motionLanguage"
       ]
     },
     "artifacts": [
@@ -1263,52 +1263,52 @@
               "bindings": [
                 {
                   "kind": "scalar",
-                  "sourcePointer": "/x-clouddrive/source/tokens/theme/fontSans",
+                  "sourcePointer": "/x-neocloud/source/tokens/theme/fontSans",
                   "template": "  --font-sans: {value};"
                 },
                 {
                   "kind": "array",
-                  "sourcePointer": "/x-clouddrive/source/tokens/colors/roleOrder",
+                  "sourcePointer": "/x-neocloud/source/tokens/colors/roleOrder",
                   "template": "  --color-{key}: var(--ds-{key});"
                 },
                 {
                   "kind": "record",
                   "shape": "literal",
-                  "sourcePointer": "/x-clouddrive/source/tokens/theme/radii",
+                  "sourcePointer": "/x-neocloud/source/tokens/theme/radii",
                   "template": "  --radius-{key}: {value};"
                 },
                 {
                   "kind": "record",
                   "shape": "literal",
-                  "sourcePointer": "/x-clouddrive/source/tokens/theme/spacings",
+                  "sourcePointer": "/x-neocloud/source/tokens/theme/spacings",
                   "template": "  --spacing-{key}: {value};"
                 },
                 {
                   "kind": "record",
                   "shape": "literal",
-                  "sourcePointer": "/x-clouddrive/source/tokens/theme/shadows",
+                  "sourcePointer": "/x-neocloud/source/tokens/theme/shadows",
                   "template": "  --shadow-{key}: {value};"
                 },
                 {
                   "kind": "scalar",
-                  "sourcePointer": "/x-clouddrive/source/tokens/theme/easeProduct",
+                  "sourcePointer": "/x-neocloud/source/tokens/theme/easeProduct",
                   "template": "  --ease-product: {value};"
                 },
                 {
                   "kind": "ref",
-                  "sourcePointer": "/x-clouddrive/source/tokens/theme/defaultTransitionDuration",
+                  "sourcePointer": "/x-neocloud/source/tokens/theme/defaultTransitionDuration",
                   "template": "  --default-transition-duration: var(\n    --motion-duration-{refKey}\n  ); /* {doc} */"
                 },
                 {
                   "kind": "record",
                   "shape": "ref",
-                  "sourcePointer": "/x-clouddrive/source/tokens/theme/transitionDurations",
+                  "sourcePointer": "/x-neocloud/source/tokens/theme/transitionDurations",
                   "template": "  --transition-duration-{key}: var(--motion-duration-{refKey});"
                 },
                 {
                   "kind": "record",
                   "shape": "literal",
-                  "sourcePointer": "/x-clouddrive/source/tokens/theme/zIndices",
+                  "sourcePointer": "/x-neocloud/source/tokens/theme/zIndices",
                   "template": "  --z-index-{key}: {value};"
                 }
               ]
@@ -1319,77 +1319,77 @@
                 {
                   "kind": "comment",
                   "style": "single",
-                  "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/debugScale/doc",
+                  "sourcePointer": "/x-neocloud/source/tokens/rootMotion/debugScale/doc",
                   "indent": 2
                 },
                 {
                   "kind": "scalar",
-                  "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/debugScale/value",
+                  "sourcePointer": "/x-neocloud/source/tokens/rootMotion/debugScale/value",
                   "template": "  --motion-debug-scale: {value};"
                 },
                 {
                   "kind": "comment",
                   "style": "align",
-                  "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/delayRoute/doc",
+                  "sourcePointer": "/x-neocloud/source/tokens/rootMotion/delayRoute/doc",
                   "indent": 2
                 },
                 {
                   "kind": "record",
                   "shape": "ref",
-                  "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/delayRoute/values",
+                  "sourcePointer": "/x-neocloud/source/tokens/rootMotion/delayRoute/values",
                   "template": "  --motion-delay-route-{key}: var(--motion-duration-{refKey});"
                 },
                 {
                   "kind": "record",
                   "shape": "literal",
-                  "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/delayReveal",
+                  "sourcePointer": "/x-neocloud/source/tokens/rootMotion/delayReveal",
                   "template": "  --motion-delay-reveal-{key}: calc({value} * var(--motion-debug-scale));"
                 },
                 {
                   "kind": "scalar",
-                  "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/revealOpacity",
+                  "sourcePointer": "/x-neocloud/source/tokens/rootMotion/revealOpacity",
                   "template": "  --motion-opacity-reveal-start: {value};"
                 },
                 {
                   "kind": "record",
                   "shape": "literal",
-                  "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/durationBase",
+                  "sourcePointer": "/x-neocloud/source/tokens/rootMotion/durationBase",
                   "template": "  --motion-duration-{key}: calc({value} * var(--motion-debug-scale));"
                 },
                 {
                   "kind": "comment",
                   "style": "single",
-                  "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/durationPurpose/doc",
+                  "sourcePointer": "/x-neocloud/source/tokens/rootMotion/durationPurpose/doc",
                   "indent": 2
                 },
                 {
                   "kind": "record",
                   "shape": "ref",
-                  "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/durationPurpose/refs",
+                  "sourcePointer": "/x-neocloud/source/tokens/rootMotion/durationPurpose/refs",
                   "template": "  --motion-duration-{key}: var(\n    --motion-duration-{refKey}\n  ); /* {doc} */"
                 },
                 {
                   "kind": "comment",
                   "style": "inline-asterisk",
-                  "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/durationProgress/doc",
+                  "sourcePointer": "/x-neocloud/source/tokens/rootMotion/durationProgress/doc",
                   "indent": 2
                 },
                 {
                   "kind": "record",
                   "shape": "ref",
-                  "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/durationProgress/values",
+                  "sourcePointer": "/x-neocloud/source/tokens/rootMotion/durationProgress/values",
                   "template": "  --motion-duration-{key}: var(--motion-duration-{refKey});"
                 },
                 {
                   "kind": "record",
                   "shape": "literal",
-                  "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/durationProgress/values",
+                  "sourcePointer": "/x-neocloud/source/tokens/rootMotion/durationProgress/values",
                   "template": "  --motion-duration-{key}: {value};"
                 },
                 {
                   "kind": "record",
                   "shape": "documented",
-                  "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/distances/values",
+                  "sourcePointer": "/x-neocloud/source/tokens/rootMotion/distances/values",
                   "template": "  --motion-distance-{key}: {value}; /* {doc} */"
                 }
               ]
@@ -1399,8 +1399,8 @@
               "bindings": [
                 {
                   "kind": "keyed",
-                  "keysPointer": "/x-clouddrive/source/tokens/colors/roleOrder",
-                  "valuesPointer": "/x-clouddrive/source/tokens/colors/light",
+                  "keysPointer": "/x-neocloud/source/tokens/colors/roleOrder",
+                  "valuesPointer": "/x-neocloud/source/tokens/colors/light",
                   "template": "  --ds-{key}: {value};"
                 }
               ]
@@ -1410,8 +1410,8 @@
               "bindings": [
                 {
                   "kind": "keyed",
-                  "keysPointer": "/x-clouddrive/source/tokens/colors/roleOrder",
-                  "valuesPointer": "/x-clouddrive/source/tokens/colors/dark",
+                  "keysPointer": "/x-neocloud/source/tokens/colors/roleOrder",
+                  "valuesPointer": "/x-neocloud/source/tokens/colors/dark",
                   "template": "  --ds-{key}: {value};"
                 }
               ]
@@ -1421,8 +1421,8 @@
               "bindings": [
                 {
                   "kind": "keyed",
-                  "keysPointer": "/x-clouddrive/source/tokens/accents/roles",
-                  "valuesPointer": "/x-clouddrive/source/tokens/accents/palettes/purple/light",
+                  "keysPointer": "/x-neocloud/source/tokens/accents/roles",
+                  "valuesPointer": "/x-neocloud/source/tokens/accents/palettes/purple/light",
                   "template": "  --ds-{key}: {value};"
                 }
               ]
@@ -1432,8 +1432,8 @@
               "bindings": [
                 {
                   "kind": "keyed",
-                  "keysPointer": "/x-clouddrive/source/tokens/accents/roles",
-                  "valuesPointer": "/x-clouddrive/source/tokens/accents/palettes/purple/dark",
+                  "keysPointer": "/x-neocloud/source/tokens/accents/roles",
+                  "valuesPointer": "/x-neocloud/source/tokens/accents/palettes/purple/dark",
                   "template": "  --ds-{key}: {value};"
                 }
               ]
@@ -1443,8 +1443,8 @@
               "bindings": [
                 {
                   "kind": "keyed",
-                  "keysPointer": "/x-clouddrive/source/tokens/accents/roles",
-                  "valuesPointer": "/x-clouddrive/source/tokens/accents/palettes/blue/light",
+                  "keysPointer": "/x-neocloud/source/tokens/accents/roles",
+                  "valuesPointer": "/x-neocloud/source/tokens/accents/palettes/blue/light",
                   "template": "  --ds-{key}: {value};"
                 }
               ]
@@ -1454,8 +1454,8 @@
               "bindings": [
                 {
                   "kind": "keyed",
-                  "keysPointer": "/x-clouddrive/source/tokens/accents/roles",
-                  "valuesPointer": "/x-clouddrive/source/tokens/accents/palettes/blue/dark",
+                  "keysPointer": "/x-neocloud/source/tokens/accents/roles",
+                  "valuesPointer": "/x-neocloud/source/tokens/accents/palettes/blue/dark",
                   "template": "  --ds-{key}: {value};"
                 }
               ]
@@ -1465,8 +1465,8 @@
               "bindings": [
                 {
                   "kind": "keyed",
-                  "keysPointer": "/x-clouddrive/source/tokens/accents/roles",
-                  "valuesPointer": "/x-clouddrive/source/tokens/accents/palettes/green/light",
+                  "keysPointer": "/x-neocloud/source/tokens/accents/roles",
+                  "valuesPointer": "/x-neocloud/source/tokens/accents/palettes/green/light",
                   "template": "  --ds-{key}: {value};"
                 }
               ]
@@ -1476,8 +1476,8 @@
               "bindings": [
                 {
                   "kind": "keyed",
-                  "keysPointer": "/x-clouddrive/source/tokens/accents/roles",
-                  "valuesPointer": "/x-clouddrive/source/tokens/accents/palettes/green/dark",
+                  "keysPointer": "/x-neocloud/source/tokens/accents/roles",
+                  "valuesPointer": "/x-neocloud/source/tokens/accents/palettes/green/dark",
                   "template": "  --ds-{key}: {value};"
                 }
               ]
@@ -1487,8 +1487,8 @@
               "bindings": [
                 {
                   "kind": "keyed",
-                  "keysPointer": "/x-clouddrive/source/tokens/accents/roles",
-                  "valuesPointer": "/x-clouddrive/source/tokens/accents/palettes/orange/light",
+                  "keysPointer": "/x-neocloud/source/tokens/accents/roles",
+                  "valuesPointer": "/x-neocloud/source/tokens/accents/palettes/orange/light",
                   "template": "  --ds-{key}: {value};"
                 }
               ]
@@ -1498,8 +1498,8 @@
               "bindings": [
                 {
                   "kind": "keyed",
-                  "keysPointer": "/x-clouddrive/source/tokens/accents/roles",
-                  "valuesPointer": "/x-clouddrive/source/tokens/accents/palettes/orange/dark",
+                  "keysPointer": "/x-neocloud/source/tokens/accents/roles",
+                  "valuesPointer": "/x-neocloud/source/tokens/accents/palettes/orange/dark",
                   "template": "  --ds-{key}: {value};"
                 }
               ]
@@ -1509,7 +1509,7 @@
               "bindings": [
                 {
                   "kind": "record",
-                  "sourcePointer": "/x-clouddrive/source/tokens/appearanceProfiles/fontSmall",
+                  "sourcePointer": "/x-neocloud/source/tokens/appearanceProfiles/fontSmall",
                   "template": "  {key}: {value};"
                 }
               ]
@@ -1519,7 +1519,7 @@
               "bindings": [
                 {
                   "kind": "record",
-                  "sourcePointer": "/x-clouddrive/source/tokens/appearanceProfiles/fontLarge",
+                  "sourcePointer": "/x-neocloud/source/tokens/appearanceProfiles/fontLarge",
                   "template": "  {key}: {value};"
                 }
               ]
@@ -1529,7 +1529,7 @@
               "bindings": [
                 {
                   "kind": "record",
-                  "sourcePointer": "/x-clouddrive/source/tokens/appearanceProfiles/densityCompact",
+                  "sourcePointer": "/x-neocloud/source/tokens/appearanceProfiles/densityCompact",
                   "template": "  {key}: {value};"
                 }
               ]
@@ -1539,7 +1539,7 @@
               "bindings": [
                 {
                   "kind": "record",
-                  "sourcePointer": "/x-clouddrive/source/tokens/appearanceProfiles/densityComfortable",
+                  "sourcePointer": "/x-neocloud/source/tokens/appearanceProfiles/densityComfortable",
                   "template": "  {key}: {value};"
                 }
               ]
@@ -1549,7 +1549,7 @@
               "bindings": [
                 {
                   "kind": "record",
-                  "sourcePointer": "/x-clouddrive/source/tokens/appearanceProfiles/contentStandard",
+                  "sourcePointer": "/x-neocloud/source/tokens/appearanceProfiles/contentStandard",
                   "template": "  {key}: {value};"
                 }
               ]
@@ -1559,7 +1559,7 @@
               "bindings": [
                 {
                   "kind": "record",
-                  "sourcePointer": "/x-clouddrive/source/tokens/appearanceProfiles/contentWide",
+                  "sourcePointer": "/x-neocloud/source/tokens/appearanceProfiles/contentWide",
                   "template": "  {key}: {value};"
                 }
               ]
@@ -1569,7 +1569,7 @@
               "bindings": [
                 {
                   "kind": "record",
-                  "sourcePointer": "/x-clouddrive/source/tokens/appearanceProfiles/contrastHigh",
+                  "sourcePointer": "/x-neocloud/source/tokens/appearanceProfiles/contrastHigh",
                   "template": "  {key}: {value};"
                 }
               ]
@@ -1579,8 +1579,8 @@
               "bindings": [
                 {
                   "kind": "keyed",
-                  "keysPointer": "/x-clouddrive/source/tokens/accents/roles",
-                  "valuesPointer": "/x-clouddrive/source/tokens/accents/palettes/pink/light",
+                  "keysPointer": "/x-neocloud/source/tokens/accents/roles",
+                  "valuesPointer": "/x-neocloud/source/tokens/accents/palettes/pink/light",
                   "template": "  --ds-{key}: {value};"
                 }
               ]
@@ -1590,8 +1590,8 @@
               "bindings": [
                 {
                   "kind": "keyed",
-                  "keysPointer": "/x-clouddrive/source/tokens/accents/roles",
-                  "valuesPointer": "/x-clouddrive/source/tokens/accents/palettes/pink/dark",
+                  "keysPointer": "/x-neocloud/source/tokens/accents/roles",
+                  "valuesPointer": "/x-neocloud/source/tokens/accents/palettes/pink/dark",
                   "template": "  --ds-{key}: {value};"
                 }
               ]
@@ -1605,22 +1605,22 @@
         "options": {
           "tokenVarPrefixes": [
             {
-              "pointerPrefix": "/x-clouddrive/source/tokens/rootMotion/durationBase",
+              "pointerPrefix": "/x-neocloud/source/tokens/rootMotion/durationBase",
               "varTemplate": "--motion-duration-{key}"
             },
             {
-              "pointerPrefix": "/x-clouddrive/source/tokens/rootMotion/durationPurpose/refs",
+              "pointerPrefix": "/x-neocloud/source/tokens/rootMotion/durationPurpose/refs",
               "varTemplate": "--motion-duration-{key}"
             },
             {
-              "pointerPrefix": "/x-clouddrive/source/tokens/rootMotion/distances/values",
+              "pointerPrefix": "/x-neocloud/source/tokens/rootMotion/distances/values",
               "varTemplate": "--motion-distance-{key}"
             }
           ],
           "topDocComment": {
             "style": "bare-asterisk",
             "indent": 0,
-            "sourcePointer": "/x-clouddrive/source/motionLanguage/doc"
+            "sourcePointer": "/x-neocloud/source/motionLanguage/doc"
           },
           "keyframeCommentStyles": {
             "content-fade-in": "single",
@@ -1641,22 +1641,22 @@
           "bindings": [
             {
               "path": ["duration", "fast"],
-              "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/durationBase/fast",
+              "sourcePointer": "/x-neocloud/source/tokens/rootMotion/durationBase/fast",
               "format": "milliseconds"
             },
             {
               "path": ["duration", "standard"],
-              "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/durationBase/standard",
+              "sourcePointer": "/x-neocloud/source/tokens/rootMotion/durationBase/standard",
               "format": "milliseconds"
             },
             {
               "path": ["duration", "slow"],
-              "sourcePointer": "/x-clouddrive/source/tokens/rootMotion/durationBase/slow",
+              "sourcePointer": "/x-neocloud/source/tokens/rootMotion/durationBase/slow",
               "format": "milliseconds"
             },
             {
               "path": ["controlRadius"],
-              "sourcePointer": "/x-clouddrive/source/tokens/theme/radii/control"
+              "sourcePointer": "/x-neocloud/source/tokens/theme/radii/control"
             }
           ]
         }

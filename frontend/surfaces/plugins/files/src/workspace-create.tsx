@@ -1,8 +1,8 @@
 'use client';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { TextField } from '@clouddrive/ui-adapter/form-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { TextField } from '@neocloud/ui-adapter/form-field';
 import { FilesError, type FileListing, type UploadCandidate } from '../../../src/files/model';
 import { formatFileBytes } from '../../../src/files/format';
 import { useFiles, useTransfers } from '../../../src/files/runtime';

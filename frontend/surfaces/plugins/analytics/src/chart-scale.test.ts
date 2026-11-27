@@ -3,7 +3,7 @@
  *
  * ui-adapter 目前没有 vitest 配置（也没有 `chart.test.ts` 运行环境），因此按
  * VP-06 的约定把可测的纯数学留在 `packages/ui-adapter/src/charts/scale.ts`，
- * 并从插件测试经 charts 子路径消费/断言（`@clouddrive/ui-adapter/charts`
+ * 并从插件测试经 charts 子路径消费/断言（`@neocloud/ui-adapter/charts`
  * 由 integrator 在 package exports 中登记后解析）。
  */
 import { describe, expect, it } from 'vitest';
@@ -22,7 +22,7 @@ import {
   resolveShare,
   summarizeValues,
   type ChartSeries,
-} from '@clouddrive/ui-adapter/charts';
+} from '@neocloud/ui-adapter/charts';
 
 const SERIES: readonly ChartSeries[] = [
   {

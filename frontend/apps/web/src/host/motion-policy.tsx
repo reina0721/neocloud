@@ -1,4 +1,5 @@
 'use client';
+import { readProductStorage, writeProductStorage } from '@neocloud/state-foundation';
 
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 
@@ -9,9 +10,9 @@ import {
   type MotionPolicyController,
   type MotionPolicyState,
   type MotionScale,
-} from '@clouddrive/surface-foundation/motion-policy-context';
+} from '@neocloud/surface-foundation/motion-policy-context';
 
-const motionSessionKey = 'clouddrive.motion-inspector';
+const motionSessionKey = 'neocloud.motion-inspector';
 const motionMediaQuery = '(prefers-reduced-motion: reduce)';
 const inspectorAvailable = process.env.NODE_ENV !== 'production';
 const defaultCategories: MotionCategoryState = {
@@ -41,7 +42,7 @@ function readReducedMotion() {
 function readStoredPolicy(): MotionPolicyState {
   if (!inspectorAvailable || typeof window === 'undefined') return defaultPolicy;
   try {
-    const value = window.sessionStorage.getItem(motionSessionKey);
+    const value = readProductStorage(window.sessionStorage, motionSessionKey);
     if (!value) return defaultPolicy;
     const parsed = JSON.parse(value) as Partial<MotionPolicyState>;
     const mode = ['system', 'full', 'reduced', 'off'].includes(parsed.mode ?? '')
@@ -118,7 +119,7 @@ export function MotionPolicyProvider({
         : 'off';
     }
     if (inspectorAvailable) {
-      window.sessionStorage.setItem(motionSessionKey, JSON.stringify(policy));
+      writeProductStorage(window.sessionStorage, motionSessionKey, JSON.stringify(policy));
     }
   }, [policy, preference]);
 

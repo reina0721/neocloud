@@ -1,7 +1,7 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { TextAreaField } from '@clouddrive/ui-adapter/form-field';
-import { DisclosurePanel } from '@clouddrive/ui-adapter/disclosure';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { TextAreaField } from '@neocloud/ui-adapter/form-field';
+import { DisclosurePanel } from '@neocloud/ui-adapter/disclosure';
 export type ScriptPanelProps = Readonly<{
   preScript: string;
   postScript: string;

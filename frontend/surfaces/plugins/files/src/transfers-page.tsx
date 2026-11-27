@@ -1,6 +1,6 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
 import { TransferPanel } from './transfer-panel';
 
 export function TransfersPage() {

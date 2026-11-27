@@ -1,4 +1,4 @@
-# clouddrive 项目范围
+# NeoCloud 项目范围
 
 当前构建范围为根 Go 后端与 frontend/ 内完整 Next.js 工作区。后端来自 community-go，前端来自 console-web；导入分支和完整提交号见根 SOURCES.json。只导入源码快照，不导入上游数据库、凭据、嵌套 Git 或提交历史。
 

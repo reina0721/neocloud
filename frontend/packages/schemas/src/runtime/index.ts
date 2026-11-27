@@ -127,15 +127,15 @@ export async function createSchemaRuntime(options: SchemaRuntimeOptions): Promis
     return { doc: raw as AuthorityDocument, etag };
   }
 
-  /** 解析 x-clouddrive 元数据 + 找 registry entry 供协议校验。 */
+  /** 解析 x-neocloud 元数据 + 找 registry entry 供协议校验。 */
   async function metaOf(sourceId: string): Promise<{
     meta: Record<string, unknown>;
     doc: unknown;
   }> {
     const { raw } = await readRawSchema(sourceId);
     const root = assertRecord(raw, 'Schema 文档');
-    const meta = root['x-clouddrive'];
-    if (!isRecord(meta)) throw new SchemaIoError('Schema 文档缺少 x-clouddrive');
+    const meta = root['x-neocloud'];
+    if (!isRecord(meta)) throw new SchemaIoError('Schema 文档缺少 x-neocloud');
     return { meta, doc: raw };
   }
 
@@ -202,12 +202,12 @@ export async function createSchemaRuntime(options: SchemaRuntimeOptions): Promis
           ? (authoring.patchableSourcePointers as string[])
           : [];
       const result = applyRfcPatch(raw, input.patch, patchable, [
-        '/x-clouddrive/contractRef',
-        '/x-clouddrive/facts',
-        '/x-clouddrive/authoring',
-        '/x-clouddrive/artifacts',
-        '/x-clouddrive/protocolVersion',
-        '/x-clouddrive/authorityId',
+        '/x-neocloud/contractRef',
+        '/x-neocloud/facts',
+        '/x-neocloud/authoring',
+        '/x-neocloud/artifacts',
+        '/x-neocloud/protocolVersion',
+        '/x-neocloud/authorityId',
       ]);
       if (!result.ok) throw new SchemaIoError(`Patch 失败: ${result.error}`);
       const nextRaw = result.data;
@@ -241,7 +241,7 @@ export async function createSchemaRuntime(options: SchemaRuntimeOptions): Promis
       for (const sourceId of schemaPaths.keys()) {
         const { raw } = await readRawSchema(sourceId);
         const root = assertRecord(raw, 'Schema 文档');
-        const meta = root['x-clouddrive'];
+        const meta = root['x-neocloud'];
         if (!isRecord(meta) || !Array.isArray(meta.artifacts)) {
           results.push({
             target: '',
@@ -309,7 +309,7 @@ export async function createSchemaRuntime(options: SchemaRuntimeOptions): Promis
       for (const sourceId of schemaPaths.keys()) {
         const { raw } = await readRawSchema(sourceId);
         const root = assertRecord(raw, 'Schema 文档');
-        const meta = root['x-clouddrive'];
+        const meta = root['x-neocloud'];
         if (!isRecord(meta) || !Array.isArray(meta.artifacts)) {
           results.push({ target: '', ok: false, error: `${sourceId}: artifacts 缺失` });
           continue;

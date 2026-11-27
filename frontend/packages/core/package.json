@@ -1,5 +1,5 @@
 {
-  "name": "@clouddrive/core",
+  "name": "@neocloud/core",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@clouddrive/types": "workspace:*"
+    "@neocloud/types": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^4.1.11"

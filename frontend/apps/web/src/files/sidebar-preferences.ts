@@ -1,12 +1,17 @@
 import {
+  readProductStorage,
+  removeProductStorage,
+  writeProductStorage,
+} from '@neocloud/state-foundation';
+import {
   defaultFileSidebarPreferences,
   fileSidebarPreferencesSchema,
   FilesError,
   type FileSidebarPreferences,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 
-const sidebarKey = 'clouddrive.files.sidebar.v2';
-const previousSidebarKey = 'clouddrive.files.sidebar.v1';
+const sidebarKey = 'neocloud.files.sidebar.v2';
+const previousSidebarKey = 'neocloud.files.sidebar.v1';
 
 /** createFileSidebarPreferences 拥有设备侧栏偏好，旧键只在新文档成功落盘后移除。 */
 export function createFileSidebarPreferences(account: string | null, assertCurrent: () => void) {
@@ -15,15 +20,16 @@ export function createFileSidebarPreferences(account: string | null, assertCurre
     loadSidebarPreferences(): FileSidebarPreferences {
       assertCurrent();
       try {
-        const saved = localStorage.getItem(key);
+        const saved = readProductStorage(localStorage, key);
         if (saved !== null) return fileSidebarPreferencesSchema.parse(JSON.parse(saved));
-        const previous = localStorage.getItem(previousSidebarKey + '.' + account);
+        const previous = readProductStorage(localStorage, previousSidebarKey + '.' + account);
         const collapsed: unknown =
           previous === null ? defaultFileSidebarPreferences.collapsed : JSON.parse(previous);
         if (typeof collapsed !== 'boolean') throw new FilesError('invalid');
         const preferences = { ...defaultFileSidebarPreferences, collapsed };
-        localStorage.setItem(key, JSON.stringify(preferences));
-        if (previous !== null) localStorage.removeItem(previousSidebarKey + '.' + account);
+        writeProductStorage(localStorage, key, JSON.stringify(preferences));
+        if (previous !== null)
+          removeProductStorage(localStorage, previousSidebarKey + '.' + account);
         return preferences;
       } catch (error) {
         throw new FilesError('invalid', { cause: error });
@@ -32,7 +38,11 @@ export function createFileSidebarPreferences(account: string | null, assertCurre
     saveSidebarPreferences(input: FileSidebarPreferences) {
       assertCurrent();
       try {
-        localStorage.setItem(key, JSON.stringify(fileSidebarPreferencesSchema.parse(input)));
+        writeProductStorage(
+          localStorage,
+          key,
+          JSON.stringify(fileSidebarPreferencesSchema.parse(input)),
+        );
       } catch (error) {
         throw new FilesError('unavailable', { cause: error });
       }

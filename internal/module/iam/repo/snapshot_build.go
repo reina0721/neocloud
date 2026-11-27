@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sort"
 
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
 	"gorm.io/gorm"
 )
 

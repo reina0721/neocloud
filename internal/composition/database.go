@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	databaseapp "github.com/reina0721/clouddrive/internal/kernel/app/database"
-	iamrepo "github.com/reina0721/clouddrive/internal/module/iam/repo"
-	"github.com/reina0721/clouddrive/internal/module/todo/repo"
-	"github.com/reina0721/clouddrive/pkg/database"
+	databaseapp "github.com/reina0721/neocloud/internal/kernel/app/database"
+	iamrepo "github.com/reina0721/neocloud/internal/module/iam/repo"
+	"github.com/reina0721/neocloud/internal/module/todo/repo"
+	"github.com/reina0721/neocloud/pkg/database"
 )
 
 // databaseAccessAdapter 把 Kernel-owned Access 转成 Todo Adapter 使用方拥有的窄契约。

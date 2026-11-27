@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/httpx"
-	pkgobservability "github.com/reina0721/clouddrive/pkg/observability"
+	"github.com/reina0721/neocloud/pkg/httpx"
+	pkgobservability "github.com/reina0721/neocloud/pkg/observability"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"

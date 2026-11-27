@@ -1,7 +1,7 @@
 /**
  * Plugin Framework —— Notifications Capability Port（client）。
  *
- * `@clouddrive/plugin-framework/notifications`：通知中心的公共契约 + client
+ * `@neocloud/plugin-framework/notifications`：通知中心的公共契约 + client
  * Provider/context/hook。Host 注入实现（独立持久化 store，收纳真实前端事件与真实
  * 本地任务结果；不预填虚构通知）。
  *

@@ -1,12 +1,12 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { route, RouteLink } from '@neocloud/plugin-framework/plugin';
 import {
   IdentityError,
   permissionCodes,
   useIdentityPort,
-} from '@clouddrive/surface/identity/runtime';
+} from '@neocloud/surface/identity/runtime';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import { IdentityModeNotice, IdentityQueryState } from '../../../src/identity/query-state';
 export function PermissionsPage() {

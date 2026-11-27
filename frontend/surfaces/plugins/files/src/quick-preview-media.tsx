@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useRef } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
 import { FileMedia, type VideoPlaybackHandoff } from '../../../src/files/runtime';
 import type { MediaReaderSession } from './file-reader-session';
 

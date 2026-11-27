@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 {{if .Active}}<meta http-equiv="refresh" content="3">{{end}}
-<title>CloudDrive 系统维护</title>
+<title>NeoCloud 系统维护</title>
 <style>
 :root{color-scheme:light dark;font:16px/1.6 system-ui,sans-serif;--border:light-dark(#d0d8df,#49505a);--accent:light-dark(#005f66,#83d5da)}
 body{margin:0;background:light-dark(#f7f9fb,#151a20);color:light-dark(#1c2730,#e3e8ee)}
@@ -20,7 +20,7 @@ ol,ul{padding-inline-start:1.4rem}summary{cursor:pointer}small{display:block}
 </head>
 <body>
 <main>
-<header><h1>CloudDrive 系统维护</h1><a href="/">返回工作区</a></header>
+<header><h1>NeoCloud 系统维护</h1><a href="/">返回工作区</a></header>
 {{if .Error}}<section aria-label="错误"><p role="alert">{{.Error}}</p><a href="/maintenance">返回维护页</a></section>{{end}}
 {{if not .Permitted}}{{if not .Error}}<section><p>远程维护请通过已配置的 HTTPS 站点访问。本机可以使用回环 HTTP 地址。</p></section>{{end}}{{end}}
 {{if .Receipt}}<section aria-label="本次任务"><h2>本次任务</h2><p role="status">{{ action .Receipt.Action .Receipt.Offline }}{{if .Receipt.Offline}} · 本地来源{{end}} · {{ phase .Receipt.Phase }}{{if .Receipt.Result}} · {{.Receipt.Result}}{{end}}</p>{{if .Receipt.Backup}}<small>恢复点 <code>{{.Receipt.Backup}}</code></small>{{end}}</section>{{end}}

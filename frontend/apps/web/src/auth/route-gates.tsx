@@ -2,7 +2,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import { useAuth } from './context';
 import { safeReturnTo, authPageHref, authReturnDestination } from './contract';
 function AuthLoadingSurface() {

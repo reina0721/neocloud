@@ -1,8 +1,8 @@
 'use client';
 import { useContext, useEffect, useEffectEvent, useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import type { Preferences } from '@neocloud/surface/preferences-model';
 import { AuthContext } from '../auth/context';
 import { useShellStore } from '../state/use-shell-store';
 import { useNotificationsStore } from '../state/use-notifications-store';

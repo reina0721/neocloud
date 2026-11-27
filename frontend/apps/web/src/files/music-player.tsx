@@ -1,18 +1,18 @@
 'use client';
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import type { FileMusicDockProps } from '@clouddrive/surface/files/runtime';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import type { FileMusicDockProps } from '@neocloud/surface/files/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import {
   FilesError,
   type FileEntry,
   type FilesErrorCode,
   type FilesPort,
-} from '@clouddrive/surface/files';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { PopoverCard, DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { RangeSlider } from '@clouddrive/ui-adapter/range-slider';
+} from '@neocloud/surface/files';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { PopoverCard, DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { RangeSlider } from '@neocloud/ui-adapter/range-slider';
 import {
   ChevronDown,
   ListMusic,

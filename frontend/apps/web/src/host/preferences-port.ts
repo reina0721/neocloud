@@ -1,8 +1,9 @@
+import { legacyStorageKey, writeProductStorage } from '@neocloud/state-foundation';
 /**
  * Host —— Preferences Port 实现（composition root 装配）。
  *
- * 把 `@clouddrive/plugin-framework/preferences` 的 `PreferencesPort<Preferences>`
- * 契约落到 Host Shell store（`clouddrive.shell` v1，八分类偏好）。Plugin（settings）
+ * 把 `@neocloud/plugin-framework/preferences` 的 `PreferencesPort<Preferences>`
+ * 契约落到 Host Shell store（`neocloud.shell` v1，八分类偏好）。Plugin（settings）
  * 与 Shell 经本 Port 读写同一份偏好，禁止跨 Plugin 直接 import store。
  *
  * 失败语义（SET-003-005）：
@@ -16,18 +17,18 @@ import type {
   PreferencesPort,
   PersistFailureCode,
   PersistResult,
-} from '@clouddrive/plugin-framework/preferences';
+} from '@neocloud/plugin-framework/preferences';
 import { createContext } from 'react';
 import {
   defaultPreferences,
   validatePreferences,
   PREFERENCES_VERSION,
   type Preferences,
-} from '@clouddrive/surface/preferences-model';
+} from '@neocloud/surface/preferences-model';
 
 import { persistedShellPreferences, useShellStore } from '../state/use-shell-store';
 
-const PERSIST_KEY = 'clouddrive.shell';
+const PERSIST_KEY = 'neocloud.shell';
 
 function classifyStorageError(error: unknown): PersistFailureCode {
   const name = error instanceof DOMException ? error.name : '';
@@ -86,7 +87,7 @@ function toPersistResult(fn: () => void): PersistResult {
 function persistSnapshot(): void {
   const state = persistedShellPreferences(useShellStore.getState());
   const envelope = JSON.stringify({ state, version: PREFERENCES_VERSION });
-  window.localStorage.setItem(PERSIST_KEY, envelope);
+  writeProductStorage(window.localStorage, PERSIST_KEY, envelope);
 }
 
 type AccountPreferenceIntent = (before: Preferences, after: Preferences) => boolean;
@@ -156,7 +157,8 @@ export function createHostPreferencesPort(): PreferencesPort<Preferences> & {
   /** 跨窗口：另一 tab 写入完整快照后，本窗口校验并应用（不静默覆盖损坏/不完整快照）。 */
   function startCrossWindowSync(): () => void {
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== PERSIST_KEY || event.storageArea !== window.localStorage) return;
+      if (event.key !== legacyStorageKey(PERSIST_KEY) || event.storageArea !== window.localStorage)
+        return;
       const incoming = parseStoredSnapshot(event.newValue);
       if (!incoming) return; // 损坏/不完整 → 忽略，保留本窗口会话
       const current = useShellStore.getState();

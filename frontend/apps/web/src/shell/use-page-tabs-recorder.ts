@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
-import { generatedSurfaceRegistry } from '@clouddrive/surface/generated/composition';
+import { generatedSurfaceRegistry } from '@neocloud/surface/generated/composition';
 import { useShellStore } from '../state/use-shell-store';
 import { usePageTabsStore } from '../state/use-page-tabs-store';
-import { useHydratedStore } from '@clouddrive/state-foundation/react';
+import { useHydratedStore } from '@neocloud/state-foundation/react';
 /** 记录当前 pathname 的标签打开事件（app-shell 在导航提交时一并调用）。 */
 export function usePageTabsRecorder(entries: ReadonlyArray<{ href: string; label: string }>): void {
   const pathname = usePathname();

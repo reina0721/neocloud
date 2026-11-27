@@ -2,7 +2,7 @@
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { DesktopNotificationSettingsContext } from '@clouddrive/surface/administration/runtime';
+import { DesktopNotificationSettingsContext } from '@neocloud/surface/administration/runtime';
 import { useAuth } from '../auth/context';
 import { AppLoadingSurface } from '../host/app-loading-surface';
 import { RouteTransition } from '../host/route-transition';

@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import type { NavigationGroup } from '@clouddrive/types';
+import type { NavigationGroup } from '@neocloud/types';
 import { managementTaskGroups } from './management-tasks';
 
 it('管理任务只投影可见导航，不补造地址或重新排列已应用的菜单顺序', () => {

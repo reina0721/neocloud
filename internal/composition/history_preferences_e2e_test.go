@@ -6,7 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/pkg/idgen"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestHistoryPreferencesHTTPQuotaChangeAndAtomicPublication(t *testing.T) {

@@ -6,9 +6,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/reina0721/clouddrive/internal/module/files/adapter/archiveprocess"
-	"github.com/reina0721/clouddrive/internal/module/files/service"
-	"github.com/reina0721/clouddrive/pkg/logger"
+	"github.com/reina0721/neocloud/internal/module/files/adapter/archiveprocess"
+	"github.com/reina0721/neocloud/internal/module/files/service"
+	"github.com/reina0721/neocloud/pkg/logger"
 )
 
 // ArchiveWorkerArgument 是当前程序的私有解析入口，不接受其他命令或shell。

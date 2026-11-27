@@ -1,9 +1,9 @@
 'use client';
 
 import { useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { FileChoiceAction } from '@clouddrive/ui-adapter/file-choice-action';
-import { CheckboxField, SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
+import { Action } from '@neocloud/ui-adapter/action';
+import { FileChoiceAction } from '@neocloud/ui-adapter/file-choice-action';
+import { CheckboxField, SelectField, TextField } from '@neocloud/ui-adapter/form-field';
 import {
   annotationAt,
   annotationColors,

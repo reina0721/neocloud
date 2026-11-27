@@ -1,12 +1,12 @@
 'use client';
 
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { CommandMenu } from '@clouddrive/ui-adapter/command-menu';
-import { SwitchField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
-import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
-import { NavigationFlyout, NavigationHint } from '@clouddrive/ui-adapter/navigation-flyout';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { Action } from '@neocloud/ui-adapter/action';
+import { CommandMenu } from '@neocloud/ui-adapter/command-menu';
+import { SwitchField, TextField } from '@neocloud/ui-adapter/form-field';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
+import { MenuButton } from '@neocloud/ui-adapter/menu-button';
+import { NavigationFlyout, NavigationHint } from '@neocloud/ui-adapter/navigation-flyout';
 import {
   ConfirmDialog,
   DestructiveConfirmDialog,
@@ -14,12 +14,12 @@ import {
   DrawerSurface,
   PopoverCard,
   TooltipAction,
-} from '@clouddrive/ui-adapter/overlays';
+} from '@neocloud/ui-adapter/overlays';
 import { Archive, Copy, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useId, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
 import { ComponentPreview } from './component-preview';
 import { UiElementsFamilyPage } from './family-page';
 export function OverlayElementsPage() {

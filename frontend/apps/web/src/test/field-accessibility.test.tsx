@@ -1,4 +1,4 @@
-import { SelectField, RadioGroupField } from '@clouddrive/ui-adapter/form-field';
+import { SelectField, RadioGroupField } from '@neocloud/ui-adapter/form-field';
 import { render, screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 

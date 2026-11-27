@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	pkgi18n "github.com/reina0721/clouddrive/pkg/i18n"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	pkgi18n "github.com/reina0721/neocloud/pkg/i18n"
 )
 
 // 应用层默认配置（032 统一集中声明）。

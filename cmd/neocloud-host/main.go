@@ -9,7 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/reina0721/clouddrive/internal/nativeupgrade"
+	"github.com/reina0721/neocloud/internal/nativeupgrade"
 )
 
 func main() {
@@ -21,6 +21,7 @@ func main() {
 	adopt := flag.Bool("adopt-full", false, "接管已有 Go-only 实例并启动签名整包")
 	prepare := flag.Bool("prepare-full", false, "提前验签整包并只读检查实例")
 	webAddress := flag.String("web-addr", "", "沿用已有站点的监听地址，默认使用 Go 业务地址")
+	serviceName := flag.String("service-name", "", "Windows 服务注册名；桥接时可指定 CloudDriveNative")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		flag.Usage()
@@ -43,7 +44,7 @@ func main() {
 		}
 		return
 	}
-	if err := runService(ctx, func(ctx context.Context) error { return nativeupgrade.Run(ctx, *root, bootstrap) }); err != nil {
+	if err := runService(ctx, *serviceName, func(ctx context.Context) error { return nativeupgrade.Run(ctx, *root, bootstrap) }); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

@@ -1,26 +1,26 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { supportedTimeZones } from '@clouddrive/i18n/format';
-import type { PreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
-import { useDesktopNotificationSettings } from '@clouddrive/surface/administration/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { supportedTimeZones } from '@neocloud/i18n/format';
+import type { PreferencesPort } from '@neocloud/plugin-framework/preferences';
+import type { Preferences } from '@neocloud/surface/preferences-model';
+import { useDesktopNotificationSettings } from '@neocloud/surface/administration/runtime';
 import {
   validatePreferences,
   IDLE_LOCK_MINUTES,
   PAGE_TRANSITIONS,
-} from '@clouddrive/surface/preferences-model';
+} from '@neocloud/surface/preferences-model';
 import {
   RadioGroupField,
   SelectField,
   SwitchField,
   TextField,
   ComboField,
-} from '@clouddrive/ui-adapter/form-field';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
+} from '@neocloud/ui-adapter/form-field';
+import { Action } from '@neocloud/ui-adapter/action';
+import { route, RouteLink } from '@neocloud/plugin-framework/plugin';
 import { Children, isValidElement, type ReactNode } from 'react';
-import { Section } from '@clouddrive/surface-foundation/layout';
+import { Section } from '@neocloud/surface-foundation/layout';
 import { SETTINGS_INDEX } from './settings-index';
 import { LockKeyhole, Sun, Moon, MonitorCog, SunMoon } from 'lucide-react';
 import {
@@ -937,9 +937,9 @@ export function SecuritySection({ ctx }: Readonly<{ ctx: Ctx }>) {
             leadingIcon={<LockKeyhole className="size-3.5" />}
             variant="secondary"
             onPress={() => {
-              // Host 在 window 上监听 `clouddrive:lock` 并接管锁定/解锁流程；
+              // Host 在 window 上监听 `neocloud:lock` 并接管锁定/解锁流程；
               // 事件从 document 冒泡到 window（bubbles:true），浏览器预览不会真的遮挡页面。
-              document.dispatchEvent(new CustomEvent('clouddrive:lock', { bubbles: true }));
+              document.dispatchEvent(new CustomEvent('neocloud:lock', { bubbles: true }));
             }}
           >
             {t('settings.security.lockNow')}

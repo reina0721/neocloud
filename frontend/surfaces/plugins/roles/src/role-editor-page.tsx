@@ -4,16 +4,16 @@ import {
   FoundationForm,
   FoundationControlledField,
   useFoundationForm,
-} from '@clouddrive/form-foundation';
-import { useFrontendTranslation, formatNumber } from '@clouddrive/i18n';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { FormActions } from '@clouddrive/surface-foundation/form-actions';
-import { TextField, CheckboxField } from '@clouddrive/ui-adapter/form-field';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { route, RouteLink, usePluginNavigation } from '@clouddrive/plugin-framework/plugin';
-import { useRegisterDirtySource } from '@clouddrive/plugin-framework/leave-confirm';
+} from '@neocloud/form-foundation';
+import { useFrontendTranslation, formatNumber } from '@neocloud/i18n';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { FormActions } from '@neocloud/surface-foundation/form-actions';
+import { TextField, CheckboxField } from '@neocloud/ui-adapter/form-field';
+import { Action } from '@neocloud/ui-adapter/action';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { route, RouteLink, usePluginNavigation } from '@neocloud/plugin-framework/plugin';
+import { useRegisterDirtySource } from '@neocloud/plugin-framework/leave-confirm';
 import {
   IdentityError,
   permissionCodes,
@@ -22,7 +22,7 @@ import {
   type DirectoryRole,
   type IdentityAccess,
   type RoleInput,
-} from '@clouddrive/surface/identity/runtime';
+} from '@neocloud/surface/identity/runtime';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import {
   IdentityModeNotice,

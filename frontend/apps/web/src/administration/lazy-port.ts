@@ -1,5 +1,5 @@
-import type { AdministrationPort } from '@clouddrive/surface/administration';
-import { IdentityError } from '@clouddrive/surface/identity/runtime';
+import type { AdministrationPort } from '@neocloud/surface/administration';
+import { IdentityError } from '@neocloud/surface/identity/runtime';
 
 /** Keep validation and business adapters out of the initial shell bundle. */
 export function createLazyAdministrationPort(

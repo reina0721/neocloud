@@ -1,4 +1,4 @@
-import type { DirectoryRole, IdentityAccess } from '@clouddrive/surface/identity/runtime';
+import type { DirectoryRole, IdentityAccess } from '@neocloud/surface/identity/runtime';
 
 export function canEditNativeRolePermissions(access: IdentityAccess, role: DirectoryRole) {
   return (

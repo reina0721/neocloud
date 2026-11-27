@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/concurrency"
+	"github.com/reina0721/neocloud/pkg/concurrency"
 )
 
 func TestGetOrLoadStoresLoadedValue(t *testing.T) {

@@ -7,9 +7,9 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/module/auth/model"
-	"github.com/reina0721/clouddrive/internal/module/auth/service"
-	"github.com/reina0721/clouddrive/pkg/logger"
+	"github.com/reina0721/neocloud/internal/module/auth/model"
+	"github.com/reina0721/neocloud/internal/module/auth/service"
+	"github.com/reina0721/neocloud/pkg/logger"
 )
 
 // Sink 只记录分类、action 与不可逆标识摘要。

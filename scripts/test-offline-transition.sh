@@ -11,7 +11,7 @@ trust=$(realpath -e -- "$3")
 old=$(cat -- "$legacy/version.txt")
 new=$(cat -- "$candidate/version.txt")
 [[ $old == v0.2.2 && $new =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && $new != "$old" ]] || fail '离线切换验收需要 v0.2.2 和不同的正式候选版本'
-cosign=$(command -v "${CLOUDDRIVE_COSIGN:-cosign}")
+cosign=$(command -v "${NEOCLOUD_COSIGN:-${CLOUDDRIVE_COSIGN:-cosign}}")
 node=$(command -v node)
 docker=$(command -v docker)
 sock=unix:///var/run/docker.sock
@@ -99,8 +99,8 @@ airgap() {
 }
 
 verify_assets() (
-  local directory=$1 version=$2 file
-  shift 2
+  local directory=$1 version=$2 family=$3 file
+  shift 3
   local -a verify=(verify-blob --offline --bundle "$directory/checksums.txt.sigstore.json"
     --certificate-identity "https://github.com/reina0721/neocloud/.github/workflows/release.yml@refs/tags/$version"
     --certificate-oidc-issuer https://token.actions.githubusercontent.com)
@@ -111,13 +111,15 @@ verify_assets() (
     airgap "$cosign" "${verify[@]}" --new-bundle-format --trusted-root "$trust/trusted_root.json" "$directory/checksums.txt"
   fi
   cd -- "$directory"
-  for file in install.sh version.txt "clouddrive_${version}_linux_${arch}_docker.tar.gz" "$@"; do
+  for file in install.sh version.txt "${family}_${version}_linux_${arch}_docker.tar.gz" "$@"; do
     awk -v asset="$file" '$2 == asset {print}' checksums.txt | sha256sum --check --strict -
   done
 )
 
-verify_assets "$legacy" "$old"
-verify_assets "$candidate" "$new" "clouddrive-maintenance_${new}_linux_${arch}"
+family=$(awk -v suffix="-maintenance_${new}_linux_${arch}" '$2 == "neocloud" suffix { print "neocloud" } $2 == "clouddrive" suffix { print "clouddrive" }' "$candidate/checksums.txt")
+[[ $family == neocloud || $family == clouddrive ]] || fail '候选维护程序命名系列无法确定'
+verify_assets "$legacy" "$old" clouddrive
+verify_assets "$candidate" "$new" "$family-maintenance_${new}_linux_${arch}"
 
 port=$("$node" -e 'const net=require("node:net");const s=net.createServer();s.listen(0,"127.0.0.1",()=>{process.stdout.write(String(s.address().port));s.close()})')
 origin="http://127.0.0.1:$port"

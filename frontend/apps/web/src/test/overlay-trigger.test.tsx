@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
-import { OverlayTriggerAction } from '@clouddrive/ui-adapter/overlay-trigger';
+import { MenuButton } from '@neocloud/ui-adapter/menu-button';
+import { OverlayTriggerAction } from '@neocloud/ui-adapter/overlay-trigger';
 
 describe('OverlayTriggerAction语义', () => {
   it('非受控菜单仍通知打开和关闭，按需读取菜单内容的业务可以订阅', () => {

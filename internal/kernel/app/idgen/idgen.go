@@ -4,8 +4,8 @@ package idgen
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	pkgidgen "github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	pkgidgen "github.com/reina0721/neocloud/pkg/idgen"
 )
 
 const ID app.ID = "idgen"

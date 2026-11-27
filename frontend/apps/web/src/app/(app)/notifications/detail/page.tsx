@@ -5,7 +5,7 @@
 import dynamic from 'next/dynamic';
 
 const PluginPage = dynamic(
-  () => import('@clouddrive/surface/plugin-routes/notifications/detail/page'),
+  () => import('@neocloud/surface/plugin-routes/notifications/detail/page'),
   {
     loading: () => <div aria-hidden="true" className="h-64" />,
   },

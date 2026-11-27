@@ -1,8 +1,8 @@
 'use client';
 import type { ReactNode } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { CheckboxField } from '@clouddrive/ui-adapter/form-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { CheckboxField } from '@neocloud/ui-adapter/form-field';
 import type { FileEntry } from '../../../src/files/model';
 import type { FileIconRule } from '../../../src/files/icon-rules';
 import type { FileViewPreferences, FileColumn } from '../../../src/files/view-options';

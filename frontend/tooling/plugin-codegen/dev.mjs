@@ -16,7 +16,7 @@ import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { loadConfig } from '@clouddrive/config/node';
+import { loadConfig } from '@neocloud/config/node';
 import { nextDevOptions } from '../next-dev-options.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));

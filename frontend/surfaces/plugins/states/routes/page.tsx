@@ -1,10 +1,10 @@
 'use client';
 
-import { BusyIndicator } from '@clouddrive/ui-adapter/busy-indicator';
-import { Panel } from '@clouddrive/ui-adapter/panel';
-import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import type { ProductState } from '@clouddrive/types';
+import { BusyIndicator } from '@neocloud/ui-adapter/busy-indicator';
+import { Panel } from '@neocloud/ui-adapter/panel';
+import { Skeleton } from '@neocloud/ui-adapter/skeleton';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import type { ProductState } from '@neocloud/types';
 import {
   Ban,
   CheckCircle2,
@@ -16,9 +16,9 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
 
 const stateDefinitions = [
   { id: 'empty', icon: Inbox },

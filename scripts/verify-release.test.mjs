@@ -118,19 +118,19 @@ test("预发布标签不能自动提升为正式版本", () => {
   assert.throws(() => requiredAssets("v0.1.0-rc.1"), /仅正式版本/);
 });
 
-async function fixture(t, { armSha = sha, layout = true, armToolMachine = 183 } = {}) {
+async function fixture(t, { armSha = sha, layout = true, armToolMachine = 183, family = "neocloud" } = {}) {
   const directory = await mkdtemp(join(tmpdir(), "release-assets-unit-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const installerPath = join(directory, "source-installer");
   await writeFile(installerPath, "#!/usr/bin/env bash\necho fixture\n");
-  for (const name of requiredAssets(tag)) {
+  for (const name of requiredAssets(tag, family)) {
     let bytes = "fixture-archive";
     if (name.endsWith(".spdx.json"))
       bytes = JSON.stringify({
         spdxVersion: "SPDX-2.3",
         packages: [{ name: "fixture" }],
       });
-    if (name.startsWith("clouddrive-maintenance_")) {
+    if (name.startsWith(family + "-maintenance_")) {
       bytes = Buffer.alloc(20);
       bytes.set([127, 69, 76, 70, 2, 1, 1]);
       bytes.writeUInt16LE(name.endsWith("arm64") ? armToolMachine : 62, 18);
@@ -147,7 +147,7 @@ async function fixture(t, { armSha = sha, layout = true, armToolMachine = 183 } 
     await writeFile(join(stage, "install.sh"), await readFile(installerPath));
     await writeFile(
       join(stage, "images.env"),
-      `API_IMAGE=clouddrive-api:${tag}-${arch}\nWEB_IMAGE=clouddrive-web:${tag}-${arch}\n`,
+      `API_IMAGE=${family}-api:${tag}-${arch}\nWEB_IMAGE=${family}-web:${tag}-${arch}\n`,
     );
     await writeFile(
       join(stage, "manifest.txt"),
@@ -155,7 +155,7 @@ async function fixture(t, { armSha = sha, layout = true, armToolMachine = 183 } 
     );
     execFileSync("tar", [
       "-czf",
-      join(directory, `clouddrive_${tag}_linux_${arch}_docker.tar.gz`),
+      join(directory, `${family}_${tag}_linux_${arch}_docker.tar.gz`),
       "-C",
       stage,
       "compose.yaml",
@@ -166,7 +166,7 @@ async function fixture(t, { armSha = sha, layout = true, armToolMachine = 183 } 
     ]);
   }
   const lines = [];
-  for (const name of requiredAssets(tag))
+  for (const name of requiredAssets(tag, family))
     if (!["checksums.txt", "checksums.txt.sigstore.json"].includes(name))
       lines.push(
         createHash("sha256")
@@ -177,24 +177,33 @@ async function fixture(t, { armSha = sha, layout = true, armToolMachine = 183 } 
       );
   await writeFile(join(directory, "checksums.txt"), lines.join("\n") + "\n");
   const release = { tag_name: tag, draft: true, prerelease: false, assets: [] };
-  for (const name of requiredAssets(tag))
+  for (const name of requiredAssets(tag, family))
     release.assets.push({
       name,
       size: (await stat(join(directory, name))).size,
       state: "uploaded",
     });
-  return { release, directory, tag, sha, installerPath };
+  return { release, directory, tag, sha, installerPath, family };
 }
 test("完整双架构产物及其清单可通过验收", async (t) =>
   verifyAssets(await fixture(t)));
+
+test("桥接版本验收旧资产并拒绝混合命名系列", async (t) => {
+  const f = await fixture(t, { family: "clouddrive" });
+  await verifyAssets(f);
+  const name = `neocloud_${tag}_linux_amd64_docker.tar.gz`;
+  await writeFile(join(f.directory, name), "mixed");
+  f.release.assets.push({ name, size: 5, state: "uploaded" });
+  await assert.rejects(verifyAssets(f), /混合了命名系列/);
+});
 
 test("缺少自定义布局能力的草稿产物不能发布", async (t) => {
   await assert.rejects(verifyAssets(await fixture(t, { layout: false })), /INSTANCE_LAYOUT/);
 });
 for (const missing of [
   "checksums.txt.sigstore.json",
-  "clouddrive_v0.1.0_windows_amd64_managed-full.zip",
-  `clouddrive_${tag}_linux_arm64_docker.tar.gz`,
+  "neocloud_v0.1.0_windows_amd64_managed-full.zip",
+  `neocloud_${tag}_linux_arm64_docker.tar.gz`,
 ]) {
   test("缺少必要附件必须阻止发布：" + missing, async (t) => {
     const f = await fixture(t);
@@ -215,7 +224,7 @@ test("摘要损坏和未纳入签名清单的 SBOM 均阻止发布", async (t) =
     checksumsPath,
     (await readFile(checksumsPath, "utf8"))
       .split("\n")
-      .filter((x) => !x.endsWith("clouddrive-api_v0.1.0_arm64.spdx.json"))
+      .filter((x) => !x.endsWith("neocloud-api_v0.1.0_arm64.spdx.json"))
       .join("\n"),
   );
   g.release.assets.find((a) => a.name === "checksums.txt").size = (

@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/health"
-	"github.com/reina0721/clouddrive/pkg/httpx"
-	"github.com/reina0721/clouddrive/pkg/idgen"
-	"github.com/reina0721/clouddrive/pkg/logger"
-	"github.com/reina0721/clouddrive/pkg/storage"
-	"github.com/reina0721/clouddrive/pkg/supervisor"
+	"github.com/reina0721/neocloud/pkg/health"
+	"github.com/reina0721/neocloud/pkg/httpx"
+	"github.com/reina0721/neocloud/pkg/idgen"
+	"github.com/reina0721/neocloud/pkg/logger"
+	"github.com/reina0721/neocloud/pkg/storage"
+	"github.com/reina0721/neocloud/pkg/supervisor"
 )
 
 func TestFoundationLibrariesCanBeCreatedIndependently(t *testing.T) {

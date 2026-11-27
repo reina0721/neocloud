@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
+import { TextField } from '@neocloud/ui-adapter/form-field';
 
-vi.mock('@clouddrive/i18n', () => ({
+vi.mock('@neocloud/i18n', () => ({
   useFrontendTranslation: () => ({ t: (key: string) => key }),
 }));
 
@@ -22,7 +23,7 @@ it('新部署只提示刷新，关闭本次提醒后还可发现新部署', asyn
   await act(() => {
     render(
       <>
-        <input aria-label="draft" defaultValue="unfinished" />
+        <TextField label="draft" defaultValue="unfinished" />
         <WebBuildNotice />
       </>,
     );

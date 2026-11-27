@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/module/navigation/model"
-	navigationservice "github.com/reina0721/clouddrive/internal/module/navigation/service"
-	webuicontract "github.com/reina0721/clouddrive/internal/webui"
+	"github.com/reina0721/neocloud/internal/module/navigation/model"
+	navigationservice "github.com/reina0721/neocloud/internal/module/navigation/service"
+	webuicontract "github.com/reina0721/neocloud/internal/webui"
 )
 
 // navigationCatalogAdapter 只把静态菜单定义与策略校验暴露给 Navigation。

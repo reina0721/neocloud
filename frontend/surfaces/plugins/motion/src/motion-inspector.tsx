@@ -1,13 +1,13 @@
 'use client';
 
-import { ToggleGroup } from '@clouddrive/ui-adapter/toggle-group';
+import { ToggleGroup } from '@neocloud/ui-adapter/toggle-group';
 
 import {
   useMotionPolicy,
   type MotionCategory,
   type MotionMode,
   type MotionScale,
-} from '@clouddrive/surface-foundation/motion-policy-context';
+} from '@neocloud/surface-foundation/motion-policy-context';
 
 const modes: readonly MotionMode[] = ['system', 'full', 'reduced', 'off'];
 const scales: readonly MotionScale[] = [1, 2, 4];

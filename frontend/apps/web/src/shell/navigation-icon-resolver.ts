@@ -1,8 +1,8 @@
 'use client';
 
-import type { NavigationIconId } from '@clouddrive/surface/shell';
-import { navigationIconVocabulary } from '@clouddrive/surface/shell';
-import { navigationIconComponents } from '@clouddrive/surface/icon-components';
+import type { NavigationIconId } from '@neocloud/surface/shell';
+import { navigationIconVocabulary } from '@neocloud/surface/shell';
+import { navigationIconComponents } from '@neocloud/surface/icon-components';
 import { Circle, type LucideIcon } from 'lucide-react';
 
 /**

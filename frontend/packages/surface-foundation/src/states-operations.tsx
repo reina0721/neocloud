@@ -1,6 +1,6 @@
-import { ProgressMeter } from '@clouddrive/ui-adapter/progress-meter';
-import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+import { ProgressMeter } from '@neocloud/ui-adapter/progress-meter';
+import { Skeleton } from '@neocloud/ui-adapter/skeleton';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
 import type { ReactNode } from 'react';
 
 export type OperationState = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';

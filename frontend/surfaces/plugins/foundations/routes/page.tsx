@@ -1,17 +1,17 @@
 'use client';
 
-import { Card, CardContent } from '@clouddrive/ui-adapter/card';
-import { Panel } from '@clouddrive/ui-adapter/panel';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
+import { Card, CardContent } from '@neocloud/ui-adapter/card';
+import { Panel } from '@neocloud/ui-adapter/panel';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
 import { AppWindow, Braces, Component, ShieldCheck } from 'lucide-react';
-import { FrontendMessages, useFrontendTranslation } from '@clouddrive/i18n';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { useWorkbenchPort } from '@clouddrive/plugin-framework/workbench';
+import { FrontendMessages, useFrontendTranslation } from '@neocloud/i18n';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { useWorkbenchPort } from '@neocloud/plugin-framework/workbench';
 import { useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
+import type { Preferences } from '@neocloud/surface/preferences-model';
 
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
 
 import { foundationMessages } from '../src-messages';
 

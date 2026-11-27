@@ -1,7 +1,7 @@
 /* Pattern entry同时导出离开确认 Port 与视图组件，不是应用 Fast Refresh 边界。 */
 /* eslint-disable react-refresh/only-export-components */
-import type { FormLifecycle } from '@clouddrive/form-foundation';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
+import type { FormLifecycle } from '@neocloud/form-foundation';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
 import type { ReactNode } from 'react';
 
 import { StickyActions } from './layout';

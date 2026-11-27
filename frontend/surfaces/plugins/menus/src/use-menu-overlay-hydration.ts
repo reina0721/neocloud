@@ -1,6 +1,6 @@
 'use client';
 
-import { useNavigationAdminPort } from '@clouddrive/plugin-framework/navigation-admin';
+import { useNavigationAdminPort } from '@neocloud/plugin-framework/navigation-admin';
 import { useSyncExternalStore } from 'react';
 
 /**

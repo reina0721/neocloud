@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { SiteProfileProvider } from '@clouddrive/surface/administration/runtime';
-import type { SiteProfile, SiteProfileVersion } from '@clouddrive/surface/administration';
+import { SiteProfileProvider } from '@neocloud/surface/administration/runtime';
+import type { SiteProfile, SiteProfileVersion } from '@neocloud/surface/administration';
 import { readAuthConfig } from '../auth/config';
 
 export function RuntimeSiteProfile({
@@ -64,8 +64,8 @@ export function RuntimeSiteProfile({
   }, [client]);
   return (
     <SiteProfileProvider value={{ profile, theme, admin, readPublishedAddresses }}>
-      <title>{profile?.name || 'clouddrive'}</title>
-      <meta name="description" content={profile?.description || 'clouddrive 管理工作区'} />
+      <title>{profile?.name || 'NeoCloud'}</title>
+      <meta name="description" content={profile?.description || 'NeoCloud 管理工作区'} />
       {profile?.icon ? <link rel="icon" href={profile.icon} referrerPolicy="no-referrer" /> : null}
       {children}
     </SiteProfileProvider>

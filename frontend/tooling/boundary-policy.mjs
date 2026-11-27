@@ -128,7 +128,7 @@ export function findSourcePolicyViolations({ content, extension, localPath }) {
 
 export function findImportPolicyViolations({ localPath, specifier, workspace }) {
   const violations = [];
-  const legacyArchitecturePackagePrefix = `@clouddrive/${'ad' + 'min-'}`;
+  const legacyArchitecturePackagePrefix = `@neocloud/${'ad' + 'min-'}`;
 
   if (specifier.startsWith(legacyArchitecturePackagePrefix)) {
     violations.push(['Architecture naming', '禁止恢复旧 package namespace']);
@@ -155,19 +155,19 @@ export function findImportPolicyViolations({ localPath, specifier, workspace }) 
   if (importsZustand && !localPath.startsWith('packages/state-foundation/')) {
     violations.push([
       'State foundation',
-      'zustand 只能由 packages/state-foundation 直接 import；业务经 @clouddrive/state-foundation 消费',
+      'zustand 只能由 packages/state-foundation 直接 import；业务经 @neocloud/state-foundation 消费',
     ]);
   }
   // testing subpath 只允许测试/测试工具消费（production 禁止 import）。
   const isTestingSource = localPath.includes('/testing/') || testPathPattern.test(localPath);
   if (
-    specifier.startsWith('@clouddrive/state-foundation/testing') &&
+    specifier.startsWith('@neocloud/state-foundation/testing') &&
     !isTestingSource &&
     !localPath.startsWith('packages/state-foundation/')
   ) {
     violations.push(['State foundation', 'testing subpath 禁止被 production 代码 import']);
   }
-  if (specifier === '@clouddrive/config/node' || specifier.startsWith('@clouddrive/config/node')) {
+  if (specifier === '@neocloud/config/node' || specifier.startsWith('@neocloud/config/node')) {
     const isNodeAllowed =
       isTestingSource ||
       localPath.startsWith('tooling/') ||
@@ -177,17 +177,16 @@ export function findImportPolicyViolations({ localPath, specifier, workspace }) 
     if (!isNodeAllowed) {
       violations.push([
         'Config foundation',
-        '@clouddrive/config/node 只能在 Node 构建与工具链中消费，禁止在应用运行时/浏览器代码中导入',
+        '@neocloud/config/node 只能在 Node 构建与工具链中消费，禁止在应用运行时/浏览器代码中导入',
       ]);
     }
   }
-  if (specifier === '@clouddrive/ui-adapter') {
+  if (specifier === '@neocloud/ui-adapter') {
     violations.push(['UI adapter imports', '必须使用 UI Adapter 语义子路径，禁止根 Barrel 导入']);
   }
-  const importsWebHost =
-    specifier === '@clouddrive/web' || specifier.startsWith('@clouddrive/web/');
+  const importsWebHost = specifier === '@neocloud/web' || specifier.startsWith('@neocloud/web/');
   const importsSurface =
-    specifier === '@clouddrive/surface' || specifier.startsWith('@clouddrive/surface/');
+    specifier === '@neocloud/surface' || specifier.startsWith('@neocloud/surface/');
 
   if (workspace?.startsWith('packages/') && importsWebHost) {
     violations.push(['Dependency direction', '公共包不得依赖 Runtime Host']);
@@ -197,8 +196,8 @@ export function findImportPolicyViolations({ localPath, specifier, workspace }) 
   }
   if (
     (workspace?.startsWith('apps/') || workspace?.startsWith('packages/')) &&
-    (specifier === '@clouddrive/surface/plugins' ||
-      specifier.startsWith('@clouddrive/surface/plugins/'))
+    (specifier === '@neocloud/surface/plugins' ||
+      specifier.startsWith('@neocloud/surface/plugins/'))
   ) {
     violations.push(['Surface private boundary', 'Host/公共包不得导入 Surface Plugin 内部实现']);
   }
@@ -207,7 +206,7 @@ export function findImportPolicyViolations({ localPath, specifier, workspace }) 
   }
   if (workspace === 'packages/core') {
     const allowed =
-      specifier === '@clouddrive/types' || specifier === 'vitest' || specifier.startsWith('.');
+      specifier === '@neocloud/types' || specifier === 'vitest' || specifier.startsWith('.');
     if (!allowed) violations.push(['Core purity', `Core 不得依赖 ${specifier}`]);
   }
 

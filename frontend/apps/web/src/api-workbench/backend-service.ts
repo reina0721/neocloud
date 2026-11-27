@@ -5,7 +5,7 @@ import {
   safeParseWorkspaceSnapshot,
   type ApiWorkbenchPort,
   type WorkspaceSnapshot,
-} from '@clouddrive/surface/api-workbench';
+} from '@neocloud/surface/api-workbench';
 const executionSchema = z.discriminatedUnion('ok', [
   z.object({
     ok: z.literal(true),

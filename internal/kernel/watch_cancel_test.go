@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	"github.com/reina0721/neocloud/internal/kernel/config"
 )
 
 func TestWatchCancelAfterReadyDoesNotReportUnexpectedStop(t *testing.T) {

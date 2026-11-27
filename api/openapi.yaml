@@ -6616,11 +6616,11 @@ components:
       type: http
     webuiSession:
       in: cookie
-      name: go_scaffold_session
+      name: __Host-neocloud_iam_session
       type: apiKey
 info:
-  description: 当前模板的公开 HTTP 契约。所有失败使用 RFC 9457 Problem Details；operation 的认证与授权由项目 gate 统一执行。
-  title: clouddrive HTTP API
+  description: NeoCloud 的原生 HTTP 契约。所有失败使用 RFC 9457 Problem Details；operation 的认证与授权由项目 gate 统一执行。
+  title: NeoCloud HTTP API
   version: 1.0.0-rc.1
 openapi: 3.0.3
 paths:

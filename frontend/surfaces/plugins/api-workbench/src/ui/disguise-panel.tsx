@@ -1,12 +1,12 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import type { RequestDisguise } from '@clouddrive/surface/api-workbench';
-import { useApiWorkbenchPort } from '@clouddrive/surface/api-workbench';
-import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
-import { TextField } from '@clouddrive/ui-adapter/form-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import type { RequestDisguise } from '@neocloud/surface/api-workbench';
+import { useApiWorkbenchPort } from '@neocloud/surface/api-workbench';
+import { AlertBanner } from '@neocloud/ui-adapter/feedback';
+import { TextField } from '@neocloud/ui-adapter/form-field';
 import { Sliders } from 'lucide-react';
-import { Action } from '@clouddrive/ui-adapter/action';
+import { Action } from '@neocloud/ui-adapter/action';
 
 export type DisguisePanelProps = Readonly<{
   disguise: RequestDisguise;

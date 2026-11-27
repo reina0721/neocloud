@@ -8,9 +8,12 @@ on:
 permissions:
   contents: read
 
+env:
+  NEOCLOUD_RELEASE_PROFILE: ${{ vars.NEOCLOUD_RELEASE_PROFILE || (github.ref_name == 'v0.3.4' && 'legacy') || 'neocloud' }}
+
 jobs:
   release:
-    name: Verify source and build legacy release archives
+    name: Verify source and build standalone release archives
     if: github.repository == 'reina0721/neocloud'
     runs-on: ubuntu-latest
     environment: release
@@ -71,19 +74,28 @@ jobs:
           if [[ "$GITHUB_REF_NAME" == *-* ]]; then
             unset GORELEASER_PREVIOUS_TAG
           fi
+          family="$(node scripts/release-go-source.mjs family)"
+          if [[ "$family" == clouddrive ]]; then
+            export NEOCLOUD_RELEASE_GO_ROOT
+            NEOCLOUD_RELEASE_GO_ROOT="$(mktemp -d "$RUNNER_TEMP/legacy-go-XXXXXXXX")"
+            trap 'rm -rf -- "$NEOCLOUD_RELEASE_GO_ROOT"' EXIT
+            node scripts/release-go-source.mjs prepare-legacy "$NEOCLOUD_RELEASE_GO_ROOT"
+          fi
           node scripts/release-config.mjs --output "${RUNNER_TEMP}/goreleaser.yaml"
           goreleaser release --clean --skip=sign --config "${RUNNER_TEMP}/goreleaser.yaml"
-      - name: Verify legacy archive targets and license trees
+      - name: Verify standalone archive targets and license trees
         run: |
+          family="$(node scripts/release-go-source.mjs family)"
           version="${GITHUB_REF_NAME#v}"
-          linux="${GORELEASER_DIST}/clouddrive_${version}_linux_amd64.tar.gz"
-          windows="${GORELEASER_DIST}/clouddrive_${version}_windows_amd64.zip"
+          linux="${GORELEASER_DIST}/${family}_${version}_linux_amd64.tar.gz"
+          windows="${GORELEASER_DIST}/${family}_${version}_windows_amd64.zip"
           tar -tzf "$linux" > "$RUNNER_TEMP/linux-files.txt"
           unzip -Z1 "$windows" > "$RUNNER_TEMP/windows-files.txt"
-          tar -xOzf "$linux" clouddrive > "$RUNNER_TEMP/legacy-linux"
-          unzip -p "$windows" clouddrive.exe > "$RUNNER_TEMP/legacy-windows"
+          tar -xOzf "$linux" "$family" > "$RUNNER_TEMP/standalone-linux"
+          unzip -p "$windows" "$family.exe" > "$RUNNER_TEMP/standalone-windows"
           for target in linux windows; do
-            go version -m "$RUNNER_TEMP/legacy-$target" > "$RUNNER_TEMP/$target-build.txt"
+            go version -m "$RUNNER_TEMP/standalone-$target" > "$RUNNER_TEMP/$target-build.txt"
+            grep -Ex "[[:space:]]+path[[:space:]]+github.com/reina0721/$family/cmd/app" "$RUNNER_TEMP/$target-build.txt"
             grep -Ex "[[:space:]]+build[[:space:]]+GOOS=$target" "$RUNNER_TEMP/$target-build.txt"
             grep -Ex '[[:space:]]+build[[:space:]]+GOARCH=amd64' "$RUNNER_TEMP/$target-build.txt"
             for file in README.md LICENSE NOTICE SOURCES.json locales/messages.zh-CN.yaml internal/module/todo/binding/i18n/locales/messages.zh-CN.yaml third-party/GO-LICENSE third-party/github.com/spf13/cobra/LICENSE.txt; do
@@ -117,15 +129,24 @@ jobs:
         run: bash scripts/build-docker-release.sh --version "${GITHUB_REF_NAME}" --arch "${{ matrix.arch }}" --out dist/docker
       - name: Build host maintenance command
         run: |
-          binary="dist/docker/clouddrive-maintenance_${GITHUB_REF_NAME}_linux_${{ matrix.arch }}"
-          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build -trimpath -buildvcs=false -ldflags="-s -w" -o "${binary}" ./cmd/clouddrive-maintenance
+          family="$(node scripts/release-go-source.mjs family)"
+          go_root="$PWD"
+          if [[ "$family" == clouddrive ]]; then
+            go_root="$(mktemp -d "$RUNNER_TEMP/legacy-go-XXXXXXXX")"
+            trap 'rm -rf -- "$go_root"' EXIT
+            node scripts/release-go-source.mjs prepare-legacy "$go_root"
+          fi
+          binary="$PWD/dist/docker/${family}-maintenance_${GITHUB_REF_NAME}_linux_${{ matrix.arch }}"
+          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go -C "$go_root" build -trimpath -buildvcs=false -ldflags="-s -w" -o "${binary}" "./cmd/${family}-maintenance"
           node scripts/verify-elf-platform.mjs "${binary}" "${{ matrix.arch }}"
+          go version -m "$binary" | grep -Ex "[[:space:]]+path[[:space:]]+github.com/reina0721/$family/cmd/$family-maintenance"
       - name: Produce image SBOMs
         run: |
+          family="$(node scripts/release-go-source.mjs family)"
           GOBIN="${RUNNER_TEMP}/release-tools" go install github.com/anchore/syft/cmd/syft@v1.50.0
           for service in api web; do
-            "${RUNNER_TEMP}/release-tools/syft" "docker:clouddrive-${service}:${GITHUB_REF_NAME}-${{ matrix.arch }}" \
-              --output "spdx-json=dist/docker/clouddrive-${service}_${GITHUB_REF_NAME}_${{ matrix.arch }}.spdx.json"
+            "${RUNNER_TEMP}/release-tools/syft" "docker:${family}-${service}:${GITHUB_REF_NAME}-${{ matrix.arch }}" \
+              --output "spdx-json=dist/docker/${family}-${service}_${GITHUB_REF_NAME}_${{ matrix.arch }}.spdx.json"
           done
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -213,9 +234,11 @@ jobs:
           baseline="$BASELINE"
           [[ "$baseline" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
           baseline_assets=$(gh release view "$baseline" --json assets --jq '.assets[].name')
+          family="$(node scripts/release-go-source.mjs family)"
           source_args=()
           if grep -q '_managed-go\.zip$' <<< "$baseline_assets"; then
-            grep -Fxq "clouddrive_${baseline}_${TARGET_OS}_${TARGET_ARCH}_managed-go.zip" <<< "$baseline_assets"
+            grep -Fxq -e "clouddrive_${baseline}_${TARGET_OS}_${TARGET_ARCH}_managed-go.zip" \
+              -e "neocloud_${baseline}_${TARGET_OS}_${TARGET_ARCH}_managed-go.zip" <<< "$baseline_assets"
             baseline_commit=$(git rev-parse "${baseline}^{commit}")
             source_args=(--base-version "$baseline" --base-commit "$baseline_commit")
           fi
@@ -225,7 +248,7 @@ jobs:
             --os "$TARGET_OS" --arch "$TARGET_ARCH" --out dist/managed-go "${source_args[@]}" \
             --web-dir "$RUNNER_TEMP/managed-static/web" --web-licenses-dir "$RUNNER_TEMP/managed-static/licenses"
           for profile in managed-go managed-full; do
-            archive="dist/managed-go/clouddrive_${GITHUB_REF_NAME}_${TARGET_OS}_${TARGET_ARCH}_${profile}.zip"
+            archive="dist/managed-go/${family}_${GITHUB_REF_NAME}_${TARGET_OS}_${TARGET_ARCH}_${profile}.zip"
             syft "file:$archive" --output "spdx-json=$archive.spdx.json"
           done
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -252,6 +275,9 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:
           go-version-file: go.mod
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.11.1
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: docker-*
@@ -267,6 +293,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          family="$(node scripts/release-go-source.mjs family)"
           mkdir -p dist/complete
           test "$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft)" = true
           gh release download "${GITHUB_REF_NAME}" --pattern checksums.txt --pattern '*.spdx.json' --dir dist/complete
@@ -274,7 +301,7 @@ jobs:
           cd dist/docker
           sha256sum --check "checksums-amd64.txt"
           sha256sum --check "checksums-arm64.txt"
-          sha256sum -- clouddrive_*_docker.tar.gz clouddrive-maintenance_* install.sh version.txt *.spdx.json >> ../complete/checksums.txt
+          sha256sum -- "${family}_"*_docker.tar.gz "${family}-maintenance_"* install.sh version.txt *.spdx.json >> ../complete/checksums.txt
           if [[ "$GITHUB_REF_NAME" != *-* ]]; then
             (cd ../managed-go && sha256sum -- *_managed-go.zip *_managed-full.zip *_managed-go.zip.spdx.json *_managed-full.zip.spdx.json) >> ../complete/checksums.txt
           fi
@@ -291,9 +318,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          family="$(node scripts/release-go-source.mjs family)"
           test "$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq .isDraft)" = true
-          gh release upload "${GITHUB_REF_NAME}" dist/docker/clouddrive_*_docker.tar.gz dist/docker/install.sh \
-            dist/docker/version.txt dist/docker/*.spdx.json dist/docker/clouddrive-maintenance_* dist/complete/checksums.txt dist/complete/checksums.txt.sigstore.json --clobber
+          gh release upload "${GITHUB_REF_NAME}" "dist/docker/${family}_"*_docker.tar.gz dist/docker/install.sh \
+            dist/docker/version.txt dist/docker/*.spdx.json "dist/docker/${family}-maintenance_"* dist/complete/checksums.txt dist/complete/checksums.txt.sigstore.json --clobber
           if [[ "$GITHUB_REF_NAME" != *-* ]]; then
             gh release upload "${GITHUB_REF_NAME}" dist/managed-go/*_managed-go.zip dist/managed-go/*_managed-full.zip \
               dist/managed-go/*_managed-go.zip.spdx.json dist/managed-go/*_managed-full.zip.spdx.json --clobber
@@ -451,6 +479,7 @@ jobs:
           test "$(git rev-parse "$ref^{commit}")" = "$GITHUB_SHA"
       - name: Download and verify complete signed asset set
         run: |
+          family="$(node scripts/release-go-source.mjs family)"
           gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" > "${RUNNER_TEMP}/release-pages.json"
           node scripts/verify-release.mjs draft "${RUNNER_TEMP}/release-pages.json" "${GITHUB_REF_NAME}" > "${RUNNER_TEMP}/release.json"
           gh release download "${GITHUB_REF_NAME}" --dir "${RUNNER_TEMP}/release-assets"
@@ -462,7 +491,7 @@ jobs:
             os=${target%/*}
             arch=${target#*/}
             for profile in managed-go managed-full; do
-              archive="${RUNNER_TEMP}/release-assets/clouddrive_${GITHUB_REF_NAME}_${os}_${arch}_${profile}.zip"
+              archive="${RUNNER_TEMP}/release-assets/${family}_${GITHUB_REF_NAME}_${os}_${arch}_${profile}.zip"
               go run ./internal/tools/native-archive --profile "$profile" --verify-managed "$archive" \
                 --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" --os "$os" --arch "$arch"
             done

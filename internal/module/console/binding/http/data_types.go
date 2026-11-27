@@ -1,7 +1,7 @@
 package httpbinding
 
 import (
-	"github.com/reina0721/clouddrive/internal/module/console/model"
+	"github.com/reina0721/neocloud/internal/module/console/model"
 )
 
 type Event = model.Event

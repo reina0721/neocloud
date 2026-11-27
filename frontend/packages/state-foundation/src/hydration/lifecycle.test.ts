@@ -12,7 +12,7 @@ type SP = Partial<S>;
 
 function makeStore(storage: PersistStorage<SP>) {
   return createPersistStore<S>(() => ({ theme: 'light' }), {
-    name: 'clouddrive.test.hydration',
+    name: 'neocloud.test.hydration',
     version: 1,
     storage,
     skipHydration: true,
@@ -37,7 +37,7 @@ describe('hydration lifecycle', () => {
 
   it('async storage：hydrated 在异步完成后到达', async () => {
     const fixture = createAsyncStorageFixture<SP>();
-    fixture.setItem('clouddrive.test.hydration', { state: { theme: 'dark' }, version: 1 });
+    fixture.setItem('neocloud.test.hydration', { state: { theme: 'dark' }, version: 1 });
     const store = makeStore(fixture);
     const lc = createHydrationLifecycle(store);
     expect(lc.trigger()).toBe(true);

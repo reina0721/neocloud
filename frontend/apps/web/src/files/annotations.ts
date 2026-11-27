@@ -5,7 +5,7 @@ import {
   annotationSummariesResultSchema,
   FilesError,
   type AnnotationsPort,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import type { createJsonClient } from '../api/json-client';
 
 /** createAnnotationsPort 复用唯一文件客户端，账号校验与剪贴板职责保留在Host。 */

@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	"github.com/reina0721/clouddrive/pkg/database"
+	"github.com/reina0721/neocloud/pkg/database"
 )
 
 const (

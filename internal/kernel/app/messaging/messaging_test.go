@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	kernelconfig "github.com/reina0721/clouddrive/internal/kernel/config"
-	pkgclock "github.com/reina0721/clouddrive/pkg/clock"
-	pkgexecution "github.com/reina0721/clouddrive/pkg/execution"
-	"github.com/reina0721/clouddrive/pkg/fault"
-	"github.com/reina0721/clouddrive/pkg/health"
-	"github.com/reina0721/clouddrive/pkg/logger"
-	pkgmessaging "github.com/reina0721/clouddrive/pkg/messaging"
-	pkgobservability "github.com/reina0721/clouddrive/pkg/observability"
+	kernelconfig "github.com/reina0721/neocloud/internal/kernel/config"
+	pkgclock "github.com/reina0721/neocloud/pkg/clock"
+	pkgexecution "github.com/reina0721/neocloud/pkg/execution"
+	"github.com/reina0721/neocloud/pkg/fault"
+	"github.com/reina0721/neocloud/pkg/health"
+	"github.com/reina0721/neocloud/pkg/logger"
+	pkgmessaging "github.com/reina0721/neocloud/pkg/messaging"
+	pkgobservability "github.com/reina0721/neocloud/pkg/observability"
 )
 
 func TestResourceFreezesCatalogAndGatesPublisherByActivation(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/kernel/config"
 )
 
 // Watch 持续监听 FileSource，并由唯一 Coordinator 加载每个候选。

@@ -19,7 +19,7 @@ const tokensCssPath = join(frontendRoot, 'packages', 'design-system', 'src', 'to
 
 async function loadTokensFixture() {
   const schema = (await readJsonFile(schemaPath)) as Record<string, unknown>;
-  const meta = schema['x-clouddrive'] as Record<string, unknown>;
+  const meta = schema['x-neocloud'] as Record<string, unknown>;
   const artifact = (meta.artifacts as Array<Record<string, unknown>>).find(
     (a) => a.generator === 'css-token-regions-v1',
   )!;

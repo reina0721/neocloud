@@ -1,6 +1,6 @@
 import { access, cp } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { loadWebConfig } from '@clouddrive/config/node';
+import { loadWebConfig } from '@neocloud/config/node';
 import { bundleLicenses } from './bundle-licenses.mjs';
 
 const webRoot = resolve(import.meta.dirname, '../apps/web');

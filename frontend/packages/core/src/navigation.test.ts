@@ -1,4 +1,4 @@
-import type { NavigationNode } from '@clouddrive/types';
+import type { NavigationNode } from '@neocloud/types';
 import { describe, expect, it } from 'vitest';
 
 import {

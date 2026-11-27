@@ -1,7 +1,7 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
 import { useReaderWorkspace } from '../../src/reader-workspace-context';
 
 export default function FileViewerRoute() {

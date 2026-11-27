@@ -17,7 +17,7 @@ const motionCssPath = join(frontendRoot, 'packages', 'design-system', 'src', 'mo
 
 async function loadMotionFixture() {
   const schema = (await readJsonFile(schemaPath)) as Record<string, unknown>;
-  const meta = schema['x-clouddrive'] as Record<string, unknown>;
+  const meta = schema['x-neocloud'] as Record<string, unknown>;
   const artifact = (meta.artifacts as Array<Record<string, unknown>>).find(
     (a) => a.generator === 'css-motion-language-v1',
   )!;
@@ -99,7 +99,7 @@ describe('css-motion-language-v1（真实 fixture）', () => {
     const doc = mutableSource(source);
     const translateKeyframe = doc.motionLanguage.keyframes.find((k) => k.id === 'content-rise-in')!;
     translateKeyframe.frames[0]!.ops[0]!.distanceRef =
-      '/x-clouddrive/source/tokens/rootMotion/distances/values/missing';
+      '/x-neocloud/source/tokens/rootMotion/distances/values/missing';
     const issues = validateMotionLanguageReferences(doc, options);
     expect(issues.length).toBeGreaterThan(0);
   });
@@ -109,7 +109,7 @@ describe('css-motion-language-v1（真实 fixture）', () => {
     const doc = mutableSource(source);
     const translateKeyframe = doc.motionLanguage.keyframes.find((k) => k.id === 'content-rise-in')!;
     translateKeyframe.frames[0]!.ops[0]!.distanceRef =
-      '/x-clouddrive/source/tokens/theme/radii/control';
+      '/x-neocloud/source/tokens/theme/radii/control';
     const issues = validateMotionLanguageReferences(doc, options);
     expect(issues.some((i) => i.includes('tokenVarPrefix'))).toBe(true);
   });

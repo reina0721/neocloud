@@ -1,11 +1,11 @@
 'use client';
-import { useFrontendTranslation, formatDate, formatTimeOfDay } from '@clouddrive/i18n';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
-import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
-import { IdentityError, useIdentityPort } from '@clouddrive/surface/identity/runtime';
+import { useFrontendTranslation, formatDate, formatTimeOfDay } from '@neocloud/i18n';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { DescriptionList } from '@neocloud/ui-adapter/description-list';
+import { route, RouteLink } from '@neocloud/plugin-framework/plugin';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import type { Preferences } from '@neocloud/surface/preferences-model';
+import { IdentityError, useIdentityPort } from '@neocloud/surface/identity/runtime';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import { IdentityModeNotice, IdentityQueryState } from '../../../src/identity/query-state';
 export function AuditDetailPage({

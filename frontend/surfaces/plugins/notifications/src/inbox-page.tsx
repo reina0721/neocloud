@@ -1,29 +1,24 @@
 'use client';
 import { useState } from 'react';
-import {
-  useFrontendTranslation,
-  formatDate,
-  formatTimeOfDay,
-  formatNumber,
-} from '@clouddrive/i18n';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
+import { useFrontendTranslation, formatDate, formatTimeOfDay, formatNumber } from '@neocloud/i18n';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
 import {
   Collection,
   CollectionPagination,
   CollectionQuery,
-} from '@clouddrive/surface-foundation/collection';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { PaginationControl } from '@clouddrive/ui-adapter/navigation';
-import { SelectField, CheckboxField } from '@clouddrive/ui-adapter/form-field';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
-import { NOTIFICATION_CATEGORIES } from '@clouddrive/plugin-framework/notifications';
-import { route, RouteLink, usePluginNavigation } from '@clouddrive/plugin-framework/plugin';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
+} from '@neocloud/surface-foundation/collection';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { PaginationControl } from '@neocloud/ui-adapter/navigation';
+import { SelectField, CheckboxField } from '@neocloud/ui-adapter/form-field';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
+import { NOTIFICATION_CATEGORIES } from '@neocloud/plugin-framework/notifications';
+import { route, RouteLink, usePluginNavigation } from '@neocloud/plugin-framework/plugin';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import type { Preferences } from '@neocloud/surface/preferences-model';
 import { CheckCheck, RefreshCw, X } from '../../../src/action-icons';
-import { IdentityError, useIdentityPort } from '@clouddrive/surface/identity/runtime';
+import { IdentityError, useIdentityPort } from '@neocloud/surface/identity/runtime';
 import { useProductInbox } from '../../../src/identity/use-inbox';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import { defaultInboxQuery, type InboxQuery } from './query-model';

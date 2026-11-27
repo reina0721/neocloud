@@ -1,11 +1,11 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Avatar, UserIdentity } from '@clouddrive/ui-adapter/identity';
-import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { useAccountNotificationSettings } from '@clouddrive/surface/administration/runtime';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Avatar, UserIdentity } from '@neocloud/ui-adapter/identity';
+import { MenuButton } from '@neocloud/ui-adapter/menu-button';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { useAccountNotificationSettings } from '@neocloud/surface/administration/runtime';
+import type { Preferences } from '@neocloud/surface/preferences-model';
 import {
   ChevronDown,
   Languages,

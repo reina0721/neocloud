@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { defaultPreferences, PREFERENCES_VERSION } from '@clouddrive/surface/preferences-model';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { defaultPreferences, PREFERENCES_VERSION } from '@neocloud/surface/preferences-model';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppProviders } from '../host/providers';

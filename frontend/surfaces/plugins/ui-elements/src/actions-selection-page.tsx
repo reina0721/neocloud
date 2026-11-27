@@ -1,8 +1,8 @@
 'use client';
 
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { ToggleGroup } from '@clouddrive/ui-adapter/toggle-group';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { ToggleGroup } from '@neocloud/ui-adapter/toggle-group';
 import {
   CheckCircle2,
   ChevronRight,
@@ -14,8 +14,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
 import { ComponentPreview } from './component-preview';
 import { UiElementsFamilyPage } from './family-page';
 export function ActionsSelectionPage() {

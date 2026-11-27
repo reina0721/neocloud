@@ -1,6 +1,6 @@
 {
   "contracts": {
-    "@clouddrive/core": {
+    "@neocloud/core": {
       "layer": "universal",
       "owner": "pure frontend semantics",
       "maturity": "stable",
@@ -8,7 +8,7 @@
       "authorityRoutes": ["/foundations"],
       "evidence": ["packages/core/src/navigation.test.ts", "packages/core/src/table.test.ts"]
     },
-    "@clouddrive/config": {
+    "@neocloud/config": {
       "layer": "universal",
       "owner": "global configuration",
       "maturity": "experimental",
@@ -21,7 +21,7 @@
         "docs/config-foundation.md"
       ]
     },
-    "@clouddrive/design-system": {
+    "@neocloud/design-system": {
       "layer": "universal",
       "owner": "semantic token and motion primitives",
       "maturity": "stable",
@@ -33,7 +33,7 @@
         "apps/web/e2e/ui-ux-109.spec.ts"
       ]
     },
-    "@clouddrive/form-foundation": {
+    "@neocloud/form-foundation": {
       "layer": "universal",
       "owner": "form lifecycle and field bridge",
       "maturity": "stable",
@@ -46,7 +46,7 @@
         "file-tests/storage-experience.spec.ts"
       ]
     },
-    "@clouddrive/i18n": {
+    "@neocloud/i18n": {
       "layer": "universal",
       "owner": "locale runtime and formatting",
       "maturity": "stable",
@@ -61,7 +61,7 @@
         "apps/web/e2e/authentication.spec.ts"
       ]
     },
-    "@clouddrive/schemas": {
+    "@neocloud/schemas": {
       "layer": "universal",
       "owner": "schema contract and authority runtime primitives",
       "maturity": "stable",
@@ -76,7 +76,7 @@
         "packages/schemas/src/runtime/runtime-integration.test.ts"
       ]
     },
-    "@clouddrive/types": {
+    "@neocloud/types": {
       "layer": "universal",
       "owner": "stable cross-workspace types",
       "maturity": "stable",
@@ -84,7 +84,7 @@
       "authorityRoutes": ["/foundations"],
       "evidence": ["packages/types/src/index.ts"]
     },
-    "@clouddrive/ui-adapter": {
+    "@neocloud/ui-adapter": {
       "layer": "universal",
       "owner": "product-neutral UI contracts",
       "maturity": "stable",
@@ -93,6 +93,7 @@
         "./action",
         "./accessibility",
         "./async-region",
+        "./browser-layout",
         "./busy-indicator",
         "./card",
         "./charts",
@@ -159,7 +160,7 @@
         "file-tests/storage-policy.spec.ts"
       ]
     },
-    "@clouddrive/state-foundation": {
+    "@neocloud/state-foundation": {
       "layer": "universal",
       "owner": "product state mechanics (store creation, persistence, storage, hydration)",
       "maturity": "experimental",
@@ -171,7 +172,7 @@
         "packages/state-foundation/src/storage/indexed-db.test.ts"
       ]
     },
-    "@clouddrive/surface-foundation": {
+    "@neocloud/surface-foundation": {
       "layer": "surface",
       "owner": "product surface UX patterns and shell presentation",
       "maturity": "stable",
@@ -209,7 +210,7 @@
         "apps/web/e2e/sidebar-browser-zoom.spec.ts"
       ]
     },
-    "@clouddrive/plugin-framework": {
+    "@neocloud/plugin-framework": {
       "layer": "surface",
       "kind": "framework",
       "owner": "plugin contract, registry, route target and host capability",
@@ -238,7 +239,7 @@
         "apps/web/e2e/ui-ux-109.spec.ts"
       ]
     },
-    "@clouddrive/surface": {
+    "@neocloud/surface": {
       "layer": "surface",
       "kind": "surface",
       "owner": "surface shell, composition and private plugin workspace",

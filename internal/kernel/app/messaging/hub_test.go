@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/reina0721/clouddrive/pkg/health"
-	pkgmessaging "github.com/reina0721/clouddrive/pkg/messaging"
+	"github.com/reina0721/neocloud/pkg/health"
+	pkgmessaging "github.com/reina0721/neocloud/pkg/messaging"
 )
 
 func TestHubRestoresPreviousAdmissionWhenCandidateActivationFails(t *testing.T) {

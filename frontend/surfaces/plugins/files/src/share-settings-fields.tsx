@@ -1,11 +1,11 @@
 'use client';
 import { resolveShareExpiry, type ShareExpiryDraft } from './share-expiry';
-import { wallTimeInstant } from '@clouddrive/i18n/temporal';
+import { wallTimeInstant } from '@neocloud/i18n/temporal';
 import { useFileTime } from './use-file-time';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { CheckboxField, SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { DatePickerField } from '@clouddrive/ui-adapter/date-picker-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { CheckboxField, SelectField, TextField } from '@neocloud/ui-adapter/form-field';
+import { DatePickerField } from '@neocloud/ui-adapter/date-picker-field';
 import {
   readOnlySharePermissions,
   uploadOnlySharePermissions,

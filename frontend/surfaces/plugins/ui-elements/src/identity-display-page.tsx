@@ -1,10 +1,10 @@
 'use client';
 
-import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
-import { Avatar, UserIdentity } from '@clouddrive/ui-adapter/identity';
-import { ReadyImage } from '@clouddrive/ui-adapter/ready-image';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
+import { DescriptionList } from '@neocloud/ui-adapter/description-list';
+import { Avatar, UserIdentity } from '@neocloud/ui-adapter/identity';
+import { ReadyImage } from '@neocloud/ui-adapter/ready-image';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
 import { ComponentPreview } from './component-preview';
 import { UiElementsFamilyPage } from './family-page';
 

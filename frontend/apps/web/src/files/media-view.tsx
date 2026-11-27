@@ -9,10 +9,10 @@ import {
   type ComponentType,
   type RefObject,
 } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { FilesError, type FilesErrorCode } from '@clouddrive/surface/files';
-import type { FileMediaProps, ImageEditingAccess } from '@clouddrive/surface/files/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { FilesError, type FilesErrorCode } from '@neocloud/surface/files';
+import type { FileMediaProps, ImageEditingAccess } from '@neocloud/surface/files/runtime';
 
 import { rasterType } from './media-signatures';
 import type { ImageSize } from './image-edit';

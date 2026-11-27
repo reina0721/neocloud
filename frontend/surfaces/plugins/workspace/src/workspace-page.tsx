@@ -5,16 +5,16 @@ import {
   formatNumber,
   formatRelativeTime,
   useFrontendTranslation,
-} from '@clouddrive/i18n';
-import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { createHydrationLifecycle, rehydrateStore } from '@clouddrive/state-foundation';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { CheckboxField } from '@clouddrive/ui-adapter/form-field';
-import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
-import { ProgressMeter } from '@clouddrive/ui-adapter/progress-meter';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
+} from '@neocloud/i18n';
+import { route, RouteLink } from '@neocloud/plugin-framework/plugin';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { createHydrationLifecycle, rehydrateStore } from '@neocloud/state-foundation';
+import { Action } from '@neocloud/ui-adapter/action';
+import { CheckboxField } from '@neocloud/ui-adapter/form-field';
+import { AlertBanner } from '@neocloud/ui-adapter/feedback';
+import { ProgressMeter } from '@neocloud/ui-adapter/progress-meter';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
 import {
   ArrowRight,
   ChartLine,

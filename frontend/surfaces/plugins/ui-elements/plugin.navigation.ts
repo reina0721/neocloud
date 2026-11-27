@@ -1,4 +1,4 @@
-import type { NavigationContribution } from '@clouddrive/plugin-framework/navigation';
+import type { NavigationContribution } from '@neocloud/plugin-framework/navigation';
 
 /**
  * ui-elements —— Sidebar Navigation Contribution。

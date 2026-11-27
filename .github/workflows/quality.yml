@@ -43,7 +43,7 @@ jobs:
           GOBIN="${RUNNER_TEMP}/repository-tools" go install github.com/goreleaser/goreleaser/v2@v2.17.1
           node scripts/release-config.mjs --output "${RUNNER_TEMP}/goreleaser.yaml"
           "${RUNNER_TEMP}/repository-tools/goreleaser" check --config "${RUNNER_TEMP}/goreleaser.yaml"
-          node --test scripts/verify-changed.test.mjs scripts/verify-artifacts.test.mjs scripts/release-config.test.mjs scripts/verify-release.test.mjs scripts/install.test.mjs scripts/verify-elf-platform.test.mjs scripts/docker-image-config-id.test.mjs
+          node --test scripts/verify-changed.test.mjs scripts/verify-artifacts.test.mjs scripts/release-config.test.mjs scripts/release-go-source.test.mjs scripts/verify-release.test.mjs scripts/install.test.mjs scripts/verify-elf-platform.test.mjs scripts/docker-image-config-id.test.mjs
 
   changes:
     if: github.event_name == 'pull_request'

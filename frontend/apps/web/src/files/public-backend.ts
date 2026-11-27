@@ -13,7 +13,7 @@ import {
   type PublicUploadCandidate,
   type PublicShare,
   type PublicUploadProgress,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import { nativeDownload, downloadBlob } from './native-download';
 import { shareTokenPattern, saveShareIntentHref } from './share-address';
 import { readPublicBlob } from './public-content';

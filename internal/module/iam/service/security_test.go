@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	iampermission "github.com/reina0721/clouddrive/internal/module/iam/binding/permission"
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
-	"github.com/reina0721/clouddrive/internal/module/iam/service"
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
+	iampermission "github.com/reina0721/neocloud/internal/module/iam/binding/permission"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
+	"github.com/reina0721/neocloud/internal/module/iam/service"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
 )
 
 // TestConcurrentRolePermissionReplaceYieldsOneVersionConflict 验证两个管理员

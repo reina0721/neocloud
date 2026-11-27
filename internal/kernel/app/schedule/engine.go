@@ -8,8 +8,8 @@ import (
 
 	"github.com/go-co-op/gocron/v2"
 	"github.com/google/uuid"
-	pkgclock "github.com/reina0721/clouddrive/pkg/clock"
-	pkgschedule "github.com/reina0721/clouddrive/pkg/schedule"
+	pkgclock "github.com/reina0721/neocloud/pkg/clock"
+	pkgschedule "github.com/reina0721/neocloud/pkg/schedule"
 )
 
 type engineJobID string

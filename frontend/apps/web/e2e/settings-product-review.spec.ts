@@ -6,7 +6,7 @@ import {
   defaultPreferences,
   PREFERENCES_VERSION,
   type Preferences,
-} from '@clouddrive/surface/preferences-model';
+} from '@neocloud/surface/preferences-model';
 
 async function seedAppearance(
   page: Page,

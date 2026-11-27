@@ -24,8 +24,8 @@ describe('RFC 6901 JSON Pointer', () => {
 
   it('joinPointerTokens 输出标准转义指针', () => {
     expect(joinPointerTokens([])).toBe('');
-    expect(joinPointerTokens(['contracts', '@clouddrive/design-system'])).toBe(
-      '/contracts/@clouddrive~1design-system',
+    expect(joinPointerTokens(['contracts', '@neocloud/design-system'])).toBe(
+      '/contracts/@neocloud~1design-system',
     );
   });
 
@@ -50,9 +50,9 @@ describe('RFC 6901 JSON Pointer', () => {
   });
 
   it('contractRef 含 / 的 authorityId 经转义后可求值', () => {
-    const registry = { contracts: { '@clouddrive/design-system': { maturity: 'stable' } } };
-    const pointer = '/contracts/@clouddrive~1design-system';
-    expect(parsePointer(pointer)).toEqual(['contracts', '@clouddrive/design-system']);
+    const registry = { contracts: { '@neocloud/design-system': { maturity: 'stable' } } };
+    const pointer = '/contracts/@neocloud~1design-system';
+    expect(parsePointer(pointer)).toEqual(['contracts', '@neocloud/design-system']);
     expect(evaluatePointer(registry, pointer)).toEqual({ maturity: 'stable' });
   });
 });

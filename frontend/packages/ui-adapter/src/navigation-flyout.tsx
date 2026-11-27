@@ -2,7 +2,7 @@ import Popper from '@mui/material/Popper';
 import Paper from '@mui/material/Paper';
 import Fade from '@mui/material/Fade';
 import { useTheme } from '@mui/material/styles';
-import { designParameters } from '@clouddrive/design-system/parameters';
+import { designParameters } from '@neocloud/design-system/parameters';
 import ClickAwayListener from '@mui/material/ClickAwayListener';
 import ButtonBase from '@mui/material/ButtonBase';
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';

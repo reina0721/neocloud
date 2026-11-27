@@ -1,6 +1,6 @@
 package model
 
-import "github.com/reina0721/clouddrive/pkg/idgen"
+import "github.com/reina0721/neocloud/pkg/idgen"
 
 const MaxPreferenceFolders = 200
 const MaxPreferenceRevision int64 = 1<<53 - 1

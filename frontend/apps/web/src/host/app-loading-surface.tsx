@@ -1,7 +1,7 @@
 'use client';
 
-import { BusyIndicator } from '@clouddrive/ui-adapter/busy-indicator';
-import { PageLoadingSurface } from '@clouddrive/surface-foundation/states-operations';
+import { BusyIndicator } from '@neocloud/ui-adapter/busy-indicator';
+import { PageLoadingSurface } from '@neocloud/surface-foundation/states-operations';
 
 export function AppLoadingSurface({ label }: Readonly<{ label: string }>) {
   return (

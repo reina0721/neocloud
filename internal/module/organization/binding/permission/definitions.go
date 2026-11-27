@@ -2,8 +2,8 @@
 package permission
 
 import (
-	orgpermission "github.com/reina0721/clouddrive/internal/module/organization/permission"
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
+	orgpermission "github.com/reina0721/neocloud/internal/module/organization/permission"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
 )
 
 func Definitions() []permissioncatalog.Definition {

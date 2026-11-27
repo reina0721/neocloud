@@ -1,6 +1,6 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
-import { FilesError } from '@clouddrive/surface/files';
+import { FilesError } from '@neocloud/surface/files';
 
 /** hashFile 逐块计算同内容身份，不把大文件整体复制到 JS 堆。 */
 export async function hashFile(

@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/nativeupgrade/control"
+	"github.com/reina0721/neocloud/internal/nativeupgrade/control"
 )
 
 const handoffBudget = 5 * time.Second

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { defaultEpubReadingState, FilesError } from '@clouddrive/surface/files';
+import { defaultEpubReadingState, FilesError } from '@neocloud/surface/files';
 import { createEpubReadingPreferences } from './epub-reading-preferences';
 
 const book = {

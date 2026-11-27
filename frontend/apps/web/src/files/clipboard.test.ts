@@ -4,7 +4,7 @@ import {
   type FileEntry,
   type FilesPort,
   fileClipboardMaxEntries,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import { createFileClipboard } from './clipboard';
 import { createFilesRuntime } from './backend';
 const entry = (id: string, parentId = 'source', kind: 'file' | 'folder' = 'file'): FileEntry => ({

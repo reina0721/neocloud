@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { ConfirmDialog, DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { ConfirmDialog, DialogSurface } from '@neocloud/ui-adapter/overlays';
 
 /** 存储设置的编辑会话：关闭与读取最新配置分别确认，提交期间保持会话。 */
 export function StorageEditDialog({

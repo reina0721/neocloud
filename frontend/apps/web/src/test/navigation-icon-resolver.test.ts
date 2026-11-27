@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { navigationIconVocabulary } from '@clouddrive/surface/shell';
+import { navigationIconVocabulary } from '@neocloud/surface/shell';
 import { Circle } from 'lucide-react';
 
 import { resolveNavigationIcon, UNKNOWN_NAVIGATION_ICON } from '../shell/navigation-icon-resolver';

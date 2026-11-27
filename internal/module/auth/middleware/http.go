@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/reina0721/clouddrive/internal/module/auth/model"
-	"github.com/reina0721/clouddrive/internal/module/auth/service"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/internal/module/auth/model"
+	"github.com/reina0721/neocloud/internal/module/auth/service"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 // Source 是 Bearer/development 认证的项目自有请求来源。

@@ -1,4 +1,4 @@
-import { createAppStore } from '@clouddrive/state-foundation';
+import { createAppStore } from '@neocloud/state-foundation';
 import { FilesError } from '../../../src/files/model';
 import {
   directoryTreeRoot,

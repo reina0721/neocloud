@@ -1,4 +1,4 @@
-import type { ApiWorkbenchPort } from '@clouddrive/surface/api-workbench';
+import type { ApiWorkbenchPort } from '@neocloud/surface/api-workbench';
 import { readAuthConfig } from '../auth/config';
 
 /** Resolve the runtime implementation only when the workbench is used. */

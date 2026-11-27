@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	"github.com/reina0721/clouddrive/internal/module/files/service"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/module/files/service"
 )
 
 const defaultStagingPath = ".data/file-transfers"

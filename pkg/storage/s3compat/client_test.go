@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	storageclient "github.com/reina0721/clouddrive/pkg/storage/client"
+	storageclient "github.com/reina0721/neocloud/pkg/storage/client"
 )
 
 func TestClientExerciseWithPathStyleEndpoint(t *testing.T) {

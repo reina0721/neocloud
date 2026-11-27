@@ -2,7 +2,7 @@
  * Product Surface —— 受控语义 Icon 呈现组件（只导出组件，满足 Fast Refresh）。
  *
  * 消费方只认识 semantic iconId，不接触具体图标库；iconId → Icon Component
- * 唯一映射在 `./navigation-icon-components`（经 @clouddrive/surface/
+ * 唯一映射在 `./navigation-icon-components`（经 @neocloud/surface/
  * icon-components 暴露给 Shell resolver）。
  */
 

@@ -3,8 +3,8 @@ package composition
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	storageapp "github.com/reina0721/clouddrive/internal/kernel/app/storage"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	storageapp "github.com/reina0721/neocloud/internal/kernel/app/storage"
 )
 
 func composeStorage(plan *app.Plan) (app.Added[storageapp.Access], error) {

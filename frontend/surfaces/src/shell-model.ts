@@ -9,13 +9,13 @@
  * Group Alias 是 plugins 范围公共 IA（plugins/navigation-groups.ts），此处不重复定义。
  */
 
-import type { RegistryModel } from '@clouddrive/plugin-framework';
+import type { RegistryModel } from '@neocloud/plugin-framework';
 import type {
   NavigationBranch,
   NavigationGroup,
   NavigationLeaf,
   NavigationNode,
-} from '@clouddrive/types';
+} from '@neocloud/types';
 
 export type {
   NavigationIconId,

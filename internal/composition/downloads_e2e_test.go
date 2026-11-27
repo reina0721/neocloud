@@ -16,11 +16,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/database"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/pkg/database"
+	"github.com/reina0721/neocloud/pkg/idgen"
 	"gorm.io/gorm"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func waitDownloadState(t *testing.T, owner *consoleTestClient, path, state string) map[string]any {

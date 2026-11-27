@@ -1,7 +1,7 @@
 /**
  * Plugin Framework —— Commands Capability（client）。
  *
- * `@clouddrive/plugin-framework/commands`：命令注册的公共契约 + client
+ * `@neocloud/plugin-framework/commands`：命令注册的公共契约 + client
  * Provider/context/hook。Host 注入实现（统一注册表）。
  *
  * 语义（107 设置中心）：

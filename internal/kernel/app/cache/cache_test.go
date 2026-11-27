@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	kernelconfig "github.com/reina0721/clouddrive/internal/kernel/config"
-	pkgcache "github.com/reina0721/clouddrive/pkg/cache"
-	"github.com/reina0721/clouddrive/pkg/coordination"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	kernelconfig "github.com/reina0721/neocloud/internal/kernel/config"
+	pkgcache "github.com/reina0721/neocloud/pkg/cache"
+	"github.com/reina0721/neocloud/pkg/coordination"
 )
 
 func TestDefinitionContributesRestartRequiredCacheAccess(t *testing.T) {

@@ -81,7 +81,7 @@ Design System Token 与 Motion Language facts 的唯一 Source 是
   reduced-motion policy 与实现型 CSS 保持手写；`motion.css` 由
   `css-motion-language-v1` 从受控 Motion Language（opacity enter/exit、
   token-driven translate、progress width operation）**整文件**生成。两文件路径与
-  export（`@clouddrive/design-system/tokens.css`、`/motion.css`）不变。
+  export（`@neocloud/design-system/tokens.css`、`/motion.css`）不变。
 - 修改 Token/Motion 事实 = 编辑 Schema 的 `source`（唯一可配置值域），运行
   `pnpm codegen:design` 重新生成；`pnpm codegen:design:check` 与完整 `pnpm check`
   做 freshness（受控区段逐字节 / motion.css 整文件逐字节）。`pnpm dev` 启动

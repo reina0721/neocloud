@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	pkgmessaging "github.com/reina0721/clouddrive/pkg/messaging"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	pkgmessaging "github.com/reina0721/neocloud/pkg/messaging"
 )
 
 const (

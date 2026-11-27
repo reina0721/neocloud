@@ -1,4 +1,4 @@
-import { FilesError } from '@clouddrive/surface/files';
+import { FilesError } from '@neocloud/surface/files';
 
 // fileIORetryDelaysMs 与现有tus分块预算一致，仅用于文件I/O的有限恢复。
 export const fileIORetryDelaysMs = [0, 1000, 3000] as const;

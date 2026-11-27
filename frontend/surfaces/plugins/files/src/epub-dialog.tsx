@@ -1,9 +1,9 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { useContainerBreakpoint } from '@clouddrive/ui-adapter/container-layout';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { useContainerBreakpoint } from '@neocloud/ui-adapter/container-layout';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
 import { ReaderSurface } from './reader-surface';
 import { useReaderSurface } from './reader-surface-context';
 import {

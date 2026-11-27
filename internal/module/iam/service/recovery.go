@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
 )
 
 var ErrOwnerRecoveryUnavailable = errors.New("所选账号已不是有效系统所有者")

@@ -2,7 +2,7 @@
 import { parseColumnLayoutPersisted } from './column-layout-schema';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { rehydrateStore } from '@clouddrive/state-foundation';
+import { rehydrateStore } from '@neocloud/state-foundation';
 
 import { normalizeColumnLayout, useColumnLayoutStore } from '../stores/column-layout';
 

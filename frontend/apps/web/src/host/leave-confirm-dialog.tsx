@@ -1,9 +1,9 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
-import { BusyIndicator } from '@clouddrive/ui-adapter/busy-indicator';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import type { Preferences } from '@neocloud/surface/preferences-model';
+import { BusyIndicator } from '@neocloud/ui-adapter/busy-indicator';
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import {
@@ -12,7 +12,7 @@ import {
   setLeaveConfirmResolver,
 } from './leave-confirm';
 const ConfirmDialog = lazy(() =>
-  import('@clouddrive/ui-adapter/overlays').then((module) => ({ default: module.ConfirmDialog })),
+  import('@neocloud/ui-adapter/overlays').then((module) => ({ default: module.ConfirmDialog })),
 );
 
 /**

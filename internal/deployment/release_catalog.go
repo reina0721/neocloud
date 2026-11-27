@@ -55,7 +55,7 @@ func (s *Releases) readReleaseCatalog(ctx context.Context) (releaseCatalog, int,
 		return releaseCatalog{}, http.StatusBadGateway, "upstream"
 	}
 	request.Header.Set("Accept", "application/vnd.github+json")
-	request.Header.Set("User-Agent", "CloudDrive-Release-Catalog")
+	request.Header.Set("User-Agent", "NeoCloud-Release-Catalog")
 	request.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	// The public metadata endpoint has a fixed origin and does not follow redirects.
 	client := *s.http
@@ -104,16 +104,17 @@ func (s *Releases) readReleaseCatalog(ctx context.Context) (releaseCatalog, int,
 		catalog.Notes = *value.Body
 	}
 	version := strings.TrimPrefix(value.Tag, "v")
-	kinds := map[string]string{
-		"clouddrive_" + version + "_windows_amd64.zip": "windows-backend",
-		"clouddrive_" + version + "_windows_arm64.zip": "windows-backend",
-	}
-	if name, err := nativeAssetNameFor(value.Tag, "windows", "amd64", NativeGo); err == nil {
-		kinds[name] = "windows-backend"
-	}
-	for _, platform := range []struct{ os, arch string }{{"windows", "amd64"}, {"linux", "amd64"}, {"linux", "arm64"}} {
-		if name, err := nativeAssetNameFor(value.Tag, platform.os, platform.arch, NativeFull); err == nil {
-			kinds[name] = "managed-full"
+	kinds := make(map[string]string)
+	for _, family := range releaseFamilies {
+		kinds[string(family)+"_"+version+"_windows_amd64.zip"] = "windows-backend"
+		kinds[string(family)+"_"+version+"_windows_arm64.zip"] = "windows-backend"
+		if name, err := family.nativeAsset(value.Tag, "windows", "amd64", NativeGo); err == nil {
+			kinds[name] = "windows-backend"
+		}
+		for _, platform := range []struct{ os, arch string }{{"windows", "amd64"}, {"linux", "amd64"}, {"linux", "arm64"}} {
+			if name, err := family.nativeAsset(value.Tag, platform.os, platform.arch, NativeFull); err == nil {
+				kinds[name] = "managed-full"
+			}
 		}
 	}
 	for _, item := range value.Assets {

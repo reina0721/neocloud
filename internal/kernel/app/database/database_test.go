@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	pkgdatabase "github.com/reina0721/clouddrive/pkg/database"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	pkgdatabase "github.com/reina0721/neocloud/pkg/database"
 )
 
 func TestDefinitionContributesConfigWithoutExposingClose(t *testing.T) {

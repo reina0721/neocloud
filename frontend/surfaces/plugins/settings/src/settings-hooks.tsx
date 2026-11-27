@@ -1,13 +1,13 @@
 'use client';
 import { useState, useSyncExternalStore, type ReactNode } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import {
   usePreferencesPort,
   type PersistResult,
   type PreferencesPort,
-} from '@clouddrive/plugin-framework/preferences';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
-import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
+} from '@neocloud/plugin-framework/preferences';
+import type { Preferences } from '@neocloud/surface/preferences-model';
+import { AlertBanner } from '@neocloud/ui-adapter/feedback';
 import { TriangleAlert } from 'lucide-react';
 import type { Ctx } from './category-sections';
 export function useSettingsPersistReport(): {

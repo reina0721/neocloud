@@ -1,9 +1,9 @@
 'use client';
 
-import { formatDate, formatNumber, useFrontendTranslation } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
-import { TabsView } from '@clouddrive/ui-adapter/data-display';
-import { AreaChart, type ChartSeries } from '@clouddrive/ui-adapter/charts';
+import { formatDate, formatNumber, useFrontendTranslation } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
+import { TabsView } from '@neocloud/ui-adapter/data-display';
+import { AreaChart, type ChartSeries } from '@neocloud/ui-adapter/charts';
 import { useState } from 'react';
 
 import type { AnalyticsDataset } from './analytics-data';

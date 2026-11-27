@@ -69,7 +69,7 @@ export function createIndexedDBStorage<S = unknown>(options?: {
   unavailablePolicy?: UnavailablePolicy;
 }): PersistStorage<S> {
   const policy = options?.unavailablePolicy ?? 'error';
-  const databaseName = options?.databaseName ?? 'clouddrive';
+  const databaseName = options?.databaseName ?? 'neocloud';
   const storeName = options?.storeName ?? 'kv';
 
   let backend: AsyncKeyValueStorage | null = null;

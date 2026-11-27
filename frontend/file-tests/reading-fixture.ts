@@ -60,7 +60,7 @@ export function readPreviewAccess() {
     path === resolve(localData, 'preview-access.json') &&
     resolve(access.dataDirectory) === resolve(localData, 'file-preview');
   if (
-    (!legacy && marker !== 'clouddrive-node-preview-v1') ||
+    (!legacy && marker !== 'clouddrive-node-preview-v1' && marker !== 'neocloud-node-preview-v1') ||
     !isWithinData(access.dataDirectory) ||
     !existsSync(resolve(access.dataDirectory, 'initialized'))
   )

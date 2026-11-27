@@ -4,10 +4,10 @@ package model
 import (
 	"time"
 
-	pkgmessaging "github.com/reina0721/clouddrive/pkg/messaging"
-	"github.com/reina0721/clouddrive/pkg/observability"
-	pkgschedule "github.com/reina0721/clouddrive/pkg/schedule"
-	"github.com/reina0721/clouddrive/pkg/supervisor"
+	pkgmessaging "github.com/reina0721/neocloud/pkg/messaging"
+	"github.com/reina0721/neocloud/pkg/observability"
+	pkgschedule "github.com/reina0721/neocloud/pkg/schedule"
+	"github.com/reina0721/neocloud/pkg/supervisor"
 )
 
 // ProbeKind 是管理端点支持的有限探针集合。

@@ -12,7 +12,7 @@ import {
 } from 'react-hook-form';
 import { useEffect, useRef, type FormEventHandler, type ReactNode } from 'react';
 
-import type { FoundationSchema } from '@clouddrive/schemas';
+import type { FoundationSchema } from '@neocloud/schemas';
 
 export type FormLifecycle = 'pristine' | 'dirty' | 'submitting' | 'submitted' | 'invalid';
 

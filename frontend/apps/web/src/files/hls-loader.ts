@@ -6,7 +6,7 @@ import {
   type LoaderConfiguration,
   type LoaderContext,
 } from 'hls.js';
-import { FilesError } from '@clouddrive/surface/files';
+import { FilesError } from '@neocloud/surface/files';
 import type { PrivateHlsSession } from './hls-source';
 
 const playlistTypes: ReadonlySet<LoaderContextType> = new Set([

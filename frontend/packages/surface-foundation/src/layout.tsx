@@ -1,6 +1,6 @@
-import { ActionToolbar } from '@clouddrive/ui-adapter/action-toolbar';
-import { BreadcrumbTrail } from '@clouddrive/ui-adapter/navigation';
-import { Panel } from '@clouddrive/ui-adapter/panel';
+import { ActionToolbar } from '@neocloud/ui-adapter/action-toolbar';
+import { BreadcrumbTrail } from '@neocloud/ui-adapter/navigation';
+import { Panel } from '@neocloud/ui-adapter/panel';
 import type { ReactNode } from 'react';
 import { ViewportReveal } from './viewport-reveal';
 

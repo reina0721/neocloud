@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"github.com/reina0721/clouddrive/pkg/coordination"
+	"github.com/reina0721/neocloud/pkg/coordination"
 )
 
 const minimumLeaseTTL = time.Millisecond

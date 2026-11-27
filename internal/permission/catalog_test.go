@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/reina0721/clouddrive/internal/module"
+	"github.com/reina0721/neocloud/internal/module"
 )
 
 func TestBuildCatalogSortsAndProtectsDefinitions(t *testing.T) {

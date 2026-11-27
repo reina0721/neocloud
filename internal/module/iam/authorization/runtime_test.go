@@ -10,16 +10,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/authorization"
-	migrationbinding "github.com/reina0721/clouddrive/internal/module/iam/binding/migration"
-	iampermission "github.com/reina0721/clouddrive/internal/module/iam/binding/permission"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
-	"github.com/reina0721/clouddrive/pkg/database"
-	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
+	"github.com/reina0721/neocloud/internal/module/iam/authorization"
+	migrationbinding "github.com/reina0721/neocloud/internal/module/iam/binding/migration"
+	iampermission "github.com/reina0721/neocloud/internal/module/iam/binding/permission"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
+	"github.com/reina0721/neocloud/pkg/database"
+	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
 	"gorm.io/gorm"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 var fixed = time.Date(2026, 8, 22, 1, 0, 0, 0, time.UTC)

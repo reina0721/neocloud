@@ -323,7 +323,7 @@ export const pluginI18nResources = {
           importDescription:
             '粘贴本产品导出的 JSON 配置。导入只覆盖配置中真正发生变化的分类，其余分类保持不变。',
           importLabel: '配置 JSON',
-          importPlaceholder: '{"kind":"clouddrive.preferences","version":2,...}',
+          importPlaceholder: '{"kind":"neocloud.preferences","version":2,...}',
           importHint: '仅接受本产品导出的配置文件；校验失败时不会修改任何设置。',
           importConfirm: '导入',
           importDone: '已导入 {{count}} 个分类的配置',
@@ -691,7 +691,7 @@ export const pluginI18nResources = {
           importDescription:
             'Paste a JSON configuration exported by this product. Only categories that actually change are written; other categories stay as they are.',
           importLabel: 'Configuration JSON',
-          importPlaceholder: '{"kind":"clouddrive.preferences","version":2,...}',
+          importPlaceholder: '{"kind":"neocloud.preferences","version":2,...}',
           importHint:
             'Only configurations exported by this product are accepted; nothing is changed when validation fails.',
           importConfirm: 'Import',

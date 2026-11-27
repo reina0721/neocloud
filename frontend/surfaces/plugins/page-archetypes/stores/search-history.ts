@@ -1,9 +1,9 @@
-import { createPersistStore, createLocalStorage } from '@clouddrive/state-foundation';
+import { createPersistStore, createLocalStorage } from '@neocloud/state-foundation';
 
 /**
  * 搜索历史（page-archetypes 插件私有 store，SET-006-001）。
  *
- * - 独立持久化（key `clouddrive.page-archetypes.search-history`），不混入设置记录；
+ * - 独立持久化（key `neocloud.page-archetypes.search-history`），不混入设置记录；
  * - 最近在前，去重（同词前移），上限固定；
  * - 记录开关（操作偏好 rememberSearchHistory）由调用方判断（本 store 不读偏好）；
  * - 提供独立 clear（"清空搜索历史"为明确动作，不随关闭记忆删除）。
@@ -45,7 +45,7 @@ export const useSearchHistoryStore = createPersistStore<SearchHistoryState, Sear
     clear: () => set({ entries: [] }),
   }),
   {
-    name: 'clouddrive.page-archetypes.search-history',
+    name: 'neocloud.page-archetypes.search-history',
     version: 1,
     skipHydration: true,
     storage: createLocalStorage(),

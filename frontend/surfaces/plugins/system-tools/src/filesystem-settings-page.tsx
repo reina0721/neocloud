@@ -1,12 +1,12 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader, SectionBody } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { TabsView } from '@clouddrive/ui-adapter/data-display';
-import { SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { Panel } from '@clouddrive/ui-adapter/panel';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader, SectionBody } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { TabsView } from '@neocloud/ui-adapter/data-display';
+import { SelectField, TextField } from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { Panel } from '@neocloud/ui-adapter/panel';
 import type {
   FilesystemSettings,
   FilesystemSettingsInput,

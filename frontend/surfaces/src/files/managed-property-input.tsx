@@ -1,12 +1,12 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import {
   CheckboxField,
   SelectField,
   TextAreaField,
   TextField,
-} from '@clouddrive/ui-adapter/form-field';
+} from '@neocloud/ui-adapter/form-field';
 import {
   defaultPropertyRating,
   parsePropertyChoices,

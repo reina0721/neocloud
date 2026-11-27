@@ -3,7 +3,7 @@ import {
   type DecodedFileText,
   type TextEncoding,
   type TextLineEnding,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 
 function unicodeEncoding(bytes: Uint8Array) {
   if (bytes[0] === 0xff && bytes[1] === 0xfe) return 'utf-16le';

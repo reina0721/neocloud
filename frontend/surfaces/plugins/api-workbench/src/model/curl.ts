@@ -1,4 +1,4 @@
-import type { HttpMethod, KeyValueEntry, RequestBody } from '@clouddrive/surface/api-workbench';
+import type { HttpMethod, KeyValueEntry, RequestBody } from '@neocloud/surface/api-workbench';
 
 export type ParsedCurl = {
   method: HttpMethod;

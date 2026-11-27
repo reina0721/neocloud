@@ -1,13 +1,13 @@
 'use client';
 
 import { MoreHorizontal, Pin, X } from 'lucide-react';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
+import { Action } from '@neocloud/ui-adapter/action';
+import { MenuButton } from '@neocloud/ui-adapter/menu-button';
 import { useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { rehydrateStore } from '@clouddrive/state-foundation';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { rehydrateStore } from '@neocloud/state-foundation';
 import { usePageTabsStore } from '../state/use-page-tabs-store';
 import { useShellStore } from '../state/use-shell-store';
 import { proceedAfterLeaveConfirm } from '../host/leave-confirm';

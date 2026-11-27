@@ -1,11 +1,11 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { NavigationIcon } from '@clouddrive/surface/icon-presentation';
-import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { NavigationIcon } from '@neocloud/surface/icon-presentation';
+import { Skeleton } from '@neocloud/ui-adapter/skeleton';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { route, RouteLink } from '@neocloud/plugin-framework/plugin';
 import type { IdentityError } from './model';
-import { Action } from '@clouddrive/ui-adapter/action';
+import { Action } from '@neocloud/ui-adapter/action';
 
 export function IdentityQueryState({
   error,

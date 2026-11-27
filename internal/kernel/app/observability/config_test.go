@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/reina0721/clouddrive/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/kernel/config"
 )
 
 func TestDefaultConfigDisablesTracing(t *testing.T) {
@@ -16,7 +16,7 @@ func TestDefaultConfigDisablesTracing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode() error = %v", err)
 	}
-	if resolved.ServiceName != "clouddrive" || resolved.Tracing.Enabled {
+	if resolved.ServiceName != "neocloud" || resolved.Tracing.Enabled {
 		t.Fatalf("defaults = %#v", resolved)
 	}
 }

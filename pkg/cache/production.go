@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/concurrency"
+	"github.com/reina0721/neocloud/pkg/concurrency"
 )
 
 // GetOrLoad 使用 singleflight 防止热点缓存击穿。

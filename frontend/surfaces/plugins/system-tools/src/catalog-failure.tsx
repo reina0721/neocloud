@@ -1,6 +1,6 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
 import { FilesError } from '../../../src/files/model';
 
 export function CatalogFailure({ error, retry }: { error: unknown; retry: () => void }) {

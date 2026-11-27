@@ -4,8 +4,8 @@ package clock
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	pkgclock "github.com/reina0721/clouddrive/pkg/clock"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	pkgclock "github.com/reina0721/neocloud/pkg/clock"
 )
 
 const ID app.ID = "clock"

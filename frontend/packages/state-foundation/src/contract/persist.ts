@@ -6,14 +6,14 @@
  */
 import type { PersistStorage } from 'zustand/middleware';
 
-/** 持久化 key 的稳定命名空间。默认策略：`clouddrive.<scope>.<store>`。 */
+/** 持久化 key 的稳定命名空间。默认策略：`neocloud.<scope>.<store>`。 */
 export type PersistNamespace = Readonly<{
   product: string;
   scope: string;
   store: string;
 }>;
 
-/** 构造稳定 storage key；兼容历史 key（如 clouddrive.shell）。 */
+/** 构造稳定 storage key；兼容历史 key（如 neocloud.shell）。 */
 export function formatPersistKey(namespace: PersistNamespace): string {
   const { product, scope, store } = namespace;
   const parts = [product, scope, store].filter(Boolean);

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { iamUsernameSchema } from '@clouddrive/surface/identity';
+import { iamUsernameSchema } from '@neocloud/surface/identity';
 
 export type AuthFormValues = {
   name: string;

@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/todo/model"
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/fault"
+	"github.com/reina0721/neocloud/internal/module/todo/model"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/fault"
 )
 
 const testID = "11111111-1111-4111-8111-111111111111"

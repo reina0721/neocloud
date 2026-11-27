@@ -2,7 +2,7 @@
 
 package archiveprocess
 
-import "github.com/reina0721/clouddrive/internal/module/files/model"
+import "github.com/reina0721/neocloud/internal/module/files/model"
 
 type processGuard struct{}
 

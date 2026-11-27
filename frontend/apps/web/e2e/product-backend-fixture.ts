@@ -16,7 +16,7 @@ import {
   type DirectoryRole,
   type ProductNotification,
   type AuditRecord,
-} from '@clouddrive/surface/identity';
+} from '@neocloud/surface/identity';
 
 /** Controlled HTTP contract fixture. It proves adapter/UI requests, never a real backend deployment. */
 export async function installProductBackend(

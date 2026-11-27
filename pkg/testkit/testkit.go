@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/health"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/health"
 )
 
 // Clock 返回固定测试时钟。

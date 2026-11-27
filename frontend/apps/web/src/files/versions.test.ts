@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createVersionsPort } from './versions';
 import type { createJsonClient } from '../api/json-client';
-import { fileVersionPageSchema, type FileVersion } from '@clouddrive/surface/files';
+import { fileVersionPageSchema, type FileVersion } from '@neocloud/surface/files';
 vi.mock('./native-download', () => ({ nativeDownload: vi.fn() }));
 const version: FileVersion = {
   revision: 1,

@@ -1,22 +1,22 @@
 'use client';
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { CurrentSiteLogo, useSiteProfile } from '@clouddrive/surface/administration/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { CurrentSiteLogo, useSiteProfile } from '@neocloud/surface/administration/runtime';
 import {
   Page,
   PageHeader,
   ProductMasthead,
   Section,
   Toolbar,
-} from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
+} from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
 import {
   CheckboxField,
   PasswordField,
   SelectField,
   TextField,
-} from '@clouddrive/ui-adapter/form-field';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+} from '@neocloud/ui-adapter/form-field';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
 import { Cloud, FileGlyph } from '../../../src/files/icons';
 import { usePublicFiles } from '../../../src/files/runtime';
 import { formatFileBytes } from '../../../src/files/format';
@@ -49,7 +49,7 @@ export function PublicSharePage() {
   const port = usePublicFiles(),
     { t } = useFrontendTranslation();
   const { profile } = useSiteProfile();
-  const siteName = profile?.name || 'clouddrive';
+  const siteName = profile?.name || 'NeoCloud';
   const [share, setShare] = useState<PublicShare>(),
     [listing, setListing] = useState<PublicFileListing>(),
     [query, setQuery] = useState<PublicFileQuery>(initialPublicQuery),

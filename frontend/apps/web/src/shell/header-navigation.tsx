@@ -1,9 +1,9 @@
 'use client';
 
-import { flattenNavigationLeaves } from '@clouddrive/core';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import type { NavigationGroup, NavigationNode } from '@clouddrive/types';
-import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
+import { flattenNavigationLeaves } from '@neocloud/core';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import type { NavigationGroup, NavigationNode } from '@neocloud/types';
+import { MenuButton } from '@neocloud/ui-adapter/menu-button';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 

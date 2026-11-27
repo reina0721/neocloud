@@ -1,4 +1,4 @@
-import type { ExecutedResponse, Extractor } from '@clouddrive/surface/api-workbench';
+import type { ExecutedResponse, Extractor } from '@neocloud/surface/api-workbench';
 
 export function evaluateJsonPath(obj: unknown, path: string): unknown {
   if (obj === null || obj === undefined) return undefined;

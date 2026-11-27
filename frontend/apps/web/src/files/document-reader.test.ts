@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createDocumentReader } from './document-reader';
-import { type FileDocumentProps, FilesError } from '@clouddrive/surface/files';
+import { type FileDocumentProps, FilesError } from '@neocloud/surface/files';
 import type { createJsonClient } from '../api/json-client';
 const bytes = '%PDF-test';
 const props: FileDocumentProps = {

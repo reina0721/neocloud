@@ -14,14 +14,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel"
-	databaseapp "github.com/reina0721/clouddrive/internal/kernel/app/database"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	kernellogging "github.com/reina0721/clouddrive/internal/kernel/logging"
-	pkgdatabase "github.com/reina0721/clouddrive/pkg/database"
-	pkglogger "github.com/reina0721/clouddrive/pkg/logger"
+	"github.com/reina0721/neocloud/internal/kernel"
+	databaseapp "github.com/reina0721/neocloud/internal/kernel/app/database"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	kernellogging "github.com/reina0721/neocloud/internal/kernel/logging"
+	pkgdatabase "github.com/reina0721/neocloud/pkg/database"
+	pkglogger "github.com/reina0721/neocloud/pkg/logger"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestHostReloadsRealSQLiteAndKeepsCrossComponentTransactionAtomic(t *testing.T) {

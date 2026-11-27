@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
 import { usePublicFiles } from '../../../src/files/runtime';
 import { FilesError, type PublicFileListing, type PublicFileEntry } from '../../../src/files/model';
 import { initialPublicQuery } from './public-entry';

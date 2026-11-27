@@ -11,14 +11,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	pkgclock "github.com/reina0721/clouddrive/pkg/clock"
-	pkgexecution "github.com/reina0721/clouddrive/pkg/execution"
-	"github.com/reina0721/clouddrive/pkg/fault"
-	"github.com/reina0721/clouddrive/pkg/health"
-	pkglogger "github.com/reina0721/clouddrive/pkg/logger"
-	pkgmessaging "github.com/reina0721/clouddrive/pkg/messaging"
-	pkgobservability "github.com/reina0721/clouddrive/pkg/observability"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	pkgclock "github.com/reina0721/neocloud/pkg/clock"
+	pkgexecution "github.com/reina0721/neocloud/pkg/execution"
+	"github.com/reina0721/neocloud/pkg/fault"
+	"github.com/reina0721/neocloud/pkg/health"
+	pkglogger "github.com/reina0721/neocloud/pkg/logger"
+	pkgmessaging "github.com/reina0721/neocloud/pkg/messaging"
+	pkgobservability "github.com/reina0721/neocloud/pkg/observability"
 )
 
 const (

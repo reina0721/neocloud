@@ -4,7 +4,7 @@ set -euo pipefail
 image="${1:?usage: container-smoke.sh <image>}"
 management_url="${CONTAINER_SMOKE_MANAGEMENT_URL:-http://127.0.0.1:9090}"
 business_url="${CONTAINER_SMOKE_BUSINESS_URL:-http://127.0.0.1:8080}"
-container_name="clouddrive-smoke-${GITHUB_RUN_ID:-local}-$$"
+container_name="neocloud-smoke-${GITHUB_RUN_ID:-local}-$$"
 volume_name="${container_name}-data"
 license_dir="$(mktemp -d)"
 
@@ -35,7 +35,7 @@ docker run --detach --name "${container_name}" --network host \
   "${image}" >/dev/null
 
 # 从实际镜像提取，而非仅相信 Dockerfile 或 OCI label。
-docker cp "${container_name}:/usr/share/licenses/clouddrive/." - \
+docker cp "${container_name}:/usr/share/licenses/neocloud/." - \
   | tar --extract --file - --directory "${license_dir}" --no-same-owner --no-same-permissions
 chmod -R u+rwX "${license_dir}"
 for file in LICENSE NOTICE SOURCES.json third-party/GO-LICENSE third-party/github.com/spf13/cobra/LICENSE.txt; do

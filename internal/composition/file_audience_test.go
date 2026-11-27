@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	filesmodel "github.com/reina0721/clouddrive/internal/module/files/model"
+	authmodel "github.com/reina0721/neocloud/internal/module/auth/model"
+	filesmodel "github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // TestShareAudienceRejectsRestrictedSessionPrincipal 覆盖口令到期只派生会话限制、原始账号标记尚未改变的边界。

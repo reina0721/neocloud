@@ -11,15 +11,15 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/reina0721/clouddrive/internal/kernel"
-	kernelcomposition "github.com/reina0721/clouddrive/internal/kernel/composition"
-	kernellogging "github.com/reina0721/clouddrive/internal/kernel/logging"
-	"github.com/reina0721/clouddrive/internal/module/migration"
+	"github.com/reina0721/neocloud/internal/kernel"
+	kernelcomposition "github.com/reina0721/neocloud/internal/kernel/composition"
+	kernellogging "github.com/reina0721/neocloud/internal/kernel/logging"
+	"github.com/reina0721/neocloud/internal/module/migration"
 
-	"github.com/reina0721/clouddrive/pkg/httpx"
-	"github.com/reina0721/clouddrive/pkg/idgen"
-	"github.com/reina0721/clouddrive/pkg/logger"
-	"github.com/reina0721/clouddrive/pkg/supervisor"
+	"github.com/reina0721/neocloud/pkg/httpx"
+	"github.com/reina0721/neocloud/pkg/idgen"
+	"github.com/reina0721/neocloud/pkg/logger"
+	"github.com/reina0721/neocloud/pkg/supervisor"
 )
 
 func TestApplicationRouterRateLimitModesAndGenerationLocalState(t *testing.T) {

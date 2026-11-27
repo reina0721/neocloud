@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/anacrolix/torrent/bencode"
-	"github.com/reina0721/clouddrive/internal/module/files/service"
+	"github.com/reina0721/neocloud/internal/module/files/service"
 )
 
 func encodedMetadata(t *testing.T, paths ...[]string) ([]byte, []byte) {

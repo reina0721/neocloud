@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	kernellogging "github.com/reina0721/clouddrive/internal/kernel/logging"
-	pkglogger "github.com/reina0721/clouddrive/pkg/logger"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	kernellogging "github.com/reina0721/neocloud/internal/kernel/logging"
+	pkglogger "github.com/reina0721/neocloud/pkg/logger"
 )
 
 type testGenerationFactory struct {

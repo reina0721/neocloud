@@ -6,7 +6,7 @@ import {
   FilesError,
   type DownloadsPort,
   type OfflineDownload,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import { z } from 'zod';
 import type { createJsonClient } from '../api/json-client';
 import { watchFileTaskRefresh } from './task-refresh';

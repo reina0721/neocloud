@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback } from 'react';
-import { FrontendMessages, useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
+import { FrontendMessages, useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
 import {
   useRequiredAdministration,
   useSystemUpdateEnvironment,

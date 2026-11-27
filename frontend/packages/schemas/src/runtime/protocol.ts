@@ -1,16 +1,16 @@
 /**
  * Schema Runtime —— 协议校验核心。
  *
- * - Draft 2020-12 schema 语法校验（Ajv 2020 strict；`x-clouddrive` 经
+ * - Draft 2020-12 schema 语法校验（Ajv 2020 strict；`x-neocloud` 经
  *   addVocabulary 正式注册为 extension keyword，**不关闭 strict**）；
  * - 自描述双路：① 文档作为 schema 语法合法；② 文档作为数据，由内建容器
- *   schema（properties['x-clouddrive'] → `$defs.authorityMeta`）校验
- *   `x-clouddrive` 实例结构，Source 由 `$defs.authoritySource` 独立编译校验；
+ *   schema（properties['x-neocloud'] → `$defs.authorityMeta`）校验
+ *   `x-neocloud` 实例结构，Source 由 `$defs.authoritySource` 独立编译校验；
  * - 通用 Authority 协议约束：contractRef RFC 6901 转义、registry-owned 字段
  *   不得重新声明、facts 无值且 sourcePointer 指向 source、引用完整性、
  *   patchableSourcePointers 必须位于 source 之下。
  * - 所有 Pointer 语义统一为**文档绝对 RFC 6901 指针**，且必须位于
- *   `/x-clouddrive/source` 之下。
+ *   `/x-neocloud/source` 之下。
  */
 
 import Ajv2020 from 'ajv/dist/2020.js';
@@ -20,10 +20,10 @@ import { JsonPointerError, parsePointer, readPointer } from './json-pointer.ts';
 import { REGISTRY_OWNED_FIELDS, type AuthorityDocument, type AuthorityMeta } from './types.ts';
 
 export const PROTOCOL_VERSION = 1;
-export const EXTENSION_KEYWORD = 'x-clouddrive';
+export const EXTENSION_KEYWORD = 'x-neocloud';
 export const DEFAULT_SCHEMA_DIALECT = 'https://json-schema.org/draft/2020-12/schema';
 /** 所有事实/引用/可写区指针必须位于的源区前缀。 */
-export const SOURCE_PREFIX = '/x-clouddrive/source';
+export const SOURCE_PREFIX = '/x-neocloud/source';
 
 export class ProtocolError extends Error {
   constructor(message: string) {
@@ -58,7 +58,7 @@ function compileStrict(source: unknown): ValidateFunction {
 
 /**
  * ① 文档作为 JSON Schema Draft 2020-12 语法校验。
- * x-clouddrive 已注册 extension keyword；其它未知关键字仍 strict fail。
+ * x-neocloud 已注册 extension keyword；其它未知关键字仍 strict fail。
  */
 export function validateSchemaSyntax(data: unknown): string[] {
   if (!isRecord(data)) return ['文档必须是 JSON 对象'];
@@ -77,7 +77,7 @@ export function validateSchemaSyntax(data: unknown): string[] {
 }
 
 /**
- * ② 文档作为数据：容器 schema 校验 x-clouddrive 实例结构。
+ * ② 文档作为数据：容器 schema 校验 x-neocloud 实例结构。
  * 要求文档必须携带 $defs.authorityMeta 与 $defs.authoritySource。
  */
 export function validateMetaShape(data: unknown): string[] {
@@ -111,7 +111,7 @@ export function validateMetaShape(data: unknown): string[] {
 function assertNoRegistryOwnedFields(meta: Record<string, unknown>, issues: string[]): void {
   for (const field of REGISTRY_OWNED_FIELDS) {
     if (field in meta) {
-      issues.push(`x-clouddrive 不得重新声明 registry-owned 字段: ${field}`);
+      issues.push(`x-neocloud 不得重新声明 registry-owned 字段: ${field}`);
     }
   }
 }
@@ -178,7 +178,7 @@ function validateFact(fact: unknown, source: unknown, issues: string[]): void {
       return;
     }
   }
-  // meta.source 即 /x-clouddrive/source 节点：截去前缀后保留前导 "/" 再求值。
+  // meta.source 即 /x-neocloud/source 节点：截去前缀后保留前导 "/" 再求值。
   const { found } = readPointer(source, sourcePointer.slice(SOURCE_PREFIX.length));
   if (!found) issues.push(`fact ${id}: sourcePointer 悬空: ${sourcePointer}`);
 }
@@ -268,7 +268,7 @@ export function validateAuthorityDocument(
       issues.push(`contractRef.pointer 必须以 "/" 开头: ${pointer}`);
     } else {
       // RFC 6901 escaping：pointer 必须指向 contracts.<authorityId>；
-      // authorityId 含 "/"（如 @clouddrive/design-system）时必须以 ~1 转义。
+      // authorityId 含 "/"（如 @neocloud/design-system）时必须以 ~1 转义。
       let tokens: string[];
       try {
         tokens = parsePointer(pointer);

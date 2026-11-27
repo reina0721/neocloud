@@ -4,7 +4,7 @@ import { renderToString } from 'react-dom/server';
 import {
   ViewportReveal,
   ViewportRevealProvider,
-} from '@clouddrive/surface-foundation/viewport-reveal';
+} from '@neocloud/surface-foundation/viewport-reveal';
 import { MotionPolicyProvider } from '../host/motion-policy';
 
 beforeEach(() => window.sessionStorage.clear());

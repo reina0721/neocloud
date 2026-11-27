@@ -4,7 +4,7 @@ export type CsvExportPort = Readonly<{
 
 /**
  * Browser download adapter（Plugin 私有）：只落盘已序列化的 CSV 文本。
- * 序列化由 `@clouddrive/core` 的 `toCsv` 负责；此处仅补 UTF-8 BOM。
+ * 序列化由 `@neocloud/core` 的 `toCsv` 负责；此处仅补 UTF-8 BOM。
  */
 export const browserCsvExport: CsvExportPort = {
   downloadCsv(fileName, content) {

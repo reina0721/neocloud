@@ -3,10 +3,10 @@ package iam
 import (
 	"context"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/authorization"
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	"github.com/reina0721/clouddrive/internal/module/iam/service"
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
+	"github.com/reina0721/neocloud/internal/module/iam/authorization"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
+	"github.com/reina0721/neocloud/internal/module/iam/service"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
 )
 
 // 本文件定义 IAM Module 对外的窄输出 facet：根 composition 和跨模块

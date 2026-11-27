@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { NotificationItem } from '@clouddrive/plugin-framework/notifications';
+import type { NotificationItem } from '@neocloud/plugin-framework/notifications';
 
 import { NOTIFICATIONS_LIMIT, useNotificationsStore } from '../state/use-notifications-store';
 import { createHostNotificationsPort } from '../host/notifications-port';

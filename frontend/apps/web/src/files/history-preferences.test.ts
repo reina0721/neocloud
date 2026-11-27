@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { FilesError } from '@clouddrive/surface/files';
+import { FilesError } from '@neocloud/surface/files';
 import { createHistoryPreferences } from './history-preferences';
 import type { createJsonClient } from '../api/json-client';
 const value = { revision: 2, enabled: true, extensions: ['txt'], maxVersions: 3 };

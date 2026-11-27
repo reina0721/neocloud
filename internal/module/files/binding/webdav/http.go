@@ -7,15 +7,15 @@ import (
 	"net/url"
 	"strings"
 
-	protocol "github.com/reina0721/clouddrive/internal/module/files/adapter/webdav"
-	"github.com/reina0721/clouddrive/internal/module/files/handler"
-	"github.com/reina0721/clouddrive/internal/module/files/model"
-	"github.com/reina0721/clouddrive/internal/module/files/service"
-	"github.com/reina0721/clouddrive/pkg/httpx"
-	"github.com/reina0721/clouddrive/pkg/logger"
+	protocol "github.com/reina0721/neocloud/internal/module/files/adapter/webdav"
+	"github.com/reina0721/neocloud/internal/module/files/handler"
+	"github.com/reina0721/neocloud/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/service"
+	"github.com/reina0721/neocloud/pkg/httpx"
+	"github.com/reina0721/neocloud/pkg/logger"
 )
 
-const basicChallenge = `Basic realm="clouddrive WebDAV", charset="UTF-8"`
+const basicChallenge = `Basic realm="NeoCloud WebDAV", charset="UTF-8"`
 
 type Handler struct {
 	boundary     *handler.Handler

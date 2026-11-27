@@ -1,4 +1,4 @@
-# clouddrive 全量配置示例。
+# NeoCloud 全量配置示例。
 #
 # 本文件是带注释的字段参考，不是第二套启动权威。
 # 首次本地启动推荐：
@@ -314,7 +314,7 @@ management:
   metricsAccess: public
 
 observability:
-  serviceName: clouddrive
+  serviceName: neocloud
   tracing:
     enabled: false
     endpoint: ""

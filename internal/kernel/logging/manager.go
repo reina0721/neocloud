@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	pkglogger "github.com/reina0721/clouddrive/pkg/logger"
+	pkglogger "github.com/reina0721/neocloud/pkg/logger"
 )
 
 // Target 是 composition 用来声明 Kernel 内置 Logger 替换关系的 typed target。

@@ -2,7 +2,7 @@ import type {
   ExecutedResponse,
   ScriptExecutionResult,
   TestResult,
-} from '@clouddrive/surface/api-workbench';
+} from '@neocloud/surface/api-workbench';
 import { createExpectation } from '../model/assertions';
 import {
   base64Decode,

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	"github.com/reina0721/clouddrive/pkg/cli"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
+	"github.com/reina0721/neocloud/pkg/cli"
 )
 
 // SelectOwnerRecovery 由本机 CLI 选定账号并读取经确认的临时密码。

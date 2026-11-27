@@ -1,7 +1,7 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { RouteLink, route } from '@clouddrive/plugin-framework/plugin';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { RouteLink, route } from '@neocloud/plugin-framework/plugin';
 
 export function SettingsSections({ active }: Readonly<{ active: 'site' | 'registration' }>) {
   const { t } = useFrontendTranslation();

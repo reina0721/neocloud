@@ -1,10 +1,10 @@
 'use client';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import { useFileTime } from './use-file-time';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { CheckboxField, SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { DrawerSurface, DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { Action } from '@neocloud/ui-adapter/action';
+import { CheckboxField, SelectField, TextField } from '@neocloud/ui-adapter/form-field';
+import { DrawerSurface, DialogSurface } from '@neocloud/ui-adapter/overlays';
 import { useFiles, FileMedia } from '../../../src/files/runtime';
 import { FilesError, type FileEntry } from '../../../src/files/model';
 import {

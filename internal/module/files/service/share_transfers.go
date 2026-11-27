@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // ShareTransfers 只向访客投影自己的分享绑定，内部统一使用原Transfer生命周期与发布。

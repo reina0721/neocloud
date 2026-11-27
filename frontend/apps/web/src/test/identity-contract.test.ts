@@ -1,3 +1,4 @@
+import { legacyStorageKey } from '@neocloud/state-foundation';
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { webcrypto } from 'node:crypto';
 import {
@@ -6,7 +7,7 @@ import {
   defaultAuditQuery,
   type CreateUserInput,
   type UpdateUserInput,
-} from '@clouddrive/surface/identity';
+} from '@neocloud/surface/identity';
 import { createMockIdentityService, type IdentityOperations } from '../identity/mock-service';
 import { createBackendIdentityService } from '../identity/backend-service';
 import {
@@ -19,11 +20,13 @@ import { createBrowserMockRepository } from '../auth/mock-repository';
 import { withMockDirectory } from '../identity/mock-auth';
 import { createJsonClient } from '../api/json-client';
 
+const MOCK_DATABASE_LEGACY_KEY = legacyStorageKey(MOCK_DATABASE_KEY);
+
 let owner = 'mock-demo';
 beforeEach(async () => {
   vi.stubGlobal('crypto', webcrypto);
   owner = 'mock-demo';
-  window.localStorage.removeItem(MOCK_DATABASE_KEY);
+  window.localStorage.removeItem(MOCK_DATABASE_LEGACY_KEY);
   await createDatabaseAuthRepository().saveSession({
     user: { id: owner, name: 'Rin', email: 'demo@community.test' },
     expiresAt: Date.now() + 60000,
@@ -31,7 +34,7 @@ beforeEach(async () => {
 });
 afterEach(() => {
   vi.unstubAllGlobals();
-  window.localStorage.removeItem(MOCK_DATABASE_KEY);
+  window.localStorage.removeItem(MOCK_DATABASE_LEGACY_KEY);
 });
 
 function contractRequest(service: IdentityOperations): typeof fetch {
@@ -57,7 +60,7 @@ function contractRequest(service: IdentityOperations): typeof fetch {
             : { settings: await service.registrationSettings() },
         );
       if (path === '/system/registration' && method === 'PATCH') {
-        const { registrationSettingsInputSchema } = await import('@clouddrive/surface/identity');
+        const { registrationSettingsInputSchema } = await import('@neocloud/surface/identity');
         return Response.json({
           settings: await service.updateRegistrationSettings(
             registrationSettingsInputSchema.parse(body),
@@ -73,7 +76,7 @@ function contractRequest(service: IdentityOperations): typeof fetch {
       if (path === '/roles' && method === 'GET')
         return Response.json({ items: await service.roles() });
       if (path === '/roles' && method === 'POST') {
-        const { roleInputSchema } = await import('@clouddrive/surface/identity');
+        const { roleInputSchema } = await import('@neocloud/surface/identity');
         return Response.json(
           { role: await service.createRole(roleInputSchema.parse(body)) },
           { status: 201 },
@@ -84,14 +87,14 @@ function contractRequest(service: IdentityOperations): typeof fetch {
         const id = decodeURIComponent(roleMatch[1]);
         if (method === 'GET') return Response.json({ role: await service.readRole(id) });
         if (method === 'PATCH') {
-          const { updateRoleSchema } = await import('@clouddrive/surface/identity');
+          const { updateRoleSchema } = await import('@neocloud/surface/identity');
           return Response.json({
             role: await service.updateRole(id, updateRoleSchema.parse(body)),
           });
         }
       }
       if (path === '/users/batch-status' && method === 'POST') {
-        const { batchStatusInputSchema } = await import('@clouddrive/surface/identity');
+        const { batchStatusInputSchema } = await import('@neocloud/surface/identity');
         return Response.json(await service.batchStatus(batchStatusInputSchema.parse(body)));
       }
       const memberMatch = /^\/roles\/([^/]+)\/members(?:\/([^/]+))?$/.exec(path);
@@ -126,7 +129,7 @@ function contractRequest(service: IdentityOperations): typeof fetch {
           item: await service.readNotification(path.slice('/notifications/'.length)),
         });
       if (path === '/notifications' && method === 'GET' && url.searchParams.has('page')) {
-        const { productInboxQuerySchema } = await import('@clouddrive/surface/identity');
+        const { productInboxQuerySchema } = await import('@neocloud/surface/identity');
         return Response.json(
           await service.inboxPage(
             productInboxQuerySchema.parse({
@@ -140,12 +143,12 @@ function contractRequest(service: IdentityOperations): typeof fetch {
       if (path === '/notifications' && method === 'GET')
         return Response.json({ items: await service.inbox() });
       if (path === '/notifications/read' && method === 'PATCH') {
-        const { readNotificationsSchema } = await import('@clouddrive/surface/identity');
+        const { readNotificationsSchema } = await import('@neocloud/surface/identity');
         await service.readNotifications(readNotificationsSchema.parse(body).ids);
         return new Response(null, { status: 204 });
       }
       if (path === '/audit-logs' && method === 'GET') {
-        const { auditQuerySchema } = await import('@clouddrive/surface/identity');
+        const { auditQuerySchema } = await import('@neocloud/surface/identity');
         return Response.json(
           await service.audit(
             auditQuerySchema.parse({
@@ -169,7 +172,7 @@ function contractRequest(service: IdentityOperations): typeof fetch {
         });
       if (path === '/me' && method === 'GET') return Response.json({ user: await service.me() });
       if (path === '/me' && method === 'PATCH') {
-        const { updateUserSchema } = await import('@clouddrive/surface/identity');
+        const { updateUserSchema } = await import('@neocloud/surface/identity');
         return Response.json({ user: await service.updateMe(updateUserSchema.parse(body)) });
       }
       if (path === '/users' && method === 'GET') {
@@ -179,7 +182,7 @@ function contractRequest(service: IdentityOperations): typeof fetch {
           page: Number(url.searchParams.get('page')),
           pageSize: Number(url.searchParams.get('pageSize')),
         };
-        const { userQuerySchema } = await import('@clouddrive/surface/identity');
+        const { userQuerySchema } = await import('@neocloud/surface/identity');
         return Response.json(
           await service.list(
             userQuerySchema.parse({
@@ -193,7 +196,7 @@ function contractRequest(service: IdentityOperations): typeof fetch {
         );
       }
       if (path === '/users' && method === 'POST') {
-        const { createUserSchema } = await import('@clouddrive/surface/identity');
+        const { createUserSchema } = await import('@neocloud/surface/identity');
         return Response.json(
           { user: await service.create(createUserSchema.parse(body)) },
           { status: 201 },
@@ -206,7 +209,7 @@ function contractRequest(service: IdentityOperations): typeof fetch {
       if (id && method === 'PATCH') {
         const { z } = await import('zod');
         const { updateUserSchema, userStatusSchema, roleIdsSchema } =
-          await import('@clouddrive/surface/identity');
+          await import('@neocloud/surface/identity');
         if (match[2] === 'status') {
           const values = z.object({ status: userStatusSchema, version: z.number() }).parse(body);
           return Response.json({
@@ -669,7 +672,7 @@ it('migrates v2 records without replacing accounts, sessions or user changes', a
     users: prior.users,
     sequence: 12,
   };
-  window.localStorage.setItem(MOCK_DATABASE_KEY, JSON.stringify({ version: 2, state }));
+  window.localStorage.setItem(MOCK_DATABASE_LEGACY_KEY, JSON.stringify({ version: 2, state }));
   const migrated = await readMockDatabase();
   expect(migrated.users).toEqual(state.users);
   expect(migrated.session).toEqual(state.session);
@@ -685,7 +688,7 @@ it('migrates v1 accounts/session in place and preserves corrupt/unknown versions
     expiresAt: Date.now() + 60000,
   };
   window.localStorage.setItem(
-    MOCK_DATABASE_KEY,
+    MOCK_DATABASE_LEGACY_KEY,
     JSON.stringify({
       version: 1,
       state: { accounts: [{ user: session.user, salt: 'salt', digest: 'a'.repeat(64) }], session },
@@ -697,13 +700,13 @@ it('migrates v1 accounts/session in place and preserves corrupt/unknown versions
     roleIds: ['viewer'],
   });
   expect(migrated.accounts).toHaveLength(1);
-  window.localStorage.setItem(MOCK_DATABASE_KEY, 'corrupt');
+  window.localStorage.setItem(MOCK_DATABASE_LEGACY_KEY, 'corrupt');
   await expect(readMockDatabase()).rejects.toMatchObject({ code: 'protocol' });
-  expect(window.localStorage.getItem(MOCK_DATABASE_KEY)).toBe('corrupt');
+  expect(window.localStorage.getItem(MOCK_DATABASE_LEGACY_KEY)).toBe('corrupt');
   const newer = JSON.stringify({ version: 100, state: migrated });
-  window.localStorage.setItem(MOCK_DATABASE_KEY, newer);
+  window.localStorage.setItem(MOCK_DATABASE_LEGACY_KEY, newer);
   await expect(readMockDatabase()).rejects.toMatchObject({ code: 'protocol' });
-  expect(window.localStorage.getItem(MOCK_DATABASE_KEY)).toBe(newer);
+  expect(window.localStorage.getItem(MOCK_DATABASE_LEGACY_KEY)).toBe(newer);
 });
 it('migrates v3 in place without replacing users, role grants, notifications or audit', async () => {
   const database = await readMockDatabase();
@@ -716,7 +719,10 @@ it('migrates v3 in place without replacing users, role grants, notifications or 
       permissions: role.permissions.filter((permission) => !permission.startsWith('settings.')),
     })),
   };
-  window.localStorage.setItem(MOCK_DATABASE_KEY, JSON.stringify({ version: 3, state: original }));
+  window.localStorage.setItem(
+    MOCK_DATABASE_LEGACY_KEY,
+    JSON.stringify({ version: 3, state: original }),
+  );
   const migrated = await readMockDatabase();
   expect(migrated.registrationSettings).toMatchObject({
     enabled: true,

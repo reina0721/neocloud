@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"sync"
 
-	casbinadapter "github.com/reina0721/clouddrive/internal/module/iam/adapter/casbin"
-	iampermission "github.com/reina0721/clouddrive/internal/module/iam/permission"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
+	casbinadapter "github.com/reina0721/neocloud/internal/module/iam/adapter/casbin"
+	iampermission "github.com/reina0721/neocloud/internal/module/iam/permission"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
 )
 
 var (

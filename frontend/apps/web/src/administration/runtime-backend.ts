@@ -10,7 +10,7 @@ import {
   runtimeMetricsSchema,
   runtimeProbeSchema,
   type RuntimePort,
-} from '@clouddrive/surface/administration';
+} from '@neocloud/surface/administration';
 import { ApiError, createJsonClient } from '../api/json-client';
 
 export async function readRuntimeInformation<T>(
@@ -116,10 +116,10 @@ export function createRuntimePort(
       owned(async () => {
         const options = { cache: 'no-store' as const, ...(signal ? { signal } : {}) };
         const gateway = await request('/maintenance', { ...options, method: 'HEAD' });
-        if (
-          gateway.status === 404 ||
-          (gateway.ok && gateway.headers.get('X-CloudDrive-Maintenance') !== '1')
-        ) {
+        const gatewayMarker =
+          gateway.headers.get('X-NeoCloud-Maintenance') ??
+          gateway.headers.get('X-CloudDrive-Maintenance');
+        if (gateway.status === 404 || (gateway.ok && gatewayMarker !== '1')) {
           return 'gateway-unavailable';
         }
         if (!gateway.ok) throw new ApiError('http', gateway.status);

@@ -1,6 +1,6 @@
 'use client';
 
-import { ViewportRevealProvider } from '@clouddrive/surface-foundation/viewport-reveal';
+import { ViewportRevealProvider } from '@neocloud/surface-foundation/viewport-reveal';
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 
 /** Document is the content scroll owner; sidebar/settings navigation scroll separately. */

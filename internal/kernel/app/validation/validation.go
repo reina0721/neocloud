@@ -4,8 +4,8 @@ package validation
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	pkgvalidation "github.com/reina0721/clouddrive/pkg/validation"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	pkgvalidation "github.com/reina0721/neocloud/pkg/validation"
 )
 
 const ID app.ID = "validation"

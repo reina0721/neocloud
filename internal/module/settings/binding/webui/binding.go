@@ -2,8 +2,8 @@
 package webui
 
 import (
-	"github.com/reina0721/clouddrive/internal/module"
-	webuicontract "github.com/reina0721/clouddrive/internal/webui"
+	"github.com/reina0721/neocloud/internal/module"
+	webuicontract "github.com/reina0721/neocloud/internal/webui"
 )
 
 func Binding() webuicontract.Binding {

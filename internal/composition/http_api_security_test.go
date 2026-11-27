@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"testing"
 
-	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	"github.com/reina0721/clouddrive/internal/transport/http"
-	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
+	authmodel "github.com/reina0721/neocloud/internal/module/auth/model"
+	"github.com/reina0721/neocloud/internal/transport/http"
+	"github.com/reina0721/neocloud/internal/transport/http/humabinding"
 )
 
 // stubOperationAuthorizer 是可编程 operation authorizer。

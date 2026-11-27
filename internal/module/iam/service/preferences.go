@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
 )
 
 // preferenceJSON 是偏好覆盖的持久化形状：与 model.UserPreferences 同构，

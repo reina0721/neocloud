@@ -1,11 +1,11 @@
-import { createPersistStore, createLocalStorage } from '@clouddrive/state-foundation';
-import type { PageState } from '@clouddrive/plugin-framework/workspace';
+import { createPersistStore, createLocalStorage } from '@neocloud/state-foundation';
+import type { PageState } from '@neocloud/plugin-framework/workspace';
 
 /**
  * Workspace Store（Host 拥有）—— 页面状态/本地草稿持久层（SET-006-002）。
  * 纯持久层：records + setRecords/clear；保存/恢复/冲突判定等策略在 Host
  * workspace-port.ts（读 getState 后写 setRecords，避免初始化自引用）。
- * 独立 Store（key `clouddrive.workspace`），不混入设置记录。
+ * 独立 Store（key `neocloud.workspace`），不混入设置记录。
  */
 type WorkspaceState = {
   records: Readonly<Record<string, PageState<string>>>;
@@ -35,7 +35,7 @@ export const useWorkspaceStore = createPersistStore<WorkspaceState, WorkspacePer
       }),
   }),
   {
-    name: 'clouddrive.workspace',
+    name: 'neocloud.workspace',
     version: 1,
     skipHydration: true,
     storage: createLocalStorage(),

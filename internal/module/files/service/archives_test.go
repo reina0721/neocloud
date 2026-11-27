@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 type archiveProcessorFunc func(context.Context, ArchiveParseRequest) (ArchiveParseResult, error)

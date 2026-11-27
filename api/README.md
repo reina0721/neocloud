@@ -1,4 +1,4 @@
-# clouddrive API 契约
+# NeoCloud API 契约
 
 - openapi.yaml：原生 /api/v1 的 Huma code-first 契约；go generate ./internal/transport/http/api 生成，并由 Go golden 测试验证。
 - console-openapi.json：/api/console/v1 投影与原生转发接口的 OpenAPI 3.0 文档；从 console-web 的响应/输入校验器和原生 Huma JSON 快照生成。

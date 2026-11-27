@@ -1,11 +1,11 @@
 'use client';
 import { useContext, useLayoutEffect, useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { AlertBanner } from '@neocloud/ui-adapter/feedback';
 import { AlertTriangle } from 'lucide-react';
-import { useProductAccess } from '@clouddrive/surface/identity/runtime';
-import type { AdministrationPort } from '@clouddrive/surface/administration';
-import type { AccountNotificationSettings } from '@clouddrive/surface/administration/runtime';
+import { useProductAccess } from '@neocloud/surface/identity/runtime';
+import type { AdministrationPort } from '@neocloud/surface/administration';
+import type { AccountNotificationSettings } from '@neocloud/surface/administration/runtime';
 import { HostPreferencesContext } from '../host/preferences-port';
 import { useShellStore } from '../state/use-shell-store';
 import {

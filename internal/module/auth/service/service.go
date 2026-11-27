@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/auth/model"
-	pkgalerting "github.com/reina0721/clouddrive/pkg/alerting"
-	"github.com/reina0721/clouddrive/pkg/clock"
+	"github.com/reina0721/neocloud/internal/module/auth/model"
+	pkgalerting "github.com/reina0721/neocloud/pkg/alerting"
+	"github.com/reina0721/neocloud/pkg/clock"
 )
 
 // CredentialVerifier 是 Auth Service 使用方定义的第三方凭据验证 port。

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { historyRequestSnapshot } from './history';
-import { parseWorkspaceSnapshot } from '@clouddrive/surface/api-workbench';
-import type { WorkspaceSnapshot } from '@clouddrive/surface/api-workbench';
+import { parseWorkspaceSnapshot } from '@neocloud/surface/api-workbench';
+import type { WorkspaceSnapshot } from '@neocloud/surface/api-workbench';
 import { useWorkbenchStore } from '../../stores/workbench';
 import { createRequest, mergeExecutionVariables, removeWorkspaceEntity } from './workspace-actions';
 import { isValidSchedule } from './schedule';

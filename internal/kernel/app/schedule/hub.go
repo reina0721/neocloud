@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	pkgschedule "github.com/reina0721/clouddrive/pkg/schedule"
+	pkgschedule "github.com/reina0721/neocloud/pkg/schedule"
 )
 
 // Hub 是进程稳定的 Application Generation 调度准入切换点。

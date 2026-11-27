@@ -3,14 +3,14 @@ package composition
 import (
 	"context"
 
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/pkg/idgen"
 
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestVersionsDisabledRetentionWebDAVReplacement(t *testing.T) {

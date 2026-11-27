@@ -1,15 +1,15 @@
 'use client';
 import './install-translations';
-import { ShellNavigationViewProvider } from '@clouddrive/surface/shell/runtime';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { PluginLocaleProvider } from '@clouddrive/plugin-framework/plugin';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
-import { CurrentSiteLogo, useSiteProfile } from '@clouddrive/surface/administration/runtime';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { NavigationItem } from '@clouddrive/ui-adapter/destination-navigation';
-import { WorkspaceBrand, WorkspaceHeader } from '@clouddrive/surface-foundation/layout';
-import { DrawerSurface } from '@clouddrive/ui-adapter/overlays';
+import { ShellNavigationViewProvider } from '@neocloud/surface/shell/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { PluginLocaleProvider } from '@neocloud/plugin-framework/plugin';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import type { Preferences } from '@neocloud/surface/preferences-model';
+import { CurrentSiteLogo, useSiteProfile } from '@neocloud/surface/administration/runtime';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { NavigationItem } from '@neocloud/ui-adapter/destination-navigation';
+import { WorkspaceBrand, WorkspaceHeader } from '@neocloud/surface-foundation/layout';
+import { DrawerSurface } from '@neocloud/ui-adapter/overlays';
 import {
   ArrowLeft,
   Bell,
@@ -334,7 +334,7 @@ export function PersonalShell({ children }: Readonly<{ children: ReactNode }>) {
                 compact={false}
                 onNavigate={(destination) => {
                   if (destination === 'lock-screen') {
-                    window.dispatchEvent(new Event('clouddrive:lock'));
+                    window.dispatchEvent(new Event('neocloud:lock'));
                     return;
                   }
                   const href = routeTargetResolver.resolveHref({

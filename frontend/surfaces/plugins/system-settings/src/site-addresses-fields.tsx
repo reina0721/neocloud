@@ -1,9 +1,9 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { TextField } from '@clouddrive/ui-adapter/form-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { TextField } from '@neocloud/ui-adapter/form-field';
 import {
   maxSiteAlternatives,
   normalizeSiteOrigin,

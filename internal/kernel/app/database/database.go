@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	pkgdatabase "github.com/reina0721/clouddrive/pkg/database"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	pkgdatabase "github.com/reina0721/neocloud/pkg/database"
 )
 
 const (

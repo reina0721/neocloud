@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	pkgmessaging "github.com/reina0721/clouddrive/pkg/messaging"
-	pkgschedule "github.com/reina0721/clouddrive/pkg/schedule"
-	"github.com/reina0721/clouddrive/pkg/supervisor"
+	pkgmessaging "github.com/reina0721/neocloud/pkg/messaging"
+	pkgschedule "github.com/reina0721/neocloud/pkg/schedule"
+	"github.com/reina0721/neocloud/pkg/supervisor"
 )
 
 func TestValidateContributionsAcceptsParticipant(t *testing.T) {

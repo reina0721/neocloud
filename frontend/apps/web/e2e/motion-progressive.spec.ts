@@ -1,7 +1,7 @@
 import { saveEvidenceScreenshot } from './evidence-screenshot';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { defaultPreferences, PREFERENCES_VERSION } from '@clouddrive/surface/preferences-model';
+import { defaultPreferences, PREFERENCES_VERSION } from '@neocloud/surface/preferences-model';
 
 const evidence = 'scroll-items';
 

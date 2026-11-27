@@ -2,7 +2,7 @@
 import { useSearchParams } from 'next/navigation';
 import { InboxPage } from '../src/inbox-page';
 import { useIdentityQuery } from '../../../src/identity/use-query';
-import { IdentityError } from '@clouddrive/surface/identity/runtime';
+import { IdentityError } from '@neocloud/surface/identity/runtime';
 import { IdentityQueryState } from '../../../src/identity/query-state';
 
 export default function NotificationsRoute() {

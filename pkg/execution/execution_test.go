@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/fault"
+	"github.com/reina0721/neocloud/pkg/fault"
 )
 
 func TestMemoryClaimAllowsFirstAndRejectsConcurrent(t *testing.T) {

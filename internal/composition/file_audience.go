@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/reina0721/clouddrive/internal/module/auth"
-	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	filesmodel "github.com/reina0721/clouddrive/internal/module/files/model"
-	filesservice "github.com/reina0721/clouddrive/internal/module/files/service"
-	"github.com/reina0721/clouddrive/internal/module/iam"
-	iamservice "github.com/reina0721/clouddrive/internal/module/iam/service"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	authmodel "github.com/reina0721/neocloud/internal/module/auth/model"
+	filesmodel "github.com/reina0721/neocloud/internal/module/files/model"
+	filesservice "github.com/reina0721/neocloud/internal/module/files/service"
+	"github.com/reina0721/neocloud/internal/module/iam"
+	iamservice "github.com/reina0721/neocloud/internal/module/iam/service"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 func fileAudienceError(err error) error {
@@ -92,12 +91,11 @@ func (a filesConnectionAuthority) FindAudienceTarget(ctx context.Context, kind f
 }
 
 type fileOptionalSessionAuth struct {
-	session    auth.RequestAuthenticator
-	cookieName string
+	session iamSessionAuthAdapter
 }
 
 func (a fileOptionalSessionAuth) AuthenticateOptional(request *http.Request) (*http.Request, error) {
-	_, err := request.Cookie(a.cookieName)
+	_, err := a.session.cookie(request)
 	if errors.Is(err, http.ErrNoCookie) {
 		return request, nil
 	}

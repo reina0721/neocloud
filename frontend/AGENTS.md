@@ -1,6 +1,6 @@
 # 前端协作规则
 
-本目录承载 CloudDrive 的产品界面与 Web Host。当前架构见 [README](README.md)，主题规范见[工程手册](docs/README.md)；根 [AGENTS](../AGENTS.md) 同时适用。
+本目录承载 NeoCloud 的产品界面与 Web Host。当前架构见 [README](README.md)，主题规范见[工程手册](docs/README.md)；根 [AGENTS](../AGENTS.md) 同时适用。
 
 ## 1. 分层
 

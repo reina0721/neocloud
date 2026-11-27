@@ -1,17 +1,17 @@
 'use client';
-import { WorkspaceBrand, WorkspaceHeader } from '@clouddrive/surface-foundation/layout';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { CurrentSiteLogo, useSiteProfile } from '@clouddrive/surface/administration/runtime';
+import { WorkspaceBrand, WorkspaceHeader } from '@neocloud/surface-foundation/layout';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { CurrentSiteLogo, useSiteProfile } from '@neocloud/surface/administration/runtime';
 import { useFileActionFeedback } from './use-file-action-feedback';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { useNarrowLayout } from '@clouddrive/ui-adapter/browser-layout';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
-import { NavigationItem } from '@clouddrive/ui-adapter/destination-navigation';
-import { MobileNavigation } from '@clouddrive/ui-adapter/mobile-navigation';
-import { DrawerSurface } from '@clouddrive/ui-adapter/overlays';
-import { ProgressMeter } from '@clouddrive/ui-adapter/progress-meter';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
+import { Action } from '@neocloud/ui-adapter/action';
+import { useNarrowLayout } from '@neocloud/ui-adapter/browser-layout';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { MenuButton } from '@neocloud/ui-adapter/menu-button';
+import { NavigationItem } from '@neocloud/ui-adapter/destination-navigation';
+import { MobileNavigation } from '@neocloud/ui-adapter/mobile-navigation';
+import { DrawerSurface } from '@neocloud/ui-adapter/overlays';
+import { ProgressMeter } from '@neocloud/ui-adapter/progress-meter';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
 import {
   Fragment,
   lazy,

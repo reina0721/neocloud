@@ -1,10 +1,10 @@
-import { createPersistStore, createSessionStorage } from '@clouddrive/state-foundation';
+import { createPersistStore, createSessionStorage } from '@neocloud/state-foundation';
 
 /**
  * Host —— Page Tabs Store（SET-005-002）。
  *
  * 顶部页面标签（= 页面入口；不缓存 React 页面树）。会话级持久化
- * （key `clouddrive.page-tabs`，sessionStorage —— 页签属于当前窗口活动状态，
+ * （key `neocloud.page-tabs`，sessionStorage —— 页签属于当前窗口活动状态，
  * 不跨窗口/跨启动恢复；restoreLastTabs 只在本窗口刷新时恢复）。
  *
  * - 页面身份由 pathname（Route Target 语义；筛选/排序变化不创建重复标签）；
@@ -115,7 +115,7 @@ export const usePageTabsStore = createPersistStore<PageTabsState, PageTabsPersis
       })),
   }),
   {
-    name: 'clouddrive.page-tabs',
+    name: 'neocloud.page-tabs',
     version: 2,
     skipHydration: true,
     storage: createSessionStorage(),

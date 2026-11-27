@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v16-appRouter';
-import { MaterialThemeProvider } from '@clouddrive/ui-adapter/theme-provider';
-import { SkipLink } from '@clouddrive/ui-adapter/accessibility';
+import { MaterialThemeProvider } from '@neocloud/ui-adapter/theme-provider';
+import { SkipLink } from '@neocloud/ui-adapter/accessibility';
 
 import { AppErrorBoundary } from '../host/error-boundary';
 import { AppProviders } from '../host/providers';

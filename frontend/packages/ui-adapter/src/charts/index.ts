@@ -1,7 +1,7 @@
 /**
  * Chart primitives（product-neutral，数据驱动）。
  *
- * 消费方式：`@clouddrive/ui-adapter/charts`（由 integrator 登记 package exports
+ * 消费方式：`@neocloud/ui-adapter/charts`（由 integrator 登记 package exports
  * 与 contract evidence；本目录不自带 package.json 变更）。
  *
  * 共同契约：

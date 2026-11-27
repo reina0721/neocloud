@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	modulemigration "github.com/reina0721/clouddrive/internal/module/migration"
-	todomigration "github.com/reina0721/clouddrive/internal/module/todo/binding/migration"
+	modulemigration "github.com/reina0721/neocloud/internal/module/migration"
+	todomigration "github.com/reina0721/neocloud/internal/module/todo/binding/migration"
 )
 
 func TestCatalogStableOrderAndImmutableCopies(t *testing.T) {

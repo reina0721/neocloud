@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v7"
-	"github.com/reina0721/clouddrive/pkg/concurrency"
-	"github.com/reina0721/clouddrive/pkg/fault"
+	"github.com/reina0721/neocloud/pkg/concurrency"
+	"github.com/reina0721/neocloud/pkg/fault"
 )
 
 // executor 组合幂等占用、失败重试与执行记录，输出稳定 OperationExecutor 契约。

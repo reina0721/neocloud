@@ -7,7 +7,7 @@ import { access, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { loadWebConfig } from '@clouddrive/config/node';
+import { loadWebConfig } from '@neocloud/config/node';
 import { copyStandalone } from './copy-standalone.mjs';
 
 const webRoot = resolve(import.meta.dirname, '../apps/web');
@@ -105,7 +105,7 @@ async function start(upstream) {
       NODE_ENV: 'production',
       HOSTNAME: '127.0.0.1',
       PORT: new URL(origin).port,
-      CLOUDDRIVE_BACKEND_URL: upstream,
+      NEOCLOUD_BACKEND_URL: upstream,
       NEXT_TELEMETRY_DISABLED: '1',
     },
     stdio: ['ignore', 'pipe', 'pipe'],

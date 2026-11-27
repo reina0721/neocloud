@@ -2,12 +2,12 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { FoundationForm, useFoundationForm } from '@clouddrive/form-foundation';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
-import { TextField, PasswordField } from '@clouddrive/ui-adapter/form-field';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { FoundationForm, useFoundationForm } from '@neocloud/form-foundation';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
+import { TextField, PasswordField } from '@neocloud/ui-adapter/form-field';
+import { Action } from '@neocloud/ui-adapter/action';
+import { AlertBanner } from '@neocloud/ui-adapter/feedback';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import { AuthFrame } from './frame';
 import { LoginHelp } from './login-help';
 import { readAuthConfig } from './config';

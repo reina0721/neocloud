@@ -5,11 +5,11 @@ package composition
 import (
 	"context"
 
-	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	authservice "github.com/reina0721/clouddrive/internal/module/auth/service"
-	iamservice "github.com/reina0721/clouddrive/internal/module/iam/service"
-	navigationservice "github.com/reina0721/clouddrive/internal/module/navigation/service"
-	organizationservice "github.com/reina0721/clouddrive/internal/module/organization/service"
+	authmodel "github.com/reina0721/neocloud/internal/module/auth/model"
+	authservice "github.com/reina0721/neocloud/internal/module/auth/service"
+	iamservice "github.com/reina0721/neocloud/internal/module/iam/service"
+	navigationservice "github.com/reina0721/neocloud/internal/module/navigation/service"
+	organizationservice "github.com/reina0721/neocloud/internal/module/organization/service"
 )
 
 // iamOperationAuditAdapter 是 Auth writer 到 IAM 窄 port 的唯一适配。

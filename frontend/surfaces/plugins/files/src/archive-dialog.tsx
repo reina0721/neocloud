@@ -1,17 +1,17 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
 import {
   CheckboxField,
   PasswordField,
   SelectField,
   TextField,
-} from '@clouddrive/ui-adapter/form-field';
+} from '@neocloud/ui-adapter/form-field';
 import { ReaderSurface } from './reader-surface';
 import { useReaderSurface } from './reader-surface-context';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
 import { FilesError, type FileEntry, type FileListing } from '../../../src/files/model';
 import type {
   ArchiveAccess,

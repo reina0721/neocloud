@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"golang.org/x/sys/windows/svc"
 )
@@ -13,7 +15,7 @@ type handler struct {
 	run func(context.Context) error
 }
 
-func runService(ctx context.Context, run func(context.Context) error) error {
+func runService(ctx context.Context, name string, run func(context.Context) error) error {
 	service, err := svc.IsWindowsService()
 	if err != nil {
 		return err
@@ -21,7 +23,13 @@ func runService(ctx context.Context, run func(context.Context) error) error {
 	if !service {
 		return run(ctx)
 	}
-	return svc.Run("CloudDriveNative", handler{ctx: ctx, run: run})
+	if name == "" {
+		name = "NeoCloudNative"
+		if strings.EqualFold(filepath.Base(os.Args[0]), "clouddrive-host.exe") {
+			name = "CloudDriveNative"
+		}
+	}
+	return svc.Run(name, handler{ctx: ctx, run: run})
 }
 
 func (h handler) Execute(_ []string, changes <-chan svc.ChangeRequest, statuses chan<- svc.Status) (bool, uint32) {

@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/pkg/idgen"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 // publicShareRequest 使用无 Cookie 客户端，失败诊断不输出 capability URL 或票据。

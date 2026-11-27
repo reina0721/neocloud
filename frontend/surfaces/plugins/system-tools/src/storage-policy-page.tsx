@@ -5,18 +5,18 @@ import {
   FoundationControlledField,
   FoundationForm,
   useFoundationForm,
-} from '@clouddrive/form-foundation';
-import { formatNumber, FrontendMessages, useFrontendTranslation } from '@clouddrive/i18n';
-import { formatInstant } from '@clouddrive/i18n/format';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { useRegisterDirtySource } from '@clouddrive/plugin-framework/leave-confirm';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { CheckboxField, SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { DataTable } from '@clouddrive/ui-adapter/data-display';
-import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
+} from '@neocloud/form-foundation';
+import { formatNumber, FrontendMessages, useFrontendTranslation } from '@neocloud/i18n';
+import { formatInstant } from '@neocloud/i18n/format';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { useRegisterDirtySource } from '@neocloud/plugin-framework/leave-confirm';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { CheckboxField, SelectField, TextField } from '@neocloud/ui-adapter/form-field';
+import { DataTable } from '@neocloud/ui-adapter/data-display';
+import { DescriptionList } from '@neocloud/ui-adapter/description-list';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
 import { formatFileBytes } from '../../../src/files/format';
 import { FilesError } from '../../../src/files/model';
 import { useFiles } from '../../../src/files/runtime';

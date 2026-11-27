@@ -29,20 +29,20 @@ apps/web                Runtime Host：Next Router、Shell 装配、Host Navigat
 - `packages/surface-foundation` 与 `packages/plugin-framework` 职责不同：
   foundation 拥有可复用产品视觉/Pattern/Shell 表现；framework 拥有契约与纯模型
   （Registry、Navigation Resolution、Host Capability、Route Target），不依赖 React Router/Next。
-- `surfaces`（`@clouddrive/surface`）是 private workspace，只为 dependency
+- `surfaces`（`@neocloud/surface`）是 private workspace，只为 dependency
   ownership、module resolution、typecheck 与 test 服务。具体 Plugin 不是 Package，
   也不是 Surface 公共 API。
 
 ### Surface 对 Host 只开放
 
-- `@clouddrive/surface/shell`
-- `@clouddrive/surface/preferences-model`、`/identity`、`/identity/runtime`（当前产品共享偏好、身份目录、角色授权、通知及只读审计模型与语义 Port/hook，Web 注入实现；不含 HTTP、Storage、Session 或后端授权实现）
-- `@clouddrive/surface/icon-presentation`、`/icon-components`
-- `@clouddrive/surface/generated/composition`
-- `@clouddrive/surface/generated/catalog`
-- `@clouddrive/surface/plugin-routes/*`（Generated Adapter 的 (A) 层公共 shim）
+- `@neocloud/surface/shell`
+- `@neocloud/surface/preferences-model`、`/identity`、`/identity/runtime`（当前产品共享偏好、身份目录、角色授权、通知及只读审计模型与语义 Port/hook，Web 注入实现；不含 HTTP、Storage、Session 或后端授权实现）
+- `@neocloud/surface/icon-presentation`、`/icon-components`
+- `@neocloud/surface/generated/composition`
+- `@neocloud/surface/generated/catalog`
+- `@neocloud/surface/plugin-routes/*`（Generated Adapter 的 (A) 层公共 shim）
 
-禁止公开或直接导入：`@clouddrive/surface/plugins/*`、对应相对路径、
+禁止公开或直接导入：`@neocloud/surface/plugins/*`、对应相对路径、
 以及其它能够绕过 generated shim 的 Plugin internals。具体 Route Catalog、
 业务 Route IDs 与 generated module shims 全部位于 `surfaces/generated/`，
 不得生成到 `packages/plugin-framework`（Framework 只定义可扩展 Catalog protocol，
@@ -69,9 +69,9 @@ Plugin 导航方式（按正常 Next 开发方式）：
 - 普通静态导航可直接用 `next/link` / `next/navigation`（`useRouter`/`usePathname`/
   `useSearchParams`）——Plugin route 模块在受控 Next 白名单内。
 - 跨 Plugin 稳定引用 / 需参数校验时用 Route Target：
-  - `@clouddrive/plugin-framework/target`（纯模块，Server/Client 均可 import）：
+  - `@neocloud/plugin-framework/target`（纯模块，Server/Client 均可 import）：
     `route()`、`RouteTarget`、`encodeSegment`、`resolveTargetHref`。
-  - `@clouddrive/plugin-framework/plugin`（client）：`RouteLink`、
+  - `@neocloud/plugin-framework/plugin`（client）：`RouteLink`、
     `usePluginNavigation`、`usePluginLocale`、`PluginLocaleProvider`。
 
 ```ts
@@ -85,32 +85,32 @@ Plugin 正常使用 Next Link/Router。
 
 ### Plugin Schema 能力接入
 
-`@clouddrive/schemas` 的公共能力经 Plugin Framework 两个独立入口暴露，Plugin
+`@neocloud/schemas` 的公共能力经 Plugin Framework 两个独立入口暴露，Plugin
 只消费公开符号，不访问 schemas 内部实现（`packages/schemas/src/**` 一律禁止）：
 
-- **`@clouddrive/plugin-framework/schemas`（浏览器安全）**：显式转出
+- **`@neocloud/plugin-framework/schemas`（浏览器安全）**：显式转出
   `FoundationSchema`、`SchemaIssue`（类型）与 `getSchemaIssues`（值）。该入口
   **不含 Node Runtime**（schemas 根入口对 zod 仅 type import），浏览器与 Server
   Component 均可消费。
-- **`@clouddrive/plugin-framework/schemas/runtime`（Node 装配方）**：显式接入
-  `@clouddrive/schemas/runtime` 已公开的 Runtime 工厂（`createSchemaRuntime`）、
+- **`@neocloud/plugin-framework/schemas/runtime`（Node 装配方）**：显式接入
+  `@neocloud/schemas/runtime` 已公开的 Runtime 工厂（`createSchemaRuntime`）、
   契约（`SchemaRuntime` / `SchemaRuntimeOptions` / `SchemaSourceDescriptor`）与
   错误类型（`SchemaRuntimeError` / `SourceNotFoundError`）。Runtime 实例沿用原有
   公开方法（listSources/readSource/validate/applyPatch/generate/checkFreshness/
   watch/close），**创建与关闭由装配方负责**（Node 环境）；标注为内部用途的
   `SOURCE_PATHS` 不公开。该入口依赖 schemas/runtime 自身的 Node 环境要求，**不得**
   被浏览器入口 import。
-- **`@clouddrive/plugin-framework/plugin` 的 `schemas` 命名空间**：Plugin 页面可
+- **`@neocloud/plugin-framework/plugin` 的 `schemas` 命名空间**：Plugin 页面可
   直接消费浏览器安全值能力（与直接 import `/schemas` 等价）：
 
 ```ts
-import { schemas } from '@clouddrive/plugin-framework/plugin';
-import type { FoundationSchema, SchemaIssue } from '@clouddrive/plugin-framework/plugin';
+import { schemas } from '@neocloud/plugin-framework/plugin';
+import type { FoundationSchema, SchemaIssue } from '@neocloud/plugin-framework/plugin';
 
 const issues = schemas.getSchemaIssues(error); // SchemaIssue[]
 ```
 
-函数引用、参数、返回值与错误语义与 `@clouddrive/schemas` 原导出完全一致（转出
+函数引用、参数、返回值与错误语义与 `@neocloud/schemas` 原导出完全一致（转出
 同一模块引用，不做二次封装）。本轮只完成公共能力装配与暴露；浏览器到 Node 的
 Runtime 调用链**未打通**（无服务/协议/Adapter），Runtime 仍保留其 Node 运行环境
 要求。
@@ -137,7 +137,7 @@ Shell 不写死 Group。多个 Plugin 可选同一 Group，各自维护自己的
 **Plugin Navigation Contribution**：每 Plugin 根目录 `plugin.navigation.ts`：
 
 ```ts
-import type { NavigationContribution } from '@clouddrive/plugin-framework/navigation';
+import type { NavigationContribution } from '@neocloud/plugin-framework/navigation';
 export const navigationContribution = {
   parents: [
     {
@@ -178,9 +178,9 @@ export const navigationContribution = {
   metadata**（不是 Plugin capability / 能力协商）：合法集合由 Product Surface icon
   vocabulary（`surfaces/src/navigation-icon.ts`，受控、不动态化）治理；
   iconId → Lucide 组件的**唯一映射**在 `surfaces/src/navigation-icon-components.ts`
-  （`@clouddrive/surface/icon-components`）；Shell resolver 与 Icon 展示页
+  （`@neocloud/surface/icon-components`）；Shell resolver 与 Icon 展示页
   消费同一映射。**Plugin 代码不直接 import lucide-react**（Icon 大全页经
-  `@clouddrive/surface/icon-presentation` 的 `NavigationIcon` 消费语义 id）。
+  `@neocloud/surface/icon-presentation` 的 `NavigationIcon` 消费语义 id）。
 
 Plugin route 模块允许（受控白名单）：import `next/link`、`next/navigation`
 （useRouter/usePathname/useSearchParams/redirect/notFound 中 static-export 允许者）
@@ -267,7 +267,7 @@ Discovery → Framework Contract Validation → Static Framework Descriptors
     公共 shim（因 `plugins/*` 是 private，Host 只能经 exports wildcard 公共 subpath
     访问）；内容 `export { default } from '<源>'`。
   - (B) `apps/web/src/app/(app)/<mount>/<rel>/<kind>.tsx` —— Host Next adapter，只
-    re-export (A)：`export { default } from '@clouddrive/surface/plugin-routes/…'`。
+    re-export (A)：`export { default } from '@neocloud/surface/plugin-routes/…'`。
   - 例外（116 起）：静态 `page` 的 (B) 生成 **Host 侧按需加载外壳**——
     `'use client'` + `next/dynamic(() => import('(A)'), { loading })`，loading 为
     无文案占位。原因：产物预算以单 Route HTML 引用的 JS 计算，若页面实现静态
@@ -465,7 +465,7 @@ RouteTarget 的 query 和 fragment 为可选结构化定位信息；Registry 负
 菜单管理需要"业务呈现覆盖真正作用于侧栏"，但 Host 不得 import Plugin 内部实现、Plugin 也不得
 自建导航真相。因此新增 Host Port：
 
-- 契约：`@clouddrive/plugin-framework/navigation-admin`，导出 `NavigationAdminPort`、
+- 契约：`@neocloud/plugin-framework/navigation-admin`，导出 `NavigationAdminPort`、
   `NavigationAdminOverride/Patch/Result/Snapshot`、`NavigationAdminProvider` 与
   `useNavigationAdminPort()`。
 - 能力：`getSnapshot/subscribe`（引用稳定，供 selector 订阅）、`update(navigationId, patch,
@@ -477,7 +477,7 @@ expectedVersion)`、`resetPresentation`、`clear`、`clearAll`、`recover`（清
 - 应用：`useProductNavigation` 在权限过滤前后应用 hidden/order/permission；标题覆盖经
   `useNavigationLabelOverrides` 同时作用于侧栏、页签标题与命令面板。
 - Backend 从服务端 `/navigation` 加载呈现覆盖，mock 使用上述本地实现。Host 通过
-  `@clouddrive/surface/shell/runtime` 的 `ShellNavigationViewProvider` 提供最终只读呈现快照；
+  `@neocloud/surface/shell/runtime` 的 `ShellNavigationViewProvider` 提供最终只读呈现快照；
   `useShellNavigationView()` 返回 `groups/labels/status/onReload`。管理概览按任务组合已可见的
   navigation id，不另抄 URL、权限表或菜单覆盖。加载中、读取失败和没有入口分别呈现；
   重试更新原有身份与菜单来源。Provider 不拥有路由、持久化或后端授权；独立运行时入口

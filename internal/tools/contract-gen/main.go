@@ -13,10 +13,10 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/reina0721/clouddrive/internal/composition/httpcatalog"
-	"github.com/reina0721/clouddrive/internal/projectlayout"
-	httptransport "github.com/reina0721/clouddrive/internal/transport/http"
-	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
+	"github.com/reina0721/neocloud/internal/composition/httpcatalog"
+	"github.com/reina0721/neocloud/internal/projectlayout"
+	httptransport "github.com/reina0721/neocloud/internal/transport/http"
+	"github.com/reina0721/neocloud/internal/transport/http/humabinding"
 )
 
 func main() {

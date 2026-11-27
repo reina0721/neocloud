@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	"github.com/reina0721/clouddrive/internal/module/todo/service"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/module/todo/service"
 )
 
 const (

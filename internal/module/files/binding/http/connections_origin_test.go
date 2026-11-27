@@ -10,7 +10,15 @@ func TestConnectionRequestOriginIsPresentationOnly(t *testing.T) {
 		r := httptest.NewRequest("GET", "http://backend:8080/api/v1/files/connections", nil)
 		r.Header.Set("X-CloudDrive-Web-Origin", value)
 		if got := connectionRequestOrigin(r); got != value {
-			t.Fatalf("presentation origin: %q", got)
+			t.Fatalf("legacy presentation origin: %q", got)
+		}
+		r.Header.Set("X-NeoCloud-Web-Origin", value)
+		if got := connectionRequestOrigin(r); got != value {
+			t.Fatalf("matching presentation aliases: %q", got)
+		}
+		r.Header.Del("X-CloudDrive-Web-Origin")
+		if got := connectionRequestOrigin(r); got != value {
+			t.Fatalf("canonical presentation origin: %q", got)
 		}
 		if r.Host != "backend:8080" || r.TLS != nil || r.Header.Get("Origin") != "" {
 			t.Fatal("presentation metadata changed the authorization request")
@@ -18,9 +26,15 @@ func TestConnectionRequestOriginIsPresentationOnly(t *testing.T) {
 	}
 	for _, value := range []string{"https://user:secret@evil.example", "https://evil.example/path", "https://evil.example?x=y", "file://evil.example", "null"} {
 		r := httptest.NewRequest("GET", "http://backend:8080/api/v1/files/connections", nil)
-		r.Header.Set("X-CloudDrive-Web-Origin", value)
+		r.Header.Set("X-NeoCloud-Web-Origin", value)
 		if got := connectionRequestOrigin(r); got != "http://backend:8080" {
 			t.Fatalf("invalid metadata accepted: %q", got)
 		}
+	}
+	r := httptest.NewRequest("GET", "http://backend:8080/api/v1/files/connections", nil)
+	r.Header.Set("X-CloudDrive-Web-Origin", "https://other.example")
+	r.Header.Set("X-NeoCloud-Web-Origin", "https://drive.example")
+	if got := connectionRequestOrigin(r); got != "http://backend:8080" {
+		t.Fatalf("conflicting presentation aliases accepted: %q", got)
 	}
 }

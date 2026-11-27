@@ -1,6 +1,6 @@
-import { createFrontendI18n, type TranslationResources } from '@clouddrive/i18n';
-import { mergeTranslationResources } from '@clouddrive/surface/shell';
-import { generatedSurfaceI18nResources } from '@clouddrive/surface/generated/composition';
+import { createFrontendI18n, type TranslationResources } from '@neocloud/i18n';
+import { mergeTranslationResources } from '@neocloud/surface/shell';
+import { generatedSurfaceI18nResources } from '@neocloud/surface/generated/composition';
 
 import { resources } from './resources';
 

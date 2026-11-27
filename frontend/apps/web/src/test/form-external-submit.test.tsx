@@ -6,9 +6,9 @@ import {
   FoundationControlledField,
   FoundationForm,
   useFoundationForm,
-} from '@clouddrive/form-foundation';
-import { TextField } from '@clouddrive/ui-adapter/form-field';
-import { Action } from '@clouddrive/ui-adapter/action';
+} from '@neocloud/form-foundation';
+import { TextField } from '@neocloud/ui-adapter/form-field';
+import { Action } from '@neocloud/ui-adapter/action';
 
 it('外部提交按钮保留嵌套字段校验、错误焦点和唯一提交入口', async () => {
   const saved: string[] = [];

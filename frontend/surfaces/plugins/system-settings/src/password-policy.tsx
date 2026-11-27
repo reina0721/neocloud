@@ -4,13 +4,13 @@ import {
   FoundationControlledField,
   FoundationForm,
   useFoundationForm,
-} from '@clouddrive/form-foundation';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { useRegisterDirtySource } from '@clouddrive/plugin-framework/leave-confirm';
-import { Section } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { SwitchField, TextField } from '@clouddrive/ui-adapter/form-field';
+} from '@neocloud/form-foundation';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { useRegisterDirtySource } from '@neocloud/plugin-framework/leave-confirm';
+import { Section } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { SwitchField, TextField } from '@neocloud/ui-adapter/form-field';
 import {
   useAdministration,
   type AdministrationPort,

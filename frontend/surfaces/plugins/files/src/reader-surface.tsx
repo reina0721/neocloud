@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useEffectEvent, useId, useLayoutEffect, useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
-import { DialogSurface, type DialogSurfaceProps } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { MenuButton } from '@neocloud/ui-adapter/menu-button';
+import { DialogSurface, type DialogSurfaceProps } from '@neocloud/ui-adapter/overlays';
 import { ArrowLeft, Download, MoreHorizontal } from '../../../src/files/icons';
 import { useReaderSurface } from './reader-surface-context';
 

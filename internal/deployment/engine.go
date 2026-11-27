@@ -18,11 +18,12 @@ import (
 )
 
 type engine struct {
-	root     string
-	dataDir  string
-	cfg      Config
-	releases *Releases
-	local    bool
+	root       string
+	dataDir    string
+	cfg        Config
+	releases   *Releases
+	local      bool
+	dockerHost string
 }
 
 func (e engine) control() string     { return filepath.Join(e.root, ".control", "maintenance") }
@@ -74,6 +75,9 @@ func (e engine) tool(ctx context.Context, version, action string, params ...stri
 	cmd.Env = append(os.Environ(), "CLOUDDRIVE_MAINTENANCE_ENGINE=1",
 		"CLOUDDRIVE_MAINTENANCE_COMPOSE="+override,
 		"CLOUDDRIVE_MAINTENANCE_STAGE=", "CLOUDDRIVE_MAINTENANCE_CONFIG=")
+	if e.dockerHost != "" {
+		cmd.Env = append(cmd.Env, "DOCKER_HOST="+e.dockerHost, "DOCKER_CONTEXT=")
+	}
 	return cmd
 }
 
@@ -106,10 +110,15 @@ func (e engine) prepare(ctx context.Context, version string, offline bool) error
 				return err
 			}
 		} else {
-			if err := VerifyRelease(ctx, cache, version); err != nil {
+			release, err := verifyOnlineRelease(ctx, cache, version)
+			if err != nil {
 				return err
 			}
-			if err := VerifyAsset(cache, dockerAssetName(version, runtime.GOARCH)); err != nil {
+			_, asset, err := release.dockerAsset(runtime.GOARCH)
+			if err != nil {
+				return err
+			}
+			if err := release.verifyDockerDigest(ctx, cache, asset); err != nil {
 				return err
 			}
 		}
@@ -140,7 +149,11 @@ func (e engine) prepare(ctx context.Context, version string, offline bool) error
 
 // retainDownload is called within the instance lock after checking the signed bytes.
 func (e engine) retainDownload(dir, cache, version string) error {
-	for _, name := range []string{offlineChecksums, offlineBundle, dockerAssetName(version, runtime.GOARCH)} {
+	asset, err := dockerAssetInChecksums(dir, version, runtime.GOARCH)
+	if err != nil {
+		return err
+	}
+	for _, name := range []string{offlineChecksums, offlineBundle, asset} {
 		// #nosec G304 -- 仅同步刚下载并校验的固定发布附件。
 		file, err := os.Open(filepath.Join(dir, name))
 		if err != nil {

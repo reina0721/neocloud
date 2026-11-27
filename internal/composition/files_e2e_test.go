@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/reina0721/clouddrive/internal/module/files/model"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/internal/module/files/model"
+	"github.com/reina0721/neocloud/pkg/idgen"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 // uploadFileHTTP 通过唯一的分块协议覆盖 Cookie/CSRF、内容校验及最终发布。

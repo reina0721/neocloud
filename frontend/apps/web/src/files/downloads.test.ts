@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FilesError, type OfflineDownload } from '@clouddrive/surface/files';
+import { FilesError, type OfflineDownload } from '@neocloud/surface/files';
 import { createDownloadsRuntime } from './downloads';
 
 const task: OfflineDownload = {

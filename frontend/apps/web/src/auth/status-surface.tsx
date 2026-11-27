@@ -1,7 +1,7 @@
 'use client';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
-import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
+import { AlertBanner } from '@neocloud/ui-adapter/feedback';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import { useAuth } from './context';
 import { AuthFrame } from './frame';
 import { AlertTriangle } from 'lucide-react';

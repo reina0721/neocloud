@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { FilesError, type FilesErrorCode } from '@clouddrive/surface/files';
-import type { FileMediaProps } from '@clouddrive/surface/files/runtime';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { SelectField } from '@clouddrive/ui-adapter/form-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { FilesError, type FilesErrorCode } from '@neocloud/surface/files';
+import type { FileMediaProps } from '@neocloud/surface/files/runtime';
+import { Action } from '@neocloud/ui-adapter/action';
+import { SelectField } from '@neocloud/ui-adapter/form-field';
 import { subtitleFormat } from './subtitle-contract';
 import { parseSubtitle } from './subtitle-parser';
 import type { VideoSubtitleSource } from './video-subtitle-source';

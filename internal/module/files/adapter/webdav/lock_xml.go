@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
-	"github.com/reina0721/clouddrive/internal/module/files/service"
+	"github.com/reina0721/neocloud/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/service"
 )
 
 const davNamespace = "DAV:"

@@ -1,7 +1,7 @@
 'use client';
-import { useFrontendTranslation, formatDate, formatNumber } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
-import { DataTable } from '@clouddrive/ui-adapter/data-display';
+import { useFrontendTranslation, formatDate, formatNumber } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
+import { DataTable } from '@neocloud/ui-adapter/data-display';
 import type { Dashboard } from './model';
 export function DashboardSummary({
   value,

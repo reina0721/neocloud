@@ -3,10 +3,10 @@ package files
 import (
 	"context"
 
-	"github.com/reina0721/clouddrive/internal/module/files/adapter/aria2"
-	"github.com/reina0721/clouddrive/internal/module/files/repo"
-	"github.com/reina0721/clouddrive/internal/module/files/service"
-	"github.com/reina0721/clouddrive/pkg/clock"
+	"github.com/reina0721/neocloud/internal/module/files/adapter/aria2"
+	"github.com/reina0721/neocloud/internal/module/files/repo"
+	"github.com/reina0721/neocloud/internal/module/files/service"
+	"github.com/reina0721/neocloud/pkg/clock"
 )
 
 // TorrentPreparation 限定节点候选准入所需的资源与位置，不提供运行时任意查找能力。

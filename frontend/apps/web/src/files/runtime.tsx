@@ -1,15 +1,15 @@
 'use client';
 import { lazy, Suspense } from 'react';
-import type { FileDocumentProps, FileEntry } from '@clouddrive/surface/files';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import type { FileDocumentProps, FileEntry } from '@neocloud/surface/files';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import {
   FilesProvider,
   type FileMediaProps,
   type ReaderDraft,
-} from '@clouddrive/surface/files/runtime';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { Action } from '@clouddrive/ui-adapter/action';
+} from '@neocloud/surface/files/runtime';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { Action } from '@neocloud/ui-adapter/action';
 import { Cloud, Image as ImageIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -22,7 +22,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useSiteProfile } from '@clouddrive/surface/administration/runtime';
+import { useSiteProfile } from '@neocloud/surface/administration/runtime';
 import { readAuthConfig } from '../auth/config';
 import { AuthContext, useAuth } from '../auth/context';
 import { FileAccountMenu } from './account-menu';
@@ -34,6 +34,7 @@ import { createReaderPersistence } from './reader-persistence';
 import { downloadBlob } from './native-download';
 import { createReaderAudioFocus, type VideoHandoffBuffers } from './reader-playback';
 import { MusicDock } from './music-dock';
+import { compatibleEnv } from '../../runtime/environment.mjs';
 
 const PDFReader = lazy(() =>
   import('./pdf/reader-view').then((module) => ({ default: module.PDFReaderView })),
@@ -326,7 +327,11 @@ export function FilesRuntime({
       {...(readerPersistence ? { readerPersistence } : {})}
       uploadMarkdownImage={runtime.uploadMarkdownImage}
       drawioEndpoint={
-        process.env.NEXT_PUBLIC_CLOUDDRIVE_DRAWIO_URL ?? 'https://embed.diagrams.net/'
+        compatibleEnv(
+          'NEXT_PUBLIC_NEOCLOUD_DRAWIO_URL',
+          process.env.NEXT_PUBLIC_NEOCLOUD_DRAWIO_URL,
+          process.env.NEXT_PUBLIC_CLOUDDRIVE_DRAWIO_URL,
+        ) ?? 'https://embed.diagrams.net/'
       }
       {...(fileWorkspace
         ? {

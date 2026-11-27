@@ -1,9 +1,9 @@
 'use client';
 import { useState, type SetStateAction } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { CheckboxField, SelectField } from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { Action } from '@clouddrive/ui-adapter/action';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { CheckboxField, SelectField } from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { Action } from '@neocloud/ui-adapter/action';
 import { FilesError } from '../../../src/files/model';
 import {
   changeFileView,

@@ -1,12 +1,12 @@
 'use client';
 
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
 import { FileQuestion } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
 import { proceedAfterLeaveConfirm } from '../host/leave-confirm';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 
 const AuthFrame = dynamic(() => import('../auth/frame').then((module) => module.AuthFrame), {
   ssr: false,

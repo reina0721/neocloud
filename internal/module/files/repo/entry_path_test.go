@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	filesmigration "github.com/reina0721/clouddrive/internal/module/files/binding/migration"
-	"github.com/reina0721/clouddrive/internal/module/files/model"
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/database"
-	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
+	filesmigration "github.com/reina0721/neocloud/internal/module/files/binding/migration"
+	"github.com/reina0721/neocloud/internal/module/files/model"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/database"
+	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
 	"gorm.io/gorm"
 )
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { generatedRouteCatalog } from '@clouddrive/surface/generated/catalog';
-import type { NavigationGroup, NavigationNode } from '@clouddrive/types';
+import { generatedRouteCatalog } from '@neocloud/surface/generated/catalog';
+import type { NavigationGroup, NavigationNode } from '@neocloud/types';
 import { visibleProductNavigation } from '../shell/navigation-visibility';
 import type { NavigationOverrides } from '../state/use-navigation-admin-store';
 

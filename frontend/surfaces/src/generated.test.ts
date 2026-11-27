@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveRouteTarget } from '@clouddrive/plugin-framework';
+import { resolveRouteTarget } from '@neocloud/plugin-framework';
 
 import { assertValidSurfaceRegistry } from './composition';
 import { collectUnknownNavigationIconDiagnostics } from './navigation-icon';

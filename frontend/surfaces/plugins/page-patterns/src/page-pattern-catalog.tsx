@@ -1,12 +1,12 @@
 'use client';
 
-import { BulkActionBar, Collection } from '@clouddrive/surface-foundation/collection';
+import { BulkActionBar, Collection } from '@neocloud/surface-foundation/collection';
 import {
   EntitySummary,
   SettingsLayout,
   Timeline,
-} from '@clouddrive/surface-foundation/detail-settings';
-import { FormActions, FormStatus } from '@clouddrive/surface-foundation/form-actions';
+} from '@neocloud/surface-foundation/detail-settings';
+import { FormActions, FormStatus } from '@neocloud/surface-foundation/form-actions';
 import {
   FilterBar,
   Page,
@@ -14,16 +14,16 @@ import {
   ProductMasthead,
   Section,
   Toolbar,
-} from '@clouddrive/surface-foundation/layout';
-import { OperationStatus, StateRegion } from '@clouddrive/surface-foundation/states-operations';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { FormErrorSummary } from '@clouddrive/ui-adapter/form-error-summary';
-import { Panel } from '@clouddrive/ui-adapter/panel';
-import { StepNavigation } from '@clouddrive/ui-adapter/step-navigation';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+} from '@neocloud/surface-foundation/layout';
+import { OperationStatus, StateRegion } from '@neocloud/surface-foundation/states-operations';
+import { Action } from '@neocloud/ui-adapter/action';
+import { FormErrorSummary } from '@neocloud/ui-adapter/form-error-summary';
+import { Panel } from '@neocloud/ui-adapter/panel';
+import { StepNavigation } from '@neocloud/ui-adapter/step-navigation';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { CheckboxField, TextField } from '@clouddrive/ui-adapter/form-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { CheckboxField, TextField } from '@neocloud/ui-adapter/form-field';
 import { CheckCircle2 } from 'lucide-react';
 
 export type PagePatternKind =
@@ -63,7 +63,7 @@ export function PagePatternCatalog({ kind }: Readonly<{ kind: PagePatternKind }>
       {kind === 'layout-navigation' ? (
         <Section title={t('pagePatterns.content.example3')}>
           <div data-reveal-items className="grid gap-5 p-5">
-            <ProductMasthead name="CloudDrive" description={t('pagePatterns.content.example4')} />
+            <ProductMasthead name="NeoCloud" description={t('pagePatterns.content.example4')} />
             <Toolbar
               label={t('pagePatterns.content.example4')}
               primary={

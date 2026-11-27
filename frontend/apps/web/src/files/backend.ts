@@ -27,7 +27,7 @@ import {
   type FileShortcut,
   type FilesPort,
   type UploadCandidate,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import { ApiError, createJsonClient, csrfTokenOf } from '../api/json-client';
 import { createAccountRequest } from '../api/account-request';
 import { observeFileListEnd } from '../host/file-list-visibility';
@@ -40,8 +40,8 @@ import { nativeDownload, downloadBlob as saveBlob } from './native-download';
 import { createFileNavigationPort } from './navigation';
 import { fileListParameters } from './query';
 import { fileShareAddress } from './share-address';
-import type { SiteAddresses } from '@clouddrive/surface/administration';
-import { publishedSiteOrigin } from '@clouddrive/surface/administration/runtime';
+import type { SiteAddresses } from '@neocloud/surface/administration';
+import { publishedSiteOrigin } from '@neocloud/surface/administration/runtime';
 import { createTransferRuntime } from './transfer-runtime';
 import { createVersionsPort } from './versions';
 import { createFilePreferences } from './preferences';

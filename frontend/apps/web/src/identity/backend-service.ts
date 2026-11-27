@@ -30,7 +30,7 @@ import {
   IdentityError,
   parseIdentity,
   type IdentityErrorCode,
-} from '@clouddrive/surface/identity';
+} from '@neocloud/surface/identity';
 import { createJsonClient, ApiError } from '../api/json-client';
 import type { IdentityOperations } from './mock-service';
 

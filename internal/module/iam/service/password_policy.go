@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
 )
 
 // PasswordPolicySettings 包含当前强度规则及实例覆盖的并发版本。

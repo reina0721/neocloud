@@ -7,8 +7,8 @@ import {
   decodeFileFilters,
   fileFiltersSchema,
   FilesError,
-} from '@clouddrive/surface/files';
-import { loadFileAnnotationMessages } from '@clouddrive/surface/files/runtime';
+} from '@neocloud/surface/files';
+import { loadFileAnnotationMessages } from '@neocloud/surface/files/runtime';
 import { createAnnotationsPort } from './annotations';
 import { fileListParameters } from './query';
 

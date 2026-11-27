@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { generatedRouteCatalog } from '@clouddrive/surface/generated/catalog';
-import { defaultPreferences, PREFERENCES_VERSION } from '@clouddrive/surface/preferences-model';
+import { generatedRouteCatalog } from '@neocloud/surface/generated/catalog';
+import { defaultPreferences, PREFERENCES_VERSION } from '@neocloud/surface/preferences-model';
 
 test('Shell keeps the main content in its viewport at breakpoint boundaries', async ({ page }) => {
   for (const width of [

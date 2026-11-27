@@ -2,8 +2,8 @@
 import type { ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { AppLoadingSurface } from '../host/app-loading-surface';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { loadAdministrationMessages } from '@clouddrive/surface/shell';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { loadAdministrationMessages } from '@neocloud/surface/shell';
 import { appI18n } from '../i18n/i18n';
 
 function AuthBootSurface() {

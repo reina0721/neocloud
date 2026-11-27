@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // TransferPage 返回单个有界页面；NextCursor 为空表示已到本次查询末尾。

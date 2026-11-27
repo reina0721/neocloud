@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	iampermission "github.com/reina0721/clouddrive/internal/module/iam/permission"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
+	iampermission "github.com/reina0721/neocloud/internal/module/iam/permission"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
 )
 
 var ErrRegistrationClosed = errors.New("public registration is disabled")

@@ -7,7 +7,7 @@ import {
   PREFERENCE_CATEGORIES,
   PREFERENCES_VERSION,
   type Preferences,
-} from '@clouddrive/surface/preferences-model';
+} from '@neocloud/surface/preferences-model';
 
 import {
   changedPreferenceCategories,
@@ -61,6 +61,15 @@ describe('preferences-transfer 配置信封', () => {
     expect(parsed.value.security.idleLockMinutes).toBe(15);
     expect(parsed.value.navigation.layoutMode).toBe('mixed');
     expect(parsed.value.appearance.colorWeak).toBe(true);
+  });
+
+  it('接受旧 CloudDrive 导出并写出 NeoCloud 标识', () => {
+    const exported = serializePreferences(customizedPreferences, fixedNow);
+    expect(exported).toContain('neocloud.preferences');
+    const imported = parseImportedPreferences(
+      exported.replace('neocloud.preferences', 'clouddrive.preferences'),
+    );
+    expect(imported).toMatchObject({ ok: true, value: customizedPreferences });
   });
 
   it('导入后相对当前偏好只列出真正变化的分类', () => {

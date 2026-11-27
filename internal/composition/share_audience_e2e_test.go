@@ -14,12 +14,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
-	"github.com/reina0721/clouddrive/internal/module/files/service"
-	iamservice "github.com/reina0721/clouddrive/internal/module/iam/service"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/service"
+	iamservice "github.com/reina0721/neocloud/internal/module/iam/service"
+	"github.com/reina0721/neocloud/pkg/idgen"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 // audienceHTTP 复用真实会话，诊断只输出状态，不输出分享地址、票据或请求体。

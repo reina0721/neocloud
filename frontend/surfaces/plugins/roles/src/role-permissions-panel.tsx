@@ -1,11 +1,11 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { CheckboxField } from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { IdentityError, type DirectoryRole } from '@clouddrive/surface/identity/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { CheckboxField } from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { IdentityError, type DirectoryRole } from '@neocloud/surface/identity/runtime';
 import { useRequiredAdministration } from '../../../src/administration/context';
 import type { AdministrationPort, Permission } from '../../../src/administration/model';
 import { RemoteRegion, useRemote } from '../../../src/administration/resource-state';

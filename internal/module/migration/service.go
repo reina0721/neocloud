@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"sort"
 
-	configbinding "github.com/reina0721/clouddrive/internal/module/migration/binding/config"
-	"github.com/reina0721/clouddrive/pkg/database"
-	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
+	configbinding "github.com/reina0721/neocloud/internal/module/migration/binding/config"
+	"github.com/reina0721/neocloud/pkg/database"
+	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
 )
 
 var (

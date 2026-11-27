@@ -3,9 +3,9 @@ package composition
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	clockapp "github.com/reina0721/clouddrive/internal/kernel/app/clock"
-	pkgclock "github.com/reina0721/clouddrive/pkg/clock"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	clockapp "github.com/reina0721/neocloud/internal/kernel/app/clock"
+	pkgclock "github.com/reina0721/neocloud/pkg/clock"
 )
 
 func composeClock(plan *app.Plan) (app.Added[pkgclock.Clock], error) {

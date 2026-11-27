@@ -1,5 +1,5 @@
 import { expect, test, type Locator } from '@playwright/test';
-import { defaultPreferences, PREFERENCES_VERSION } from '@clouddrive/surface/preferences-model';
+import { defaultPreferences, PREFERENCES_VERSION } from '@neocloud/surface/preferences-model';
 import { waitForVisualReadiness } from './visual-readiness';
 
 async function expectSeparateIndicator(trigger: Locator) {

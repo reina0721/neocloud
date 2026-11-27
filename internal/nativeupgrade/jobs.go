@@ -11,8 +11,8 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/deployment"
-	"github.com/reina0721/clouddrive/internal/nativeupgrade/control"
+	"github.com/reina0721/neocloud/internal/deployment"
+	"github.com/reina0721/neocloud/internal/nativeupgrade/control"
 )
 
 var stableTag = regexp.MustCompile(`^v(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})$`)

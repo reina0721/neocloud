@@ -1,8 +1,8 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import type { ApiRequestDefinition } from '@clouddrive/surface/api-workbench';
-import { TabsView, type TabsViewItem } from '@clouddrive/ui-adapter/data-display';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import type { ApiRequestDefinition } from '@neocloud/surface/api-workbench';
+import { TabsView, type TabsViewItem } from '@neocloud/ui-adapter/data-display';
 import { useWorkbenchStore } from '../../stores/workbench';
 import { AuthPanel } from './auth-panel';
 import { BodyPanel } from './body-panel';

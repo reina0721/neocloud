@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // settleCancellation 处理没有活跃租约的显式取消，也覆盖调度禁用或自动清理预算耗尽；不启用网络或第二套worker。

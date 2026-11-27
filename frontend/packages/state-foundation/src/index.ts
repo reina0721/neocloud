@@ -1,5 +1,5 @@
 /**
- * @clouddrive/state-foundation —— 产品状态管理（Application State Mechanics）。
+ * @neocloud/state-foundation —— 产品状态管理（Application State Mechanics）。
  *
  * 提供：Store 创建约定（createAppStore/createPersistStore）、Persistence Contract、
  * Storage Adapter（local/session/memory/IndexedDB）、Namespace、Hydration lifecycle。
@@ -7,8 +7,8 @@
  * 不负责：Store Registry/Catalog、Plugin Store discovery、Server State、UI State
  * Presentation（StateSurface/AsyncRegion/productStates 属 surface-foundation）。
  *
- * React hydration hook 在 @clouddrive/state-foundation/react；
- * 测试工具在 @clouddrive/state-foundation/testing（production 禁止 import）。
+ * React hydration hook 在 @neocloud/state-foundation/react；
+ * 测试工具在 @neocloud/state-foundation/testing（production 禁止 import）。
  */
 export { defineStoreContract } from './contract/store';
 export type { StoreContract, StorePersistence, StoreScope } from './contract/store';
@@ -16,6 +16,13 @@ export { formatPersistKey, PERSIST_POLICY } from './contract/persist';
 export type { PersistConfig, PersistNamespace } from './contract/persist';
 
 export { definePersistConfig } from './persist/config';
+export {
+  isProductStorageKey,
+  legacyStorageKey,
+  readProductStorage,
+  removeProductStorage,
+  writeProductStorage,
+} from './storage/product-key';
 export {
   createNamespace,
   createPersistKey,

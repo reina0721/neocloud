@@ -1,9 +1,9 @@
 /**
  * Plugin Framework —— Plugin API（Client 侧）。
  *
- * `@clouddrive/plugin-framework/plugin` 是 Plugin 消费导航/Locale 能力的 Client
+ * `@neocloud/plugin-framework/plugin` 是 Plugin 消费导航/Locale 能力的 Client
  * 子路径。Plugin 页默认按正常 Next 开发方式书写：可用 `next/link`/`useRouter`；
- * `route()`（纯 target）经 `@clouddrive/plugin-framework/target` 在 Server/Client
+ * `route()`（纯 target）经 `@neocloud/plugin-framework/target` 在 Server/Client
  * 均可 import。RouteLink / usePluginNavigation / usePluginLocale 是项目增强
  * 能力（symbolic route、跨 Plugin 稳定引用），委托 Host Navigation/Locale Port，
  * 不替代 Next 原生导航。
@@ -16,7 +16,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 
-import { getSchemaIssues as schemasGetSchemaIssues } from '@clouddrive/schemas';
+import { getSchemaIssues as schemasGetSchemaIssues } from '@neocloud/schemas';
 import type { RouteTarget } from './target-types';
 
 export type { RouteTarget } from './target-types';
@@ -32,7 +32,7 @@ export const schemas = {
   getSchemaIssues: schemasGetSchemaIssues,
 } as const;
 
-export type { FoundationSchema, SchemaIssue } from '@clouddrive/schemas';
+export type { FoundationSchema, SchemaIssue } from '@neocloud/schemas';
 
 /** Plugin 层 Navigation Port：Host 在 Composition Root 注入完整实现。 */
 export type PluginNavigationPort = Readonly<{

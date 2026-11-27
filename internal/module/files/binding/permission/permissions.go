@@ -1,7 +1,7 @@
 // Package permission 声明文件模块的私有操作和管理清单权限。
 package permission
 
-import permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
+import permissioncatalog "github.com/reina0721/neocloud/internal/permission"
 
 const (
 	Read               permissioncatalog.Key = "files:read"

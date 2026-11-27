@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/reina0721/clouddrive/internal/deployment"
+	"github.com/reina0721/neocloud/internal/deployment"
 )
 
 func secureDirectory(_ string, info os.FileInfo) error {

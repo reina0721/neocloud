@@ -15,12 +15,12 @@ importers:
       '@axe-core/playwright':
         specifier: ^4.13.0
         version: 4.13.0(playwright-core@1.62.1)
-      '@clouddrive/config':
-        specifier: workspace:*
-        version: link:packages/config
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.9.1(jiti@2.7.0))
+      '@neocloud/config':
+        specifier: workspace:*
+        version: link:packages/config
       '@playwright/test':
         specifier: ^1.62.1
         version: 1.62.1
@@ -63,39 +63,6 @@ importers:
 
   apps/web:
     dependencies:
-      '@clouddrive/config':
-        specifier: workspace:*
-        version: link:../../packages/config
-      '@clouddrive/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@clouddrive/design-system':
-        specifier: workspace:*
-        version: link:../../packages/design-system
-      '@clouddrive/form-foundation':
-        specifier: workspace:*
-        version: link:../../packages/form-foundation
-      '@clouddrive/i18n':
-        specifier: workspace:*
-        version: link:../../packages/i18n
-      '@clouddrive/plugin-framework':
-        specifier: workspace:*
-        version: link:../../packages/plugin-framework
-      '@clouddrive/state-foundation':
-        specifier: workspace:*
-        version: link:../../packages/state-foundation
-      '@clouddrive/surface':
-        specifier: workspace:*
-        version: link:../../surfaces
-      '@clouddrive/surface-foundation':
-        specifier: workspace:*
-        version: link:../../packages/surface-foundation
-      '@clouddrive/types':
-        specifier: workspace:*
-        version: link:../../packages/types
-      '@clouddrive/ui-adapter':
-        specifier: workspace:*
-        version: link:../../packages/ui-adapter
       '@emotion/cache':
         specifier: 11.14.0
         version: 11.14.0
@@ -111,6 +78,39 @@ importers:
       '@mui/material-nextjs':
         specifier: 9.5.0
         version: 9.5.0(@emotion/cache@11.14.0)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8))(@types/react@19.2.18)(next@16.4.5(@babel/core@7.29.7)(@playwright/test@1.62.1)(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)
+      '@neocloud/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@neocloud/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@neocloud/design-system':
+        specifier: workspace:*
+        version: link:../../packages/design-system
+      '@neocloud/form-foundation':
+        specifier: workspace:*
+        version: link:../../packages/form-foundation
+      '@neocloud/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@neocloud/plugin-framework':
+        specifier: workspace:*
+        version: link:../../packages/plugin-framework
+      '@neocloud/state-foundation':
+        specifier: workspace:*
+        version: link:../../packages/state-foundation
+      '@neocloud/surface':
+        specifier: workspace:*
+        version: link:../../surfaces
+      '@neocloud/surface-foundation':
+        specifier: workspace:*
+        version: link:../../packages/surface-foundation
+      '@neocloud/types':
+        specifier: workspace:*
+        version: link:../../packages/types
+      '@neocloud/ui-adapter':
+        specifier: workspace:*
+        version: link:../../packages/ui-adapter
       '@noble/hashes':
         specifier: 2.4.0
         version: 2.4.0
@@ -194,7 +194,7 @@ importers:
 
   packages/core:
     dependencies:
-      '@clouddrive/types':
+      '@neocloud/types':
         specifier: workspace:*
         version: link:../types
     devDependencies:
@@ -206,12 +206,12 @@ importers:
 
   packages/form-foundation:
     dependencies:
-      '@clouddrive/schemas':
-        specifier: workspace:*
-        version: link:../schemas
       '@hookform/resolvers':
         specifier: ^5.9.1
         version: 5.9.1(@standard-schema/spec@1.1.0)(ajv@8.20.0)(react-hook-form@7.86.0(react@19.2.8))(valibot@1.4.2(typescript@5.9.3))(zod@4.6.6)
+      '@neocloud/schemas':
+        specifier: workspace:*
+        version: link:../schemas
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -253,13 +253,13 @@ importers:
 
   packages/plugin-framework:
     dependencies:
-      '@clouddrive/core':
+      '@neocloud/core':
         specifier: workspace:*
         version: link:../core
-      '@clouddrive/schemas':
+      '@neocloud/schemas':
         specifier: workspace:*
         version: link:../schemas
-      '@clouddrive/types':
+      '@neocloud/types':
         specifier: workspace:*
         version: link:../types
       react:
@@ -313,16 +313,16 @@ importers:
 
   packages/surface-foundation:
     dependencies:
-      '@clouddrive/core':
+      '@neocloud/core':
         specifier: workspace:*
         version: link:../core
-      '@clouddrive/form-foundation':
+      '@neocloud/form-foundation':
         specifier: workspace:*
         version: link:../form-foundation
-      '@clouddrive/types':
+      '@neocloud/types':
         specifier: workspace:*
         version: link:../types
-      '@clouddrive/ui-adapter':
+      '@neocloud/ui-adapter':
         specifier: workspace:*
         version: link:../ui-adapter
       react:
@@ -349,12 +349,6 @@ importers:
 
   packages/ui-adapter:
     dependencies:
-      '@clouddrive/design-system':
-        specifier: workspace:*
-        version: link:../design-system
-      '@clouddrive/types':
-        specifier: workspace:*
-        version: link:../types
       '@emotion/react':
         specifier: 11.14.0
         version: 11.14.0(@types/react@19.2.18)(react@19.2.8)
@@ -367,6 +361,12 @@ importers:
       '@mui/x-date-pickers':
         specifier: 9.18.0
         version: 9.18.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8))(@types/react@19.2.18)(react@19.2.8))(@mui/material@9.5.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8))(@types/react@19.2.18)(react@19.2.8))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@mui/system@9.5.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8))(@types/react@19.2.18)(react@19.2.8))(@types/react@19.2.18)(react@19.2.8))(@types/react@19.2.18)(dayjs@1.11.23)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@neocloud/design-system':
+        specifier: workspace:*
+        version: link:../design-system
+      '@neocloud/types':
+        specifier: workspace:*
+        version: link:../types
       dayjs:
         specifier: 1.11.23
         version: 1.11.23
@@ -389,33 +389,6 @@ importers:
 
   surfaces:
     dependencies:
-      '@clouddrive/core':
-        specifier: workspace:*
-        version: link:../packages/core
-      '@clouddrive/form-foundation':
-        specifier: workspace:*
-        version: link:../packages/form-foundation
-      '@clouddrive/i18n':
-        specifier: workspace:*
-        version: link:../packages/i18n
-      '@clouddrive/plugin-framework':
-        specifier: workspace:*
-        version: link:../packages/plugin-framework
-      '@clouddrive/schemas':
-        specifier: workspace:*
-        version: link:../packages/schemas
-      '@clouddrive/state-foundation':
-        specifier: workspace:*
-        version: link:../packages/state-foundation
-      '@clouddrive/surface-foundation':
-        specifier: workspace:*
-        version: link:../packages/surface-foundation
-      '@clouddrive/types':
-        specifier: workspace:*
-        version: link:../packages/types
-      '@clouddrive/ui-adapter':
-        specifier: workspace:*
-        version: link:../packages/ui-adapter
       '@codemirror/commands':
         specifier: 6.11.1
         version: 6.11.1
@@ -437,6 +410,33 @@ importers:
       '@lezer/highlight':
         specifier: 1.2.5
         version: 1.2.5
+      '@neocloud/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@neocloud/form-foundation':
+        specifier: workspace:*
+        version: link:../packages/form-foundation
+      '@neocloud/i18n':
+        specifier: workspace:*
+        version: link:../packages/i18n
+      '@neocloud/plugin-framework':
+        specifier: workspace:*
+        version: link:../packages/plugin-framework
+      '@neocloud/schemas':
+        specifier: workspace:*
+        version: link:../packages/schemas
+      '@neocloud/state-foundation':
+        specifier: workspace:*
+        version: link:../packages/state-foundation
+      '@neocloud/surface-foundation':
+        specifier: workspace:*
+        version: link:../packages/surface-foundation
+      '@neocloud/types':
+        specifier: workspace:*
+        version: link:../packages/types
+      '@neocloud/ui-adapter':
+        specifier: workspace:*
+        version: link:../packages/ui-adapter
       codemirror:
         specifier: 6.0.2
         version: 6.0.2

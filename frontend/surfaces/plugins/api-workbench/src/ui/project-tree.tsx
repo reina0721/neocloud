@@ -1,17 +1,17 @@
 'use client';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import type {
   ApiCollection,
   ApiProject,
   ApiRequestDefinition,
-} from '@clouddrive/surface/api-workbench';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
-import { DestructiveConfirmDialog, DrawerSurface } from '@clouddrive/ui-adapter/overlays';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
-import { SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { Tree, type TreeNode } from '@clouddrive/ui-adapter/tree';
+} from '@neocloud/surface/api-workbench';
+import { Action } from '@neocloud/ui-adapter/action';
+import { MenuButton } from '@neocloud/ui-adapter/menu-button';
+import { DestructiveConfirmDialog, DrawerSurface } from '@neocloud/ui-adapter/overlays';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
+import { SelectField, TextField } from '@neocloud/ui-adapter/form-field';
+import { Tree, type TreeNode } from '@neocloud/ui-adapter/tree';
 import { Folder, Plus, Trash2 } from 'lucide-react';
 export type ProjectTreeProps = Readonly<{
   projects: readonly ApiProject[];

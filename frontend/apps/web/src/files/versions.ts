@@ -4,7 +4,7 @@ import {
   fileEntrySchema,
   fileHistoryTextMaxBytes,
   type VersionsPort,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import type { createJsonClient } from '../api/json-client';
 import { nativeDownload } from './native-download';
 

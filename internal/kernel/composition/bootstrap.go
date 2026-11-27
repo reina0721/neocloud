@@ -3,18 +3,18 @@ package composition
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	cacheapp "github.com/reina0721/clouddrive/internal/kernel/app/cache"
-	databaseapp "github.com/reina0721/clouddrive/internal/kernel/app/database"
-	executionapp "github.com/reina0721/clouddrive/internal/kernel/app/execution"
-	i18napp "github.com/reina0721/clouddrive/internal/kernel/app/i18n"
-	loggerapp "github.com/reina0721/clouddrive/internal/kernel/app/logger"
-	messagingapp "github.com/reina0721/clouddrive/internal/kernel/app/messaging"
-	scheduleapp "github.com/reina0721/clouddrive/internal/kernel/app/schedule"
-	storageapp "github.com/reina0721/clouddrive/internal/kernel/app/storage"
-	kernelcli "github.com/reina0721/clouddrive/internal/kernel/cli"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	pkgcli "github.com/reina0721/clouddrive/pkg/cli"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	cacheapp "github.com/reina0721/neocloud/internal/kernel/app/cache"
+	databaseapp "github.com/reina0721/neocloud/internal/kernel/app/database"
+	executionapp "github.com/reina0721/neocloud/internal/kernel/app/execution"
+	i18napp "github.com/reina0721/neocloud/internal/kernel/app/i18n"
+	loggerapp "github.com/reina0721/neocloud/internal/kernel/app/logger"
+	messagingapp "github.com/reina0721/neocloud/internal/kernel/app/messaging"
+	scheduleapp "github.com/reina0721/neocloud/internal/kernel/app/schedule"
+	storageapp "github.com/reina0721/neocloud/internal/kernel/app/storage"
+	kernelcli "github.com/reina0721/neocloud/internal/kernel/cli"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	pkgcli "github.com/reina0721/neocloud/pkg/cli"
 )
 
 // Bootstrap 保存 one-shot 启动命令所需的最小装配结果。

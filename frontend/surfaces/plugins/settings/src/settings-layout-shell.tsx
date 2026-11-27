@@ -11,12 +11,12 @@
  */
 import { useState, type ReactNode } from 'react';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { type PersistResult } from '@clouddrive/plugin-framework/preferences';
-import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
-import { PageHeader } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { type PersistResult } from '@neocloud/plugin-framework/preferences';
+import { route, RouteLink } from '@neocloud/plugin-framework/plugin';
+import { PageHeader } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
 
 import type { Ctx } from './category-sections';
 import { SettingsShellContext } from './settings-context';

@@ -1,5 +1,5 @@
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { ProgressMeter } from '@clouddrive/ui-adapter/progress-meter';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { ProgressMeter } from '@neocloud/ui-adapter/progress-meter';
 import type { OfflineDownload } from '../../../src/files/downloads';
 import { formatFileBytes as bytes } from '../../../src/files/format';
 

@@ -1,9 +1,9 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
-import { DataTable } from '@clouddrive/ui-adapter/data-display';
-import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
-import { IdentityError } from '@clouddrive/surface/identity/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
+import { DataTable } from '@neocloud/ui-adapter/data-display';
+import { route, RouteLink } from '@neocloud/plugin-framework/plugin';
+import { IdentityError } from '@neocloud/surface/identity/runtime';
 import { useRequiredAdministration } from '../../../src/administration/context';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import { IdentityQueryState } from '../../../src/identity/query-state';

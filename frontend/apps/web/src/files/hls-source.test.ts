@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type FileEntry, type FilesPort } from '@clouddrive/surface/files';
+import { type FileEntry, type FilesPort } from '@neocloud/surface/files';
 import { createPrivateHlsSource, privateHlsPath } from './hls-source';
 
 function file(name: string, overrides: Partial<FileEntry> = {}): FileEntry {

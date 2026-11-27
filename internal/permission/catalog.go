@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/reina0721/clouddrive/internal/module"
+	"github.com/reina0721/neocloud/internal/module"
 )
 
 // Key 是授权判断使用的稳定精确权限键；Catalog 不支持通配符。

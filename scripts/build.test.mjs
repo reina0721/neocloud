@@ -18,14 +18,14 @@ childProcess.spawn = (command, args, options) => {
   const child = new EventEmitter();
   setImmediate(async () => {
     try {
-      if (args.join(' ').endsWith('--filter @clouddrive/web build')) {
+      if (args.join(' ').endsWith('--filter @neocloud/web build')) {
         const dist = options.env.NEXT_DIST_DIR;
         const web = join(options.cwd, 'apps', 'web');
         const output = join(web, dist);
         await mkdir(join(output, 'standalone'), { recursive: true });
         await writeFile(join(output, 'standalone', 'server.js'), '模拟 Web 输出');
         await writeFile(join(web, 'next-env.d.ts'), 'import "./' + dist + '/types/routes.d.ts";');
-        if (options.env.CLOUDDRIVE_NATIVE_BUILD_CACHE === '1') {
+        if (options.env.NEOCLOUD_NATIVE_BUILD_CACHE === '1') {
           await mkdir(join(output, 'cache'), { recursive: true });
           await writeFile(join(output, 'cache', 'turbopack'), '模拟缓存');
         }
@@ -70,7 +70,7 @@ async function fixture(t) {
   const windows = process.platform === 'win32';
   const target = `${windows ? 'windows' : process.platform}-${process.arch === 'x64' ? 'amd64' : 'arm64'}`;
   const output = join(root, 'dist', 'native', target);
-  const archive = `clouddrive-${target}.${windows ? 'zip' : 'tar.gz'}`;
+  const archive = `neocloud-${target}.${windows ? 'zip' : 'tar.gz'}`;
   return {
     root, web, output, archive,
     run: (args = [], failWeb = false) => spawnSync(

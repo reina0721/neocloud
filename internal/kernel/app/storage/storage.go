@@ -9,9 +9,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	pkgstorage "github.com/reina0721/clouddrive/pkg/storage"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	pkgstorage "github.com/reina0721/neocloud/pkg/storage"
 )
 
 const (

@@ -19,15 +19,16 @@ import (
 )
 
 const (
-	SocketDirectory = "/run"
-	MaintenancePath = "/maintenance"
-	OwnerPath       = "/api/console/v1/deployment/owner"
+	SocketDirectory   = "/run"
+	MaintenancePath   = "/maintenance"
+	OwnerPath         = "/api/console/v1/deployment/owner"
+	dockerRenameFence = "rename-in-progress"
 )
 
 var (
 	versionPattern = regexp.MustCompile(`^v(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})$`)
 	releasePattern = regexp.MustCompile(`^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$`)
-	projectPattern = regexp.MustCompile(`^clouddrive-[a-f0-9]{12}$`)
+	projectPattern = regexp.MustCompile(`^(clouddrive|neocloud)-[a-f0-9]{12}$`)
 	idPattern      = regexp.MustCompile(`^[0-9a-f]{32}$`)
 )
 
@@ -152,6 +153,14 @@ func maintenanceProject(root string) (string, error) {
 	return name, nil
 }
 
+func requireNoDockerRename(root string) error {
+	_, err := os.Lstat(filepath.Join(root, ".control", dockerRenameFence))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	return errors.Join(ErrRecovery, errors.New("实例名称迁移尚未完成，请先查询状态或回退"), err)
+}
+
 func ReadJSON(path string, value any) error {
 	// #nosec G304 -- 只读取本地 CLI/systemd 指定的配置或实例状态。
 	f, err := os.Open(path)
@@ -187,10 +196,7 @@ func atomicWrite(path string, data []byte, mode os.FileMode) error {
 	if err = errors.Join(err, closeErr); err != nil {
 		return err
 	}
-	if err = os.Rename(f.Name(), path); err != nil {
-		return err
-	}
-	return syncDirectory(filepath.Dir(path))
+	return replaceDeploymentFile(f.Name(), path)
 }
 
 func syncDirectory(path string) error {

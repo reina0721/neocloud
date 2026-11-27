@@ -19,6 +19,7 @@ import {
   emptyPdfState,
   pdfProtocolVersion,
   pdfWorkerReadyKind,
+  legacyPdfWorkerReadyKind,
   pdfOutlineTitleMaxLength,
   pdfHistoryLimit,
   pdfMinScale,
@@ -92,7 +93,7 @@ async function waitForWorker(owned: Worker, signal: AbortSignal) {
         typeof event.data === 'object' &&
         event.data !== null &&
         'kind' in event.data &&
-        event.data.kind === pdfWorkerReadyKind
+        (event.data.kind === pdfWorkerReadyKind || event.data.kind === legacyPdfWorkerReadyKind)
       ) {
         cleanup();
         resolve();
@@ -377,7 +378,7 @@ async function open(message: PdfOpen) {
   if (closed) return;
   worker = new Worker(new URL('./worker.js', import.meta.url), {
     type: 'module',
-    name: 'clouddrive-pdf',
+    name: 'neocloud-pdf',
   });
   worker.addEventListener('error', (event) => {
     event.preventDefault();

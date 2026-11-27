@@ -6,7 +6,7 @@ import {
   filePreferencesSchema,
   filePreferenceSnapshotSchema,
   FilesError,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import type { createJsonClient } from '../api/json-client';
 import { createFilePreferences } from './preferences';
 

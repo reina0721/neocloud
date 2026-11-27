@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	kernelcli "github.com/reina0721/clouddrive/internal/kernel/cli"
-	"github.com/reina0721/clouddrive/internal/module/todo/model"
-	"github.com/reina0721/clouddrive/internal/module/todo/service"
-	"github.com/reina0721/clouddrive/pkg/cli"
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/fault"
+	kernelcli "github.com/reina0721/neocloud/internal/kernel/cli"
+	"github.com/reina0721/neocloud/internal/module/todo/model"
+	"github.com/reina0721/neocloud/internal/module/todo/service"
+	"github.com/reina0721/neocloud/pkg/cli"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/fault"
 )
 
 // Executor 在命令解析完成后进入受管 application operation。

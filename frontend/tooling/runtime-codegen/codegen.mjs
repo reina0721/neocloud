@@ -1,7 +1,7 @@
 /**
  * runtime-codegen —— Design System Schema Runtime codegen CLI。
  *
- * 与 `@clouddrive/schemas/runtime` 同一实现：经 Node 24 type-stripping
+ * 与 `@neocloud/schemas/runtime` 同一实现：经 Node 24 type-stripping
  * 动态 import runtime 模块，Source Path 清单来自 runtime 内建最小 Registry
  * （不在此重复任何 Authority 元数据）。
  *

@@ -4,12 +4,12 @@ package organization
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/module"
-	organizationhandler "github.com/reina0721/clouddrive/internal/module/organization/handler"
-	"github.com/reina0721/clouddrive/internal/module/organization/repo"
-	"github.com/reina0721/clouddrive/internal/module/organization/service"
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/internal/module"
+	organizationhandler "github.com/reina0721/neocloud/internal/module/organization/handler"
+	"github.com/reina0721/neocloud/internal/module/organization/repo"
+	"github.com/reina0721/neocloud/internal/module/organization/service"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/idgen"
 )
 
 const moduleID module.ID = "organization"

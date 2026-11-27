@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // AudienceKind 限定本实例账号和角色两种可选主体。

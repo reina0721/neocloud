@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/module/iam"
-	organizationservice "github.com/reina0721/clouddrive/internal/module/organization/service"
+	"github.com/reina0721/neocloud/internal/module/iam"
+	organizationservice "github.com/reina0721/neocloud/internal/module/organization/service"
 )
 
 // organizationAccountDirectoryAdapter 是 Organization 到 IAM AccountDirectory

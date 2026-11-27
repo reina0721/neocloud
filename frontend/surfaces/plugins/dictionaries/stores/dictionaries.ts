@@ -1,4 +1,4 @@
-import { createLocalStorage, createPersistStore } from '@clouddrive/state-foundation';
+import { createLocalStorage, createPersistStore } from '@neocloud/state-foundation';
 
 import {
   createDemoDictionaries,
@@ -20,10 +20,10 @@ import {
  *
  * 类型与字典项都是本地演示数据；类型编码唯一，类型/字典项各自带 version 做乐观并发。
  * 字典项变更会刷新所属类型的更新时间（展示语义），但不改变类型 version。
- * 持久化 key：`clouddrive.plugin.dictionaries`。
+ * 持久化 key：`neocloud.plugin.dictionaries`。
  */
 
-export const DICTIONARIES_STORAGE_KEY = 'clouddrive.plugin.dictionaries';
+export const DICTIONARIES_STORAGE_KEY = 'neocloud.plugin.dictionaries';
 export const DICTIONARIES_STORAGE_VERSION = 1;
 
 export type DictionariesFailureCode = 'conflict' | 'readonly' | 'invalid';

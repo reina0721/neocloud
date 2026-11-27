@@ -1,7 +1,7 @@
 export const resources = {
   'zh-CN': {
     translation: {
-      brand: { name: 'clouddrive', edition: '管理工作空间' },
+      brand: { name: 'NeoCloud', edition: '管理工作空间' },
       auth: { loading: '正在加载…', logout: '退出登录' },
       common: {
         filesWorkspaceTitle: '文件工作区',
@@ -61,7 +61,7 @@ export const resources = {
   },
   en: {
     translation: {
-      brand: { name: 'clouddrive', edition: 'Management workspace' },
+      brand: { name: 'NeoCloud', edition: 'Management workspace' },
       auth: { loading: 'Loading…', logout: 'Sign out' },
       common: {
         filesWorkspaceTitle: 'File workspace',

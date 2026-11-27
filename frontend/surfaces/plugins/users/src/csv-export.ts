@@ -4,7 +4,7 @@ export type CsvExportPort = Readonly<{
 
 /**
  * Browser download adapter（Plugin 私有）：只负责把已序列化的 CSV 文本落盘。
- * 序列化规则（列顺序 / RFC 4180 引号）由 `@clouddrive/core` 的 `toCsv` 提供，
+ * 序列化规则（列顺序 / RFC 4180 引号）由 `@neocloud/core` 的 `toCsv` 提供，
  * 本适配器不改写内容，只补 UTF-8 BOM 以便 Excel 正确识别中文。
  */
 export const browserCsvExport: CsvExportPort = {

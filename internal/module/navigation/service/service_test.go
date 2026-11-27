@@ -10,16 +10,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/navigation/binding/consolecatalog"
-	migrationbinding "github.com/reina0721/clouddrive/internal/module/navigation/binding/migration"
-	"github.com/reina0721/clouddrive/internal/module/navigation/model"
-	"github.com/reina0721/clouddrive/internal/module/navigation/repo"
-	"github.com/reina0721/clouddrive/internal/module/navigation/service"
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/database"
-	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
+	"github.com/reina0721/neocloud/internal/module/navigation/binding/consolecatalog"
+	migrationbinding "github.com/reina0721/neocloud/internal/module/navigation/binding/migration"
+	"github.com/reina0721/neocloud/internal/module/navigation/model"
+	"github.com/reina0721/neocloud/internal/module/navigation/repo"
+	"github.com/reina0721/neocloud/internal/module/navigation/service"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/database"
+	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestDefaultsUpdateRevisionAndCycleRollback(t *testing.T) {

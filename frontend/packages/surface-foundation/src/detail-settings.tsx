@@ -1,4 +1,4 @@
-import { Panel } from '@clouddrive/ui-adapter/panel';
+import { Panel } from '@neocloud/ui-adapter/panel';
 import type { ReactNode } from 'react';
 
 export function EntitySummary({

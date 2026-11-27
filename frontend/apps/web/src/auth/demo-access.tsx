@@ -1,7 +1,7 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
 import { useSyncExternalStore } from 'react';
 
 import { demoAccounts, type DemoAccount } from './demo-accounts';

@@ -1,10 +1,10 @@
-import { createPersistStore, createLocalStorage } from '@clouddrive/state-foundation';
-import type { NotificationItem } from '@clouddrive/plugin-framework/notifications';
+import { createPersistStore, createLocalStorage } from '@neocloud/state-foundation';
+import type { NotificationItem } from '@neocloud/plugin-framework/notifications';
 
 /**
  * Notifications Store（Host 拥有）—— 通知中心（SET-006-005）。
  *
- * - 独立 Store（key `clouddrive.notifications`），收纳**真实前端事件**（表单保存
+ * - 独立 Store（key `neocloud.notifications`），收纳**真实前端事件**（表单保存
  *   成功/失败、任务完成等），不预填虚构通知；
  * - 持久化内容可序列化（无函数；跳转存 Route Target 形状）；
  * - 未读计数/角标由调用方计算（store 不存派生值）；上限固定（防无限增长）；
@@ -56,7 +56,7 @@ export const useNotificationsStore = createPersistStore<NotificationsState, Noti
       })),
   }),
   {
-    name: 'clouddrive.notifications',
+    name: 'neocloud.notifications',
     version: 1,
     skipHydration: true,
     storage: createLocalStorage(),

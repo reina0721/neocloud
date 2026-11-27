@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useEffectEvent, useId, useState, type ReactNode } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { CheckboxField, SelectField } from '@clouddrive/ui-adapter/form-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { CheckboxField, SelectField } from '@neocloud/ui-adapter/form-field';
 import { FilesError, type FileEntry } from '../../../src/files/model';
 import { useFiles } from '../../../src/files/runtime';
 import {

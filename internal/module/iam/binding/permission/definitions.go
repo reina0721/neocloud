@@ -1,8 +1,8 @@
 // Package permission 声明 IAM 自有的稳定权限键。
 package permission
 
-import permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
-import iampermission "github.com/reina0721/clouddrive/internal/module/iam/permission"
+import permissioncatalog "github.com/reina0721/neocloud/internal/permission"
+import iampermission "github.com/reina0721/neocloud/internal/module/iam/permission"
 
 const (
 	SelfRead             = iampermission.SelfRead

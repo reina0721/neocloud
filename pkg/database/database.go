@@ -391,6 +391,14 @@ func prepareSQLiteDirectory(directory string, create bool) error {
 	return nil
 }
 
+// ConfiguredSQLitePath returns the configured path without opening or creating a database.
+func ConfiguredSQLitePath(cfg Config) (string, error) {
+	if cfg.Driver != DriverSQLite || sqliteMemoryDSN(cfg.DSN) {
+		return "", fmt.Errorf("操作需要持久化 SQLite 数据库")
+	}
+	return sqlitePath(cfg.DSN)
+}
+
 func sqlitePath(dsn string) (string, error) {
 	path := dsn
 	if strings.HasPrefix(dsn, "file:") {

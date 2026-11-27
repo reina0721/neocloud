@@ -4,10 +4,10 @@ import './install-translations';
 import { Bell } from 'lucide-react';
 import { lazy, Suspense, useState } from 'react';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { Badge } from '@clouddrive/ui-adapter/feedback';
-import { useProductInbox } from '@clouddrive/surface/identity/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { Badge } from '@neocloud/ui-adapter/feedback';
+import { useProductInbox } from '@neocloud/surface/identity/runtime';
 import { useShellStore } from '../state/use-shell-store';
 
 const NotificationDrawer = lazy(() =>

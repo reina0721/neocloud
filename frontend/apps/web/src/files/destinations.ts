@@ -1,4 +1,4 @@
-import type { FileBrowseQuery, FilesDestination } from '@clouddrive/surface/files';
+import type { FileBrowseQuery, FilesDestination } from '@neocloud/surface/files';
 
 /** fileDestinationHrefs 由Host统一拥有文件工作区的链接位置。 */
 export const fileDestinationHrefs = {

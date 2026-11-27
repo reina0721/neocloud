@@ -16,9 +16,9 @@
  * PersonalShell 持有侧栏导航，SettingsContentFrame 负责分类内容。
  */
 import { usePathname } from 'next/navigation';
-import { Page } from '@clouddrive/surface-foundation/layout';
-import { useAccountNotificationSettings } from '@clouddrive/surface/administration/runtime';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { Page } from '@neocloud/surface-foundation/layout';
+import { useAccountNotificationSettings } from '@neocloud/surface/administration/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import type { ReactNode } from 'react';
 
 import {

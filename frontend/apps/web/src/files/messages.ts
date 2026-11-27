@@ -1,7 +1,7 @@
 import {
   loadFileAnnotationMessages,
   loadPublicFileMessages,
-} from '@clouddrive/surface/files/runtime';
+} from '@neocloud/surface/files/runtime';
 import { appI18n } from '../i18n/i18n';
 
 /** initializeFileMessages 在挂载文件Surface之前补齐私有整理界面文案。 */

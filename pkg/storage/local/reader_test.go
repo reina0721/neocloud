@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	storageclient "github.com/reina0721/clouddrive/pkg/storage/client"
+	storageclient "github.com/reina0721/neocloud/pkg/storage/client"
 )
 
 // 长度不符、源读取失败或取消都不能替换已经发布的对象。

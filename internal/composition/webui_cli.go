@@ -5,15 +5,15 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel"
-	databaseapp "github.com/reina0721/clouddrive/internal/kernel/app/database"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	"github.com/reina0721/clouddrive/internal/module/iam"
-	iamcli "github.com/reina0721/clouddrive/internal/module/iam/binding/cli"
-	iamconfig "github.com/reina0721/clouddrive/internal/module/iam/binding/config"
-	iamservice "github.com/reina0721/clouddrive/internal/module/iam/service"
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/internal/kernel"
+	databaseapp "github.com/reina0721/neocloud/internal/kernel/app/database"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/module/iam"
+	iamcli "github.com/reina0721/neocloud/internal/module/iam/binding/cli"
+	iamconfig "github.com/reina0721/neocloud/internal/module/iam/binding/config"
+	iamservice "github.com/reina0721/neocloud/internal/module/iam/service"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/idgen"
 )
 
 type iamExecutor struct{ application *Application }

@@ -22,7 +22,8 @@ import (
 	"time"
 )
 
-const cookiePrefix = "clouddrive_maintenance_"
+const cookiePrefix = "neocloud_maintenance_"
+const legacyMaintenanceCookiePrefix = "clouddrive_maintenance_"
 
 //go:embed maintenance.html
 var pageHTML string
@@ -112,12 +113,12 @@ func unavailable(w http.ResponseWriter, r *http.Request) {
 		!isDAV(r.URL.Path) && !strings.HasPrefix(r.URL.Path, "/api/") && !strings.HasPrefix(r.URL.Path, "/wopi/") {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(503)
-		_, _ = io.WriteString(w, `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>CloudDrive 正在维护</title><main><h1>CloudDrive 正在维护</h1><p><a href="/maintenance">查看维护进度</a></p></main></html>`)
+		_, _ = io.WriteString(w, `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>NeoCloud 正在维护</title><main><h1>NeoCloud 正在维护</h1><p><a href="/maintenance">查看维护进度</a></p></main></html>`)
 		return
 	}
 	w.WriteHeader(503)
 	if r.Method != http.MethodHead {
-		_, _ = io.WriteString(w, "CloudDrive 正在维护\n")
+		_, _ = io.WriteString(w, "NeoCloud 正在维护\n")
 	}
 }
 
@@ -166,6 +167,9 @@ func (g *Gateway) signature(kind, payload, origin string) string {
 
 func (g *Gateway) value(r *http.Request, kind, origin string) string {
 	c, err := r.Cookie(cookiePrefix + kind)
+	if errors.Is(err, http.ErrNoCookie) {
+		c, err = r.Cookie(legacyMaintenanceCookiePrefix + kind)
+	}
 	if err != nil {
 		return ""
 	}
@@ -186,9 +190,12 @@ func (g *Gateway) value(r *http.Request, kind, origin string) string {
 }
 
 func (g *Gateway) issue(w http.ResponseWriter, kind, value, origin string, https bool, lifetime time.Duration) {
-	// #nosec G124 -- 调用方已验证 HTTPS 或直连回环 HTTP，Cookie 始终启用 HttpOnly 和 SameSiteStrict。
-	http.SetCookie(w, &http.Cookie{Name: cookiePrefix + kind, Value: g.makeToken(kind, value, origin, lifetime),
-		Path: MaintenancePath, MaxAge: int(lifetime.Seconds()), HttpOnly: true, Secure: https, SameSite: http.SameSiteStrictMode})
+	token := g.makeToken(kind, value, origin, lifetime)
+	for _, prefix := range []string{cookiePrefix, legacyMaintenanceCookiePrefix} {
+		// #nosec G124 -- 兼容旧网关，使用同一个已验证的 Origin 与签名令牌。
+		http.SetCookie(w, &http.Cookie{Name: prefix + kind, Value: token, Path: MaintenancePath,
+			MaxAge: int(lifetime.Seconds()), HttpOnly: true, Secure: https, SameSite: http.SameSiteStrictMode})
+	}
 }
 
 func (g *Gateway) iamRequest(r *http.Request, method, path string) (*http.Request, error) {
@@ -198,7 +205,7 @@ func (g *Gateway) iamRequest(r *http.Request, method, path string) (*http.Reques
 	}
 	req.Host = r.Host
 	for _, cookie := range r.Cookies() {
-		if !strings.HasPrefix(cookie.Name, cookiePrefix) {
+		if !strings.HasPrefix(cookie.Name, cookiePrefix) && !strings.HasPrefix(cookie.Name, legacyMaintenanceCookiePrefix) {
 			req.AddCookie(cookie)
 		}
 	}
@@ -299,6 +306,7 @@ func (g *Gateway) maintenance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "不支持的请求方式", 405)
 		return
 	}
+	w.Header().Set("X-NeoCloud-Maintenance", "1")
 	w.Header().Set("X-CloudDrive-Maintenance", "1")
 	if r.Method == http.MethodHead {
 		w.WriteHeader(200)
@@ -372,8 +380,10 @@ func (g *Gateway) mutate(w http.ResponseWriter, r *http.Request, origin string, 
 		}
 		g.issue(w, "recovery", "authorized", origin, secure, 30*time.Minute)
 	case "recovery-logout":
-		// #nosec G124 -- 与签发使用同一受信连接策略，只清除本维护会话的 Cookie。
-		http.SetCookie(w, &http.Cookie{Name: cookiePrefix + "recovery", Path: MaintenancePath, MaxAge: -1, HttpOnly: true, Secure: secure, SameSite: http.SameSiteStrictMode})
+		for _, prefix := range []string{cookiePrefix, legacyMaintenanceCookiePrefix} {
+			// #nosec G124 -- 与签发使用同一受信连接策略。
+			http.SetCookie(w, &http.Cookie{Name: prefix + "recovery", Path: MaintenancePath, MaxAge: -1, HttpOnly: true, Secure: secure, SameSite: http.SameSiteStrictMode})
+		}
 	default:
 		switch action {
 		case "check", "upgrade", "backup", "rollback", "restore":

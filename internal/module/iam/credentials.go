@@ -1,6 +1,6 @@
 package iam
 
-import passwordadapter "github.com/reina0721/clouddrive/internal/module/iam/adapter/password"
+import passwordadapter "github.com/reina0721/neocloud/internal/module/iam/adapter/password"
 
 // CredentialDigests 是凭据摘要的无资源 facet，不暴露 IAM Service 或密码库类型。
 type CredentialDigests interface {

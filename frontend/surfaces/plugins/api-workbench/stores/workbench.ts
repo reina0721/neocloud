@@ -1,4 +1,4 @@
-import { createAppStore } from '@clouddrive/state-foundation';
+import { createAppStore } from '@neocloud/state-foundation';
 import type {
   ApiRequestDefinition,
   ExecutedResponse,
@@ -6,7 +6,7 @@ import type {
   ScriptExecutionResult,
   TaskDefinition,
   WorkspaceSnapshot,
-} from '@clouddrive/surface/api-workbench';
+} from '@neocloud/surface/api-workbench';
 import type { RunnerBatchResult } from '../src/model/runner';
 
 export type RightTab = 'response' | 'runner' | 'tasks';

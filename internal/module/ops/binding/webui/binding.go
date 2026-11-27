@@ -2,8 +2,8 @@
 package webui
 
 import (
-	"github.com/reina0721/clouddrive/internal/module"
-	webuicontract "github.com/reina0721/clouddrive/internal/webui"
+	"github.com/reina0721/neocloud/internal/module"
+	webuicontract "github.com/reina0721/neocloud/internal/webui"
 )
 
 // Binding 返回 Ops 真实运行状态看板声明；同时声明分区注入点（顶栏快捷入口与

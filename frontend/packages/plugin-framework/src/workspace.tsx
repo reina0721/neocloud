@@ -1,7 +1,7 @@
 /**
  * Plugin Framework —— Workspace Capability Port（client）。
  *
- * `@clouddrive/plugin-framework/workspace`：工作状态（列表状态/草稿）按页面身份
+ * `@neocloud/plugin-framework/workspace`：工作状态（列表状态/草稿）按页面身份
  * 保存/恢复的公共契约 + client Provider/context/hook。Host 注入实现（独立 store，
  * 不混入 `clouddrive.shell` 设置记录——见 107 migration-cleanup）。
  *

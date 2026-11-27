@@ -6,15 +6,15 @@ import {
   FoundationControlledField,
   FoundationForm,
   useFoundationForm,
-} from '@clouddrive/form-foundation';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { useRegisterDirtySource } from '@clouddrive/plugin-framework/leave-confirm';
-import { Section } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
+} from '@neocloud/form-foundation';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { useRegisterDirtySource } from '@neocloud/plugin-framework/leave-confirm';
+import { Section } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { SelectField, TextField } from '@neocloud/ui-adapter/form-field';
+import { DescriptionList } from '@neocloud/ui-adapter/description-list';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
 import { FilesError } from '../../../src/files/model';
 import { useFiles } from '../../../src/files/runtime';
 import type { StorageNameRules, StorageNameRulesView } from '../../../src/files/storage-policy';

@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/reina0721/clouddrive/internal/nativeupgrade/control"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/internal/nativeupgrade/control"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 func TestNativeBrowserIngressTrustsOnlyVerifiedSchemeAndOwnerOrigin(t *testing.T) {
@@ -39,10 +39,10 @@ func TestNativeBrowserIngressTrustsOnlyVerifiedSchemeAndOwnerOrigin(t *testing.T
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			upstream := http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
-				if origin := httpx.RequestOrigin(request); origin != test.wantOrigin || request.Header.Get("X-CloudDrive-Web-Origin") != origin {
-					t.Fatalf("public origin=%q display=%q; want %q", origin, request.Header.Get("X-CloudDrive-Web-Origin"), test.wantOrigin)
+				if origin := httpx.RequestOrigin(request); origin != test.wantOrigin || request.Header.Get("X-NeoCloud-Web-Origin") != origin {
+					t.Fatalf("public origin=%q display=%q; want %q", origin, request.Header.Get("X-NeoCloud-Web-Origin"), test.wantOrigin)
 				}
-				if request.Header.Get("X-Forwarded-Proto") != "" || request.Header.Get(control.WebHeader) != "" || request.Header.Get(control.SchemeHeader) != "" {
+				if request.Header.Get("X-CloudDrive-Web-Origin") != "" || request.Header.Get("X-Forwarded-Proto") != "" || request.Header.Get(control.WebHeader) != "" || request.Header.Get(control.SchemeHeader) != "" {
 					t.Fatal("private or sensitive forwarding metadata leaked to business routes")
 				}
 				w.WriteHeader(http.StatusNoContent)
@@ -56,6 +56,7 @@ func TestNativeBrowserIngressTrustsOnlyVerifiedSchemeAndOwnerOrigin(t *testing.T
 			request.Header.Set(control.WebHeader, "1")
 			request.Header.Set(control.SchemeHeader, test.directScheme)
 			request.Header.Set("X-CloudDrive-Web-Origin", "https://spoofed.example.test")
+			request.Header.Set("X-NeoCloud-Web-Origin", "https://spoofed.example.test")
 			request.Header.Set("Origin", test.origin)
 			for _, value := range test.forwarded {
 				request.Header.Add("X-Forwarded-Proto", value)

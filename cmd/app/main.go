@@ -10,13 +10,13 @@ import (
 	"strings"
 	"syscall"
 
-	applicationcomposition "github.com/reina0721/clouddrive/internal/composition"
+	applicationcomposition "github.com/reina0721/neocloud/internal/composition"
 )
 
 const (
-	applicationName        = "clouddrive"
+	applicationName        = "neocloud"
 	applicationDescription = "自托管文件管理与分享协作工作区"
-	environmentPrefix      = "APP_"
+	environmentPrefix      = applicationcomposition.DefaultEnvironmentPrefix
 )
 
 var (

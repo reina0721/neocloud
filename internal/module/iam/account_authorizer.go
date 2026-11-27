@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/authorization"
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
+	"github.com/reina0721/neocloud/internal/module/iam/authorization"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
 )
 
 // accountAuthorizer 使用当前IAM事实，不能把创建凭据时的权限永久缓存为授权。

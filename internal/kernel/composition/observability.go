@@ -1,10 +1,10 @@
 package composition
 
 import (
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	observabilityapp "github.com/reina0721/clouddrive/internal/kernel/app/observability"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	pkgobservability "github.com/reina0721/clouddrive/pkg/observability"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	observabilityapp "github.com/reina0721/neocloud/internal/kernel/app/observability"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	pkgobservability "github.com/reina0721/neocloud/pkg/observability"
 )
 
 // ObservabilityMetricsDefinition 选择当前进程唯一的 Metrics 底层实现。

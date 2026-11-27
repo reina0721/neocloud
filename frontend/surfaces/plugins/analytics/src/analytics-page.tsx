@@ -1,13 +1,13 @@
 'use client';
 
-import { formatNumber, useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader, Toolbar } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { AsyncRegion, type AsyncRegionPhase } from '@clouddrive/ui-adapter/async-region';
-import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
-import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { ToggleGroup } from '@clouddrive/ui-adapter/toggle-group';
+import { formatNumber, useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader, Toolbar } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { AsyncRegion, type AsyncRegionPhase } from '@neocloud/ui-adapter/async-region';
+import { AlertBanner } from '@neocloud/ui-adapter/feedback';
+import { Skeleton } from '@neocloud/ui-adapter/skeleton';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { ToggleGroup } from '@neocloud/ui-adapter/toggle-group';
 import { Inbox, Info, RefreshCw, TriangleAlert } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 

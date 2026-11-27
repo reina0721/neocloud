@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
-	"github.com/reina0721/clouddrive/internal/module/files/service"
+	"github.com/reina0721/neocloud/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/service"
 )
 
 func TestContentLeaseRetainsUnexpectedEOFWithoutOwningReader(t *testing.T) {

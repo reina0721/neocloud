@@ -1,21 +1,21 @@
 'use client';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import {
   useApiWorkbenchPort,
   type ExecutedResponse,
   type ExecutionFailure,
   type RequestHistoryItem,
   type ScriptExecutionResult,
-} from '@clouddrive/surface/api-workbench';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
-import { TabsView, type TabsViewItem } from '@clouddrive/ui-adapter/data-display';
-import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { DisclosurePanel } from '@clouddrive/ui-adapter/disclosure';
-import { DestructiveConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+} from '@neocloud/surface/api-workbench';
+import { Action } from '@neocloud/ui-adapter/action';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
+import { TabsView, type TabsViewItem } from '@neocloud/ui-adapter/data-display';
+import { AlertBanner } from '@neocloud/ui-adapter/feedback';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { DisclosurePanel } from '@neocloud/ui-adapter/disclosure';
+import { DestructiveConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
 import { Copy, RefreshCw, Send, Trash2 } from 'lucide-react';
 import { useWorkbenchStore } from '../../stores/workbench';
 import { useWorkbenchFormat } from './use-workbench-format';

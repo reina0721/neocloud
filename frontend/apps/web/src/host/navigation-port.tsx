@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   PluginNavigationProvider,
   type PluginPortLinkProps,
-} from '@clouddrive/plugin-framework/plugin';
+} from '@neocloud/plugin-framework/plugin';
 
 import { proceedAfterLeaveConfirm } from './leave-confirm';
 import { markForwardRouteIntent, pageTransitionTypes } from './route-transition-constants';

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/reina0721/clouddrive/internal/module/navigation/model"
-	"github.com/reina0721/clouddrive/internal/module/navigation/service"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/internal/module/navigation/model"
+	"github.com/reina0721/neocloud/internal/module/navigation/service"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 type Operations interface {

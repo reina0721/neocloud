@@ -1,5 +1,6 @@
 import { defineConfig } from '@playwright/test';
-const managedWebUrl = process.env.CLOUDDRIVE_TEST_WEB_URL;
+import { readNeoCloudEnv } from './apps/web/runtime/environment.mjs';
+const managedWebUrl = readNeoCloudEnv('TEST_WEB_URL');
 export default defineConfig({
   testDir: './integration',
   workers: 1,
@@ -17,15 +18,15 @@ export default defineConfig({
   ...(!managedWebUrl
     ? {
         webServer: {
-          command: 'pnpm --filter @clouddrive/web exec next dev --hostname 127.0.0.1 --port 4185',
+          command: 'pnpm --filter @neocloud/web exec next dev --hostname 127.0.0.1 --port 4185',
           url: 'http://127.0.0.1:4185/login',
           timeout: 120_000,
           reuseExistingServer: false,
           env: {
             NEXT_DIST_DIR: '.next/integration',
-            NEXT_PUBLIC_AUTH_MODE: 'backend',
-            NEXT_PUBLIC_AUTH_API_BASE_URL: '/api/console/v1',
-            CLOUDDRIVE_BACKEND_URL: 'http://127.0.0.1:8088',
+            NEXT_PUBLIC_NEOCLOUD_AUTH_MODE: 'backend',
+            NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL: '/api/console/v1',
+            NEOCLOUD_BACKEND_URL: 'http://127.0.0.1:8088',
           },
         },
       }

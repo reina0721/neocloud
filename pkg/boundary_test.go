@@ -300,7 +300,7 @@ func exportedReceiver(receiver *ast.FieldList) bool {
 }
 
 func thirdPartyImport(importPath string) bool {
-	if importPath == "" || strings.HasPrefix(importPath, "github.com/reina0721/clouddrive/") {
+	if importPath == "" || strings.HasPrefix(importPath, "github.com/reina0721/neocloud/") {
 		return false
 	}
 	first, _, _ := strings.Cut(importPath, "/")

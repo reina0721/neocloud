@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-import { getProbeUrl, loadConfig } from '@clouddrive/config/node';
+import { getProbeUrl, loadConfig } from '@neocloud/config/node';
 
 const config = loadConfig();
 const primaryHost = config.web.host;
@@ -73,15 +73,15 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `pnpm --filter @clouddrive/web build && node apps/web/${primaryDist}/standalone/apps/web/server.js`,
+      command: `pnpm --filter @neocloud/web build && node apps/web/${primaryDist}/standalone/apps/web/server.js`,
       env: {
-        CLOUDDRIVE_BROWSER_TEST: '1',
+        NEOCLOUD_BROWSER_TEST: '1',
         WEB_PORT: String(primaryPort),
         NEXT_DIST_DIR: primaryDist,
         WEB_DEPLOYMENT_MODE: 'server',
         HOSTNAME: primaryHost,
         PORT: String(primaryPort),
-        NEXT_PUBLIC_AUTH_MODE: 'mock',
+        NEXT_PUBLIC_NEOCLOUD_AUTH_MODE: 'mock',
       },
       url: primaryProbeUrl,
       // 就绪探针不能证明占用此端口的服务采用了要求的认证模式。
@@ -90,28 +90,28 @@ export default defineConfig({
       timeout: 300_000,
     },
     {
-      command: `pnpm --filter @clouddrive/web build && node apps/web/${secondaryDist}/standalone/apps/web/server.js`,
+      command: `pnpm --filter @neocloud/web build && node apps/web/${secondaryDist}/standalone/apps/web/server.js`,
       env: {
-        CLOUDDRIVE_BROWSER_TEST: '1',
+        NEOCLOUD_BROWSER_TEST: '1',
         WEB_PORT: String(secondaryPort),
         NEXT_DIST_DIR: secondaryDist,
         WEB_DEPLOYMENT_MODE: 'server',
         HOSTNAME: primaryHost,
         PORT: String(secondaryPort),
-        NEXT_PUBLIC_AUTH_MODE: 'backend',
-        NEXT_PUBLIC_AUTH_API_BASE_URL: '/api',
+        NEXT_PUBLIC_NEOCLOUD_AUTH_MODE: 'backend',
+        NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL: '/api',
       },
       url: secondaryProbeUrl,
       reuseExistingServer: false,
       timeout: 300_000,
     },
     {
-      command: 'pnpm --filter @clouddrive/web dev',
+      command: 'pnpm --filter @neocloud/web dev',
       env: {
-        CLOUDDRIVE_BROWSER_TEST: '1',
+        NEOCLOUD_BROWSER_TEST: '1',
         WEB_PORT: String(developmentPort),
         NEXT_DIST_DIR: `.next/playwright-${developmentPort}/inspector-development`,
-        NEXT_PUBLIC_AUTH_MODE: 'mock',
+        NEXT_PUBLIC_NEOCLOUD_AUTH_MODE: 'mock',
       },
       url: `${developmentProbeUrl}/motion`,
       reuseExistingServer: false,

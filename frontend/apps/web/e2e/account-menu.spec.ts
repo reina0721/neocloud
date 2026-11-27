@@ -2,7 +2,7 @@ import { saveEvidenceScreenshot } from './evidence-screenshot';
 import { test, expect, type Page } from '@playwright/test';
 import { e2eBaseUrl } from './base-url';
 import AxeBuilder from '@axe-core/playwright';
-import { defaultPreferences, PREFERENCES_VERSION } from '@clouddrive/surface/preferences-model';
+import { defaultPreferences, PREFERENCES_VERSION } from '@neocloud/surface/preferences-model';
 async function expectHydrated(page: Page) {
   await expect(page.locator('html')).toHaveAttribute('data-hydrated', 'true');
 }

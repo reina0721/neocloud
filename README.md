@@ -1,4 +1,4 @@
-# CloudDrive
+# NeoCloud
 
 支持文件管理、分享协作与媒体阅读的自托管文件工作区。适合希望自行管理文件、账号权限和部署环境的个人与团队。
 
@@ -75,6 +75,6 @@ node scripts/verify-changed.mjs
 
 ## 来源与许可
 
-项目采用 [Apache-2.0](LICENSE)，保留 [NOTICE](NOTICE) 与第三方许可。后端源于 community-go，前端源于 console-web；导入的源码快照、分支和完整提交号见 [SOURCES.json](SOURCES.json) 与[来源记录](docs/provenance/README.md)。Go module 保留 `github.com/reina0721/clouddrive`，GitHub 仓库地址为 `reina0721/neocloud`。
+项目采用 [Apache-2.0](LICENSE)，保留 [NOTICE](NOTICE) 与第三方许可。后端源于 community-go，前端源于 console-web；导入的源码快照、分支和完整提交号见 [SOURCES.json](SOURCES.json) 与[来源记录](docs/provenance/README.md)。Go module 为 `github.com/reina0721/neocloud`，GitHub 仓库地址为 `reina0721/neocloud`。旧发行版及已有实例使用[改名与升级指南](docs/operations/neocloud-rename.md)。
 
 缺陷、需求和使用问题请参阅[支持指南](SUPPORT.md)，潜在漏洞请通过[私密安全渠道](SECURITY.md)报告。

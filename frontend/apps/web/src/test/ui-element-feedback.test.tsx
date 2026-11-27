@@ -1,7 +1,7 @@
-import { TextField } from '@clouddrive/ui-adapter/form-field';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { FeedbackPresence } from '@clouddrive/ui-adapter/feedback-presence';
-import { FeedbackProvider } from '@clouddrive/ui-adapter/feedback-provider';
+import { TextField } from '@neocloud/ui-adapter/form-field';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { FeedbackPresence } from '@neocloud/ui-adapter/feedback-presence';
+import { FeedbackProvider } from '@neocloud/ui-adapter/feedback-provider';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

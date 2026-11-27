@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { userSchema, auditRecordSchema } from '@clouddrive/surface/identity';
+import { userSchema, auditRecordSchema } from '@neocloud/surface/identity';
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { waitForVisualReadiness } from './visual-readiness';

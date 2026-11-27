@@ -2,12 +2,12 @@
 
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { formatInstant } from '@clouddrive/i18n/format';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { Panel } from '@clouddrive/ui-adapter/panel';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { formatInstant } from '@neocloud/i18n/format';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { Panel } from '@neocloud/ui-adapter/panel';
 import { formatFileBytes } from '../../../src/files/format';
 import { FilesError } from '../../../src/files/model';
 import { useFiles } from '../../../src/files/runtime';

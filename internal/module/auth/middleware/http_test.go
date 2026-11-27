@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/auth/model"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/internal/module/auth/model"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 func TestHTTPAuthenticatesBearerAndInjectsPrincipal(t *testing.T) {

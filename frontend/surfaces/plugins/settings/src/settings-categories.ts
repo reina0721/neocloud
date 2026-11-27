@@ -1,5 +1,5 @@
-import type { NavigationIconId } from '@clouddrive/surface/shell';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
+import type { NavigationIconId } from '@neocloud/surface/shell';
+import type { Preferences } from '@neocloud/surface/preferences-model';
 /** 侧边栏分组（显示与数据 / 偏好与反馈 / 安全与隐私 / 辅助与输入）。 */
 export type SettingsNavGroup = 'display' | 'preferences' | 'security' | 'assistive';
 

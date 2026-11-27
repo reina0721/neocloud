@@ -1,10 +1,10 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import type { ApiEnvironment, ApiRequestDefinition } from '@clouddrive/surface/api-workbench';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { SelectField } from '@clouddrive/ui-adapter/form-field';
-import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import type { ApiEnvironment, ApiRequestDefinition } from '@neocloud/surface/api-workbench';
+import { Action } from '@neocloud/ui-adapter/action';
+import { SelectField } from '@neocloud/ui-adapter/form-field';
+import { MenuButton } from '@neocloud/ui-adapter/menu-button';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
 import { Download, Folder, Sliders, Upload } from 'lucide-react';
 export type WorkbenchToolbarProps = Readonly<{
   environments: readonly ApiEnvironment[];

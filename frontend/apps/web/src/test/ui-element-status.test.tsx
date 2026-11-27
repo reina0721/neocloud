@@ -1,7 +1,7 @@
-import { AsyncRegion, type AsyncRegionPhase } from '@clouddrive/ui-adapter/async-region';
-import { ProgressMeter } from '@clouddrive/ui-adapter/progress-meter';
-import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+import { AsyncRegion, type AsyncRegionPhase } from '@neocloud/ui-adapter/async-region';
+import { ProgressMeter } from '@neocloud/ui-adapter/progress-meter';
+import { Skeleton } from '@neocloud/ui-adapter/skeleton';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 

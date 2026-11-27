@@ -1,6 +1,6 @@
 'use client';
 
-import { TextLink, type TextLinkProps } from '@clouddrive/ui-adapter/navigation';
+import { TextLink, type TextLinkProps } from '@neocloud/ui-adapter/navigation';
 import { useRouter } from 'next/navigation';
 
 import { useShellStore } from '../state/use-shell-store';

@@ -2,8 +2,8 @@
 package permission
 
 import (
-	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
+	authmodel "github.com/reina0721/neocloud/internal/module/auth/model"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
 )
 
 // Definitions 返回当前管理面 operation 使用的精确权限定义。

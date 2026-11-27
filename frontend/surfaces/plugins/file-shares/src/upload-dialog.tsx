@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { ProgressMeter } from '@clouddrive/ui-adapter/progress-meter';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { ProgressMeter } from '@neocloud/ui-adapter/progress-meter';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
 import { usePublicFiles } from '../../../src/files/runtime';
 import {
   FilesError,

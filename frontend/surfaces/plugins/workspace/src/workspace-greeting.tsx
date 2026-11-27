@@ -1,13 +1,8 @@
 'use client';
 
-import {
-  formatDate,
-  formatNumber,
-  formatTimeOfDay,
-  useFrontendTranslation,
-} from '@clouddrive/i18n';
-import { useIdentityPort } from '@clouddrive/surface/identity/runtime';
-import { Panel } from '@clouddrive/ui-adapter/panel';
+import { formatDate, formatNumber, formatTimeOfDay, useFrontendTranslation } from '@neocloud/i18n';
+import { useIdentityPort } from '@neocloud/surface/identity/runtime';
+import { Panel } from '@neocloud/ui-adapter/panel';
 import { CalendarDays, Clock3, FolderKanban, ListChecks, UsersRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 

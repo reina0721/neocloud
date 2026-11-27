@@ -3,9 +3,9 @@ package composition
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	executionapp "github.com/reina0721/clouddrive/internal/kernel/app/execution"
-	"github.com/reina0721/clouddrive/internal/kernel/logging"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	executionapp "github.com/reina0721/neocloud/internal/kernel/app/execution"
+	"github.com/reina0721/neocloud/internal/kernel/logging"
 )
 
 // composeExecution 装配 Execution 组件，注入结构化 Logger 依赖；

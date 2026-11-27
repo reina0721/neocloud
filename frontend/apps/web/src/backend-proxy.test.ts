@@ -33,7 +33,7 @@ describe('runtime backend routing', () => {
     'rejects an ambiguous or invalid upstream without including secrets in the error',
     (backend) => {
       expect(() => backendDestination('https://files.example/api', backend)).toThrow(
-        'CLOUDDRIVE_BACKEND_URL must be an HTTP(S) origin.',
+        'NEOCLOUD_BACKEND_URL must be an HTTP(S) origin.',
       );
     },
   );
@@ -59,6 +59,7 @@ describe('browser authority boundary', () => {
       cookie: 'session=kept',
       'x-csrf-token': 'kept',
       'x-clouddrive-web-origin': 'https://evil.example',
+      'x-neocloud-web-origin': 'https://evil.example',
       'x-forwarded-host': 'evil.example',
       'x-forwarded-proto': 'https',
     });
@@ -66,6 +67,7 @@ describe('browser authority boundary', () => {
     expect(result.get('cookie')).toBe('session=kept');
     expect(result.get('x-csrf-token')).toBe('kept');
     expect(result.get('x-clouddrive-web-origin')).toBe('http://192.0.2.10:4173');
+    expect(result.get('x-neocloud-web-origin')).toBe('http://192.0.2.10:4173');
     expect(result.has('x-forwarded-host')).toBe(false);
     expect(result.has('x-forwarded-proto')).toBe(false);
   });

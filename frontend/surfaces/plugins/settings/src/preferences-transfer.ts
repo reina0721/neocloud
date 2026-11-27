@@ -16,10 +16,11 @@ import {
   validatePreferences,
   type PreferenceCategory,
   type Preferences,
-} from '@clouddrive/surface/preferences-model';
+} from '@neocloud/surface/preferences-model';
 
 /** 导出信封标识（与持久化 namespace 一致；导入时严格匹配）。 */
-export const PREFERENCES_EXPORT_KIND = 'clouddrive.preferences';
+export const PREFERENCES_EXPORT_KIND = 'neocloud.preferences';
+const LEGACY_EXPORT_KIND = 'clouddrive.preferences';
 
 /** issue token 前缀：版本/结构级问题。 */
 export const IMPORT_ISSUE_CODE_PREFIX = 'code:';
@@ -96,7 +97,7 @@ export function serializePreferences(prefs: Preferences, now: Date = new Date())
  *
  * 规则：
  * - 空文本/非法 JSON/非对象 → 结构级失败；
- * - `kind` 不等于 `PREFERENCES_EXPORT_KIND` → 拒绝（不猜测其它产品的配置）；
+ * - `kind` 支持 NeoCloud 和它的旧版配置；其它产品的配置会被拒绝；
  * - `version` 必须是 1..PREFERENCES_VERSION 的整数；更高版本明确拒绝，不做降级猜测；
  * - `preferences` 经 `validatePreferences` 全量校验：任一分类非法则整体失败，
  *   绝不返回「部分可用」的配置。
@@ -117,7 +118,7 @@ export function parseImportedPreferences(text: string): PreferencesImportResult 
   }
   const envelope = parsed as Record<string, unknown>;
 
-  if (envelope.kind !== PREFERENCES_EXPORT_KIND) {
+  if (envelope.kind !== PREFERENCES_EXPORT_KIND && envelope.kind !== LEGACY_EXPORT_KIND) {
     return { ok: false, issues: [codeIssue('wrong-kind')] };
   }
 

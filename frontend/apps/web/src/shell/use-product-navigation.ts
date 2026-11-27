@@ -1,7 +1,7 @@
 'use client';
 import { useMemo } from 'react';
-import { useProductAccess, useIdentityPort } from '@clouddrive/surface/identity/runtime';
-import type { NavigationNode } from '@clouddrive/types';
+import { useProductAccess, useIdentityPort } from '@neocloud/surface/identity/runtime';
+import type { NavigationNode } from '@neocloud/types';
 import { useNavigationOverrides } from '../host/navigation-admin-port';
 import { combinedShellNavigationGroups } from './navigation';
 

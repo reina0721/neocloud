@@ -1,34 +1,45 @@
 package composition
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/reina0721/clouddrive/internal/module/auth"
-	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	"github.com/reina0721/clouddrive/internal/module/iam"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
-	"github.com/reina0721/clouddrive/internal/module/iam/service"
-	"github.com/reina0721/clouddrive/internal/transport/http/mutationproof"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/internal/module/auth"
+	authmodel "github.com/reina0721/neocloud/internal/module/auth/model"
+	"github.com/reina0721/neocloud/internal/module/iam"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
+	"github.com/reina0721/neocloud/internal/module/iam/service"
+	"github.com/reina0721/neocloud/internal/transport/http/mutationproof"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 // iamSessionAuthAdapter 是 IAM Session identity 到 Auth iam-rbac Principal
 // 的唯一装配适配器。
 type iamSessionAuthAdapter struct {
-	sessions   iam.SessionResolver
-	cookieName string
+	sessions         iam.SessionResolver
+	cookieName       string
+	legacyCookieName string
 }
 
-func newIAMSessionAuthAdapter(sessions iam.SessionResolver, cookieName string) (auth.RequestAuthenticator, error) {
-	if sessions == nil || cookieName == "" {
-		return nil, fmt.Errorf("iam session resolver is nil")
+func newIAMSessionAuthAdapter(sessions iam.SessionResolver, cookieName, legacyCookieName string) (iamSessionAuthAdapter, error) {
+	if sessions == nil || cookieName == "" || legacyCookieName == "" {
+		return iamSessionAuthAdapter{}, fmt.Errorf("iam session resolver or cookie names are missing")
 	}
-	return iamSessionAuthAdapter{sessions: sessions, cookieName: cookieName}, nil
+	return iamSessionAuthAdapter{sessions: sessions, cookieName: cookieName, legacyCookieName: legacyCookieName}, nil
 }
-func (a iamSessionAuthAdapter) AuthenticateRequest(request *http.Request) (*http.Request, error) {
+
+func (a iamSessionAuthAdapter) cookie(request *http.Request) (*http.Cookie, error) {
 	cookie, err := request.Cookie(a.cookieName)
+	if errors.Is(err, http.ErrNoCookie) {
+		return request.Cookie(a.legacyCookieName)
+	}
+	return cookie, err
+}
+
+func (a iamSessionAuthAdapter) AuthenticateRequest(request *http.Request) (*http.Request, error) {
+	cookie, err := a.cookie(request)
 	if err != nil || cookie.Value == "" {
 		return nil, service.ErrSessionInvalid
 	}

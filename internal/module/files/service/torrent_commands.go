@@ -5,7 +5,7 @@ import (
 	"errors"
 	"path"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 func (s *TorrentDownloads) cancelActive(id string) {

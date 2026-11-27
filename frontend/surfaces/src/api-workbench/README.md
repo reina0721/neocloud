@@ -1,6 +1,6 @@
 # API Workbench Contract
 
-本模块是当前 Product Surface 的 API 调试能力模型与 Port，对 Host 开放 `@clouddrive/surface/api-workbench`。插件组件和 Store 仍为私有实现，不进入 exports。文档入口：[前端文档](../../../docs/README.md)。
+本模块是当前 Product Surface 的 API 调试能力模型与 Port，对 Host 开放 `@neocloud/surface/api-workbench`。插件组件和 Store 仍为私有实现，不进入 exports。文档入口：[前端文档](../../../docs/README.md)。
 
 ## Runtime responsibilities
 

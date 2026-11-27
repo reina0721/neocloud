@@ -1,9 +1,9 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import type { Extractor } from '@clouddrive/surface/api-workbench';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import type { Extractor } from '@neocloud/surface/api-workbench';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { SelectField, TextField } from '@neocloud/ui-adapter/form-field';
 import { Plus, Trash2 } from 'lucide-react';
 export type ExtractorsPanelProps = Readonly<{
   extractors: readonly Extractor[];

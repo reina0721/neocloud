@@ -1,7 +1,7 @@
 'use client';
-import { formatDate, formatTimeOfDay, useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { generatedSurfaceRegistry } from '@clouddrive/surface/generated/composition';
+import { formatDate, formatTimeOfDay, useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { generatedSurfaceRegistry } from '@neocloud/surface/generated/composition';
 import { RouterTextLink } from '../host/router-text-link';
 import { useShellStore } from '../state/use-shell-store';
 import { useWorkbenchStore } from '../state/use-workbench-store';

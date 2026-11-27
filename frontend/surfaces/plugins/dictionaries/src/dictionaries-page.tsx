@@ -1,20 +1,20 @@
 'use client';
 
-import { formatDate, formatNumber, useFrontendTranslation } from '@clouddrive/i18n';
-import { Trash2 } from '@clouddrive/surface/action-icons';
-import { NavigationIcon } from '@clouddrive/surface/icon-presentation';
-import { useProductAccess } from '@clouddrive/surface/identity/runtime';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { AsyncRegion } from '@clouddrive/ui-adapter/async-region';
-import { DataTable, type DataColumn } from '@clouddrive/ui-adapter/data-display';
-import { AlertBanner, Badge } from '@clouddrive/ui-adapter/feedback';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { StatusPill, type StatusTone } from '@clouddrive/ui-adapter/status-pill';
+import { formatDate, formatNumber, useFrontendTranslation } from '@neocloud/i18n';
+import { Trash2 } from '@neocloud/surface/action-icons';
+import { NavigationIcon } from '@neocloud/surface/icon-presentation';
+import { useProductAccess } from '@neocloud/surface/identity/runtime';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { AsyncRegion } from '@neocloud/ui-adapter/async-region';
+import { DataTable, type DataColumn } from '@neocloud/ui-adapter/data-display';
+import { AlertBanner, Badge } from '@neocloud/ui-adapter/feedback';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { Skeleton } from '@neocloud/ui-adapter/skeleton';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { StatusPill, type StatusTone } from '@neocloud/ui-adapter/status-pill';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useDictionariesStore } from '../stores/dictionaries';

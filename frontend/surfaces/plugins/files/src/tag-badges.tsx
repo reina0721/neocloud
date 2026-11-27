@@ -1,5 +1,5 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import type { FileAnnotationTag } from '../../../src/files/annotation-values';
 import { AnnotationColorDot } from './annotation-fields';
 

@@ -1,13 +1,13 @@
 'use client';
 
-import { flattenNavigationLeaves, isNavigationHrefActive } from '@clouddrive/core';
+import { flattenNavigationLeaves, isNavigationHrefActive } from '@neocloud/core';
 import type {
   NavigationBranch,
   NavigationGroup,
   NavigationLeaf,
   NavigationNode,
-} from '@clouddrive/types';
-import { NavigationFlyout, NavigationHint } from '@clouddrive/ui-adapter/navigation-flyout';
+} from '@neocloud/types';
+import { NavigationFlyout, NavigationHint } from '@neocloud/ui-adapter/navigation-flyout';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import {

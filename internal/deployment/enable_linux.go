@@ -58,6 +58,9 @@ func Enable(ctx context.Context, root, trustedProxy, cosign, dockerHost string) 
 	if err != nil || !locked {
 		return errors.Join(err, ErrBusy)
 	}
+	if err := requireNoDockerRename(root); err != nil {
+		return err
+	}
 	cfg := Config{Project: project, TrustedProxy: trustedProxy}
 	e := engine{root: root, dataDir: dataDir, cfg: cfg}
 	configPath := filepath.Join(e.control(), "gateway.json")
@@ -95,9 +98,9 @@ func Enable(ctx context.Context, root, trustedProxy, cosign, dockerHost string) 
 	}
 	registered, switched, marked := false, false, false
 	workerUnit, gatewayUnit := project+"-maintenance.service", project+"-gateway.service"
-	configRoot := filepath.Join("/etc/clouddrive", project)
-	binRoot := filepath.Join("/usr/local/lib/clouddrive", project)
-	installed := filepath.Join(binRoot, "clouddrive-maintenance")
+	configRoot := filepath.Join("/etc/neocloud", project)
+	binRoot := filepath.Join("/usr/local/lib/neocloud", project)
+	installed := filepath.Join(binRoot, "neocloud-maintenance")
 	defer func() {
 		if result == nil {
 			return
@@ -131,7 +134,7 @@ func Enable(ctx context.Context, root, trustedProxy, cosign, dockerHost string) 
 			result = errors.Join(result, fmt.Errorf("原端口恢复失败: %w", undo))
 		}
 	}()
-	stage, err := os.MkdirTemp("", "clouddrive-systemd-")
+	stage, err := os.MkdirTemp("", "neocloud-systemd-")
 	if err != nil {
 		return err
 	}

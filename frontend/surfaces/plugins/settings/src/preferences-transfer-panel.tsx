@@ -13,13 +13,13 @@
  */
 
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { usePreferencesPort, type PersistResult } from '@clouddrive/plugin-framework/preferences';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { TextAreaField } from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { usePreferencesPort, type PersistResult } from '@neocloud/plugin-framework/preferences';
+import type { Preferences } from '@neocloud/surface/preferences-model';
+import { Action } from '@neocloud/ui-adapter/action';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { TextAreaField } from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
 import { Copy, Download } from 'lucide-react';
 
 import {
@@ -75,7 +75,7 @@ export function PreferencesTransferPanel({
     const blob = new Blob([serializePreferences(prefs)], { type: 'application/json' });
     const downloadUrl = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
-    anchor.download = `clouddrive-preferences-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.download = `neocloud-preferences-${new Date().toISOString().slice(0, 10)}.json`;
     anchor.href = downloadUrl;
     anchor.click();
     URL.revokeObjectURL(downloadUrl);

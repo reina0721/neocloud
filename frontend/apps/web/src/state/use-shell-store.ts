@@ -1,4 +1,5 @@
-import { createPersistStore, createLocalStorage } from '@clouddrive/state-foundation';
+import { removeProductStorage } from '@neocloud/state-foundation';
+import { createPersistStore, createLocalStorage } from '@neocloud/state-foundation';
 import {
   defaultPreferences,
   migrateShellV0Preferences,
@@ -6,7 +7,7 @@ import {
   validatePreferences,
   type PreferenceCategory,
   type Preferences,
-} from '@clouddrive/surface/preferences-model';
+} from '@neocloud/surface/preferences-model';
 
 import type { SupportedLocale as AppLocale } from '../i18n/i18n';
 
@@ -258,7 +259,7 @@ export const useShellStore = createPersistStore<ShellState, ShellPersisted>(
       ),
   }),
   {
-    name: 'clouddrive.shell',
+    name: 'neocloud.shell',
     // v1 = 八分类嵌套偏好（107 设置中心）。
     version: PREFERENCES_VERSION,
     skipHydration: true,
@@ -270,7 +271,7 @@ export const useShellStore = createPersistStore<ShellState, ShellPersisted>(
       const parsed = parsePersistedPreferences(persisted);
       if (parsed === null) {
         throw new Error(
-          'clouddrive.shell 持久化记录损坏或版本未知：拒绝静默覆盖，请检查本地数据或恢复默认。',
+          'neocloud.shell 持久化记录损坏或版本未知：拒绝静默覆盖，请检查本地数据或恢复默认。',
         );
       }
       // 版本升级必须保留 remember 策略下的侧栏状态（否则 v1 记录的折叠状态丢失）。
@@ -301,7 +302,7 @@ export const useShellStore = createPersistStore<ShellState, ShellPersisted>(
         // setState 把默认值静默写回损坏记录上方（呈现层会显示原因 + 恢复动作，
         // 不静默覆盖、不宣称保存成功）。
         if (typeof window !== 'undefined' && window.localStorage) {
-          window.localStorage.removeItem('clouddrive.shell');
+          removeProductStorage(window.localStorage, 'neocloud.shell');
         }
         useShellStore.setState({
           hasHydrated: true,

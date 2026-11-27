@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // transferPublication 让最终传输事务消费真实来源的授权快照，不在事务外假定许可仍有效。

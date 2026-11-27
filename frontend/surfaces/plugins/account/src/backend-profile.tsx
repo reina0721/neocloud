@@ -1,11 +1,11 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
-import { TextField } from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
-import { Action } from '@clouddrive/ui-adapter/action';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
+import { TextField } from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { DescriptionList } from '@neocloud/ui-adapter/description-list';
+import { Action } from '@neocloud/ui-adapter/action';
 import { useRequiredAdministration } from '../../../src/administration/context';
 import type { AccountProfile } from '../../../src/administration/model';
 import { useRemote, RemoteRegion } from '../../../src/administration/resource-state';

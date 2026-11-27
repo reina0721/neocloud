@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
 import { RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
 import type { ImageSize } from './image-edit';
 import { imageMetadataLimitMiB, readImageMetadata } from './image-metadata';

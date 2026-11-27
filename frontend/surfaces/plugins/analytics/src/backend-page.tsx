@@ -1,8 +1,8 @@
 'use client';
 import { useCallback } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
 import { DashboardSummary } from '../../../src/administration/dashboard-summary';
 import { useRequiredAdministration } from '../../../src/administration/context';
 import { useRemote, RemoteRegion } from '../../../src/administration/resource-state';

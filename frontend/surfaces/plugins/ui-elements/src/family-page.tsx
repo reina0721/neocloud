@@ -1,19 +1,19 @@
 'use client';
 
-import { Badge } from '@clouddrive/ui-adapter/feedback';
-import { SelectField, SwitchField } from '@clouddrive/ui-adapter/form-field';
-import { Panel } from '@clouddrive/ui-adapter/panel';
+import { Badge } from '@neocloud/ui-adapter/feedback';
+import { SelectField, SwitchField } from '@neocloud/ui-adapter/form-field';
+import { Panel } from '@neocloud/ui-adapter/panel';
 import { ChevronRight } from 'lucide-react';
-import { DisclosurePanel } from '@clouddrive/ui-adapter/disclosure';
-import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
+import { DisclosurePanel } from '@neocloud/ui-adapter/disclosure';
+import { route, RouteLink } from '@neocloud/plugin-framework/plugin';
 import { useSearchParams } from 'next/navigation';
 import { Children, isValidElement, useState, type ReactNode } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import { ComponentPreview } from './component-preview';
 import { previewAnchor } from './preview-anchor';
 
-import { usePluginLocale } from '@clouddrive/plugin-framework/plugin';
-import { PageHeader, Page } from '@clouddrive/surface-foundation/layout';
+import { usePluginLocale } from '@neocloud/plugin-framework/plugin';
+import { PageHeader, Page } from '@neocloud/surface-foundation/layout';
 
 const uiElementFamilies = [
   { id: 'actions-selection', labelKey: 'uiElements.nav.actionsSelection', count: 3 },

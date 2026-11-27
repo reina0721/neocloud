@@ -1,9 +1,9 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
 import { ChevronLeft, ChevronRight, Download, File } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 import { useProductAccess } from '../../../src/identity/runtime';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
 import { useCallback, useEffect, useRef } from 'react';
 
 /** 操作成功通知由发起的文件页面拥有，离开后释放自己的通知。 */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { epubLimits, isEpubDocument } from '@clouddrive/surface/files';
+import { epubLimits, isEpubDocument } from '@neocloud/surface/files';
 import { openEpubBook } from './epub-book';
 import { resolveEpubPath } from './epub-package';
 import { epubFixture } from '../test/epub-fixture';

@@ -1,3 +1,4 @@
+import { readProductStorage, writeProductStorage } from '@neocloud/state-foundation';
 import { Upload, DetailedError } from 'tus-js-client';
 import { z } from 'zod';
 import {
@@ -13,12 +14,12 @@ import {
   type TransferFilter,
   type UploadCandidate,
   type FileEntry,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import type { createJsonClient } from '../api/json-client';
 import { hashFile } from './file-hash';
 import { fileIORetryDelaysMs, withFileIOAdmissionRetry } from './file-io-retry';
 
-const pendingStoragePrefix = 'clouddrive.files.pending-transfers.v1';
+const pendingStoragePrefix = 'neocloud.files.pending-transfers.v1';
 const chunkRequestTimeoutMs = 120_000;
 const terminalRetentionCount = 100;
 
@@ -136,7 +137,7 @@ export function createTransferRuntime(deps: Dependencies) {
             ...(item.targetParentId ? { targetParentId: item.targetParentId } : {}),
             ...(item.candidate.relativePath ? { relativePath: item.candidate.relativePath } : {}),
           });
-      localStorage.setItem(storageKey, JSON.stringify(pending));
+      writeProductStorage(localStorage, storageKey, JSON.stringify(pending));
       snapshot = { ...snapshot, persistenceFailure: false };
     } catch {
       snapshot = { ...snapshot, persistenceFailure: true };
@@ -718,7 +719,7 @@ export function createTransferRuntime(deps: Dependencies) {
       if (!loadedPending) {
         loadedPending = true;
         try {
-          const stored = localStorage.getItem(storageKey);
+          const stored = readProductStorage(localStorage, storageKey);
           if (stored)
             for (const descriptor of pendingSchema.parse(JSON.parse(stored))) {
               const item = newManaged(

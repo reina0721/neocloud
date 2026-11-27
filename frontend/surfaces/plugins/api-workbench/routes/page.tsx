@@ -1,9 +1,9 @@
 'use client';
 
 import { Suspense, lazy } from 'react';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Skeleton } from '@neocloud/ui-adapter/skeleton';
 
 const Workbench = lazy(() => import('../src/ui/workbench').then((m) => ({ default: m.Workbench })));
 

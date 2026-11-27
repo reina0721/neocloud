@@ -2,7 +2,7 @@ import type {
   ApiRequestDefinition,
   KeyValueEntry,
   WorkspaceSnapshot,
-} from '@clouddrive/surface/api-workbench';
+} from '@neocloud/surface/api-workbench';
 
 export function createRequest(
   id: string,

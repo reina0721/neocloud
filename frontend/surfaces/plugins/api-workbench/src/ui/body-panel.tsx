@@ -1,10 +1,10 @@
 'use client';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import type { RequestBody } from '@clouddrive/surface/api-workbench';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { SelectField, TextAreaField } from '@clouddrive/ui-adapter/form-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import type { RequestBody } from '@neocloud/surface/api-workbench';
+import { Action } from '@neocloud/ui-adapter/action';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { SelectField, TextAreaField } from '@neocloud/ui-adapter/form-field';
 import { KeyValueEditor } from './key-value-editor';
 export type BodyPanelProps = Readonly<{ body: RequestBody; onChange: (body: RequestBody) => void }>;
 const bodyTypes: readonly RequestBody['type'][] = [

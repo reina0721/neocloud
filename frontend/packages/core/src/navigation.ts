@@ -1,4 +1,4 @@
-import type { NavigationBranch, NavigationLeaf, NavigationNode } from '@clouddrive/types';
+import type { NavigationBranch, NavigationLeaf, NavigationNode } from '@neocloud/types';
 
 export type NavigationLeafPath = Readonly<{
   leaf: NavigationLeaf;

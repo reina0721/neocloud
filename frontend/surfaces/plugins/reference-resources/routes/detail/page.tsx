@@ -1,18 +1,18 @@
 'use client';
 
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { StatusPill, type StatusTone } from '@clouddrive/ui-adapter/status-pill';
-import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { Panel } from '@clouddrive/ui-adapter/panel';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { useNotificationsPort } from '@clouddrive/plugin-framework/notifications';
-import { useWorkbenchPort } from '@clouddrive/plugin-framework/workbench';
-import { route, RouteLink } from '@clouddrive/plugin-framework/plugin';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { StatusPill, type StatusTone } from '@neocloud/ui-adapter/status-pill';
+import { DescriptionList } from '@neocloud/ui-adapter/description-list';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { Panel } from '@neocloud/ui-adapter/panel';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { useNotificationsPort } from '@neocloud/plugin-framework/notifications';
+import { useWorkbenchPort } from '@neocloud/plugin-framework/workbench';
+import { route, RouteLink } from '@neocloud/plugin-framework/plugin';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import type { Preferences } from '@neocloud/surface/preferences-model';
 import { Star } from 'lucide-react';
 import { useSyncExternalStore, useState } from 'react';
 

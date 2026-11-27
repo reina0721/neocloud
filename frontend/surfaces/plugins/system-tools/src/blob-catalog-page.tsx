@@ -1,14 +1,14 @@
 'use client';
 import { useCallback, useState, useSyncExternalStore } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { formatInstant } from '@clouddrive/i18n/format';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { Page, PageHeader, SectionBody } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { DataTable } from '@clouddrive/ui-adapter/data-display';
-import { SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { Panel } from '@clouddrive/ui-adapter/panel';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { formatInstant } from '@neocloud/i18n/format';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { Page, PageHeader, SectionBody } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { DataTable } from '@neocloud/ui-adapter/data-display';
+import { SelectField, TextField } from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { Panel } from '@neocloud/ui-adapter/panel';
 import {
   blobReferenceFilters,
   blobSorts,

@@ -1,10 +1,10 @@
 'use client';
 import { useRef, useState, useSyncExternalStore } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import {
   useNotificationsPort,
   type NotificationItem,
-} from '@clouddrive/plugin-framework/notifications';
+} from '@neocloud/plugin-framework/notifications';
 import { useIdentityQuery } from './use-query';
 import { useIdentityPort } from './context';
 import type { ProductInboxQuery } from './model';

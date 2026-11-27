@@ -9,8 +9,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
-	"github.com/reina0721/clouddrive/pkg/logger"
+	"github.com/reina0721/neocloud/internal/module/files/model"
+	"github.com/reina0721/neocloud/pkg/logger"
 )
 
 // Dispatch 一次最多处理一个持久候选，调度器拥有本调用的取消和等待，不在构造期间产生工作。

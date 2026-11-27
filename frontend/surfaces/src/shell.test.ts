@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { RouteCatalog } from '@clouddrive/plugin-framework';
-import { createRegistry } from '@clouddrive/plugin-framework';
+import type { RouteCatalog } from '@neocloud/plugin-framework';
+import { createRegistry } from '@neocloud/plugin-framework';
 
 import { convertRegistryToShellNavigation } from './shell-model';
 import { mergeTranslationResources } from './composition';

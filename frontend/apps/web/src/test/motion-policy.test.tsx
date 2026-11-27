@@ -1,12 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useMotionPolicy } from '@clouddrive/surface-foundation/motion-policy-context';
+import { useMotionPolicy } from '@neocloud/surface-foundation/motion-policy-context';
 import { MotionPolicyProvider } from '../host/motion-policy';
 import {
   ViewportReveal,
   ViewportRevealProvider,
-} from '@clouddrive/surface-foundation/viewport-reveal';
+} from '@neocloud/surface-foundation/viewport-reveal';
 
 const sessionKey = 'clouddrive.motion-inspector';
 

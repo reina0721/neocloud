@@ -41,11 +41,17 @@ export function AuthRuntime({ children }: Readonly<{ children: ReactNode }>) {
   }, [controller]);
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
-    const channel = new BroadcastChannel('clouddrive.auth-session');
+    const channels = ['neocloud.auth-session', 'clouddrive.auth-session'].map(
+      (name) => new BroadcastChannel(name),
+    );
+    let reloading = false;
     // A signal invalidates this document; it never supplies or authorizes an identity.
-    channel.onmessage = (event: MessageEvent<unknown>) => {
-      if (event.data === 'session-changed') window.location.reload();
-    };
+    for (const channel of channels)
+      channel.onmessage = (event: MessageEvent<unknown>) => {
+        if (event.data !== 'session-changed' || reloading) return;
+        reloading = true;
+        window.location.reload();
+      };
     const unsubscribe = controller.subscribe((next, previous) => {
       if (!previous.busy || next.busy) return;
       if (
@@ -54,11 +60,11 @@ export function AuthRuntime({ children }: Readonly<{ children: ReactNode }>) {
           (next.authenticatedFrom === 'login' || next.authenticatedFrom === 'register')) ||
         (next.status === 'anonymous' && next.endReason === 'logout')
       )
-        channel.postMessage('session-changed');
+        for (const channel of channels) channel.postMessage('session-changed');
     });
     return () => {
       unsubscribe();
-      channel.close();
+      for (const channel of channels) channel.close();
     };
   }, [controller]);
   useEffect(() => {

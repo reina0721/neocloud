@@ -1,5 +1,5 @@
 {
-  "name": "@clouddrive/plugin-framework",
+  "name": "@neocloud/plugin-framework",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -23,9 +23,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@clouddrive/core": "workspace:*",
-    "@clouddrive/schemas": "workspace:*",
-    "@clouddrive/types": "workspace:*",
+    "@neocloud/core": "workspace:*",
+    "@neocloud/schemas": "workspace:*",
+    "@neocloud/types": "workspace:*",
     "react": "^19.2.8"
   },
   "devDependencies": {

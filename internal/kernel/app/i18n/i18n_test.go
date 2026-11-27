@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	pkgi18n "github.com/reina0721/clouddrive/pkg/i18n"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	pkgi18n "github.com/reina0721/neocloud/pkg/i18n"
 )
 
 func TestDefinitionContributesConfiguredTranslator(t *testing.T) {

@@ -17,7 +17,7 @@ describe('persist corrupt JSON 错误语义', () => {
         setValue: (value) => set({ value }),
       }),
       {
-        name: 'clouddrive.test.corrupt',
+        name: 'neocloud.test.corrupt',
         version: 1,
         skipHydration: true,
         storage: createLocalStorage(),

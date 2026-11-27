@@ -1,4 +1,4 @@
-import { FilesError } from '@clouddrive/surface/files';
+import { FilesError } from '@neocloud/surface/files';
 
 /** nativeDownload 交由浏览器处理响应，不在页面内建立完整文件 Blob。 */
 export function nativeDownload(path: string, name: string) {

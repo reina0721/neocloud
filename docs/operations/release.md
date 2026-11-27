@@ -8,7 +8,7 @@
 
 ## 仓库设置与发布前提
 
-截至 2026-11-17，`reina0721/neocloud` 为公开仓库，Issues 开启、Discussions 关闭；已配置产品简介及 Topics，私密漏洞报告已启用。协作入口见[贡献指南](../../CONTRIBUTING.md)、[支持指南](../../SUPPORT.md)和[安全政策](../../SECURITY.md)。CloudDrive 名称与既有 Go module 保留，GitHub 仓库路径不要求源码包路径迁移。
+截至 2026-11-17，`reina0721/neocloud` 为公开仓库，Issues 开启、Discussions 关闭；已配置产品简介及 Topics，私密漏洞报告已启用。协作入口见[贡献指南](../../CONTRIBUTING.md)、[支持指南](../../SUPPORT.md)和[安全政策](../../SECURITY.md)。NeoCloud 发布沿用该仓库地址。桥接版与切换版的产物契约和升级顺序见[改名决策](../architecture/adr/145-neocloud-identity.md)及[运维说明](neocloud-rename.md)。
 
 发布使用 GitHub 的 `release` environment。人工审批取决于仓库实际配置。维护者确认目标提交的本地验收结果后，按现有授权推送发布标签。
 

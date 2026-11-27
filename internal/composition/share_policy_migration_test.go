@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	filesmigration "github.com/reina0721/clouddrive/internal/module/files/binding/migration"
-	"github.com/reina0721/clouddrive/internal/module/files/model"
-	"github.com/reina0721/clouddrive/pkg/database"
+	filesmigration "github.com/reina0721/neocloud/internal/module/files/binding/migration"
+	"github.com/reina0721/neocloud/internal/module/files/model"
+	"github.com/reina0721/neocloud/pkg/database"
 	"gorm.io/gorm"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 // sharePolicyV12Record 固定历史表的标量投影，避免新业务模型字段改变旧迁移证据。

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/health"
-	"github.com/reina0721/clouddrive/pkg/supervisor"
+	"github.com/reina0721/neocloud/pkg/health"
+	"github.com/reina0721/neocloud/pkg/supervisor"
 )
 
 const configWatchTaskName = "kernel-config-watch"

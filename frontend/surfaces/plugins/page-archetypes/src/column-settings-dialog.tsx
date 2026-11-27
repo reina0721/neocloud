@@ -1,6 +1,6 @@
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { CheckboxField } from '@clouddrive/ui-adapter/form-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { CheckboxField } from '@neocloud/ui-adapter/form-field';
 
 export function ColumnSettingsDialog({
   columns,

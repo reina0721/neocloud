@@ -3,8 +3,8 @@ import {
   fileDetailSchema,
   type FileEntry,
   type FilesPort,
-} from '@clouddrive/surface/files';
-import type { FileMediaProps } from '@clouddrive/surface/files/runtime';
+} from '@neocloud/surface/files';
+import type { FileMediaProps } from '@neocloud/surface/files/runtime';
 import type { createJsonClient } from '../api/json-client';
 import { subtitleFormat, subtitleFormats, subtitleLimits } from './subtitle-contract';
 

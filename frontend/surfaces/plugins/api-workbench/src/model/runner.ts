@@ -3,7 +3,7 @@ import type {
   HttpMethod,
   RequestTransport,
   TestResult,
-} from '@clouddrive/surface/api-workbench';
+} from '@neocloud/surface/api-workbench';
 import { executeWorkbenchRequest } from './execute-request';
 
 export type RunnerItemResult = {

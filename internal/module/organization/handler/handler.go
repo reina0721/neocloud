@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/reina0721/clouddrive/internal/module/organization/model"
-	"github.com/reina0721/clouddrive/internal/module/organization/repo"
-	"github.com/reina0721/clouddrive/internal/module/organization/service"
-	"github.com/reina0721/clouddrive/pkg/database"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/internal/module/organization/model"
+	"github.com/reina0721/neocloud/internal/module/organization/repo"
+	"github.com/reina0721/neocloud/internal/module/organization/service"
+	"github.com/reina0721/neocloud/pkg/database"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 type Operations interface {

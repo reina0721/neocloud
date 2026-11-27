@@ -38,12 +38,15 @@ const webOutput = join(webRoot, nextDist);
 const typeDeclarations = join(webRoot, 'next-env.d.ts');
 const removeOutput = { recursive: true, force: true, maxRetries: 3 };
 const buildEnv = {
+  ...process.env,
   NEXT_DIST_DIR: nextDist,
   WEB_DEPLOYMENT_MODE: 'server',
-  NEXT_PUBLIC_AUTH_MODE: 'backend',
-  NEXT_PUBLIC_AUTH_API_BASE_URL: '/api/console/v1',
-  CLOUDDRIVE_NATIVE_BUILD_CACHE: values['no-web-cache'] ? '0' : '1',
+  NEXT_PUBLIC_NEOCLOUD_AUTH_MODE: 'backend',
+  NEXT_PUBLIC_NEOCLOUD_AUTH_API_BASE_URL: '/api/console/v1',
+  NEOCLOUD_NATIVE_BUILD_CACHE: values['no-web-cache'] ? '0' : '1',
 };
+for (const legacy of ['NEXT_PUBLIC_AUTH_MODE', 'NEXT_PUBLIC_AUTH_API_BASE_URL', 'CLOUDDRIVE_NATIVE_BUILD_CACHE'])
+  delete buildEnv[legacy];
 
 function run(command, args, cwd = repo, env = process.env) {
   return new Promise((done, reject) => {
@@ -60,8 +63,8 @@ function pnpm(args) {
   const argv = ['--yes', 'pnpm@10.22.0', ...args];
   // 仅传入本脚本的固定标志。目录和构建配置使用 spawn 选项传入。
   return windows
-    ? run(process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', 'npx.cmd ' + argv.join(' ')], frontend, { ...process.env, ...buildEnv })
-    : run('npx', argv, frontend, { ...process.env, ...buildEnv });
+    ? run(process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', 'npx.cmd ' + argv.join(' ')], frontend, buildEnv)
+    : run('npx', argv, frontend, buildEnv);
 }
 
 async function measure(label, job) {
@@ -113,11 +116,11 @@ let webBuildStarted = false;
 let previousTypeDeclarations;
 let buildError;
 const next = join(webOutput, 'standalone');
-const archiveName = `clouddrive-${target}.${windows ? 'zip' : 'tar.gz'}`;
+const archiveName = `neocloud-${target}.${windows ? 'zip' : 'tar.gz'}`;
 try {
   await lock.writeFile(String(process.pid));
   staging = await mkdtemp(join(outputRoot, 'stage-'));
-  const work = join(staging, 'clouddrive');
+  const work = join(staging, 'neocloud');
   await mkdir(work);
   const go = values['go-executable'];
   await measure('依赖与生成', async () => {
@@ -131,12 +134,12 @@ try {
   previousTypeDeclarations = await readFile(typeDeclarations, 'utf8').catch(ignoreMissing);
   webBuildStarted = true;
   const results = await Promise.allSettled([
-    measure('Go 编译', () => run(go, ['build', '-trimpath', '-buildvcs=false', '-o', join(work, windows ? 'clouddrive.exe' : 'clouddrive'), './cmd/app'], repo, goEnv)),
+    measure('Go 编译', () => run(go, ['build', '-trimpath', '-buildvcs=false', '-o', join(work, windows ? 'neocloud.exe' : 'neocloud'), './cmd/app'], repo, goEnv)),
     measure('Go 依赖许可', () => run(process.execPath, [
       join(repo, 'scripts', 'prepare-go-licenses.mjs'), '--output', join(work, 'third-party'),
       '--goos', goos, '--goarch', goarch, '--go-executable', go, '--from-module',
     ])),
-    measure('Web 编译', () => pnpm(['--filter', '@clouddrive/web', 'build'])),
+    measure('Web 编译', () => pnpm(['--filter', '@neocloud/web', 'build'])),
   ]);
   const errors = results.flatMap((result) => result.status === 'rejected' ? [result.reason] : []);
   if (errors.length) throw new AggregateError(errors, '本机编译失败');
@@ -154,7 +157,7 @@ try {
         '--output', archive, '--work', work, '--web', next], repo, goEnv);
     } else {
       await copyStandalone(next, join(work, 'web'));
-      await run('tar', ['-czf', archive, 'clouddrive'], staging);
+      await run('tar', ['-czf', archive, 'neocloud'], staging);
     }
     await rename(join(staging, archiveName), join(outputRoot, archiveName));
   });

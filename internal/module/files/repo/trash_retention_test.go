@@ -8,14 +8,14 @@ import (
 	"testing"
 	"time"
 
-	filesmigration "github.com/reina0721/clouddrive/internal/module/files/binding/migration"
-	"github.com/reina0721/clouddrive/internal/module/files/model"
-	"github.com/reina0721/clouddrive/internal/module/files/service"
-	"github.com/reina0721/clouddrive/pkg/database"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	filesmigration "github.com/reina0721/neocloud/internal/module/files/binding/migration"
+	"github.com/reina0721/neocloud/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/service"
+	"github.com/reina0721/neocloud/pkg/database"
+	"github.com/reina0721/neocloud/pkg/idgen"
 	"gorm.io/gorm"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestTrashRetentionUpgradeAndExpiry(t *testing.T) {

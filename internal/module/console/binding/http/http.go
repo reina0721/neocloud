@@ -9,12 +9,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	permission "github.com/reina0721/clouddrive/internal/permission"
-	"github.com/reina0721/clouddrive/internal/transport/http/mutationproof"
-	"github.com/reina0721/clouddrive/pkg/database"
-	"github.com/reina0721/clouddrive/pkg/execution"
-	"github.com/reina0721/clouddrive/pkg/httpx"
-	"github.com/reina0721/clouddrive/pkg/logger"
+	permission "github.com/reina0721/neocloud/internal/permission"
+	"github.com/reina0721/neocloud/internal/transport/http/mutationproof"
+	"github.com/reina0721/neocloud/pkg/database"
+	"github.com/reina0721/neocloud/pkg/execution"
+	"github.com/reina0721/neocloud/pkg/httpx"
+	"github.com/reina0721/neocloud/pkg/logger"
 	"io"
 	"net/http"
 	"net/url"
@@ -26,7 +26,8 @@ import (
 const Prefix = "/api/console/v1"
 const NativePrefix = Prefix + "/native/"
 const NativeTargetPrefix = "/api/v1/"
-const csrfCookie = "__Host-clouddrive_console_csrf"
+const csrfCookie = "__Host-neocloud_console_csrf"
+const legacyCSRFCookie = "__Host-clouddrive_console_csrf"
 const legacyNativeCSRFCookie = "__Host-clouddrive_native_csrf"
 
 type Handler struct {
@@ -34,6 +35,7 @@ type Handler struct {
 	runtime             func() RuntimeMetadata
 	iam                 IdentityAccess
 	cookieName          string
+	legacyCookieName    string
 	native              http.Handler
 	origins             map[string]bool
 	siteOrigins         []string
@@ -50,22 +52,23 @@ type Handler struct {
 }
 
 type Dependencies struct {
-	Cookies         httpx.CookiePolicy
-	Runtime         func() RuntimeMetadata
-	IAM             IdentityAccess
-	CookieName      string
-	Native          http.Handler
-	Origins         []string
-	SiteOrigins     []string
-	Data            Persistence
-	Logger          logger.Logger
-	Relay           RelayPolicy
-	Executor        execution.OperationExecutor
-	Authenticate    func(*http.Request) (*http.Request, error)
-	Todos           TodoOperations
-	Navigation      NavigationOperations
-	DeploymentOwner func(context.Context, string) (bool, error)
-	ReleaseCatalog  http.Handler
+	Cookies          httpx.CookiePolicy
+	Runtime          func() RuntimeMetadata
+	IAM              IdentityAccess
+	CookieName       string
+	LegacyCookieName string
+	Native           http.Handler
+	Origins          []string
+	SiteOrigins      []string
+	Data             Persistence
+	Logger           logger.Logger
+	Relay            RelayPolicy
+	Executor         execution.OperationExecutor
+	Authenticate     func(*http.Request) (*http.Request, error)
+	Todos            TodoOperations
+	Navigation       NavigationOperations
+	DeploymentOwner  func(context.Context, string) (bool, error)
+	ReleaseCatalog   http.Handler
 }
 
 // New 显式注入当前 Generation 的 IAM 服务及原生 API，不拥有共享资源关闭权。
@@ -79,6 +82,7 @@ func New(dependencies Dependencies) (*Handler, error) {
 	h.store = dependencies.Data
 	h.runtime = dependencies.Runtime
 	h.cookieName = dependencies.CookieName
+	h.legacyCookieName = dependencies.LegacyCookieName
 	h.logger = logging
 	h.relay = relay
 	h.executor = executor
@@ -116,7 +120,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			failure(w, http.StatusForbidden, "forbidden", "origin_rejected")
 			return
 		}
-		cookie, err := r.Cookie(h.cookies.Name(csrfCookie))
+		cookie, err := h.readCSRFCookie(r)
 		if err != nil || cookie.Value == "" || subtle.ConstantTimeCompare([]byte(cookie.Value), []byte(r.Header.Get("X-CSRF-Token"))) != 1 {
 			failure(w, http.StatusForbidden, "forbidden", "csrf_rejected")
 			return
@@ -297,7 +301,7 @@ func (h *Handler) routes() {
 		reply(w, value)
 	})
 	h.mux.HandleFunc("GET "+Prefix+"/auth/csrf", func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie(h.cookies.Name(csrfCookie))
+		cookie, err := h.readCSRFCookie(r)
 		token := ""
 		if err == nil {
 			token = cookie.Value
@@ -309,7 +313,9 @@ func (h *Handler) routes() {
 				return
 			}
 			token = hex.EncodeToString(bytes)
-			http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: csrfCookie, Value: token, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode}))
+		}
+		if cookie == nil || cookie.Name != h.cookies.Name(csrfCookie) || cookie.Value != token {
+			http.SetCookie(w, h.csrfCookie(csrfCookie, token, 0))
 		}
 		reply(w, map[string]string{"token": token})
 	})
@@ -330,7 +336,13 @@ func (h *Handler) routes() {
 		reply(w, value)
 	})
 	h.mux.HandleFunc("POST "+Prefix+"/auth/{action}", h.authenticate)
-	h.mux.HandleFunc("GET "+Prefix+"/auth/session", func(w http.ResponseWriter, r *http.Request) { h.session(w, current(r)) })
+	h.mux.HandleFunc("GET "+Prefix+"/auth/session", func(w http.ResponseWriter, r *http.Request) {
+		session := current(r)
+		if _, err := r.Cookie(h.cookieName); errors.Is(err, http.ErrNoCookie) {
+			http.SetCookie(w, h.sessionCookie(h.cookieName, session.ID, 0))
+		}
+		h.session(w, session)
+	})
 	h.mux.HandleFunc("POST "+Prefix+"/auth/password/verify", h.verifySessionPassword)
 	h.mux.HandleFunc("GET "+Prefix+"/system/runtime", h.runtimeMetadata)
 	h.mux.HandleFunc("GET "+Prefix+"/auth/access", func(w http.ResponseWriter, r *http.Request) {
@@ -385,7 +397,12 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) {
 			problem(w, err)
 			return
 		}
-		http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: h.cookieName, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: -1}))
+		for _, name := range []string{h.cookieName, h.legacyCookieName} {
+			http.SetCookie(w, h.sessionCookie(name, "", -1))
+		}
+		for _, name := range []string{csrfCookie, legacyCSRFCookie} {
+			http.SetCookie(w, h.csrfCookie(name, "", -1))
+		}
 		h.clearLegacyNativeCSRFCookie(w, r)
 		w.WriteHeader(204)
 		return
@@ -463,14 +480,33 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: h.cookieName, Value: session.ID, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode}))
+	http.SetCookie(w, h.sessionCookie(h.cookieName, session.ID, 0))
+	if _, err := r.Cookie(h.legacyCookieName); err == nil {
+		http.SetCookie(w, h.sessionCookie(h.legacyCookieName, "", -1))
+	}
 	h.clearLegacyNativeCSRFCookie(w, r)
 	h.session(w, session)
 }
 
+func (h *Handler) readCSRFCookie(r *http.Request) (*http.Cookie, error) {
+	cookie, err := r.Cookie(h.cookies.Name(csrfCookie))
+	if errors.Is(err, http.ErrNoCookie) {
+		return r.Cookie(h.cookies.Name(legacyCSRFCookie))
+	}
+	return cookie, err
+}
+
+func (h *Handler) sessionCookie(name, value string, maxAge int) *http.Cookie {
+	return h.cookies.Cookie(http.Cookie{Name: name, Value: value, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode, MaxAge: maxAge})
+}
+
+func (h *Handler) csrfCookie(name, value string, maxAge int) *http.Cookie {
+	return h.cookies.Cookie(http.Cookie{Name: name, Value: value, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: maxAge})
+}
+
 func (h *Handler) clearLegacyNativeCSRFCookie(w http.ResponseWriter, r *http.Request) {
 	if _, err := r.Cookie(h.cookies.Name(legacyNativeCSRFCookie)); err == nil {
-		http.SetCookie(w, h.cookies.Cookie(http.Cookie{Secure: true, Name: legacyNativeCSRFCookie, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: -1}))
+		http.SetCookie(w, h.csrfCookie(legacyNativeCSRFCookie, "", -1))
 	}
 }
 

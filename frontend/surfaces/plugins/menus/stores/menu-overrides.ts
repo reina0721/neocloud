@@ -4,7 +4,7 @@ import {
   useNavigationAdminPort,
   type NavigationAdminPatch,
   type NavigationAdminResult,
-} from '@clouddrive/plugin-framework/navigation-admin';
+} from '@neocloud/plugin-framework/navigation-admin';
 import { useMemo, useSyncExternalStore } from 'react';
 
 import type { MenuOverride, MenuOverrides } from '../src/menu-overlay';
@@ -12,7 +12,7 @@ import type { MenuOverride, MenuOverrides } from '../src/menu-overlay';
 /**
  * menus 插件对 Host 导航覆盖的消费适配（Port 形态，不持有第二份持久化）。
  *
- * 归属边界：持久化真相在 Host（`clouddrive.navigation-admin`，由 Host 在
+ * 归属边界：持久化真相在 Host（`neocloud.navigation-admin`，由 Host 在
  * 导航构建时应用）；插件只通过 `NavigationAdminPort` 读写，并保留原有的
  * `useMenuOverlayStore(selector)` 选择器形态，使页面与对话框逻辑保持一份。
  *

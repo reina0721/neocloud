@@ -3,8 +3,8 @@ package console
 import (
 	"context"
 	"fmt"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	"github.com/reina0721/clouddrive/internal/module/console/model"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/module/console/model"
 	"net/url"
 )
 

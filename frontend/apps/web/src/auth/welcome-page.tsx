@@ -1,8 +1,8 @@
 'use client';
 import Link from 'next/link';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { useSiteProfile } from '@clouddrive/surface/administration/runtime';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { useSiteProfile } from '@neocloud/surface/administration/runtime';
 export function WelcomePage() {
   const { t } = useFrontendTranslation();
   const { profile } = useSiteProfile();

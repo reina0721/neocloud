@@ -36,3 +36,10 @@ func publishNativeDirectory(store *os.Root, stageName, version string) error {
 	}
 	return syncDirectory(store.Name())
 }
+
+func replaceDeploymentFile(source, target string) error {
+	if err := os.Rename(source, target); err != nil {
+		return err
+	}
+	return syncDirectory(filepath.Dir(target))
+}

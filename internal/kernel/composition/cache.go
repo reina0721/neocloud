@@ -3,8 +3,8 @@ package composition
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	cacheapp "github.com/reina0721/clouddrive/internal/kernel/app/cache"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	cacheapp "github.com/reina0721/neocloud/internal/kernel/app/cache"
 )
 
 func composeCache(plan *app.Plan) (app.Added[cacheapp.Access], error) {

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/idgen"
 )
 
 const (

@@ -1,6 +1,6 @@
 package console
 
-import permission "github.com/reina0721/clouddrive/internal/permission"
+import permission "github.com/reina0721/neocloud/internal/permission"
 
 // Permissions 声明控制台新增业务权限，不替代 IAM 自有权限。
 func Permissions() []permission.Definition {

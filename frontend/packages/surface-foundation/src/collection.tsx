@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from 'react';
-import { Action } from '@clouddrive/ui-adapter/action';
+import { Action } from '@neocloud/ui-adapter/action';
 
 import { Section } from './layout';
 

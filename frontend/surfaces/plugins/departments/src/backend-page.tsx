@@ -1,11 +1,11 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader, Toolbar } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { TextField, SelectField, CheckboxField } from '@clouddrive/ui-adapter/form-field';
-import { DataTable, type DataColumn } from '@clouddrive/ui-adapter/data-display';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader, Toolbar } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { TextField, SelectField, CheckboxField } from '@neocloud/ui-adapter/form-field';
+import { DataTable, type DataColumn } from '@neocloud/ui-adapter/data-display';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
 import { useRequiredAdministration } from '../../../src/administration/context';
 import { useRemote, RemoteRegion } from '../../../src/administration/resource-state';
 import type { OrganizationItem, OrganizationKind } from '../../../src/administration/model';

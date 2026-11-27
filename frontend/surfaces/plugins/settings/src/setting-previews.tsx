@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { ContentSwapTransition } from '@clouddrive/ui-adapter/content-swap-transition';
-import { formatTimeOfDay, useFrontendTranslation } from '@clouddrive/i18n';
-import { formatInstantDate } from '@clouddrive/i18n/format';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { TOAST_DURATION_MS, type Preferences } from '@clouddrive/surface/preferences-model';
+import { Action } from '@neocloud/ui-adapter/action';
+import { ContentSwapTransition } from '@neocloud/ui-adapter/content-swap-transition';
+import { formatTimeOfDay, useFrontendTranslation } from '@neocloud/i18n';
+import { formatInstantDate } from '@neocloud/i18n/format';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { TOAST_DURATION_MS, type Preferences } from '@neocloud/surface/preferences-model';
 
 /** Static comparison sketches. Actual preferences still apply through the existing Host. */
 export function DensityPreview({

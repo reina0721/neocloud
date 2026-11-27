@@ -10,53 +10,53 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/reina0721/clouddrive/internal/deployment"
-	"github.com/reina0721/clouddrive/internal/kernel"
-	kernelalerting "github.com/reina0721/clouddrive/internal/kernel/app/alerting"
-	cacheapp "github.com/reina0721/clouddrive/internal/kernel/app/cache"
-	databaseapp "github.com/reina0721/clouddrive/internal/kernel/app/database"
-	executionapp "github.com/reina0721/clouddrive/internal/kernel/app/execution"
-	messagingapp "github.com/reina0721/clouddrive/internal/kernel/app/messaging"
-	rabbitmqapp "github.com/reina0721/clouddrive/internal/kernel/app/messaging/rabbitmq"
-	scheduleapp "github.com/reina0721/clouddrive/internal/kernel/app/schedule"
-	storageapp "github.com/reina0721/clouddrive/internal/kernel/app/storage"
-	kernelcomposition "github.com/reina0721/clouddrive/internal/kernel/composition"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	kernellogging "github.com/reina0721/clouddrive/internal/kernel/logging"
-	"github.com/reina0721/clouddrive/internal/module"
-	"github.com/reina0721/clouddrive/internal/module/auth"
-	authconfig "github.com/reina0721/clouddrive/internal/module/auth/binding/config"
-	authhttp "github.com/reina0721/clouddrive/internal/module/auth/binding/http"
-	"github.com/reina0721/clouddrive/internal/module/console"
-	"github.com/reina0721/clouddrive/internal/module/files"
-	filesconfig "github.com/reina0721/clouddrive/internal/module/files/binding/config"
-	fileshttp "github.com/reina0721/clouddrive/internal/module/files/binding/http"
-	fileswebdav "github.com/reina0721/clouddrive/internal/module/files/binding/webdav"
-	"github.com/reina0721/clouddrive/internal/module/iam"
-	iamconfig "github.com/reina0721/clouddrive/internal/module/iam/binding/config"
-	iamhttp "github.com/reina0721/clouddrive/internal/module/iam/binding/http"
-	"github.com/reina0721/clouddrive/internal/module/navigation"
-	"github.com/reina0721/clouddrive/internal/module/navigation/binding/consolecatalog"
-	navigationhttp "github.com/reina0721/clouddrive/internal/module/navigation/binding/http"
-	"github.com/reina0721/clouddrive/internal/module/ops"
-	opsconfig "github.com/reina0721/clouddrive/internal/module/ops/binding/config"
-	opsmodel "github.com/reina0721/clouddrive/internal/module/ops/model"
-	"github.com/reina0721/clouddrive/internal/module/organization"
-	organizationhttp "github.com/reina0721/clouddrive/internal/module/organization/binding/http"
-	"github.com/reina0721/clouddrive/internal/module/todo"
-	configbinding "github.com/reina0721/clouddrive/internal/module/todo/binding/config"
-	todohttp "github.com/reina0721/clouddrive/internal/module/todo/binding/http"
-	httptransport "github.com/reina0721/clouddrive/internal/transport/http"
-	pkgalerting "github.com/reina0721/clouddrive/pkg/alerting"
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/httpx"
-	"github.com/reina0721/clouddrive/pkg/i18n"
-	"github.com/reina0721/clouddrive/pkg/idgen"
-	"github.com/reina0721/clouddrive/pkg/logger"
-	pkgobservability "github.com/reina0721/clouddrive/pkg/observability"
-	pkgschedule "github.com/reina0721/clouddrive/pkg/schedule"
-	"github.com/reina0721/clouddrive/pkg/supervisor"
-	"github.com/reina0721/clouddrive/pkg/validation"
+	"github.com/reina0721/neocloud/internal/deployment"
+	"github.com/reina0721/neocloud/internal/kernel"
+	kernelalerting "github.com/reina0721/neocloud/internal/kernel/app/alerting"
+	cacheapp "github.com/reina0721/neocloud/internal/kernel/app/cache"
+	databaseapp "github.com/reina0721/neocloud/internal/kernel/app/database"
+	executionapp "github.com/reina0721/neocloud/internal/kernel/app/execution"
+	messagingapp "github.com/reina0721/neocloud/internal/kernel/app/messaging"
+	rabbitmqapp "github.com/reina0721/neocloud/internal/kernel/app/messaging/rabbitmq"
+	scheduleapp "github.com/reina0721/neocloud/internal/kernel/app/schedule"
+	storageapp "github.com/reina0721/neocloud/internal/kernel/app/storage"
+	kernelcomposition "github.com/reina0721/neocloud/internal/kernel/composition"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	kernellogging "github.com/reina0721/neocloud/internal/kernel/logging"
+	"github.com/reina0721/neocloud/internal/module"
+	"github.com/reina0721/neocloud/internal/module/auth"
+	authconfig "github.com/reina0721/neocloud/internal/module/auth/binding/config"
+	authhttp "github.com/reina0721/neocloud/internal/module/auth/binding/http"
+	"github.com/reina0721/neocloud/internal/module/console"
+	"github.com/reina0721/neocloud/internal/module/files"
+	filesconfig "github.com/reina0721/neocloud/internal/module/files/binding/config"
+	fileshttp "github.com/reina0721/neocloud/internal/module/files/binding/http"
+	fileswebdav "github.com/reina0721/neocloud/internal/module/files/binding/webdav"
+	"github.com/reina0721/neocloud/internal/module/iam"
+	iamconfig "github.com/reina0721/neocloud/internal/module/iam/binding/config"
+	iamhttp "github.com/reina0721/neocloud/internal/module/iam/binding/http"
+	"github.com/reina0721/neocloud/internal/module/navigation"
+	"github.com/reina0721/neocloud/internal/module/navigation/binding/consolecatalog"
+	navigationhttp "github.com/reina0721/neocloud/internal/module/navigation/binding/http"
+	"github.com/reina0721/neocloud/internal/module/ops"
+	opsconfig "github.com/reina0721/neocloud/internal/module/ops/binding/config"
+	opsmodel "github.com/reina0721/neocloud/internal/module/ops/model"
+	"github.com/reina0721/neocloud/internal/module/organization"
+	organizationhttp "github.com/reina0721/neocloud/internal/module/organization/binding/http"
+	"github.com/reina0721/neocloud/internal/module/todo"
+	configbinding "github.com/reina0721/neocloud/internal/module/todo/binding/config"
+	todohttp "github.com/reina0721/neocloud/internal/module/todo/binding/http"
+	httptransport "github.com/reina0721/neocloud/internal/transport/http"
+	pkgalerting "github.com/reina0721/neocloud/pkg/alerting"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/httpx"
+	"github.com/reina0721/neocloud/pkg/i18n"
+	"github.com/reina0721/neocloud/pkg/idgen"
+	"github.com/reina0721/neocloud/pkg/logger"
+	pkgobservability "github.com/reina0721/neocloud/pkg/observability"
+	pkgschedule "github.com/reina0721/neocloud/pkg/schedule"
+	"github.com/reina0721/neocloud/pkg/supervisor"
+	"github.com/reina0721/neocloud/pkg/validation"
 )
 
 type applicationGenerationFactory struct {
@@ -491,7 +491,7 @@ func (f *applicationGenerationFactory) Prepare(
 	if err != nil {
 		return abort(err)
 	}
-	filesSession, err := newIAMSessionAuthAdapter(generation.iamModule.Sessions, generation.iamModule.SessionCookieName())
+	filesSession, err := newIAMSessionAuthAdapter(generation.iamModule.Sessions, generation.iamModule.SessionCookieName(), generation.iamModule.LegacySessionCookieName())
 	if err != nil {
 		return abort(err)
 	}
@@ -499,7 +499,7 @@ func (f *applicationGenerationFactory) Prepare(
 		Database: databaseAccess, StorageIdentity: storageIdentity, StorageBackend: storageBackend,
 		Content:        filesContentAdapter{access: generation.storage.value()},
 		Authority:      filesConnectionAuthority{access: generation.iamModule.AccountAuthorization, audience: generation.iamModule.Collaboration},
-		Authentication: fileOptionalSessionAuth{session: filesSession, cookieName: generation.iamModule.SessionCookieName()},
+		Authentication: fileOptionalSessionAuth{session: filesSession},
 		Actors:         filesActorAdapter{}, Passwords: iam.NewCredentialDigests(), Clock: clock.System(), IDs: idgen.UUID(),
 		Logger: generation.logger.value(), PublicOrigins: httpConfig.CORS.AllowedOrigins,
 		TaskEnabled: func(id pkgschedule.TaskID) (bool, error) { return scheduleapp.TaskConfiguredEnabled(snapshot, id) },
@@ -530,7 +530,15 @@ func (f *applicationGenerationFactory) Prepare(
 	if err != nil {
 		return abort(err)
 	}
-	consoleHandler, err := console.New(console.Dependencies{Runtime: generation.consoleRuntime, DeploymentOwner: (consoleIAMPort{generation.iamModule.Service}).deploymentOwner, IAM: consoleIAMPort{generation.iamModule.Service}, CookieName: generation.iamModule.SessionCookieName(), Cookies: generation.iamModule.Cookies, Native: httptransport.IsolatedRoutes(apiRoutes), Origins: httpConfig.CORS.AllowedOrigins, SiteOrigins: consoleConfig.SiteOrigins, Database: databaseAccess, Logger: generation.logger.value(), Relay: consoleConfig.Relay, Executor: generation.execution.value(), Authenticate: consoleAuthenticate(generation.authModule.SessionSource.AuthenticateRequest), Todos: consoleTodoPort{generation.module.Operations}, Navigation: consoleNavigationPort{generation.navigationModule.Operations}, ReleaseCatalog: http.HandlerFunc(deployment.NewReleases().ServeReleaseCatalog)})
+	consoleHandler, err := console.New(console.Dependencies{
+		Runtime: generation.consoleRuntime, DeploymentOwner: (consoleIAMPort{generation.iamModule.Service}).deploymentOwner,
+		IAM: consoleIAMPort{generation.iamModule.Service}, CookieName: generation.iamModule.SessionCookieName(),
+		LegacyCookieName: generation.iamModule.LegacySessionCookieName(), Cookies: generation.iamModule.Cookies,
+		Native: httptransport.IsolatedRoutes(apiRoutes), Origins: httpConfig.CORS.AllowedOrigins, SiteOrigins: consoleConfig.SiteOrigins,
+		Database: databaseAccess, Logger: generation.logger.value(), Relay: consoleConfig.Relay, Executor: generation.execution.value(),
+		Authenticate: consoleAuthenticate(generation.authModule.SessionSource.AuthenticateRequest), Todos: consoleTodoPort{generation.module.Operations},
+		Navigation: consoleNavigationPort{generation.navigationModule.Operations}, ReleaseCatalog: http.HandlerFunc(deployment.NewReleases().ServeReleaseCatalog),
+	})
 	if err != nil {
 		return abort(err)
 	}
@@ -556,7 +564,7 @@ func (f *applicationGenerationFactory) Prepare(
 		return abort(fmt.Errorf("compose scheduler coordination: %w", err))
 	}
 	schedulerDefinition, err := scheduleapp.Definition(scheduleapp.Dependencies{
-		ApplicationName: f.applicationName, Generation: generation.id,
+		ApplicationName: schedulerApplicationIdentity(f.applicationName), Generation: generation.id,
 		Logger: generation.logger.value(), Clock: clock.System(), Execution: generation.execution.value(), Coordination: coordinationManager,
 		Telemetry: generation.telemetry.output, Bindings: schedules,
 		ReportFailure: generation.reportScheduleFailure,
@@ -1167,3 +1175,11 @@ func (g *applicationGeneration) trackRequests(next http.Handler) http.Handler {
 var _ kernel.GenerationFactory = (*applicationGenerationFactory)(nil)
 var _ kernel.PreparedGeneration = (*applicationGeneration)(nil)
 var _ kernel.ActiveGeneration = (*applicationGeneration)(nil)
+
+// schedulerApplicationIdentity 让桥接和切换版本共用执行租约。
+func schedulerApplicationIdentity(name string) string {
+	if name == "neocloud" {
+		return "clouddrive"
+	}
+	return name
+}

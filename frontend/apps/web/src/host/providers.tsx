@@ -1,24 +1,25 @@
 'use client';
+import { removeProductStorage } from '@neocloud/state-foundation';
 
-import { MaterialThemeProvider } from '@clouddrive/ui-adapter/theme-provider';
-import { useMotionPolicy } from '@clouddrive/surface-foundation/motion-policy-context';
-import { FeedbackProvider } from '@clouddrive/ui-adapter/feedback-provider';
-import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
+import { MaterialThemeProvider } from '@neocloud/ui-adapter/theme-provider';
+import { useMotionPolicy } from '@neocloud/surface-foundation/motion-policy-context';
+import { FeedbackProvider } from '@neocloud/ui-adapter/feedback-provider';
+import { AlertBanner } from '@neocloud/ui-adapter/feedback';
 import { AlertTriangle } from 'lucide-react';
-import { FrontendI18nProvider, useFrontendTranslation } from '@clouddrive/i18n';
-import { ControlLocaleProvider } from '@clouddrive/ui-adapter/accessibility';
-import { CommandsProvider } from '@clouddrive/plugin-framework/commands';
-import { LeaveConfirmProvider } from '@clouddrive/plugin-framework/leave-confirm';
-import { NotificationsProvider } from '@clouddrive/plugin-framework/notifications';
-import { PreferencesProvider } from '@clouddrive/plugin-framework/preferences';
-import { WorkspaceProvider } from '@clouddrive/plugin-framework/workspace';
-import { WorkbenchProvider } from '@clouddrive/plugin-framework/workbench';
-import { rehydrateStore } from '@clouddrive/state-foundation';
+import { FrontendI18nProvider, useFrontendTranslation } from '@neocloud/i18n';
+import { ControlLocaleProvider } from '@neocloud/ui-adapter/accessibility';
+import { CommandsProvider } from '@neocloud/plugin-framework/commands';
+import { LeaveConfirmProvider } from '@neocloud/plugin-framework/leave-confirm';
+import { NotificationsProvider } from '@neocloud/plugin-framework/notifications';
+import { PreferencesProvider } from '@neocloud/plugin-framework/preferences';
+import { WorkspaceProvider } from '@neocloud/plugin-framework/workspace';
+import { WorkbenchProvider } from '@neocloud/plugin-framework/workbench';
+import { rehydrateStore } from '@neocloud/state-foundation';
 import { ScrollRevealRuntime } from './scroll-reveal-runtime';
 import { useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
 
 import { appI18n } from '../i18n/i18n';
-import { TOAST_DURATION_MS } from '@clouddrive/surface/preferences-model';
+import { TOAST_DURATION_MS } from '@neocloud/surface/preferences-model';
 import { useNotificationsStore } from '../state/use-notifications-store';
 import { useShellStore } from '../state/use-shell-store';
 import { useWorkbenchStore } from '../state/use-workbench-store';
@@ -234,7 +235,7 @@ function RuntimeProviders({ children }: Readonly<{ children: ReactNode }>) {
                                     onAction={() => {
                                       // 恢复默认：清除损坏记录并重载（不触碰收藏/通知/草稿等
                                       // 独立 Store）。
-                                      window.localStorage.removeItem('clouddrive.shell');
+                                      removeProductStorage(window.localStorage, 'neocloud.shell');
                                       window.location.reload();
                                     }}
                                     title={t('shell.hydrationIssueTitle')}

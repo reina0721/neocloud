@@ -1,11 +1,11 @@
 'use client';
 
-import { TabsView } from '@clouddrive/ui-adapter/data-display';
-import { DisclosurePanel } from '@clouddrive/ui-adapter/disclosure';
-import { BreadcrumbTrail, PaginationControl, TextLink } from '@clouddrive/ui-adapter/navigation';
-import { NavigationItem, NavigationTabs } from '@clouddrive/ui-adapter/destination-navigation';
-import { StepNavigation } from '@clouddrive/ui-adapter/step-navigation';
-import { Tree } from '@clouddrive/ui-adapter/tree';
+import { TabsView } from '@neocloud/ui-adapter/data-display';
+import { DisclosurePanel } from '@neocloud/ui-adapter/disclosure';
+import { BreadcrumbTrail, PaginationControl, TextLink } from '@neocloud/ui-adapter/navigation';
+import { NavigationItem, NavigationTabs } from '@neocloud/ui-adapter/destination-navigation';
+import { StepNavigation } from '@neocloud/ui-adapter/step-navigation';
+import { Tree } from '@neocloud/ui-adapter/tree';
 import {
   Bell,
   Boxes,
@@ -16,8 +16,8 @@ import {
   Waypoints,
 } from 'lucide-react';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
 import { ComponentPreview } from './component-preview';
 import { UiElementsFamilyPage } from './family-page';
 export function NavigationElementsPage() {

@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // ConnectionSnapshot 是同一owner事务内的策略与目录事实，不包含第三方类型。

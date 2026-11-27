@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	"github.com/reina0721/clouddrive/internal/kernel/logging"
-	pkgexecution "github.com/reina0721/clouddrive/pkg/execution"
-	"github.com/reina0721/clouddrive/pkg/health"
-	pkglogger "github.com/reina0721/clouddrive/pkg/logger"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/kernel/logging"
+	pkgexecution "github.com/reina0721/neocloud/pkg/execution"
+	"github.com/reina0721/neocloud/pkg/health"
+	pkglogger "github.com/reina0721/neocloud/pkg/logger"
 )
 
 const (

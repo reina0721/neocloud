@@ -10,7 +10,7 @@
  * 配合草稿恢复兜底，不承诺覆盖全部关闭场景）。
  */
 import { shouldProceedWithNavigation, getCurrentResolvedHref } from './navigation-lifecycle';
-import { parseResolvedHref, isResolvedNavigationEqual } from '@clouddrive/core';
+import { parseResolvedHref, isResolvedNavigationEqual } from '@neocloud/core';
 
 /** 页面注册的 dirty source。 */
 export type DirtySource = Readonly<{

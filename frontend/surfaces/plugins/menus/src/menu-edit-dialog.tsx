@@ -1,9 +1,9 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { SwitchField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { SwitchField, TextField } from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
 import { useRef, useState } from 'react';
 
 import { useMenuOverride, useMenuOverlayStore } from '../stores/menu-overrides';

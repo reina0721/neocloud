@@ -3,7 +3,7 @@ import {
   wallTimeInstant,
   type TimeOccurrence,
   type WallTimeResult,
-} from '@clouddrive/i18n/temporal';
+} from '@neocloud/i18n/temporal';
 
 export type ShareExpiryDraft = Readonly<{
   mode: 'default' | 'keep' | '1' | '24' | '168' | '720' | 'custom';

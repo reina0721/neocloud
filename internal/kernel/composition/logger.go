@@ -3,10 +3,10 @@ package composition
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel"
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	loggerapp "github.com/reina0721/clouddrive/internal/kernel/app/logger"
-	kernellogging "github.com/reina0721/clouddrive/internal/kernel/logging"
+	"github.com/reina0721/neocloud/internal/kernel"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	loggerapp "github.com/reina0721/neocloud/internal/kernel/app/logger"
+	kernellogging "github.com/reina0721/neocloud/internal/kernel/logging"
 )
 
 func composeBuiltinLogger(plan *app.Plan, target kernellogging.Target) (app.Added[kernellogging.Target], error) {

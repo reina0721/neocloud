@@ -5,9 +5,9 @@ import (
 	"errors"
 	"sort"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
-	"github.com/reina0721/clouddrive/pkg/clock"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
+	"github.com/reina0721/neocloud/pkg/clock"
 )
 
 // ErrAudienceUnavailable 不区分不存在、已禁用和归档主体，避免查找泄露生命周期。

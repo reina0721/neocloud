@@ -6,7 +6,7 @@ import {
   AccountNotificationSettingsContext,
   AdministrationProvider,
   type AccountNotificationSettings,
-} from '@clouddrive/surface/administration/runtime';
+} from '@neocloud/surface/administration/runtime';
 import { readAuthConfig } from '../auth/config';
 import { HostPreferencesContext } from '../host/preferences-port';
 import { createLazyAdministrationPort } from './lazy-port';

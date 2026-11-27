@@ -1,7 +1,7 @@
 /**
  * Plugin Framework —— Leave-confirm Capability Port（client）。
  *
- * `@clouddrive/plugin-framework/leave-confirm`：页面把"未提交输入（dirty）"上报给
+ * `@neocloud/plugin-framework/leave-confirm`：页面把"未提交输入（dirty）"上报给
  * Host 的统一导航保护。Host 在任何应用内导航提交前询问（见 107 SET-005-001 Host
  * leave-confirm 接线）；**取消不改变路由/标签/进度**；刷新/关闭仅 dirty 时注册
  * beforeunload（平台限制内）。

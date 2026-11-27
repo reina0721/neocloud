@@ -23,7 +23,7 @@ export type MutableTokenSource = {
   };
 };
 
-/** 可变 x-clouddrive 元数据。 */
+/** 可变 x-neocloud 元数据。 */
 export type MutableMeta = {
   protocolVersion: number;
   authorityId: string;
@@ -54,7 +54,7 @@ export type MutableSchemaDocument = {
   $schema: string;
   $defs: Record<string, unknown>;
   someUnknownKeyword?: boolean;
-  'x-clouddrive': MutableMeta;
+  'x-neocloud': MutableMeta;
 };
 
 /** 把解析出的 JSON 文档转成可变视图（unknown 单跳断言；仅测试用）。 */

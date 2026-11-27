@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { FilesError } from '@clouddrive/surface/files';
+import { FilesError } from '@neocloud/surface/files';
 import { createFileSidebarPreferences } from './sidebar-preferences';
 
 describe('设备侧栏偏好的迁移和隔离', () => {

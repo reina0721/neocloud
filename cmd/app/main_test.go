@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	applicationcomposition "github.com/reina0721/clouddrive/internal/composition"
+	applicationcomposition "github.com/reina0721/neocloud/internal/composition"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestProcessGeneratedConfigurationSupportsMigrationAndServiceStartup(t *testing.T) {
@@ -62,7 +62,7 @@ func TestProcessGeneratedConfigurationSupportsMigrationAndServiceStartup(t *test
 		"todo:", "titleMaxRunes: 120", "defaultListLimit: 20", "maxListLimit: 100", "iam:", "maxFailedAttempts: 5",
 		"http:", "addr: 127.0.0.1:8080",
 		"management:", "addr: 127.0.0.1:9090", "metricsAccess: public",
-		"observability:", "serviceName: clouddrive", "sampleRatio: 0.1",
+		"observability:", "serviceName: neocloud", "sampleRatio: 0.1",
 	} {
 		if !bytes.Contains(content, []byte(expected)) {
 			t.Fatalf("generated config missing %q:\n%s", expected, content)
@@ -585,7 +585,7 @@ func TestExecuteUsesCLIExitCodeAndReportsError(t *testing.T) {
 	if exitCode != applicationcomposition.ExitUsage {
 		t.Fatalf("exit code = %d, want %d", exitCode, applicationcomposition.ExitUsage)
 	}
-	if !strings.Contains(stderr.String(), "clouddrive: run application CLI") {
+	if !strings.Contains(stderr.String(), "neocloud: run application CLI") {
 		t.Fatalf("stderr = %q, want application context", stderr.String())
 	}
 }

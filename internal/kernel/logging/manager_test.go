@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	pkglogger "github.com/reina0721/clouddrive/pkg/logger"
+	pkglogger "github.com/reina0721/neocloud/pkg/logger"
 )
 
 func TestManagerRequiresBaseline(t *testing.T) {

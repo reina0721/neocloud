@@ -1,8 +1,8 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { useAccountNotificationSettings } from '@clouddrive/surface/administration/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { useAccountNotificationSettings } from '@neocloud/surface/administration/runtime';
 import {
   ACCENT_PRESETS,
   CONTENT_WIDTHS,
@@ -11,11 +11,11 @@ import {
   MOTION_PREFERENCES,
   THEME_MODES,
   type Preferences,
-} from '@clouddrive/surface/preferences-model';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
-import { RadioGroupField, SelectField, SwitchField } from '@clouddrive/ui-adapter/form-field';
-import { ConfirmDialog, DrawerSurface } from '@clouddrive/ui-adapter/overlays';
+} from '@neocloud/surface/preferences-model';
+import { Action } from '@neocloud/ui-adapter/action';
+import { AlertBanner } from '@neocloud/ui-adapter/feedback';
+import { RadioGroupField, SelectField, SwitchField } from '@neocloud/ui-adapter/form-field';
+import { ConfirmDialog, DrawerSurface } from '@neocloud/ui-adapter/overlays';
 import { TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useSyncExternalStore, useState } from 'react';
@@ -166,7 +166,7 @@ export function QuickPreferencesDrawer({
           <Action
             size="sm"
             variant="secondary"
-            onPress={() => window.dispatchEvent(new Event('clouddrive:lock'))}
+            onPress={() => window.dispatchEvent(new Event('neocloud:lock'))}
           >
             {t('shell.quickPreferences.lockNow')}
           </Action>

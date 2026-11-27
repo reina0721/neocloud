@@ -57,14 +57,14 @@ func TestOfflineArchiveVerifiesIdentityAndInstaller(t *testing.T) {
 		version: version,
 		digests: map[string]string{"install.sh": fmt.Sprintf("%x", sha256.Sum256([]byte(installer)))},
 	}
-	if err := verifyOfflineArchive(t.Context(), bytes.NewReader(data), release, "amd64"); err != nil {
+	if err := verifyOfflineArchive(t.Context(), bytes.NewReader(data), release, "amd64", legacyRelease); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyOfflineArchive(t.Context(), bytes.NewReader(data), release, "arm64"); err == nil {
+	if err := verifyOfflineArchive(t.Context(), bytes.NewReader(data), release, "arm64", legacyRelease); err == nil {
 		t.Fatal("接受了不同平台的离线包")
 	}
 	release.digests["install.sh"] = strings.Repeat("0", 64)
-	if err := verifyOfflineArchive(t.Context(), bytes.NewReader(data), release, "amd64"); err == nil {
+	if err := verifyOfflineArchive(t.Context(), bytes.NewReader(data), release, "amd64", legacyRelease); err == nil {
 		t.Fatal("接受了包内与签名安装器不一致的离线包")
 	}
 }

@@ -10,9 +10,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	"github.com/reina0721/clouddrive/internal/module/migration"
-	"github.com/reina0721/clouddrive/internal/nativeupgrade/control"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/module/migration"
+	"github.com/reina0721/neocloud/internal/nativeupgrade/control"
 )
 
 const managedPrivateAddress = "127.0.0.1:0"

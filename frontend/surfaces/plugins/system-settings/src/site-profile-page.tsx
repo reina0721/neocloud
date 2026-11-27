@@ -5,15 +5,15 @@ import {
   FoundationControlledField,
   FoundationForm,
   useFoundationForm,
-} from '@clouddrive/form-foundation';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { useRegisterDirtySource } from '@clouddrive/plugin-framework/leave-confirm';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { FormActions } from '@clouddrive/surface-foundation/form-actions';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { TextAreaField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { useProductAccess } from '@clouddrive/surface/identity/runtime';
+} from '@neocloud/form-foundation';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { useRegisterDirtySource } from '@neocloud/plugin-framework/leave-confirm';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { FormActions } from '@neocloud/surface-foundation/form-actions';
+import { Action } from '@neocloud/ui-adapter/action';
+import { TextAreaField, TextField } from '@neocloud/ui-adapter/form-field';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { useProductAccess } from '@neocloud/surface/identity/runtime';
 import {
   siteProfileSchema,
   SiteProfileError,

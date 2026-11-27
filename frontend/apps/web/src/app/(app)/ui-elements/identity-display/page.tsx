@@ -5,7 +5,7 @@
 import dynamic from 'next/dynamic';
 
 const PluginPage = dynamic(
-  () => import('@clouddrive/surface/plugin-routes/ui-elements/identity-display/page'),
+  () => import('@neocloud/surface/plugin-routes/ui-elements/identity-display/page'),
   {
     loading: () => <div aria-hidden="true" className="h-64" />,
   },

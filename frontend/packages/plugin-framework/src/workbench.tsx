@@ -1,7 +1,7 @@
 /**
  * Plugin Framework —— Workbench Capability Port（client）。
  *
- * `@clouddrive/plugin-framework/workbench`：收藏与最近访问的公共契约 + client
+ * `@neocloud/plugin-framework/workbench`：收藏与最近访问的公共契约 + client
  * Provider/context/hook。Host 注入实现（独立持久化 store，不混入设置记录）。
  *
  * 语义：

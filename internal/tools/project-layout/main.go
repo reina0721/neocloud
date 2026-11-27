@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/reina0721/clouddrive/internal/kernel/cli"
-	"github.com/reina0721/clouddrive/internal/projectlayout"
+	"github.com/reina0721/neocloud/internal/kernel/cli"
+	"github.com/reina0721/neocloud/internal/projectlayout"
 )
 
 func main() {

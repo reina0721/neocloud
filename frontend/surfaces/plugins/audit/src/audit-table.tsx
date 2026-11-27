@@ -4,9 +4,9 @@ import {
   type DataColumn,
   type DataTableDensity,
   type DataTableSelection,
-} from '@clouddrive/ui-adapter/data-display';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import type { AuditRecord } from '@clouddrive/surface/identity/runtime';
+} from '@neocloud/ui-adapter/data-display';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import type { AuditRecord } from '@neocloud/surface/identity/runtime';
 
 export function AuditTable({
   columns,

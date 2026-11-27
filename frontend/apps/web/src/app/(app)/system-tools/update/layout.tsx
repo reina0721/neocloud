@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { SystemUpdateEnvironmentProvider } from '@clouddrive/surface/administration/runtime';
+import { SystemUpdateEnvironmentProvider } from '@neocloud/surface/administration/runtime';
 
 export default function SystemUpdateLayout({ children }: Readonly<{ children: ReactNode }>) {
   const developmentEnvironment =

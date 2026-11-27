@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CommandDefinition } from '@clouddrive/plugin-framework/commands';
+import type { CommandDefinition } from '@neocloud/plugin-framework/commands';
 
 import { createHostCommandsPort, resetHostCommandsForTest } from '../host/commands-port';
 

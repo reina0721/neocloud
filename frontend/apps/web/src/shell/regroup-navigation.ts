@@ -1,4 +1,4 @@
-import type { NavigationGroup, NavigationNode } from '@clouddrive/types';
+import type { NavigationGroup, NavigationNode } from '@neocloud/types';
 import type { NavigationOverrides } from '../state/use-navigation-admin-store';
 
 /** 把后端父级覆盖应用到同一套代码注册节点，不创建新路由或丢弃原始路由身份。 */

@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	kernellogging "github.com/reina0721/clouddrive/internal/kernel/logging"
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	"github.com/reina0721/clouddrive/pkg/logger"
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	kernellogging "github.com/reina0721/neocloud/internal/kernel/logging"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
+	"github.com/reina0721/neocloud/pkg/logger"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestOwnerRecoveryUsesExistingSQLiteInstanceAndRequiresPasswordChange(t *testing.T) {

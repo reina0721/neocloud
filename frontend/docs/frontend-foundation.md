@@ -14,14 +14,14 @@ Universal Foundation 只承载跨 Product Surface 成立的契约。
 
 Universal 禁止出现 Product Page、Product Workspace、Next Router、Browser/Desktop API、后端 DTO、权限计算和业务状态机。UI authority 为 `/ui-elements/*`，Motion authority 为 `/motion`。
 
-### Schema-Controlled Authority（`@clouddrive/schemas/runtime`）
+### Schema-Controlled Authority（`@neocloud/schemas/runtime`）
 
 正式 Authority 可以把自身事实收拢为**一份** Authority Schema
 （`packages/design-system/design-system.schema.json` 是第一例，覆盖 Token 与
-Motion Language facts），由 `@clouddrive/schemas/runtime` 统一提供校验、RFC 6902
+Motion Language facts），由 `@neocloud/schemas/runtime` 统一提供校验、RFC 6902
 Patch（内容哈希 etag 并发冲突）、确定性生成与 freshness：
 
-- Authority Schema 使用 Draft 2020-12；`x-clouddrive` 是正式注册的 extension
+- Authority Schema 使用 Draft 2020-12；`x-neocloud` 是正式注册的 extension
   keyword（Ajv strict，不关闭校验）。`source` 实例结构由 `$defs.authoritySource`
   定义；**所有可配置值只在 `source` 下**，facts/Artifact mapping 只经 Source
   Pointer 引用，Source 内 Token 间引用为结构化 ref（不保存 `var(--*)` 等 CSS 表达）。
@@ -75,7 +75,7 @@ Schema、提交锁和错误焦点入口提交。受控字段的 `ref` 是注册�
 
 ### 按需语言资源
 
-`@clouddrive/i18n/format`提供无React的瞬间格式化、有效时区和运行环境候选；文件瞬间先按所选时区求日期再按用户格式显示，纯日历日期继续保持原语义。`@clouddrive/i18n/temporal`独立封装现有Adobe日期库的壁钟时间转换，第三方对象不出边界；跳过时间拒绝，重复时间显式选择早/晚。转换模块不从主入口重导出，分享等惰性消费者按需加载；不得在Feature复制偏移计算或Intl格式器。
+`@neocloud/i18n/format`提供无React的瞬间格式化、有效时区和运行环境候选；文件瞬间先按所选时区求日期再按用户格式显示，纯日历日期继续保持原语义。`@neocloud/i18n/temporal`独立封装现有Adobe日期库的壁钟时间转换，第三方对象不出边界；跳过时间拒绝，重复时间显式选择早/晚。转换模块不从主入口重导出，分享等惰性消费者按需加载；不得在Feature复制偏移计算或Intl格式器。
 
 `FrontendI18nRuntime.addResources(TranslationResources)` 通过 i18n 内部公开的资源
 注册能力深合并文案，保持单一运行时、原资源与当前语言，不向 Host/Feature 暴露

@@ -1,15 +1,15 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import type {
   ApiCollection,
   ApiRequestDefinition,
   RequestTransport,
-} from '@clouddrive/surface/api-workbench';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { DisclosurePanel } from '@clouddrive/ui-adapter/disclosure';
-import { ProgressMeter } from '@clouddrive/ui-adapter/progress-meter';
-import { SelectField } from '@clouddrive/ui-adapter/form-field';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
+} from '@neocloud/surface/api-workbench';
+import { Action } from '@neocloud/ui-adapter/action';
+import { DisclosurePanel } from '@neocloud/ui-adapter/disclosure';
+import { ProgressMeter } from '@neocloud/ui-adapter/progress-meter';
+import { SelectField } from '@neocloud/ui-adapter/form-field';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
 import { Play } from 'lucide-react';
 import { runCollectionBatch } from '../model/runner';
 import { useWorkbenchStore } from '../../stores/workbench';

@@ -21,7 +21,7 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	pkgdatabase "github.com/reina0721/clouddrive/pkg/database"
+	pkgdatabase "github.com/reina0721/neocloud/pkg/database"
 )
 
 const defaultMigrationTable = "schema_migrations"

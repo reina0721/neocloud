@@ -1,4 +1,4 @@
-import { ReadyImage } from '@clouddrive/ui-adapter/ready-image';
+import { ReadyImage } from '@neocloud/ui-adapter/ready-image';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

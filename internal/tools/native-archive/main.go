@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/deployment"
+	"github.com/reina0721/neocloud/internal/deployment"
 )
 
 func main() {
@@ -115,10 +115,10 @@ func createArchive(output, work, web string) error {
 		excluded[filepath.Clean(link.Path)] = struct{}{}
 	}
 	return writeArchive(output, func(archive *zip.Writer) error {
-		if err := addTree(archive, work, "clouddrive", nil); err != nil {
+		if err := addTree(archive, work, "neocloud", nil); err != nil {
 			return err
 		}
-		return addTree(archive, web, "clouddrive/web", excluded)
+		return addTree(archive, web, "neocloud/web", excluded)
 	})
 }
 

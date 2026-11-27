@@ -5,8 +5,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
 )
 
 // VerifySessionPassword 只复核当前有效会话的本人密码，不创建会话、提升认证等级或签发授权凭据。

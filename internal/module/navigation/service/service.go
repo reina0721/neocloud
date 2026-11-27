@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/reina0721/clouddrive/internal/module/navigation/model"
-	"github.com/reina0721/clouddrive/internal/module/navigation/repo"
-	"github.com/reina0721/clouddrive/pkg/clock"
+	"github.com/reina0721/neocloud/internal/module/navigation/model"
+	"github.com/reina0721/neocloud/internal/module/navigation/repo"
+	"github.com/reina0721/neocloud/pkg/clock"
 )
 
 type CatalogSnapshot struct {

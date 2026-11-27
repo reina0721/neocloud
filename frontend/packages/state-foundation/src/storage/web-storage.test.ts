@@ -34,11 +34,24 @@ describe('web storage adapters (jsdom)', () => {
     expect(storage.getItem('clouddrive.session')).toBeNull();
   });
 
-  it('raw key 直接落 Web Storage（namespace 由 persist name 承载）', () => {
+  it('旧标签页写入与删除在升级和回退期间保持权威', () => {
     const storage = createLocalStorage<Payload>();
-    storage.setItem('clouddrive.shell', { state: { theme: 'dark' }, version: 1 });
-    // key 不加额外前缀（避免双重前缀）；与历史 clouddrive.shell 兼容。
-    expect(window.localStorage.getItem('clouddrive.shell')).not.toBeNull();
+    const native = window.localStorage;
+    const legacy = 'clouddrive.shell';
+    const current = 'neocloud.shell';
+    const dark = { state: { theme: 'dark' }, version: 1 } as const;
+    const light = { state: { theme: 'light' }, version: 1 } as const;
+
+    native.setItem(legacy, JSON.stringify(dark));
+    expect(storage.getItem(current)).toEqual(dark);
+    expect(native.getItem(current)).toBe(JSON.stringify(dark));
+    storage.setItem(current, light);
+    expect(native.getItem(legacy)).toBe(JSON.stringify(light));
+    native.setItem(legacy, JSON.stringify(dark));
+    expect(storage.getItem(current)).toEqual(dark);
+    native.removeItem(legacy);
+    expect(storage.getItem(current)).toBeNull();
+    expect(native.getItem(current)).toBeNull();
   });
 
   it('unavailablePolicy=noop 工厂可创建（lazy，无 window 也不崩）', () => {

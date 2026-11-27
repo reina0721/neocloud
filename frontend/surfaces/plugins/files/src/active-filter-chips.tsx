@@ -1,6 +1,6 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
 import { fileFilterKeys, utcInputDate, type FileFilters } from '../../../src/files/search';
 
 const chipLabels: Partial<Record<keyof FileFilters, string>> = {

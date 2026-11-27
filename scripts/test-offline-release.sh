@@ -8,8 +8,10 @@ trust=$(realpath -e -- "$2")
 version=$3
 arch=$4
 [[ $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && ( $arch == amd64 || $arch == arm64 ) ]]
-cosign=$(command -v "${CLOUDDRIVE_COSIGN:-cosign}")
-tool="clouddrive-maintenance_${version}_linux_${arch}"
+cosign=$(command -v "${NEOCLOUD_COSIGN:-${CLOUDDRIVE_COSIGN:-cosign}}")
+family=$(awk -v suffix="-maintenance_${version}_linux_${arch}" '$2 == "neocloud" suffix { print "neocloud" } $2 == "clouddrive" suffix { print "clouddrive" }' "$assets/checksums.txt")
+[[ $family == neocloud || $family == clouddrive ]] || { echo '维护程序命名系列无法确定' >&2; exit 1; }
+tool="$family-maintenance_${version}_linux_${arch}"
 fixture=$(mktemp -d "${TMPDIR:-/tmp}/clouddrive-airgap-XXXXXXXX")
 fixture=$(realpath -e -- "$fixture")
 instance="$fixture/instance"

@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	organizationhandler "github.com/reina0721/clouddrive/internal/module/organization/handler"
-	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	organizationhandler "github.com/reina0721/neocloud/internal/module/organization/handler"
+	"github.com/reina0721/neocloud/internal/transport/http/humabinding"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 // MutationGuard 是 Organization 的 mutation operation 使用的 Origin/Session/CSRF

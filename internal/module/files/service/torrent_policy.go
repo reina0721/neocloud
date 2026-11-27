@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // TorrentWorkspaceIdentity 同时绑定节点ID、RPC端点与共享挂载；名称和Secret轮换不改变位置身份。

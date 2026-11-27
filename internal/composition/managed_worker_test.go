@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	databaseapp "github.com/reina0721/clouddrive/internal/kernel/app/database"
-	"github.com/reina0721/clouddrive/internal/kernel/logging"
-	"github.com/reina0721/clouddrive/internal/nativeupgrade/control"
-	"github.com/reina0721/clouddrive/pkg/logger"
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	databaseapp "github.com/reina0721/neocloud/internal/kernel/app/database"
+	"github.com/reina0721/neocloud/internal/kernel/logging"
+	"github.com/reina0721/neocloud/internal/nativeupgrade/control"
+	"github.com/reina0721/neocloud/pkg/logger"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestManagedWorkerStandbyAndHandoff(t *testing.T) {

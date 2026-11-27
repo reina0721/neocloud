@@ -1,14 +1,12 @@
 /**
  * Namespace 策略 —— 所有 Persistent Store 的稳定命名空间。
  *
- * 默认策略：`clouddrive.<scope>.<store>`（product / scope / store 三段，克制不过度分层）。
- * 必须兼容历史 key（如 clouddrive.shell）：scope 或 store 缺省时退化为
- * `clouddrive.<segment>`，保证迁移不换 key、老用户 preference 不丢。
+ * 默认策略为 `neocloud.<scope>.<store>`，省略 scope 时为 `neocloud.<store>`。
+ * 浏览器存储适配处理旧版键和回退兼容。
  */
 import { formatPersistKey, type PersistNamespace } from '../contract/persist';
 
-/** 默认 product 前缀（与历史 clouddrive.shell 一致）。 */
-export const DEFAULT_PRODUCT = 'clouddrive';
+export const DEFAULT_PRODUCT = 'neocloud';
 
 /** 从 scope + store 构造命名空间；支持省略 scope（历史单段 key）。 */
 export function createNamespace(
@@ -23,7 +21,7 @@ export function createNamespace(
   return { product, scope, store };
 }
 
-/** 展开为最终 storage key（clouddrive.<scope>.<store> 或兼容单段 clouddrive.<store>）。 */
+/** 展开为三段或单段 scope storage key。 */
 export function namespaceKey(namespace: PersistNamespace): string {
   return formatPersistKey(namespace);
 }

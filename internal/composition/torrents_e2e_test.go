@@ -19,9 +19,9 @@ import (
 	"time"
 
 	"github.com/anacrolix/torrent/bencode"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/pkg/idgen"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 // torrentProtocolFixture 只验证产品事务与RPC边界，不作为真实peer交换的替代证据。

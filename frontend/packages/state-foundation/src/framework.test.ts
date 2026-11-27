@@ -23,7 +23,7 @@ function makeInitializer(): StateCreator<DemoState, [['zustand/persist', unknown
 
 describe('createPersistStore', () => {
   let memory: ReturnType<typeof createMemoryStorage<Partial<DemoState>>>;
-  const KEY = 'clouddrive.test.persist';
+  const KEY = 'neocloud.test.persist';
 
   beforeEach(() => {
     window.localStorage.clear();

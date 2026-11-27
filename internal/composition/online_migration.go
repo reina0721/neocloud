@@ -3,10 +3,10 @@ package composition
 import (
 	"context"
 
-	databaseapp "github.com/reina0721/clouddrive/internal/kernel/app/database"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	"github.com/reina0721/clouddrive/internal/module/migration"
-	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
+	databaseapp "github.com/reina0721/neocloud/internal/kernel/app/database"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/module/migration"
+	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
 )
 
 func backupOnlineMigrationSnapshot(ctx context.Context, snapshot config.Snapshot, directory string) (string, error) {

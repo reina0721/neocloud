@@ -30,11 +30,7 @@ for (const [language, source] of [
     ['monday', 1],
     ['sunday', 0],
   ] as const)
-    dayjs.locale(
-      { ...source, name: `clouddrive-${language}-${start}`, weekStart },
-      undefined,
-      true,
-    );
+    dayjs.locale({ ...source, name: `neocloud-${language}-${start}`, weekStart }, undefined, true);
 
 export default function DatePickerCalendar({
   label,
@@ -47,7 +43,7 @@ export default function DatePickerCalendar({
 }: DatePickerFieldProps) {
   const { locale, weekStart } = useControlLocale();
   const chinese = locale.startsWith('zh');
-  const adapterLocale = `clouddrive-${chinese ? 'zh' : 'en'}-${weekStart ?? (chinese ? 'monday' : 'sunday')}`;
+  const adapterLocale = `neocloud-${chinese ? 'zh' : 'en'}-${weekStart ?? (chinese ? 'monday' : 'sunday')}`;
   const id = useId();
   const [open, setOpen] = useState(defaultOpen);
   return (

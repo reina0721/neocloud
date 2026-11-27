@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/observability"
+	"github.com/reina0721/neocloud/pkg/observability"
 )
 
 type metricsFixture struct{ handler http.Handler }

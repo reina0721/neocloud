@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/module/console/model"
-	"github.com/reina0721/clouddrive/pkg/database"
+	"github.com/reina0721/neocloud/internal/module/console/model"
+	"github.com/reina0721/neocloud/pkg/database"
 	"gorm.io/gorm"
 )
 

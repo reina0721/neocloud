@@ -1,13 +1,13 @@
 'use client';
 
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import type { RequestAuth } from '@clouddrive/surface/api-workbench';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import type { RequestAuth } from '@neocloud/surface/api-workbench';
 import {
   SelectField,
   type SelectOption,
   TextField,
   PasswordField,
-} from '@clouddrive/ui-adapter/form-field';
+} from '@neocloud/ui-adapter/form-field';
 
 export type AuthPanelProps = Readonly<{
   auth: RequestAuth;

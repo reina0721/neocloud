@@ -1,21 +1,21 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { useRegisterDirtySource } from '@clouddrive/plugin-framework/leave-confirm';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { useRegisterDirtySource } from '@neocloud/plugin-framework/leave-confirm';
 import {
   safeParseWorkspaceSnapshot,
   useApiWorkbenchPort,
   type KeyValueEntry,
   type WorkspaceSnapshot,
-} from '@clouddrive/surface/api-workbench';
-import { Panel } from '@clouddrive/ui-adapter/panel';
-import { TabsView, type TabsViewItem } from '@clouddrive/ui-adapter/data-display';
-import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
-import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { ConfirmDialog, DrawerSurface } from '@clouddrive/ui-adapter/overlays';
-import { useContainerBreakpoint } from '@clouddrive/ui-adapter/container-layout';
+} from '@neocloud/surface/api-workbench';
+import { Panel } from '@neocloud/ui-adapter/panel';
+import { TabsView, type TabsViewItem } from '@neocloud/ui-adapter/data-display';
+import { Skeleton } from '@neocloud/ui-adapter/skeleton';
+import { AlertBanner } from '@neocloud/ui-adapter/feedback';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { ConfirmDialog, DrawerSurface } from '@neocloud/ui-adapter/overlays';
+import { useContainerBreakpoint } from '@neocloud/ui-adapter/container-layout';
 import { AlertCircle, Send } from 'lucide-react';
 import { resolveVariableMap } from '../model/interpolate';
 import { historyRequestSnapshot } from '../model/history';

@@ -1,5 +1,5 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import { readAuthConfig } from './config';
 
 /** Environment disclosure belongs to Host composition, never form behavior. */

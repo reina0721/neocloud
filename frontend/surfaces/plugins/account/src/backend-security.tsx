@@ -1,17 +1,17 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { TextField } from '@clouddrive/ui-adapter/form-field';
-import { DataTable, type DataColumn } from '@clouddrive/ui-adapter/data-display';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { TextField } from '@neocloud/ui-adapter/form-field';
+import { DataTable, type DataColumn } from '@neocloud/ui-adapter/data-display';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
 import { useRequiredAdministration } from '../../../src/administration/context';
 import { useRemote, RemoteRegion } from '../../../src/administration/resource-state';
 import type { AccessToken } from '../../../src/administration/model';
 import { IdentityError } from '../../../src/identity/errors';
 import { useProductAccess } from '../../../src/identity/use-access';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
 import { NavigationIcon } from '../../../src/navigation-icon-presentation';
 
 function MfaAction({

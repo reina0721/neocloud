@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	pkgclock "github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/coordination"
-	pkgexecution "github.com/reina0721/clouddrive/pkg/execution"
-	"github.com/reina0721/clouddrive/pkg/logger"
-	pkgobservability "github.com/reina0721/clouddrive/pkg/observability"
-	pkgschedule "github.com/reina0721/clouddrive/pkg/schedule"
+	pkgclock "github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/coordination"
+	pkgexecution "github.com/reina0721/neocloud/pkg/execution"
+	"github.com/reina0721/neocloud/pkg/logger"
+	pkgobservability "github.com/reina0721/neocloud/pkg/observability"
+	pkgschedule "github.com/reina0721/neocloud/pkg/schedule"
 )
 
 func TestResourcePrepareDoesNotStartAndActivateRunsThroughGovernance(t *testing.T) {

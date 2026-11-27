@@ -1,12 +1,12 @@
 'use client';
 import './install-translations';
-import { ProductMasthead } from '@clouddrive/surface-foundation/layout';
+import { ProductMasthead } from '@neocloud/surface-foundation/layout';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Cloud, Upload, FileText, Folder, Languages, Moon, Share2, Sun } from 'lucide-react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { CurrentSiteLogo, useSiteProfile } from '@clouddrive/surface/administration/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { CurrentSiteLogo, useSiteProfile } from '@neocloud/surface/administration/runtime';
 import { useShellStore } from '../state/use-shell-store';
 import { EnvironmentNotice } from './environment-notice';
 

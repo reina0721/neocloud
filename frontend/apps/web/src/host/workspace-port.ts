@@ -1,7 +1,7 @@
 /**
  * Host —— Workspace Port 实现（composition root 装配）。
  *
- * 把 `@clouddrive/plugin-framework/workspace` 契约接到 Host workspace store：
+ * 把 `@neocloud/plugin-framework/workspace` 契约接到 Host workspace store：
  * - 页面先 registerPageState 声明白名单/版本；save 按该描述过滤草稿字段（白名单）；
  * - 草稿冲突（另一窗口/时序已有不同草稿）不静默覆盖 → 返回 conflict；
  * - 业务提交成功后页面调用 clearPageState。
@@ -10,7 +10,7 @@ import type {
   PageState,
   PageStateDescriptor,
   WorkspacePort,
-} from '@clouddrive/plugin-framework/workspace';
+} from '@neocloud/plugin-framework/workspace';
 import { useWorkspaceStore } from '../state/use-workspace-store';
 
 const descriptors = new Map<string, PageStateDescriptor<string>>();

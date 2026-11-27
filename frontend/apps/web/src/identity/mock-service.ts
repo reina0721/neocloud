@@ -21,7 +21,7 @@ import {
   type IdentityPort,
   type DirectoryUser,
   type IdentityPermission,
-} from '@clouddrive/surface/identity';
+} from '@neocloud/surface/identity';
 import { passwordDigest } from '../auth/mock-adapter';
 import { readMockDatabase, mutateMockDatabase, type MockDatabase } from './mock-database';
 

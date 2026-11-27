@@ -1,4 +1,4 @@
-import { FilesError, type PDFReaderLimits } from '@clouddrive/surface/files';
+import { FilesError, type PDFReaderLimits } from '@neocloud/surface/files';
 import assets from './assets.json';
 import {
   isPdfReaderState,

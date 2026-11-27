@@ -1,18 +1,18 @@
 'use client';
 import { useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import {
   useApiWorkbenchPort,
   type ApiCollection,
   type ApiRequestDefinition,
   type TaskDefinition,
-} from '@clouddrive/surface/api-workbench';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { AlertBanner } from '@clouddrive/ui-adapter/feedback';
-import { DestructiveConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
-import { SelectField, SwitchField, TextField } from '@clouddrive/ui-adapter/form-field';
+} from '@neocloud/surface/api-workbench';
+import { Action } from '@neocloud/ui-adapter/action';
+import { AlertBanner } from '@neocloud/ui-adapter/feedback';
+import { DestructiveConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
+import { SelectField, SwitchField, TextField } from '@neocloud/ui-adapter/form-field';
 import { Clock, Play, Plus, Trash2 } from 'lucide-react';
 import { runCollectionBatch } from '../model/runner';
 import { useWorkbenchStore } from '../../stores/workbench';

@@ -2,7 +2,7 @@ package model
 
 import (
 	"errors"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/pkg/idgen"
 	"time"
 )
 

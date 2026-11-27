@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/service"
+	"github.com/reina0721/neocloud/internal/module/iam/service"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 // TestIAMRBACSQLiteRuntimeFlow 验证真实 SQLite runtime 的授权闭环：

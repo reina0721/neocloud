@@ -1,20 +1,20 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Collection } from '@clouddrive/surface-foundation/collection';
-import { EntitySummary, SettingsLayout } from '@clouddrive/surface-foundation/detail-settings';
-import { FormActions, FormStatus } from '@clouddrive/surface-foundation/form-actions';
-import { Page, PageHeader, Section, SplitView } from '@clouddrive/surface-foundation/layout';
+import { Collection } from '@neocloud/surface-foundation/collection';
+import { EntitySummary, SettingsLayout } from '@neocloud/surface-foundation/detail-settings';
+import { FormActions, FormStatus } from '@neocloud/surface-foundation/form-actions';
+import { Page, PageHeader, Section, SplitView } from '@neocloud/surface-foundation/layout';
 import {
   OperationStatus,
   type OperationState,
-} from '@clouddrive/surface-foundation/states-operations';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { SwitchField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { Panel } from '@clouddrive/ui-adapter/panel';
-import { TextLink } from '@clouddrive/ui-adapter/navigation';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { ContentSwapTransition } from '@clouddrive/ui-adapter/content-swap-transition';
+} from '@neocloud/surface-foundation/states-operations';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { SwitchField, TextField } from '@neocloud/ui-adapter/form-field';
+import { Panel } from '@neocloud/ui-adapter/panel';
+import { TextLink } from '@neocloud/ui-adapter/navigation';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { ContentSwapTransition } from '@neocloud/ui-adapter/content-swap-transition';
 import { Clock3, FileText } from 'lucide-react';
 export type PageArchetypeKind = 'overview' | 'detail' | 'settings' | 'master-detail' | 'operation';
 export function PageArchetypeShowcase({ kind }: Readonly<{ kind: PageArchetypeKind }>) {

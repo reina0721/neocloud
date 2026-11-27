@@ -4,8 +4,8 @@ package migration
 import (
 	"embed"
 
-	"github.com/reina0721/clouddrive/pkg/database"
-	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
+	"github.com/reina0721/neocloud/pkg/database"
+	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
 )
 
 const CurrentVersion uint = 3

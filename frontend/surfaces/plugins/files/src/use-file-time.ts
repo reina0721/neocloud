@@ -1,8 +1,8 @@
 'use client';
 import { useSyncExternalStore } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { formatInstant, formatInstantDate } from '@clouddrive/i18n/format';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { formatInstant, formatInstantDate } from '@neocloud/i18n/format';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
 import type { Preferences } from '../../../src/preferences-model';
 
 /** useFileTime 订阅既有区域偏好，统一文件瞬间显示，不持有第二套设置。 */

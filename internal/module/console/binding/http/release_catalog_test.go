@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	permission "github.com/reina0721/clouddrive/internal/permission"
+	permission "github.com/reina0721/neocloud/internal/permission"
 )
 
 func TestReleaseCatalogReusesConsolePermission(t *testing.T) {

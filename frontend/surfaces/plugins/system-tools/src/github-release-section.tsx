@@ -2,12 +2,12 @@
 
 import { useState, useSyncExternalStore } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { formatInstant } from '@clouddrive/i18n/format';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { Section } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { DisclosurePanel } from '@clouddrive/ui-adapter/disclosure';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { formatInstant } from '@neocloud/i18n/format';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { Section } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { DisclosurePanel } from '@neocloud/ui-adapter/disclosure';
 import { RuntimeReadError, type ReleaseCatalog } from '../../../src/administration/runtime-model';
 import { formatFileBytes } from '../../../src/files/format';
 import type { Preferences } from '../../../src/preferences-model';

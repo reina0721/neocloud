@@ -3,7 +3,7 @@ package repo
 import (
 	"context"
 
-	"github.com/reina0721/clouddrive/internal/module/files/service"
+	"github.com/reina0721/neocloud/internal/module/files/service"
 )
 
 const fileIconRulesID = "file-icon-rules"

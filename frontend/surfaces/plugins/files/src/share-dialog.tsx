@@ -1,11 +1,11 @@
 'use client';
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { PasswordField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { DisclosurePanel } from '@clouddrive/ui-adapter/disclosure';
-import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { PasswordField, TextField } from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { DisclosurePanel } from '@neocloud/ui-adapter/disclosure';
+import { DescriptionList } from '@neocloud/ui-adapter/description-list';
 import { Share2 } from '../../../src/files/icons';
 import { shareAudienceChoice } from './share-audience-choice';
 import { useFiles } from '../../../src/files/runtime';

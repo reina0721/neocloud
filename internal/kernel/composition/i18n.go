@@ -3,9 +3,9 @@ package composition
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	i18napp "github.com/reina0721/clouddrive/internal/kernel/app/i18n"
-	pkgi18n "github.com/reina0721/clouddrive/pkg/i18n"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	i18napp "github.com/reina0721/neocloud/internal/kernel/app/i18n"
+	pkgi18n "github.com/reina0721/neocloud/pkg/i18n"
 )
 
 func composeI18n(plan *app.Plan) (app.Added[pkgi18n.Translator], error) {

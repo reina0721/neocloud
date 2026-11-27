@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	pkgdatabase "github.com/reina0721/clouddrive/pkg/database"
+	pkgdatabase "github.com/reina0721/neocloud/pkg/database"
 )
 
 // ReadStatus 只读查询 migration version table，不创建或修改 schema。

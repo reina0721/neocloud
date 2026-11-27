@@ -1,7 +1,7 @@
 /**
  * Plugin Framework —— Navigation Administration Capability（client）。
  *
- * `@clouddrive/plugin-framework/navigation-admin`：菜单管理（业务呈现覆盖）的公共
+ * `@neocloud/plugin-framework/navigation-admin`：菜单管理（业务呈现覆盖）的公共
  * 契约 + Provider/hook。Host 注入实现（Host 拥有的持久化 store），Plugin 只能读
  * 部署期路由目录 + 写呈现覆盖，不能自建路由或导航真相。
  *

@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/cli"
+	"github.com/reina0721/neocloud/pkg/cli"
 )
 
 // Commands declares the native update entry in the normal application CLI.

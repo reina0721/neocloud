@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"sort"
 
-	pkgmessaging "github.com/reina0721/clouddrive/pkg/messaging"
-	pkgschedule "github.com/reina0721/clouddrive/pkg/schedule"
-	"github.com/reina0721/clouddrive/pkg/supervisor"
+	pkgmessaging "github.com/reina0721/neocloud/pkg/messaging"
+	pkgschedule "github.com/reina0721/neocloud/pkg/schedule"
+	"github.com/reina0721/neocloud/pkg/supervisor"
 )
 
 // ID 是应用模块在单个进程内的稳定唯一标识。

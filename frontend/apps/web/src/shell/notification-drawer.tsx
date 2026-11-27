@@ -1,11 +1,11 @@
 'use client';
 import { CheckCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { formatRelativeTime, formatTimeOfDay, useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
-import { DrawerSurface } from '@clouddrive/ui-adapter/overlays';
-import type { useProductInbox } from '@clouddrive/surface/identity/runtime';
+import { formatRelativeTime, formatTimeOfDay, useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
+import { DrawerSurface } from '@neocloud/ui-adapter/overlays';
+import type { useProductInbox } from '@neocloud/surface/identity/runtime';
 import { proceedAfterLeaveConfirm } from '../host/leave-confirm';
 import { routeTargetResolver } from '../host/route-target-resolver';
 import { useShellStore } from '../state/use-shell-store';

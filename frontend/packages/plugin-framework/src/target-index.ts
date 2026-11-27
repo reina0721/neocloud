@@ -1,7 +1,7 @@
 /**
  * Plugin Framework —— Route Target 子路径（纯模块，Server/Client 均可 import）。
  *
- * `@clouddrive/plugin-framework/target` 只含纯函数与类型：route() 创建 symbolic
+ * `@neocloud/plugin-framework/target` 只含纯函数与类型：route() 创建 symbolic
  * target、encodeSegment/resolveTargetHref 构造 href。无 React/Next/浏览器依赖，
  * Server Component 与 Client Component 均可安全 import。
  *

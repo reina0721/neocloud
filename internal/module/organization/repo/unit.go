@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/reina0721/clouddrive/pkg/database"
+	"github.com/reina0721/neocloud/pkg/database"
 	"gorm.io/gorm"
 )
 

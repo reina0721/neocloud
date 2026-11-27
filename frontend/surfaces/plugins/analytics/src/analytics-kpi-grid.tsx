@@ -1,8 +1,8 @@
 'use client';
 
-import { formatNumber, useFrontendTranslation } from '@clouddrive/i18n';
-import { Panel } from '@clouddrive/ui-adapter/panel';
-import { Sparkline, type SparklineTone } from '@clouddrive/ui-adapter/charts';
+import { formatNumber, useFrontendTranslation } from '@neocloud/i18n';
+import { Panel } from '@neocloud/ui-adapter/panel';
+import { Sparkline, type SparklineTone } from '@neocloud/ui-adapter/charts';
 import { ArrowDownRight, ArrowUpRight, Download, Eye, Gauge, Users } from 'lucide-react';
 import type { ComponentType, SVGProps } from 'react';
 

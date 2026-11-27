@@ -1,19 +1,19 @@
 'use client';
 
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { LiveRegion } from '@clouddrive/ui-adapter/accessibility';
-import { AsyncRegion, type AsyncRegionPhase } from '@clouddrive/ui-adapter/async-region';
-import { BusyIndicator } from '@clouddrive/ui-adapter/busy-indicator';
-import { DisclosurePanel } from '@clouddrive/ui-adapter/disclosure';
-import { Skeleton } from '@clouddrive/ui-adapter/skeleton';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { ToggleGroup } from '@clouddrive/ui-adapter/toggle-group';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { LiveRegion } from '@neocloud/ui-adapter/accessibility';
+import { AsyncRegion, type AsyncRegionPhase } from '@neocloud/ui-adapter/async-region';
+import { BusyIndicator } from '@neocloud/ui-adapter/busy-indicator';
+import { DisclosurePanel } from '@neocloud/ui-adapter/disclosure';
+import { Skeleton } from '@neocloud/ui-adapter/skeleton';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { ToggleGroup } from '@neocloud/ui-adapter/toggle-group';
 import { CircleAlert, Inbox } from 'lucide-react';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 
 import { MotionInspector } from '../src/motion-inspector';
-import { ViewportReveal } from '@clouddrive/surface-foundation/viewport-reveal';
+import { ViewportReveal } from '@neocloud/surface-foundation/viewport-reveal';
 
 const asyncPhases: readonly AsyncRegionPhase[] = [
   'initial',

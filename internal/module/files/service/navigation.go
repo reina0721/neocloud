@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/internal/module/files/model"
+	"github.com/reina0721/neocloud/pkg/idgen"
 )
 
 const ShortcutMediaType = "application/vnd.clouddrive.share-shortcut"

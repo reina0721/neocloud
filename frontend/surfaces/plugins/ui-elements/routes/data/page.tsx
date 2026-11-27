@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { PageLoadingSurface } from '@clouddrive/surface-foundation/states-operations';
+import { PageLoadingSurface } from '@neocloud/surface-foundation/states-operations';
 
 import { DataElementsPage } from '../../src/data-elements-page';
 

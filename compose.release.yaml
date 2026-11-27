@@ -19,7 +19,7 @@ x-backend: &backend
     APP_SCHEDULER__ENABLED: "true"
   volumes:
     - type: bind
-      source: ${CLOUDDRIVE_RELEASE_DATA_DIR:-./data}
+      source: ${NEOCLOUD_RELEASE_DATA_DIR:-${CLOUDDRIVE_RELEASE_DATA_DIR:-./data}}
       target: /app/.data
       bind:
         create_host_path: false
@@ -40,9 +40,9 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      CLOUDDRIVE_BACKEND_URL: http://backend:8080
-      CLOUDDRIVE_ALLOWED_ORIGINS: '${ALLOWED_ORIGINS:-[]}'
-      CLOUDDRIVE_PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-}
+      NEOCLOUD_BACKEND_URL: http://backend:8080
+      NEOCLOUD_ALLOWED_ORIGINS: '${ALLOWED_ORIGINS:-[]}'
+      NEOCLOUD_PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-}
     ports:
       - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-4173}:4173"
     depends_on: [backend]

@@ -1,4 +1,4 @@
-import { createLocalStorage, createPersistStore } from '@clouddrive/state-foundation';
+import { createLocalStorage, createPersistStore } from '@neocloud/state-foundation';
 
 /**
  * Host —— 导航业务覆盖 store（菜单管理持久化真相）。
@@ -7,12 +7,12 @@ import { createLocalStorage, createPersistStore } from '@clouddrive/state-founda
  * - 部署期 Plugin Registry（codegen 产物）决定路由与导航的**存在性**，运行期只读；
  * - 本 store 只保存业务呈现覆盖：可见性、标题、排序、所需权限码；不新增路由、
  *   不改变授权真相（后端/数据服务仍是授权边界）；
- * - 菜单管理 Plugin 经 `@clouddrive/plugin-framework/navigation-admin` Port 读写，
+ * - 菜单管理 Plugin 经 `@neocloud/plugin-framework/navigation-admin` Port 读写，
  *   Shell 经 `useProductNavigation` 应用同一份数据 —— 单一持久化真相；
- * - key `clouddrive.navigation-admin` v1，损坏记录拒绝静默覆盖（页面呈现恢复动作）。
+ * - key `neocloud.navigation-admin` v1，损坏记录拒绝静默覆盖（页面呈现恢复动作）。
  */
 
-export const NAVIGATION_ADMIN_KEY = 'clouddrive.navigation-admin';
+export const NAVIGATION_ADMIN_KEY = 'neocloud.navigation-admin';
 export const NAVIGATION_ADMIN_VERSION = 1;
 
 export type NavigationOverride = Readonly<{

@@ -9,10 +9,10 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
-	messagingapp "github.com/reina0721/clouddrive/internal/kernel/app/messaging"
-	pkgclock "github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/logger"
-	pkgmessaging "github.com/reina0721/clouddrive/pkg/messaging"
+	messagingapp "github.com/reina0721/neocloud/internal/kernel/app/messaging"
+	pkgclock "github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/logger"
+	pkgmessaging "github.com/reina0721/neocloud/pkg/messaging"
 )
 
 func TestDecodeDeliveryValidatesEnvelopeAndMapsDeliveryCount(t *testing.T) {

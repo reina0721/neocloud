@@ -1,6 +1,6 @@
 # 项目协作规则
 
-CloudDrive 是文件与协作产品，根 Go 服务与 `frontend/` Web Host 分进程运行。先读[项目入口](README.md)、[范围](docs/repository-scope.md)与相关主题，再定位代码和真实使用方。用户当前授权和约束优先于历史方案。
+NeoCloud 是文件与协作产品，根 Go 服务与 `frontend/` Web Host 分进程运行。先读[项目入口](README.md)、[范围](docs/repository-scope.md)与相关主题，再定位代码和真实使用方。用户当前授权和约束优先于历史方案。
 
 ## 实施
 

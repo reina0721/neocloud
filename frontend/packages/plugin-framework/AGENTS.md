@@ -1,13 +1,13 @@
 # Plugin Framework 开发约束
 
-本目录是 `@clouddrive/plugin-framework`：Plugin 契约与纯模型层
+本目录是 `@neocloud/plugin-framework`：Plugin 契约与纯模型层
 （Plugin Contract、Route Target、Registry、Navigation Resolution、Diagnostics、
 Host Port / Host Capability、Route Context、Navigation Contract 子路径）。
 
 - 本目录只定义类型、纯规则与可独立测试的模型；**不实现 Router、不读取 pathname、
   不维护 history、不复制 Next Route Runtime**。唯一真实 Router 是 Next.js App Router，
   其实现只存在于 Host（`apps/web`）的 Port adapter。
-- Plugin 只通过 `@clouddrive/plugin-framework/plugin` 子路径消费 API
+- Plugin 只通过 `@neocloud/plugin-framework/plugin` 子路径消费 API
   （`route`/`RouteLink`/`usePluginNavigation`/`usePluginLocale`/稳定
   Page/Layout/Loading/Error props）；Route Context 通过 `/route-context` 子路径消费；
   Sidebar Navigation Contribution 类型经 `/navigation` 子路径（navigation-contract.ts）。

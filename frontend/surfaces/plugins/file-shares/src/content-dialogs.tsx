@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { TextField, TextAreaField } from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { TextField, TextAreaField } from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
 import { FileMedia, usePublicFiles } from '../../../src/files/runtime';
 import { FilesError, type PublicFileEntry } from '../../../src/files/model';
 import { publicMediaEntry, publicTextEntry } from './public-entry';

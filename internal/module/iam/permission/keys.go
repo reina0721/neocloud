@@ -1,7 +1,7 @@
 // Package permission 定义 IAM 业务规则使用的稳定精确权限键。
 package permission
 
-import permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
+import permissioncatalog "github.com/reina0721/neocloud/internal/permission"
 
 const (
 	SelfRead             permissioncatalog.Key = "iam:account:self:read"

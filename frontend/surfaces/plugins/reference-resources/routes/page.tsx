@@ -1,11 +1,11 @@
 'use client';
 
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
-import { StatusPill, type StatusTone } from '@clouddrive/ui-adapter/status-pill';
-import { Panel } from '@clouddrive/ui-adapter/panel';
-import { useCommandsPort } from '@clouddrive/plugin-framework/commands';
-import { route, RouteLink, usePluginNavigation } from '@clouddrive/plugin-framework/plugin';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
+import { StatusPill, type StatusTone } from '@neocloud/ui-adapter/status-pill';
+import { Panel } from '@neocloud/ui-adapter/panel';
+import { useCommandsPort } from '@neocloud/plugin-framework/commands';
+import { route, RouteLink, usePluginNavigation } from '@neocloud/plugin-framework/plugin';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import { useEffect } from 'react';
 
 import type { ReferenceResource } from '../data';

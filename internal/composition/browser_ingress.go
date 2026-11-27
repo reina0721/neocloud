@@ -13,7 +13,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 type nativeBrowserSchemeKey struct{}
@@ -73,11 +73,11 @@ func (p browserIngress) wrap(next http.Handler) http.Handler {
 				return
 			}
 		}
-		for _, key := range []string{"Forwarded", "X-Forwarded-Host", "X-Forwarded-Proto", "X-Forwarded-Port"} {
+		for _, key := range []string{"Forwarded", "X-Forwarded-Host", "X-Forwarded-Proto", "X-Forwarded-Port", "X-CloudDrive-Web-Origin", "X-NeoCloud-Web-Origin"} {
 			r.Header.Del(key)
 		}
 		// Display metadata must never copy a client value or act as a permission grant.
-		r.Header.Set("X-CloudDrive-Web-Origin", origin)
+		r.Header.Set("X-NeoCloud-Web-Origin", origin)
 		next.ServeHTTP(w, httpx.WithVerifiedRequestOrigin(r, origin))
 	})
 }

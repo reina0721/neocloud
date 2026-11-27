@@ -90,45 +90,56 @@ func fileDigest(path string) (string, error) {
 }
 
 func VerifyRelease(ctx context.Context, dir, version string) error {
+	_, err := verifyOnlineRelease(ctx, dir, version)
+	return err
+}
+
+func verifyOnlineRelease(ctx context.Context, dir, version string) (signedOfflineRelease, error) {
+	release := signedOfflineRelease{version: version}
 	if !versionPattern.MatchString(version) {
-		return errors.New("维护只接受正式版本")
+		return release, errors.New("维护只接受正式版本")
 	}
 	source, err := openOfflineDir(dir)
 	if err != nil {
-		return err
+		return release, err
 	}
 	defer source.Close()
-	bundle, err := readOfflineFile(source, offlineBundle)
+	release.bundle, err = readOfflineFile(source, offlineBundle)
 	if err != nil {
-		return err
+		return release, err
 	}
-	if _, err = verifyBundleFormat(bundle); err != nil {
-		return err
+	if _, err = verifyBundleFormat(release.bundle); err != nil {
+		return release, err
 	}
-	checksums, err := readOfflineFile(source, offlineChecksums)
+	release.checksums, err = readOfflineFile(source, offlineChecksums)
 	if err != nil {
-		return err
+		return release, err
 	}
-	staged, err := os.CreateTemp("", "clouddrive-release-*.sigstore.json")
+	if err = verifyOnlineSignature(ctx, release); err != nil {
+		return release, err
+	}
+	release.digests, err = parseReleaseDigests(release.checksums)
+	return release, err
+}
+
+func verifyOnlineSignature(ctx context.Context, release signedOfflineRelease) error {
+	staged, err := os.CreateTemp("", "neocloud-release-*.sigstore.json")
 	if err != nil {
 		return err
 	}
 	defer os.Remove(staged.Name())
-	_, err = staged.Write(bundle)
+	_, err = staged.Write(release.bundle)
 	if err = errors.Join(err, staged.Close()); err != nil {
 		return err
 	}
-	cosign := os.Getenv("CLOUDDRIVE_COSIGN")
-	if cosign == "" {
-		cosign = "cosign"
-	}
+	cosign := releaseCosign()
 	// #nosec G204 G702 -- cosign 由安装者配置，证书身份的 tag 已限定格式，参数独立传递。
 	command := exec.CommandContext(ctx, cosign, "verify-blob",
 		"--bundle", staged.Name(),
-		"--certificate-identity", releaseOrigin+"/.github/workflows/release.yml@refs/tags/"+version,
+		"--certificate-identity", releaseOrigin+"/.github/workflows/release.yml@refs/tags/"+release.version,
 		"--certificate-oidc-issuer", "https://token.actions.githubusercontent.com",
 		"-")
-	command.Stdin = bytes.NewReader(checksums)
+	command.Stdin = bytes.NewReader(release.checksums)
 	if err := command.Run(); err != nil {
 		return fmt.Errorf("正式发布签名验证失败: %w", err)
 	}
@@ -189,14 +200,59 @@ func (s *Releases) Package(ctx context.Context, dir, version string) error {
 			return err
 		}
 	}
-	if err := VerifyRelease(ctx, dir, version); err != nil {
+	release, err := verifyOnlineRelease(ctx, dir, version)
+	if err != nil {
 		return err
 	}
-	asset := fmt.Sprintf("clouddrive_%s_linux_%s_docker.tar.gz", version, runtime.GOARCH)
+	_, asset, err := release.dockerAsset(runtime.GOARCH)
+	if err != nil {
+		return err
+	}
 	if err := s.download(ctx, dir, version, asset, 6<<30); err != nil {
 		return err
 	}
-	return VerifyAsset(dir, asset)
+	return release.verifyDockerDigest(ctx, dir, asset)
+}
+
+func (release signedOfflineRelease) verifyDockerDigest(ctx context.Context, dir, asset string) error {
+	root, err := openOfflineDir(dir)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	verified, err := release.openVerified(ctx, root, asset, offlineArchive)
+	if err != nil {
+		return err
+	}
+	return verified.Close()
+}
+
+func dockerAssetInChecksums(dir, version, arch string) (string, error) {
+	root, err := openOfflineDir(dir)
+	if err != nil {
+		return "", err
+	}
+	defer root.Close()
+	checksums, err := readOfflineFile(root, offlineChecksums)
+	if err != nil {
+		return "", err
+	}
+	digests, err := parseReleaseDigests(checksums)
+	if err != nil {
+		return "", err
+	}
+	_, name, err := (signedOfflineRelease{version: version, digests: digests}).dockerAsset(arch)
+	return name, err
+}
+
+func releaseCosign() string {
+	if executable := os.Getenv("NEOCLOUD_COSIGN"); executable != "" {
+		return executable
+	}
+	if executable := os.Getenv("CLOUDDRIVE_COSIGN"); executable != "" {
+		return executable
+	}
+	return "cosign"
 }
 
 func (s *Releases) download(ctx context.Context, dir, version, asset string, limit int64) error {

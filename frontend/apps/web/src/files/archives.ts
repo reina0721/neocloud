@@ -7,7 +7,7 @@ import {
   type ArchiveAccess,
   type ArchivesPort,
   type ArchiveMember,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import type { createJsonClient } from '../api/json-client';
 import { downloadBlob } from './native-download';
 import { rasterType } from './media-signatures';

@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"path/filepath"
 
-	"github.com/reina0721/clouddrive/internal/module/files/service"
+	"github.com/reina0721/neocloud/internal/module/files/service"
 )
 
 // 新版本需要刷新协议证据后再接纳；不能仅凭版本字符串更大就假定兼容。

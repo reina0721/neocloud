@@ -1,37 +1,32 @@
 'use client';
 import { lazy, Suspense, useEffect, useId, useState, useSyncExternalStore } from 'react';
-import {
-  useFrontendTranslation,
-  formatDate,
-  formatTimeOfDay,
-  formatNumber,
-} from '@clouddrive/i18n';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
+import { useFrontendTranslation, formatDate, formatTimeOfDay, formatNumber } from '@neocloud/i18n';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
 import {
   Collection,
   CollectionPagination,
   CollectionQuery,
   type CollectionActiveFilter,
-} from '@clouddrive/surface-foundation/collection';
+} from '@neocloud/surface-foundation/collection';
 import {
   CollectionToolbar,
   type ColumnSettingsText,
   type DensityLevel,
-} from '@clouddrive/surface-foundation/collection-tools';
-import { normalizeColumnLayout, toCsv, type CsvColumn } from '@clouddrive/core';
-import type { DataColumn } from '@clouddrive/ui-adapter/data-display';
-import { SearchBox } from '@clouddrive/ui-adapter/search-box';
-import { SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { BusyIndicator } from '@clouddrive/ui-adapter/busy-indicator';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { PaginationControl } from '@clouddrive/ui-adapter/navigation';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { route, RouteLink, usePluginNavigation } from '@clouddrive/plugin-framework/plugin';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { rehydrateStore } from '@clouddrive/state-foundation';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
+} from '@neocloud/surface-foundation/collection-tools';
+import { normalizeColumnLayout, toCsv, type CsvColumn } from '@neocloud/core';
+import type { DataColumn } from '@neocloud/ui-adapter/data-display';
+import { SearchBox } from '@neocloud/ui-adapter/search-box';
+import { SelectField, TextField } from '@neocloud/ui-adapter/form-field';
+import { BusyIndicator } from '@neocloud/ui-adapter/busy-indicator';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { PaginationControl } from '@neocloud/ui-adapter/navigation';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { route, RouteLink, usePluginNavigation } from '@neocloud/plugin-framework/plugin';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { rehydrateStore } from '@neocloud/state-foundation';
+import type { Preferences } from '@neocloud/surface/preferences-model';
 import { RefreshCw } from '../../../src/action-icons';
 import {
   IdentityError,
@@ -40,7 +35,7 @@ import {
   useIdentityPort,
   type AuditQuery,
   type AuditRecord,
-} from '@clouddrive/surface/identity/runtime';
+} from '@neocloud/surface/identity/runtime';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import {
   IdentityModeNotice,
@@ -51,7 +46,7 @@ import {
 import { useAuditColumnLayoutStore } from '../stores/column-layout';
 import { browserCsvExport } from './csv-export';
 const DatePickerField = lazy(() =>
-  import('@clouddrive/ui-adapter/date-picker-field').then((module) => ({
+  import('@neocloud/ui-adapter/date-picker-field').then((module) => ({
     default: module.DatePickerField,
   })),
 );

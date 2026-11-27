@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	authservice "github.com/reina0721/clouddrive/internal/module/auth/service"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	authmodel "github.com/reina0721/neocloud/internal/module/auth/model"
+	authservice "github.com/reina0721/neocloud/internal/module/auth/service"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 const (

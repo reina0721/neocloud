@@ -16,21 +16,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/deployment"
+	"github.com/reina0721/neocloud/internal/deployment"
 )
 
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	if err := run(ctx, os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "CloudDrive 维护:", err)
+		fmt.Fprintln(os.Stderr, "NeoCloud 维护:", err)
 		os.Exit(1)
 	}
 }
 
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return errors.New("需要 enable、worker、gateway、client、local、import-release 或 verify-release")
+		return errors.New("需要 enable、worker、gateway、client、local、rename、import-release 或 verify-release")
 	}
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	root := flags.String("root", "", "安装目录")
@@ -40,6 +40,7 @@ func run(ctx context.Context, args []string) error {
 	trusted := flags.String("trusted-proxy", "", "代理 IP")
 	action := flags.String("action", "status", "操作")
 	target := flags.String("target", "", "版本或恢复点")
+	targetRoot := flags.String("target-root", "", "改名后的安装目录")
 	confirm := flags.String("confirm", "", "恢复点确认")
 	offline := flags.Bool("offline", false, "只使用已校验的本地发布包")
 	releaseDir := flags.String("release-dir", "", "离线发布资产目录")
@@ -68,6 +69,12 @@ func run(ctx context.Context, args []string) error {
 		}
 	}
 	switch mode {
+	case "rename":
+		result, err := deployment.RenameDockerInstance(ctx, *action, *root, *target, *targetRoot, *dockerHost)
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(os.Stdout).Encode(result)
 	case "verify-release":
 		if *releaseDir == "" || *version == "" || *trustDir == "" {
 			return errors.New("验证离线发布包需要 --release-dir、--version 和 --trust-dir")

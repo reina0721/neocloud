@@ -7,7 +7,7 @@ import {
   type ResolvedRequest,
   type TaskDefinition,
   type WorkspaceSnapshot,
-} from '@clouddrive/surface/api-workbench';
+} from '@neocloud/surface/api-workbench';
 
 export function ApiWorkbenchRuntime({ children }: Readonly<{ children: ReactNode }>) {
   const [port] = useState<ApiWorkbenchPort>(() => {

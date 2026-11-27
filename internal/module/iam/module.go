@@ -4,19 +4,19 @@ package iam
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/module"
-	passwordadapter "github.com/reina0721/clouddrive/internal/module/iam/adapter/password"
-	"github.com/reina0721/clouddrive/internal/module/iam/authorization"
-	configbinding "github.com/reina0721/clouddrive/internal/module/iam/binding/config"
-	httpbinding "github.com/reina0721/clouddrive/internal/module/iam/binding/http"
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
-	"github.com/reina0721/clouddrive/internal/module/iam/service"
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
-	pkgalerting "github.com/reina0721/clouddrive/pkg/alerting"
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/httpx"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/internal/module"
+	passwordadapter "github.com/reina0721/neocloud/internal/module/iam/adapter/password"
+	"github.com/reina0721/neocloud/internal/module/iam/authorization"
+	configbinding "github.com/reina0721/neocloud/internal/module/iam/binding/config"
+	httpbinding "github.com/reina0721/neocloud/internal/module/iam/binding/http"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
+	"github.com/reina0721/neocloud/internal/module/iam/service"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
+	pkgalerting "github.com/reina0721/neocloud/pkg/alerting"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/httpx"
+	"github.com/reina0721/neocloud/pkg/idgen"
 )
 
 const moduleID module.ID = "iam"
@@ -104,3 +104,7 @@ func NewHTTP(dependencies HTTPDependencies) (HTTPModule, error) {
 }
 
 func (m HTTPModule) SessionCookieName() string { return m.Cookies.Name(service.SessionCookieName) }
+
+func (m HTTPModule) LegacySessionCookieName() string {
+	return m.Cookies.Name(service.LegacySessionCookieName)
+}

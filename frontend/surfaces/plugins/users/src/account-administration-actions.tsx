@@ -1,12 +1,12 @@
 'use client';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { PasswordField } from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { Section } from '@clouddrive/surface-foundation/layout';
-import { IdentityError, type DirectoryUser } from '@clouddrive/surface/identity/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { PasswordField } from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { Section } from '@neocloud/surface-foundation/layout';
+import { IdentityError, type DirectoryUser } from '@neocloud/surface/identity/runtime';
 import { IdentityMutationError } from '../../../src/identity/query-state';
 import { useRequiredAdministration } from '../../../src/administration/context';
 

@@ -1,4 +1,4 @@
-import type { NavigationGroup } from '@clouddrive/types';
+import type { NavigationGroup } from '@neocloud/types';
 
 import { createPluginNavigationGroups } from './plugin-navigation';
 

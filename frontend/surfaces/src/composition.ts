@@ -12,8 +12,8 @@
  * 保证 Host 只消费已验证的 valid navigation model。
  */
 
-import type { RegistryModel } from '@clouddrive/plugin-framework';
-import type { TranslationResources } from '@clouddrive/i18n';
+import type { RegistryModel } from '@neocloud/plugin-framework';
+import type { TranslationResources } from '@neocloud/i18n';
 
 import { collectUnknownNavigationIconDiagnostics } from './navigation-icon';
 

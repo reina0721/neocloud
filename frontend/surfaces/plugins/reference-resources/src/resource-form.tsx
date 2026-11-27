@@ -3,19 +3,19 @@ import {
   FoundationForm,
   FoundationControlledField,
   useFoundationForm,
-} from '@clouddrive/form-foundation';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { useRegisterDirtySource } from '@clouddrive/plugin-framework/leave-confirm';
-import { route, RouteLink, usePluginNavigation } from '@clouddrive/plugin-framework/plugin';
-import { useNotificationsPort } from '@clouddrive/plugin-framework/notifications';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { useWorkspacePort } from '@clouddrive/plugin-framework/workspace';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { FormActions } from '@clouddrive/surface-foundation/form-actions';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { SelectField, TextField } from '@clouddrive/ui-adapter/form-field';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
+} from '@neocloud/form-foundation';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { useRegisterDirtySource } from '@neocloud/plugin-framework/leave-confirm';
+import { route, RouteLink, usePluginNavigation } from '@neocloud/plugin-framework/plugin';
+import { useNotificationsPort } from '@neocloud/plugin-framework/notifications';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { useWorkspacePort } from '@neocloud/plugin-framework/workspace';
+import type { Preferences } from '@neocloud/surface/preferences-model';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { FormActions } from '@neocloud/surface-foundation/form-actions';
+import { Action } from '@neocloud/ui-adapter/action';
+import { SelectField, TextField } from '@neocloud/ui-adapter/form-field';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
 import type { ReferenceResource } from '../data';
 import { useResourcesStore } from '../stores/resources';
 import type { ResourceFormValues } from './schema';

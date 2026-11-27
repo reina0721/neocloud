@@ -1,6 +1,6 @@
 version: 2
 
-project_name: clouddrive
+project_name: neocloud
 
 # dist 本身不支持 GoReleaser 模板；scripts/release-config.mjs 从布局渲染此占位符，调用方通过 --config 使用临时配置。
 dist: "{{ .Env.GORELEASER_DIST }}"
@@ -8,7 +8,7 @@ dist: "{{ .Env.GORELEASER_DIST }}"
 builds:
   - id: application
     main: ./cmd/app
-    binary: clouddrive
+    binary: neocloud
     env:
       - CGO_ENABLED=0
     goos:
@@ -94,13 +94,13 @@ release:
   header: |
     CloudDrive 文件与管理工作区，采用 Material Design 组件，提供响应式文件管理、PDF 与媒体阅读，以及悬浮、底部面板和全屏音乐播放器。
 
-    Linux amd64 / arm64 推荐使用离线 Docker 安装包。目标机无需编译源码或访问镜像仓库。下例只监听服务器本机，访问 http://127.0.0.1:4173/setup，使用 ~/clouddrive/.control/setup-token 的令牌创建管理员。持久数据位于 ~/clouddrive/data/。
+    Linux amd64 / arm64 推荐使用离线 Docker 安装包。目标机无需编译源码或访问镜像仓库。下例只监听服务器本机，访问 http://127.0.0.1:4173/setup，使用 ~/neocloud/.control/setup-token 的令牌创建管理员。持久数据位于 ~/neocloud/data/。
 
     ```bash
     curl -fL --proto '=https' --proto-redir '=https' https://github.com/reina0721/neocloud/releases/latest/download/install.sh -o install.sh
-    bash install.sh install --dir "$HOME/clouddrive" --bind 127.0.0.1
-    ~/clouddrive/install.sh check-update
-    ~/clouddrive/install.sh upgrade
+    bash install.sh install --dir "$HOME/neocloud" --bind 127.0.0.1
+    ~/neocloud/install.sh check-update
+    ~/neocloud/install.sh upgrade
     ```
 
     支持启用同址网页运维，在 /maintenance 检查更新、完整备份、升级、回退和恢复。已有实例应先按部署手册升级，再启用网页运维。

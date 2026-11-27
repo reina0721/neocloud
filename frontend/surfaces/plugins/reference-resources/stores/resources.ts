@@ -1,4 +1,4 @@
-import { createAppStore } from '@clouddrive/state-foundation';
+import { createAppStore } from '@neocloud/state-foundation';
 import { getReferenceResources, type ReferenceResource } from '../data';
 
 type ResourceState = {

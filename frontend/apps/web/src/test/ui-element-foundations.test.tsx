@@ -1,9 +1,9 @@
-import { NavigationItem, NavigationTabs } from '@clouddrive/ui-adapter/destination-navigation';
-import { BusyIndicator } from '@clouddrive/ui-adapter/busy-indicator';
-import { Card, CardContent, CardFooter, CardHeader } from '@clouddrive/ui-adapter/card';
-import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
-import { Avatar, UserIdentity } from '@clouddrive/ui-adapter/identity';
-import { BreadcrumbTrail, PaginationControl } from '@clouddrive/ui-adapter/navigation';
+import { NavigationItem, NavigationTabs } from '@neocloud/ui-adapter/destination-navigation';
+import { BusyIndicator } from '@neocloud/ui-adapter/busy-indicator';
+import { Card, CardContent, CardFooter, CardHeader } from '@neocloud/ui-adapter/card';
+import { DescriptionList } from '@neocloud/ui-adapter/description-list';
+import { Avatar, UserIdentity } from '@neocloud/ui-adapter/identity';
+import { BreadcrumbTrail, PaginationControl } from '@neocloud/ui-adapter/navigation';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

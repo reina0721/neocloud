@@ -1,6 +1,6 @@
 /**
  * run-next-dev.mjs — Standalone runner for Next.js dev server in apps/web.
- * Loads Host configuration via @clouddrive/config/node and passes dynamic
+ * Loads Host configuration via @neocloud/config/node and passes dynamic
  * --hostname and --port to Next CLI.
  */
 
@@ -10,7 +10,7 @@ import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { loadConfig } from '@clouddrive/config/node';
+import { loadConfig } from '@neocloud/config/node';
 import { nextDevOptions } from './next-dev-options.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));

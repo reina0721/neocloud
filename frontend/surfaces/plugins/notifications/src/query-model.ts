@@ -1,4 +1,4 @@
-import type { NotificationCategory } from '@clouddrive/plugin-framework/notifications';
+import type { NotificationCategory } from '@neocloud/plugin-framework/notifications';
 export type InboxQuery = {
   q: string;
   category: 'all' | NotificationCategory;

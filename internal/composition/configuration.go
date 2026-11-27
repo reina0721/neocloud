@@ -5,17 +5,22 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	composed "github.com/reina0721/clouddrive/internal/kernel/composition"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	authconfig "github.com/reina0721/clouddrive/internal/module/auth/binding/config"
-	"github.com/reina0721/clouddrive/internal/module/console"
-	filesconfig "github.com/reina0721/clouddrive/internal/module/files/binding/config"
-	iamconfig "github.com/reina0721/clouddrive/internal/module/iam/binding/config"
-	migrationconfig "github.com/reina0721/clouddrive/internal/module/migration/binding/config"
-	opsconfig "github.com/reina0721/clouddrive/internal/module/ops/binding/config"
-	todoconfig "github.com/reina0721/clouddrive/internal/module/todo/binding/config"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	composed "github.com/reina0721/neocloud/internal/kernel/composition"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	authconfig "github.com/reina0721/neocloud/internal/module/auth/binding/config"
+	"github.com/reina0721/neocloud/internal/module/console"
+	filesconfig "github.com/reina0721/neocloud/internal/module/files/binding/config"
+	iamconfig "github.com/reina0721/neocloud/internal/module/iam/binding/config"
+	migrationconfig "github.com/reina0721/neocloud/internal/module/migration/binding/config"
+	opsconfig "github.com/reina0721/neocloud/internal/module/ops/binding/config"
+	todoconfig "github.com/reina0721/neocloud/internal/module/todo/binding/config"
 )
+
+// DefaultEnvironmentPrefix 是正式进程选取配置覆盖值的环境变量前缀。
+const DefaultEnvironmentPrefix = "NEOCLOUD_APP_"
+
+const legacyEnvironmentPrefix = "APP_"
 
 // configurationSource 统一服务与单次命令的实例选择、配置合并顺序和校验规则。
 func (a *Application) configurationSource() (*config.Loader, []config.Binding, error) {
@@ -23,7 +28,12 @@ func (a *Application) configurationSource() (*config.Loader, []config.Binding, e
 	if err != nil {
 		return nil, nil, fmt.Errorf("compose instance configuration bindings: %w", err)
 	}
-	return config.New(config.FileSource(a.config.ConfigPath), config.EnvSource(a.config.EnvironmentPrefix)), bindings, nil
+	prefix := a.config.EnvironmentPrefix
+	var aliases []string
+	if prefix == DefaultEnvironmentPrefix {
+		aliases = []string{legacyEnvironmentPrefix}
+	}
+	return config.New(config.FileSource(a.config.ConfigPath), config.EnvSource(prefix, aliases...)), bindings, nil
 }
 
 // requireReloadableConfiguration 在创建候选之前保护持久化身份与进程级资源。

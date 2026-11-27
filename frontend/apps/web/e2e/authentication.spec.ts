@@ -2,7 +2,7 @@ import { saveEvidenceScreenshot } from './evidence-screenshot';
 import { test, expect, type Page } from '@playwright/test';
 import { e2eBaseUrl } from './base-url';
 import AxeBuilder from '@axe-core/playwright';
-import { defaultPreferences, PREFERENCES_VERSION } from '@clouddrive/surface/preferences-model';
+import { defaultPreferences, PREFERENCES_VERSION } from '@neocloud/surface/preferences-model';
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -42,6 +42,7 @@ test('Registration validates confirmation, displays success and persists only sa
   page,
 }) => {
   await page.goto('/register');
+  await expect(page).toHaveTitle('NeoCloud');
   await page.getByRole('textbox', { name: '姓名', exact: true }).fill('Auth Review');
   await page.getByRole('textbox', { name: '邮箱', exact: true }).fill('review@example.test');
   await page.getByLabel('密码', { exact: true }).fill('UniqueDemoPass2026!');

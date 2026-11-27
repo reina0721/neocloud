@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	storageclient "github.com/reina0721/clouddrive/pkg/storage/client"
-	"github.com/reina0721/clouddrive/pkg/storage/local"
-	"github.com/reina0721/clouddrive/pkg/storage/s3compat"
+	storageclient "github.com/reina0721/neocloud/pkg/storage/client"
+	"github.com/reina0721/neocloud/pkg/storage/local"
+	"github.com/reina0721/neocloud/pkg/storage/s3compat"
 )
 
 type StorageClient = storageclient.StorageClient

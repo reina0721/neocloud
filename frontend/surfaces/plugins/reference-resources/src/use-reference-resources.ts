@@ -1,4 +1,4 @@
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import { useResourcesStore } from '../stores/resources';
 
 /** Translate fixtures on read; user-entered names remain user data. */

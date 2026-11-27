@@ -1,15 +1,20 @@
 import {
+  readProductStorage,
+  removeProductStorage,
+  writeProductStorage,
+} from '@neocloud/state-foundation';
+import {
   defaultFilePreferences,
   filePreferenceSnapshotSchema,
   filePreferencesSchema,
   fileViewPreferencesSchema,
   FilesError,
   type FilePreferenceSnapshot,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import type { createJsonClient } from '../api/json-client';
 
-const preferenceKey = 'clouddrive.files.view.v2';
-const previousPreferenceKey = 'clouddrive.files.view.v1';
+const preferenceKey = 'neocloud.files.view.v2';
+const previousPreferenceKey = 'neocloud.files.view.v1';
 
 /** createFilePreferences 保持本机模式不依赖网络；同步失败明确上抛，账号失效后不落盘。 */
 export function createFilePreferences(
@@ -21,15 +26,16 @@ export function createFilePreferences(
   function readLocal(): FilePreferenceSnapshot {
     assertCurrent();
     try {
-      const saved = localStorage.getItem(key);
+      const saved = readProductStorage(localStorage, key);
       if (saved !== null) return filePreferenceSnapshotSchema.parse(JSON.parse(saved));
-      const legacy = localStorage.getItem(previousPreferenceKey + '.' + account);
+      const legacy = readProductStorage(localStorage, previousPreferenceKey + '.' + account);
       const document = defaultFilePreferences();
       if (legacy !== null) document.defaults = fileViewPreferencesSchema.parse(JSON.parse(legacy));
       const snapshot = { sync: false, configuration: document };
       // 先成功写入新文档，再移除旧键，避免存储失败造成偏好丢失。
-      localStorage.setItem(key, JSON.stringify(snapshot));
-      if (legacy !== null) localStorage.removeItem(previousPreferenceKey + '.' + account);
+      writeProductStorage(localStorage, key, JSON.stringify(snapshot));
+      if (legacy !== null)
+        removeProductStorage(localStorage, previousPreferenceKey + '.' + account);
       return snapshot;
     } catch (error) {
       throw new FilesError('invalid', { cause: error });
@@ -37,7 +43,7 @@ export function createFilePreferences(
   }
   function writeLocal(value: FilePreferenceSnapshot) {
     assertCurrent();
-    localStorage.setItem(key, JSON.stringify(value));
+    writeProductStorage(localStorage, key, JSON.stringify(value));
   }
   return {
     loadPreferences: async (

@@ -1,17 +1,18 @@
+import { readNeoCloudEnv } from '../apps/web/runtime/environment.mjs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { chromium, expect } from '@playwright/test';
 
-const origin = new URL(process.env.CLOUDDRIVE_NATIVE_BROWSER_ORIGIN ?? '');
+const origin = new URL(readNeoCloudEnv('NATIVE_BROWSER_ORIGIN') ?? '');
 assert.equal(origin.protocol, 'http:');
 assert.equal(origin.hostname, '127.0.0.1');
 assert.notEqual(origin.port, '4180', 'Use an isolated acceptance instance');
-const email = process.env.CLOUDDRIVE_NATIVE_BROWSER_EMAIL;
-const password = process.env.CLOUDDRIVE_NATIVE_BROWSER_PASSWORD;
+const email = readNeoCloudEnv('NATIVE_BROWSER_EMAIL');
+const password = readNeoCloudEnv('NATIVE_BROWSER_PASSWORD');
 assert.ok(email && password, 'Missing isolated test credentials');
-const output = process.env.CLOUDDRIVE_NATIVE_BROWSER_OUTPUT;
+const output = readNeoCloudEnv('NATIVE_BROWSER_OUTPUT');
 if (output) await mkdir(output, { recursive: true });
 
 const pagePath = '/system-tools/update';

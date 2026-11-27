@@ -716,10 +716,14 @@ async function exerciseFullRelease() {
     "--quiet",
     "backend",
   ).stdout.trim();
+  const [entrypoint] = JSON.parse(run("docker", [
+    "inspect", "--format", "{{json .Config.Entrypoint}}", apiContainer,
+  ]).stdout);
+  assert.match(entrypoint, /^\/app\/(neocloud|clouddrive)$/);
   const originalStorage = run("docker", [
     "exec",
     apiContainer,
-    "/app/clouddrive",
+    entrypoint,
     "db",
     "migrate",
     "status",
@@ -1104,7 +1108,7 @@ async function validateSmokeProject() {
     return "";
   });
   if (!project) return false;
-  const expected = "clouddrive-" + sha(await realpath(root)).slice(0, 12);
+  const expected = "neocloud-" + sha(await realpath(root)).slice(0, 12);
   assert.equal(project.trim(), expected, "拒绝清理不属于本次验收的 Compose 项目");
   return true;
 }

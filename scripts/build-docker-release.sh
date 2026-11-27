@@ -5,7 +5,7 @@ umask 022
 # 一次解析主流程，长时间构建期间不重新读取可能被编辑的脚本尾部。
 main() {
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-version='' arch='' out='' api_source='' web_source=''
+version='' arch='' out='' api_source='' web_source='' profile=${NEOCLOUD_RELEASE_PROFILE:-neocloud}
 while [[ $# -gt 0 ]]; do
   case $1 in
     --version) version=$2; shift 2 ;;
@@ -13,18 +13,20 @@ while [[ $# -gt 0 ]]; do
     --out) out=$2; shift 2 ;;
     --api-image) api_source=$2; shift 2 ;;
     --web-image) web_source=$2; shift 2 ;;
+    --profile) profile=$2; shift 2 ;;
     *) printf '未知参数：%s\n' "$1" >&2; exit 1 ;;
   esac
 done
 [[ $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ && $arch =~ ^(amd64|arm64)$ ]] || { echo '需要 --version vX.Y.Z --arch amd64|arm64' >&2; exit 1; }
 out=$(realpath -m "${out:-$root/dist/docker}")
 mkdir -p "$out"
-d() { if [[ ${CLOUDDRIVE_DOCKER_SUDO:-0} == 1 ]]; then sudo -n docker "$@"; else docker "$@"; fi; }
+family=$(NEOCLOUD_RELEASE_PROFILE="$profile" node "$root/scripts/release-go-source.mjs" family)
+d() { if [[ ${NEOCLOUD_DOCKER_SUDO:-${CLOUDDRIVE_DOCKER_SUDO:-0}} == 1 ]]; then sudo -n docker "$@"; else docker "$@"; fi; }
 commit=$(git -C "$root" rev-parse HEAD)
-api="clouddrive-api:$version-$arch"; web="clouddrive-web:$version-$arch"
+api="$family-api:$version-$arch"; web="$family-web:$version-$arch"
 if [[ -z $api_source && -z $web_source ]]; then
   dirty=false; [[ -z $(git -C "$root" status --porcelain) ]] || dirty=true
-  d buildx build --platform "linux/$arch" --load --build-arg VERSION="$version" --build-arg COMMIT="$commit" --build-arg DIRTY="$dirty" --build-arg BUILD_TIME="$(date -u +%FT%TZ)" --tag "$api" "$root"
+  d buildx build --platform "linux/$arch" --load --target "$family" --build-arg RELEASE_FAMILY="$family" --build-arg VERSION="$version" --build-arg COMMIT="$commit" --build-arg DIRTY="$dirty" --build-arg BUILD_TIME="$(date -u +%FT%TZ)" --tag "$api" "$root"
   d buildx build --platform "linux/$arch" --load --file "$root/frontend/Dockerfile" --build-arg VERSION="$version" --build-arg COMMIT="$commit" --tag "$web" "$root"
 elif [[ -n $api_source && -n $web_source ]]; then
   # 已构建的配套镜像用于重复打包；仍校验版本/平台/源码，不能伪造发布标签。
@@ -49,7 +51,7 @@ for pair in "API:$api" "WEB:$web"; do
 done
 # 只创建容器并读取文件，不执行目标程序；模拟执行也不能掩盖错装的架构。
 probe=$(d container create --platform "linux/$arch" "$api")
-d container cp "$probe:/app/clouddrive" "$stage/api-binary"
+d container cp "$probe:/app/$family" "$stage/api-binary"
 node "$root/scripts/verify-elf-platform.mjs" "$stage/api-binary" "$arch"
 d container rm "$probe" >/dev/null; probe=''
 rm "$stage/api-binary"
@@ -60,7 +62,7 @@ for pair in "API:$api" "WEB:$web"; do
   printf '%s_ID=%s\n' "$kind" "$config_id" >> "$stage/manifest.txt"
 done
 # 由调用者重定向创建归档，避免 sudo Docker 创建仅 root 可读的文件。
-archive="clouddrive_${version}_linux_${arch}_docker.tar.gz"
+archive="${family}_${version}_linux_${arch}_docker.tar.gz"
 tar --create --gzip --file "$out/$archive" --directory "$stage" compose.yaml images.env images.tar install.sh manifest.txt
 cp "$root/install.sh" "$out/install.sh"
 printf '%s\n' "$version" > "$out/version.txt"

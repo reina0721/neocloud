@@ -5,9 +5,9 @@ import (
 	"context"
 	"fmt"
 
-	kernelcli "github.com/reina0721/clouddrive/internal/kernel/cli"
-	"github.com/reina0721/clouddrive/internal/module/iam/service"
-	"github.com/reina0721/clouddrive/pkg/cli"
+	kernelcli "github.com/reina0721/neocloud/internal/kernel/cli"
+	"github.com/reina0721/neocloud/internal/module/iam/service"
+	"github.com/reina0721/neocloud/pkg/cli"
 )
 
 type Executor interface {

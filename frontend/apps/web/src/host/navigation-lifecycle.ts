@@ -2,7 +2,7 @@ import {
   parseResolvedHref,
   isResolvedNavigationEqual,
   type ResolvedLocation,
-} from '@clouddrive/core';
+} from '@neocloud/core';
 
 import {
   beginNavigation,

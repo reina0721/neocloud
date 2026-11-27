@@ -9,8 +9,8 @@ import (
 	"time"
 	"unicode"
 
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
+	"github.com/reina0721/neocloud/pkg/idgen"
 )
 
 const (

@@ -4,11 +4,11 @@ package navigation
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/module"
-	navigationhandler "github.com/reina0721/clouddrive/internal/module/navigation/handler"
-	"github.com/reina0721/clouddrive/internal/module/navigation/repo"
-	"github.com/reina0721/clouddrive/internal/module/navigation/service"
-	"github.com/reina0721/clouddrive/pkg/clock"
+	"github.com/reina0721/neocloud/internal/module"
+	navigationhandler "github.com/reina0721/neocloud/internal/module/navigation/handler"
+	"github.com/reina0721/neocloud/internal/module/navigation/repo"
+	"github.com/reina0721/neocloud/internal/module/navigation/service"
+	"github.com/reina0721/neocloud/pkg/clock"
 )
 
 const moduleID module.ID = "navigation"

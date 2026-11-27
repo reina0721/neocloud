@@ -1,5 +1,5 @@
 import { useLayoutEffect, type RefObject } from 'react';
-import type { FileMediaProps, VideoPlaybackHandoff } from '@clouddrive/surface/files/runtime';
+import type { FileMediaProps, VideoPlaybackHandoff } from '@neocloud/surface/files/runtime';
 import { useLockStore } from '../state/use-lock-store';
 
 export function useReaderPlayback(

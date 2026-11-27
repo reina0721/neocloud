@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { FilesError, type FileConnection } from '@clouddrive/surface/files';
+import { FilesError, type FileConnection } from '@neocloud/surface/files';
 import { createConnectionsPort } from './connections';
 
 const connection: FileConnection = {

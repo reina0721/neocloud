@@ -2,11 +2,11 @@
 
 import Hls from 'hls.js';
 import { useEffect, useRef, useState, type ComponentType } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { SelectField } from '@clouddrive/ui-adapter/form-field';
-import { FilesError, type FilesErrorCode } from '@clouddrive/surface/files';
-import type { FileMediaProps } from '@clouddrive/surface/files/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { SelectField } from '@neocloud/ui-adapter/form-field';
+import { FilesError, type FilesErrorCode } from '@neocloud/surface/files';
+import type { FileMediaProps } from '@neocloud/surface/files/runtime';
 import { privateHlsLoader } from './hls-loader';
 import type { createPrivateHlsSource } from './hls-source';
 import type { VideoToolsProps } from './media-view';

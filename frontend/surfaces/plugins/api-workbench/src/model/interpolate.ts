@@ -1,4 +1,4 @@
-import type { KeyValueEntry } from '@clouddrive/surface/api-workbench';
+import type { KeyValueEntry } from '@neocloud/surface/api-workbench';
 
 export function resolveVariableMap(
   envVars: readonly KeyValueEntry[] = [],

@@ -3,8 +3,8 @@ package clibinding
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/service"
-	"github.com/reina0721/clouddrive/pkg/cli"
+	"github.com/reina0721/neocloud/internal/module/iam/service"
+	"github.com/reina0721/neocloud/pkg/cli"
 )
 
 func (c *Contract) passwordPolicyCommand() cli.CommandSpec {

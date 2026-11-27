@@ -1,10 +1,10 @@
 'use client';
 /* eslint-disable react-refresh/only-export-components */
 import { useEffect, useState, type ReactNode } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { AsyncRegion } from '@clouddrive/ui-adapter/async-region';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { Page, PageHeader } from '@clouddrive/surface-foundation/layout';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { AsyncRegion } from '@neocloud/ui-adapter/async-region';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { Page, PageHeader } from '@neocloud/surface-foundation/layout';
 import { NavigationIcon } from '../navigation-icon-presentation';
 import { IdentityError } from '../identity/errors';
 import { useAdministration } from './context';

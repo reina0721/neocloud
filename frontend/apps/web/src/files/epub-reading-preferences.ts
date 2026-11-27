@@ -1,9 +1,15 @@
 import {
+  legacyStorageKey,
+  readProductStorage,
+  removeProductStorage,
+  writeProductStorage,
+} from '@neocloud/state-foundation';
+import {
   epubBookmarkLimit,
   epubFontScales,
   FilesError,
   type EpubReadingPort,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import { z } from 'zod';
 
 const historyLimit = 64;
@@ -27,7 +33,7 @@ const recordSchema = z.object({
 });
 
 function readRecord(storage: Storage, key: string) {
-  const value = storage.getItem(key);
+  const value = readProductStorage(storage, key);
   if (value === null) return undefined;
   try {
     const parsed = recordSchema.safeParse(JSON.parse(value));
@@ -43,7 +49,7 @@ export function createEpubReadingPreferences(
   account: string | null,
   assertCurrent: () => void,
 ): EpubReadingPort {
-  const prefix = 'clouddrive.files.epub.v1.' + encodeURIComponent(account ?? '') + ':';
+  const prefix = 'neocloud.files.epub.v1.' + encodeURIComponent(account ?? '') + ':';
   return {
     load(entry) {
       assertCurrent();
@@ -66,20 +72,22 @@ export function createEpubReadingPreferences(
           updatedAtMs: Date.now(),
           reading,
         });
-        storage.setItem(key, JSON.stringify(record));
+        writeProductStorage(storage, key, JSON.stringify(record));
         if (previous) return;
         const others: { key: string; updatedAtMs: number }[] = [];
-        for (let index = 0; index < storage.length; index += 1) {
-          const candidate = storage.key(index);
-          if (candidate?.startsWith(prefix) && candidate !== key) {
+        const legacyPrefix = legacyStorageKey(prefix);
+        const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index));
+        for (const candidate of keys) {
+          if (candidate?.startsWith(legacyPrefix) && candidate !== legacyStorageKey(key)) {
+            const productKey = prefix + candidate.slice(legacyPrefix.length);
             others.push({
-              key: candidate,
-              updatedAtMs: readRecord(storage, candidate)?.updatedAtMs ?? 0,
+              key: productKey,
+              updatedAtMs: readRecord(storage, productKey)?.updatedAtMs ?? 0,
             });
           }
         }
         others.sort((left, right) => right.updatedAtMs - left.updatedAtMs);
-        for (const old of others.slice(historyLimit - 1)) storage.removeItem(old.key);
+        for (const old of others.slice(historyLimit - 1)) removeProductStorage(storage, old.key);
       } catch (error) {
         throw new FilesError('unavailable', { cause: error });
       }

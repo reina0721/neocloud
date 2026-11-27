@@ -1,6 +1,6 @@
 # Product Surface 实现约束
 
-本目录是 `@clouddrive/surface`（private workspace）：只承载 Product Surface 的
+本目录是 `@neocloud/surface`（private workspace）：只承载 Product Surface 的
 Plugin 业务、shell 模型、Group Alias / icon vocabulary 与 generated 产物，为
 dependency ownership、module resolution、typecheck 与 test 服务。
 
@@ -22,9 +22,9 @@ dependency ownership、module resolution、typecheck 与 test 服务。
   惯例）。Plugin 可像正常 app/ 一样 colocate components/services/lib/schema/styles/
   tests/_private 等普通实现文件——Framework 完全忽略它们，不增加 Plugin 语义。
   普通导航可用 `next/link`/`next/navigation`（受控白名单），跨 Plugin 稳定引用可用
-  `route()`（`@clouddrive/plugin-framework/target`，Server/Client 均可 import）/
+  `route()`（`@neocloud/plugin-framework/target`，Server/Client 均可 import）/
   `RouteLink`/`usePluginNavigation`/`usePluginLocale`
-  （`@clouddrive/plugin-framework/plugin`，client）。
+  （`@neocloud/plugin-framework/plugin`，client）。
 - **不存在第二套 Route Contract**：不引入 route.meta.ts / plugin.route.ts /
   route.config.ts 或任何逐 Route 显式声明文件；不要求 page.tsx 配 Framework 契约。
   Route identity 由 Framework 从 pluginId + Next 文件树确定性派生。Next 有语义但
@@ -91,7 +91,7 @@ layout`），区段优先组合 `PageHeader`、`Section`、`Toolbar`、
      （TabsView 已接入）。Plugin 页无需、也不得自行接动画；**禁止依赖 React
      `ViewTransition` 组件**（stable react 不导出，运行时 undefined）。
 5. **State**：Plugin 私有状态放 Plugin `stores/`（filesystem ownership），用
-   `@clouddrive/state-foundation` 创建（createAppStore/createPersistStore，持久化
+   `@neocloud/state-foundation` 创建（createAppStore/createPersistStore，持久化
    经 definePersistConfig 显式 opt-in）；禁止直接 import zustand、禁止 import
    Host/Shell/其它 Plugin 的私有 store、禁止 import testing subpath 到 production。
    跨 Host/Plugin Runtime boundary 的能力经正式 Port（locale/navigation），不为

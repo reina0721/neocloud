@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 func torrentFailure(err error) model.DownloadFailure {

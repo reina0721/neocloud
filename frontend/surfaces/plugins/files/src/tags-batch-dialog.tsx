@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
 import { FilesError } from '../../../src/files/model';
 import {
   annotationTagNamesSchema,

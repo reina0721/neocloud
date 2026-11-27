@@ -1,6 +1,6 @@
 package model
 
-import "github.com/reina0721/clouddrive/pkg/idgen"
+import "github.com/reina0721/neocloud/pkg/idgen"
 
 const (
 	MaxAudienceRules         = 32

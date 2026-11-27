@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	modulemigration "github.com/reina0721/clouddrive/internal/module/migration"
-	migrationconfig "github.com/reina0721/clouddrive/internal/module/migration/binding/config"
-	todomigration "github.com/reina0721/clouddrive/internal/module/todo/binding/migration"
-	"github.com/reina0721/clouddrive/pkg/database"
-	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
+	modulemigration "github.com/reina0721/neocloud/internal/module/migration"
+	migrationconfig "github.com/reina0721/neocloud/internal/module/migration/binding/config"
+	todomigration "github.com/reina0721/neocloud/internal/module/todo/binding/migration"
+	"github.com/reina0721/neocloud/pkg/database"
+	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
 )
 
 func TestConfiguredServerMigrations(t *testing.T) {

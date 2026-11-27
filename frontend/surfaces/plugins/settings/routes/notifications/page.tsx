@@ -2,10 +2,10 @@
 
 import { useSettingsShell } from '../../src/settings-context';
 import { NotificationsSection } from '../../src/category-sections';
-import { useAccountNotificationSettings } from '@clouddrive/surface/administration/runtime';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
-import { SwitchField } from '@clouddrive/ui-adapter/form-field';
+import { useAccountNotificationSettings } from '@neocloud/surface/administration/runtime';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
+import { SwitchField } from '@neocloud/ui-adapter/form-field';
 
 /**
  * 分类区段页（/settings 内页 Shell 的右侧内容）。侧边栏/搜索/PageHeader 由

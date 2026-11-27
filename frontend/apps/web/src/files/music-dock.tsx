@@ -2,8 +2,8 @@
 
 import { useCallback, useId, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import type { FileMediaDockProps } from '@clouddrive/surface/files/runtime';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
+import type { FileMediaDockProps } from '@neocloud/surface/files/runtime';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
 import { ChevronUp } from 'lucide-react';
 
 function inVideoCard(target: EventTarget | null) {

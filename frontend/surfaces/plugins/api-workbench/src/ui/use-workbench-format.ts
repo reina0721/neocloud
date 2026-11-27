@@ -1,4 +1,4 @@
-import { formatDate, formatNumber, useFrontendTranslation } from '@clouddrive/i18n';
+import { formatDate, formatNumber, useFrontendTranslation } from '@neocloud/i18n';
 
 export function useWorkbenchFormat() {
   const { t, locale } = useFrontendTranslation();

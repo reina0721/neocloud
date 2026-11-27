@@ -3,25 +3,25 @@ import { describe, expect, it } from 'vitest';
 import { applyPatch, assertPatchShape } from './patch';
 
 const doc = () => ({
-  'x-clouddrive': {
+  'x-neocloud': {
     source: {
       tokens: { colors: { light: { brand: '#5d49d6' } }, theme: { radii: { control: '0.75rem' } } },
     },
-    facts: [{ id: 'a', sourcePointer: '/x-clouddrive/source/tokens/colors' }],
+    facts: [{ id: 'a', sourcePointer: '/x-neocloud/source/tokens/colors' }],
   },
 });
 
-const WRITABLE = ['/x-clouddrive/source'];
+const WRITABLE = ['/x-neocloud/source'];
 const READONLY = [
-  '/x-clouddrive/contractRef',
-  '/x-clouddrive/facts',
-  '/x-clouddrive/authoring',
-  '/x-clouddrive/artifacts',
+  '/x-neocloud/contractRef',
+  '/x-neocloud/facts',
+  '/x-neocloud/authoring',
+  '/x-neocloud/artifacts',
 ];
 
 /** Patch 成功结果的 typed 视图（仅测试访问 source.tokens.* 字段）。 */
 type PatchDoc = {
-  'x-clouddrive': {
+  'x-neocloud': {
     source: {
       tokens?: {
         colors?: { light?: Record<string, string> };
@@ -50,7 +50,7 @@ describe('RFC 6902 Patch（带只读边界）', () => {
       [
         {
           op: 'replace',
-          path: '/x-clouddrive/source/tokens/colors/light/brand',
+          path: '/x-neocloud/source/tokens/colors/light/brand',
           value: '#000000',
         },
       ],
@@ -58,36 +58,36 @@ describe('RFC 6902 Patch（带只读边界）', () => {
       READONLY,
     );
     const data = expectOk(result);
-    expect(data['x-clouddrive'].source.tokens!.colors!.light!.brand).toBe('#000000');
+    expect(data['x-neocloud'].source.tokens!.colors!.light!.brand).toBe('#000000');
   });
 
   it('add 对象键与数组 "-" 追加', () => {
     const withArray = () => ({
-      'x-clouddrive': { source: { arr: [1, 2] } },
+      'x-neocloud': { source: { arr: [1, 2] } },
     });
     const result1 = applyPatch(
       doc(),
-      [{ op: 'add', path: '/x-clouddrive/source/tokens/colors/light/extra', value: '#ffffff' }],
+      [{ op: 'add', path: '/x-neocloud/source/tokens/colors/light/extra', value: '#ffffff' }],
       WRITABLE,
       READONLY,
     );
     expect(result1.ok).toBe(true);
     const result2 = applyPatch(
       withArray(),
-      [{ op: 'add', path: '/x-clouddrive/source/arr/-', value: 3 }],
+      [{ op: 'add', path: '/x-neocloud/source/arr/-', value: 3 }],
       WRITABLE,
       READONLY,
     );
     expect(result2.ok).toBe(true);
     if (result2.ok) {
-      expect(dataOf(result2)['x-clouddrive'].source.arr).toEqual([1, 2, 3]);
+      expect(dataOf(result2)['x-neocloud'].source.arr).toEqual([1, 2, 3]);
     }
   });
 
   it('remove / replace / move / copy / test 成功路径', () => {
     const r1 = applyPatch(
       doc(),
-      [{ op: 'remove', path: '/x-clouddrive/source/tokens/theme/radii/control' }],
+      [{ op: 'remove', path: '/x-neocloud/source/tokens/theme/radii/control' }],
       WRITABLE,
       READONLY,
     );
@@ -97,8 +97,8 @@ describe('RFC 6902 Patch（带只读边界）', () => {
       [
         {
           op: 'move',
-          from: '/x-clouddrive/source/tokens/colors/light/brand',
-          path: '/x-clouddrive/source/tokens/theme/radii/brand',
+          from: '/x-neocloud/source/tokens/colors/light/brand',
+          path: '/x-neocloud/source/tokens/theme/radii/brand',
         },
       ],
       WRITABLE,
@@ -107,16 +107,16 @@ describe('RFC 6902 Patch（带只读边界）', () => {
     expect(r2.ok).toBe(true);
     if (r2.ok) {
       const data = dataOf(r2);
-      expect(data['x-clouddrive'].source.tokens!.theme!.radii!.brand).toBe('#5d49d6');
-      expect(data['x-clouddrive'].source.tokens!.colors!.light!.brand).toBeUndefined();
+      expect(data['x-neocloud'].source.tokens!.theme!.radii!.brand).toBe('#5d49d6');
+      expect(data['x-neocloud'].source.tokens!.colors!.light!.brand).toBeUndefined();
     }
     const r3 = applyPatch(
       doc(),
       [
         {
           op: 'copy',
-          from: '/x-clouddrive/source/tokens/colors/light/brand',
-          path: '/x-clouddrive/source/tokens/theme/radii/copy',
+          from: '/x-neocloud/source/tokens/colors/light/brand',
+          path: '/x-neocloud/source/tokens/theme/radii/copy',
         },
       ],
       WRITABLE,
@@ -125,7 +125,7 @@ describe('RFC 6902 Patch（带只读边界）', () => {
     expect(r3.ok).toBe(true);
     const r4 = applyPatch(
       doc(),
-      [{ op: 'test', path: '/x-clouddrive/source/tokens/colors/light/brand', value: '#5d49d6' }],
+      [{ op: 'test', path: '/x-neocloud/source/tokens/colors/light/brand', value: '#5d49d6' }],
       WRITABLE,
       READONLY,
     );
@@ -134,12 +134,12 @@ describe('RFC 6902 Patch（带只读边界）', () => {
 
   it('写只读区（facts/artifacts/contractRef/协议结构）整次失败', () => {
     const cases = [
-      { op: 'replace' as const, path: '/x-clouddrive/facts/0/id', value: 'x' },
-      { op: 'remove' as const, path: '/x-clouddrive/artifacts' },
-      { op: 'add' as const, path: '/x-clouddrive/contractRef/file', value: 'x' },
+      { op: 'replace' as const, path: '/x-neocloud/facts/0/id', value: 'x' },
+      { op: 'remove' as const, path: '/x-neocloud/artifacts' },
+      { op: 'add' as const, path: '/x-neocloud/contractRef/file', value: 'x' },
       {
         op: 'replace' as const,
-        path: '/x-clouddrive/authoring/patchableSourcePointers/0',
+        path: '/x-neocloud/authoring/patchableSourcePointers/0',
         value: '/',
       },
     ];
@@ -149,10 +149,10 @@ describe('RFC 6902 Patch（带只读边界）', () => {
     }
   });
 
-  it('只读区外但不在 patchable 白名单（source 之外其他 x-clouddrive 顶层）失败', () => {
+  it('只读区外但不在 patchable 白名单（source 之外其他 x-neocloud 顶层）失败', () => {
     const result = applyPatch(
       doc(),
-      [{ op: 'add', path: '/x-clouddrive/extra', value: 1 }],
+      [{ op: 'add', path: '/x-neocloud/extra', value: 1 }],
       WRITABLE,
       READONLY,
     );
@@ -162,7 +162,7 @@ describe('RFC 6902 Patch（带只读边界）', () => {
   it('move/copy 来源或目标越权均整次失败（无部分应用）', () => {
     const moveFromReadonly = applyPatch(
       doc(),
-      [{ op: 'move', from: '/x-clouddrive/facts/0', path: '/x-clouddrive/source/tokens/x' }],
+      [{ op: 'move', from: '/x-neocloud/facts/0', path: '/x-neocloud/source/tokens/x' }],
       WRITABLE,
       READONLY,
     );
@@ -172,8 +172,8 @@ describe('RFC 6902 Patch（带只读边界）', () => {
       [
         {
           op: 'move',
-          from: '/x-clouddrive/source/tokens/colors/light/brand',
-          path: '/x-clouddrive/facts/0',
+          from: '/x-neocloud/source/tokens/colors/light/brand',
+          path: '/x-neocloud/facts/0',
         },
       ],
       WRITABLE,
@@ -185,8 +185,8 @@ describe('RFC 6902 Patch（带只读边界）', () => {
       [
         {
           op: 'copy',
-          from: '/x-clouddrive/contractRef',
-          path: '/x-clouddrive/source/tokens/x',
+          from: '/x-neocloud/contractRef',
+          path: '/x-neocloud/source/tokens/x',
         },
       ],
       WRITABLE,
@@ -202,16 +202,16 @@ describe('RFC 6902 Patch（带只读边界）', () => {
       [
         {
           op: 'replace',
-          path: '/x-clouddrive/source/tokens/colors/light/brand',
+          path: '/x-neocloud/source/tokens/colors/light/brand',
           value: '#111111',
         },
-        { op: 'remove', path: '/x-clouddrive/facts/0' }, // 失败点
+        { op: 'remove', path: '/x-neocloud/facts/0' }, // 失败点
       ],
       WRITABLE,
       READONLY,
     );
     expect(result.ok).toBe(false);
-    expect(original['x-clouddrive'].source.tokens.colors.light.brand).toBe('#5d49d6');
+    expect(original['x-neocloud'].source.tokens.colors.light.brand).toBe('#5d49d6');
   });
 
   it('shape 校验：未知 op / 缺 from / move 自环 / 非数组', () => {

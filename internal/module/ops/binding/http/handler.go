@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"net/http"
 
-	configbinding "github.com/reina0721/clouddrive/internal/module/ops/binding/config"
-	"github.com/reina0721/clouddrive/internal/module/ops/model"
-	"github.com/reina0721/clouddrive/internal/module/ops/service"
-	"github.com/reina0721/clouddrive/pkg/httpx"
-	"github.com/reina0721/clouddrive/pkg/logger"
-	pkgobservability "github.com/reina0721/clouddrive/pkg/observability"
+	configbinding "github.com/reina0721/neocloud/internal/module/ops/binding/config"
+	"github.com/reina0721/neocloud/internal/module/ops/model"
+	"github.com/reina0721/neocloud/internal/module/ops/service"
+	"github.com/reina0721/neocloud/pkg/httpx"
+	"github.com/reina0721/neocloud/pkg/logger"
+	pkgobservability "github.com/reina0721/neocloud/pkg/observability"
 )
 
 // Access 是 composition 连接 Auth module 时实现的 management scope 端口。

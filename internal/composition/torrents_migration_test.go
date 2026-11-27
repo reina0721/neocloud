@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	filesmigration "github.com/reina0721/clouddrive/internal/module/files/binding/migration"
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	filesmigration "github.com/reina0721/neocloud/internal/module/files/binding/migration"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 	"gorm.io/gorm"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func torrentMigrationSnapshot(db *gorm.DB, tables []string) (map[string][]string, error) {

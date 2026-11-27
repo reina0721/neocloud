@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { PopoverCard } from '@clouddrive/ui-adapter/overlays';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { PopoverCard } from '@neocloud/ui-adapter/overlays';
 import { FileGlyph, LayoutGrid } from '../../../src/files/icons';
 import { FileMedia } from '../../../src/files/runtime';
 import type { OpenFile } from './reader-workspace';

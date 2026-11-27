@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // WriteLocks 只拥有文件编辑占用用例，数据库和内容资源仍由组合根管理。

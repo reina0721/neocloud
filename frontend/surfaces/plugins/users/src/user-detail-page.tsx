@@ -1,26 +1,26 @@
 'use client';
 import { useState, useSyncExternalStore } from 'react';
-import { formatDate, formatTimeOfDay, useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
-import { CheckboxField } from '@clouddrive/ui-adapter/form-field';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { route, RouteLink, usePluginNavigation } from '@clouddrive/plugin-framework/plugin';
-import { useRegisterDirtySource } from '@clouddrive/plugin-framework/leave-confirm';
-import { useWorkbenchPort } from '@clouddrive/plugin-framework/workbench';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
+import { formatDate, formatTimeOfDay, useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { DescriptionList } from '@neocloud/ui-adapter/description-list';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
+import { CheckboxField } from '@neocloud/ui-adapter/form-field';
+import { Action } from '@neocloud/ui-adapter/action';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { route, RouteLink, usePluginNavigation } from '@neocloud/plugin-framework/plugin';
+import { useRegisterDirtySource } from '@neocloud/plugin-framework/leave-confirm';
+import { useWorkbenchPort } from '@neocloud/plugin-framework/workbench';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import type { Preferences } from '@neocloud/surface/preferences-model';
 import {
   useIdentityPort,
   IdentityError,
   type DirectoryUser,
   type DirectoryRole,
   type IdentityAccess,
-} from '@clouddrive/surface/identity/runtime';
+} from '@neocloud/surface/identity/runtime';
 import { readUserListContext } from './user-list-context';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import {

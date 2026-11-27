@@ -1,5 +1,5 @@
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { MenuButton } from '@neocloud/ui-adapter/menu-button';
 
 import { fileCategoryKeys } from './file-category-keys';
 

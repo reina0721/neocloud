@@ -11,8 +11,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	dto "github.com/prometheus/client_model/go"
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	pkgobservability "github.com/reina0721/clouddrive/pkg/observability"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	pkgobservability "github.com/reina0721/neocloud/pkg/observability"
 )
 
 type metricsResource struct {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { PDFFrameSession, checkedOutline } from './session';
 import { emptyPdfState, isPdfCommand, isPdfOpen, pdfProtocolVersion } from './protocol';
-import type { PDFReaderLimits } from '@clouddrive/surface/files';
+import type { PDFReaderLimits } from '@neocloud/surface/files';
 const limits: PDFReaderLimits = {
   maxBytes: 1024,
   maxPages: 500,

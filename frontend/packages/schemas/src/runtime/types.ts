@@ -1,19 +1,19 @@
 /**
  * Schema Runtime —— 类型定义（Authority Schema 协议的类型镜像）。
  *
- * 值只存在于 `x-clouddrive.source`；facts / artifact mapping 只通过
+ * 值只存在于 `x-neocloud.source`；facts / artifact mapping 只通过
  * Source Pointer 描述，不保存值副本。本文件只定义运行时消费的结构形态，
  * 不做任何具体 Authority 命名假设。
  */
 
-/** x-clouddrive 文档（解析后的 Authority Schema 容器）。 */
+/** x-neocloud 文档（解析后的 Authority Schema 容器）。 */
 export type AuthorityDocument = Readonly<{
   $schema: string;
   $id?: string;
   title?: string;
   description?: string;
   $defs?: Readonly<Record<string, unknown>>;
-  'x-clouddrive': AuthorityMeta;
+  'x-neocloud': AuthorityMeta;
 }>;
 
 export type AuthorityMeta = Readonly<{

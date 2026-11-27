@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from 'react';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { CheckboxField, SelectField } from '@clouddrive/ui-adapter/form-field';
-import { IconAction } from '@clouddrive/ui-adapter/icon-action';
-import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { Action } from '@neocloud/ui-adapter/action';
+import { CheckboxField, SelectField } from '@neocloud/ui-adapter/form-field';
+import { IconAction } from '@neocloud/ui-adapter/icon-action';
+import { MenuButton } from '@neocloud/ui-adapter/menu-button';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
 
 import { Toolbar } from './layout';
 

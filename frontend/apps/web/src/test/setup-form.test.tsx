@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { createFrontendI18n, FrontendI18nProvider } from '@clouddrive/i18n';
+import { createFrontendI18n, FrontendI18nProvider } from '@neocloud/i18n';
 import { SetupForm } from '../auth/setup-form';
 import { authenticationResources } from '../auth/translations';
 

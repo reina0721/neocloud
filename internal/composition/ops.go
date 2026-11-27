@@ -8,12 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel"
-	"github.com/reina0721/clouddrive/internal/module/auth"
-	authmodel "github.com/reina0721/clouddrive/internal/module/auth/model"
-	httpbinding "github.com/reina0721/clouddrive/internal/module/ops/binding/http"
-	opsmodel "github.com/reina0721/clouddrive/internal/module/ops/model"
-	"github.com/reina0721/clouddrive/pkg/supervisor"
+	"github.com/reina0721/neocloud/internal/kernel"
+	"github.com/reina0721/neocloud/internal/module/auth"
+	authmodel "github.com/reina0721/neocloud/internal/module/auth/model"
+	httpbinding "github.com/reina0721/neocloud/internal/module/ops/binding/http"
+	opsmodel "github.com/reina0721/neocloud/internal/module/ops/model"
+	"github.com/reina0721/neocloud/pkg/supervisor"
 )
 
 type opsAccessAdapter struct{ auth auth.Module }

@@ -1,16 +1,16 @@
 # Global Configuration（全局配置架构）
 
-本文是 `@clouddrive/config`（全局配置架构包）的唯一当前权威文档。
+本文是 `@neocloud/config`（全局配置架构包）的唯一当前权威文档。
 
 ## 1. 定位与分层
 
 - **Workspace**：`packages/config`
-- **Package**：`@clouddrive/config`
+- **Package**：`@neocloud/config`
 - **分层**：Universal Frontend Foundation
 - **核心原则**：
   - 核心导出（`.`）为**纯 TypeScript**，不依赖 `node:*`、浏览器专属 API、React 或具体 UI 库。
   - Node 专属能力（读取 `.env`、探测当前工程目录、回填 `process.env`）收口在 `./node` 子路径，仅允许在构建、CLI 工具链（`tooling/*`）、Next 配置文件（`next.config.ts`）与 Playwright 运行配置中消费。
-  - 应用运行时及浏览器代码只能消费纯配置契约与经过构建期注入的常量，禁止直接导入 `@clouddrive/config/node`。
+  - 应用运行时及浏览器代码只能消费纯配置契约与经过构建期注入的常量，禁止直接导入 `@neocloud/config/node`。
 
 ## 2. 配置字段与默认值
 

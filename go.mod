@@ -1,4 +1,4 @@
-module github.com/reina0721/clouddrive
+module github.com/reina0721/neocloud
 
 go 1.26.11
 

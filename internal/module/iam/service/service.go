@@ -17,16 +17,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/adapter/totp"
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
-	pkgalerting "github.com/reina0721/clouddrive/pkg/alerting"
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	"github.com/reina0721/neocloud/internal/module/iam/adapter/totp"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
+	pkgalerting "github.com/reina0721/neocloud/pkg/alerting"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/idgen"
 )
 
-const SessionCookieName = "__Host-clouddrive_iam_session"
+const SessionCookieName = "__Host-neocloud_iam_session"
+const LegacySessionCookieName = "__Host-clouddrive_iam_session"
 
 const (
 	defaultListLimit = 20
@@ -2413,7 +2414,7 @@ type ApiTokenResolution struct {
 const apiTokenPrefix = "iam_"
 
 // mfaIssuer 是 otpauth URI 的展示名（验证器 app 内显示）。
-const mfaIssuer = "clouddrive"
+const mfaIssuer = "NeoCloud"
 
 // MFARequiredError 表示登录需要第二步 TOTP 验证；ChallengeID 单次有效、短 TTL。
 type MFARequiredError struct {

@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/reina0721/clouddrive/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/model"
 )
 
 // DirectoryRepository 只供本人目录和回收站使用，分享及检索继续使用各自的授权快照。

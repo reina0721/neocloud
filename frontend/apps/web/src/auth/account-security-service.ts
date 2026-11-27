@@ -5,8 +5,8 @@ import {
   identifierSchema,
   IdentityError,
   parseIdentity,
-} from '@clouddrive/surface/identity';
-import type { AccountSecurityPort } from '@clouddrive/surface/identity/runtime';
+} from '@neocloud/surface/identity';
+import type { AccountSecurityPort } from '@neocloud/surface/identity/runtime';
 import { createJsonClient, ApiError } from '../api/json-client';
 import { readMockDatabase, mutateMockDatabase } from '../identity/mock-database';
 import { passwordDigest, MOCK_DEMO_PASSWORD } from './mock-adapter';

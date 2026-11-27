@@ -1,12 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { TextField, SelectField } from '@clouddrive/ui-adapter/form-field';
-import { ProgressMeter } from '@clouddrive/ui-adapter/progress-meter';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { TextField, SelectField } from '@neocloud/ui-adapter/form-field';
+import { ProgressMeter } from '@neocloud/ui-adapter/progress-meter';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
 import { FilesError, type FileListing } from '../../../src/files/model';
 import { formatFileBytes } from '../../../src/files/format';
 import {

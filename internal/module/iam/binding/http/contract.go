@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/module/iam/model"
-	"github.com/reina0721/clouddrive/internal/module/iam/repo"
-	"github.com/reina0721/clouddrive/internal/module/iam/service"
-	permissioncatalog "github.com/reina0721/clouddrive/internal/permission"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/internal/module/iam/model"
+	"github.com/reina0721/neocloud/internal/module/iam/repo"
+	"github.com/reina0721/neocloud/internal/module/iam/service"
+	permissioncatalog "github.com/reina0721/neocloud/internal/permission"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 const (

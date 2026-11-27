@@ -3,7 +3,8 @@ import {
   createPersistStore,
   createLocalStorage,
   createHydrationLifecycle,
-} from '@clouddrive/state-foundation';
+  legacyStorageKey,
+} from '@neocloud/state-foundation';
 import {
   userSchema,
   roleSchema,
@@ -15,11 +16,11 @@ import {
   type DirectoryRole,
   IdentityError,
   permissionCodes,
-} from '@clouddrive/surface/identity';
+} from '@neocloud/surface/identity';
 import { AuthError, readSession, type AuthSession, type AuthUser } from '../auth/contract';
 import type { MockAccount } from '../auth/mock-adapter';
 
-export const MOCK_DATABASE_KEY = 'clouddrive.auth-mock';
+export const MOCK_DATABASE_KEY = 'neocloud.auth-mock';
 const seedDate = '2026-10-01T00:00:00.000Z';
 const defaultRegistrationSettings = {
   enabled: true,
@@ -329,7 +330,7 @@ export async function mutateMockDatabase<T>(
   };
   const operation = pendingMutation.then(async () => {
     if (typeof navigator !== 'undefined' && navigator.locks)
-      return await navigator.locks.request(MOCK_DATABASE_KEY, perform);
+      return await navigator.locks.request(legacyStorageKey(MOCK_DATABASE_KEY), perform);
     return await perform();
   });
   pendingMutation = operation.then(

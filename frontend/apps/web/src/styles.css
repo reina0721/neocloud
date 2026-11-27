@@ -3,10 +3,10 @@
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/noto-sans-sc';
 @import 'tailwindcss';
-@import '@clouddrive/ui-adapter/styles.css';
-@import '@clouddrive/design-system/tokens.css';
-@import '@clouddrive/design-system/motion.css';
-@import '@clouddrive/surface-foundation/styles.css';
+@import '@neocloud/ui-adapter/styles.css';
+@import '@neocloud/design-system/tokens.css';
+@import '@neocloud/design-system/motion.css';
+@import '@neocloud/surface-foundation/styles.css';
 /* Tailwind v4 source coverage：所有允许业务直接写 Tailwind utility 的正式 source root
  * 都必须在此显式登记。surfaces/ 是 Product Surface（plugins/src/shell）的唯一正式根；
  * 漏登记会让「仅该目录使用」的 utility 静默不生成（历史教训：DataTable mb-4）。

@@ -1,8 +1,8 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { MenuButton } from '@clouddrive/ui-adapter/menu-button';
-import { StatusPill, type StatusTone } from '@clouddrive/ui-adapter/status-pill';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { MenuButton } from '@neocloud/ui-adapter/menu-button';
+import { StatusPill, type StatusTone } from '@neocloud/ui-adapter/status-pill';
 import { FileGlyph, MoreHorizontal } from '../../../src/files/icons';
 import type { FileShare } from '../../../src/files/model';
 import { sharePermissionPreset } from '../../../src/files/sharing';

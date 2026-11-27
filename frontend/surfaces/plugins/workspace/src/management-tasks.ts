@@ -1,4 +1,4 @@
-import type { NavigationGroup, NavigationNode } from '@clouddrive/types';
+import type { NavigationGroup, NavigationNode } from '@neocloud/types';
 
 // 这里只定义首页任务的阅读分组；地址、标题、可见性和顺序消费 Shell 的最终呈现结果。
 const tasks = [

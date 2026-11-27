@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
 import { FileMediaDock, type useFileMusic } from '../../../src/files/runtime';
 
 export function MediaShelf({

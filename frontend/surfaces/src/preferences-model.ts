@@ -1,7 +1,7 @@
 /**
  * Product Surface —— 偏好领域模型（单一事实源）。
  *
- * 归属：Product Surface 公共 subpath `@clouddrive/surface/preferences-model`。
+ * 归属：Product Surface 公共 subpath `@neocloud/surface/preferences-model`。
  * 服务对象：Host Shell（运行时读写/迁移）、`settings` 插件（八分类设置页）、以及未来
  * 其它消费页面——各方读同一份 typed 模型、默认值与边界校验，禁止各插件自建第二套。
  *
@@ -12,19 +12,19 @@
  *   本文件只提供字段语义与默认值；
  * - 校验是“有限联合 + 边界”守卫，不建通用动态 Schema/表单引擎（目标已确认）。
  *
- * 版本语义：`PREFERENCES_VERSION = 1` 对应 `clouddrive.shell` persist version。
+ * 版本语义：`PREFERENCES_VERSION = 1` 对应 `neocloud.shell` persist version。
  * 旧用户 v0 记录（theme/locale/sidebarCollapsed）经 `migrateShellV0Preferences`
  * 保真映射进本模型（显式值不套新默认）；无记录（首次）用 `defaultPreferences`。
  */
 
-import { isSupportedTimeZone } from '@clouddrive/i18n/format';
+import { isSupportedTimeZone } from '@neocloud/i18n/format';
 
 /* ------------------------------------------------------------------ */
 /* 版本与分类                                                           */
 /* ------------------------------------------------------------------ */
 
 /**
- * 当前偏好模型版本（clouddrive.shell persist version）。
+ * 当前偏好模型版本（neocloud.shell persist version）。
  *
  * v1 → v2：新增 `security` 分类（水印/空闲锁屏）、`appearance.colorWeak|grayscale`、
  * `navigation.layoutMode`。v1 记录由 `validatePreferences` 按字段默认值补全后直接可用，
@@ -506,7 +506,7 @@ export const defaultCategoryOf = (category: PreferenceCategory): Preferences[Pre
   defaultPreferences[category];
 
 /* ------------------------------------------------------------------ */
-/* 旧版 v0 迁移（clouddrive.shell version 0 → 1）                     */
+/* 旧版 v0 迁移（neocloud.shell version 0 → 1）                     */
 /* ------------------------------------------------------------------ */
 
 /** 历史 v0 持久化形状（partialize 白名单 theme/locale/sidebarCollapsed）。 */

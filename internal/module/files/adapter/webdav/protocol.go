@@ -10,8 +10,8 @@ import (
 	"net/http"
 
 	dav "github.com/emersion/go-webdav"
-	"github.com/reina0721/clouddrive/internal/module/files/model"
-	"github.com/reina0721/clouddrive/internal/module/files/service"
+	"github.com/reina0721/neocloud/internal/module/files/model"
+	"github.com/reina0721/neocloud/internal/module/files/service"
 )
 
 var ErrResponseBudget = errors.New("webdav response exceeds configured budget")

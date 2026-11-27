@@ -1,6 +1,7 @@
-import type { PDFReaderLimits, PdfViewPosition } from '@clouddrive/surface/files';
+import type { PDFReaderLimits, PdfViewPosition } from '@neocloud/surface/files';
 export const pdfProtocolVersion = 5;
-export const pdfWorkerReadyKind = 'clouddrive-pdf-worker-ready';
+export const pdfWorkerReadyKind = 'neocloud-pdf-worker-ready';
+export const legacyPdfWorkerReadyKind = 'clouddrive-pdf-worker-ready';
 export const pdfThumbnailPageSize = 8;
 export const pdfPasswordMaxLength = 1024;
 export const pdfSearchMaxLength = 512;

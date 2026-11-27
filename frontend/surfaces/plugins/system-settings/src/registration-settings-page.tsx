@@ -1,28 +1,28 @@
 'use client';
-import { formatDate } from '@clouddrive/i18n';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
+import { formatDate } from '@neocloud/i18n';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import type { Preferences } from '@neocloud/surface/preferences-model';
 import { useState } from 'react';
 import {
   FoundationForm,
   FoundationControlledField,
   useFoundationForm,
-} from '@clouddrive/form-foundation';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { FormActions } from '@clouddrive/surface-foundation/form-actions';
-import { SelectField, SwitchField, type SelectOption } from '@clouddrive/ui-adapter/form-field';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
-import { ConfirmDialog } from '@clouddrive/ui-adapter/overlays';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { useRegisterDirtySource } from '@clouddrive/plugin-framework/leave-confirm';
+} from '@neocloud/form-foundation';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { FormActions } from '@neocloud/surface-foundation/form-actions';
+import { SelectField, SwitchField, type SelectOption } from '@neocloud/ui-adapter/form-field';
+import { Action } from '@neocloud/ui-adapter/action';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
+import { ConfirmDialog } from '@neocloud/ui-adapter/overlays';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { useRegisterDirtySource } from '@neocloud/plugin-framework/leave-confirm';
 import {
   IdentityError,
   useIdentityPort,
   type RegistrationConfiguration,
   type RegistrationSettingsInput,
-} from '@clouddrive/surface/identity/runtime';
+} from '@neocloud/surface/identity/runtime';
 import { useIdentityQuery } from '../../../src/identity/use-query';
 import { SettingsSections } from './settings-sections';
 import { PasswordPolicySection } from './password-policy';

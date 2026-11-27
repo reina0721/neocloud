@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	configbinding "github.com/reina0721/clouddrive/internal/module/ops/binding/config"
-	"github.com/reina0721/clouddrive/internal/module/ops/model"
-	"github.com/reina0721/clouddrive/internal/module/ops/service"
-	"github.com/reina0721/clouddrive/pkg/logger"
-	pkgobservability "github.com/reina0721/clouddrive/pkg/observability"
+	configbinding "github.com/reina0721/neocloud/internal/module/ops/binding/config"
+	"github.com/reina0721/neocloud/internal/module/ops/model"
+	"github.com/reina0721/neocloud/internal/module/ops/service"
+	"github.com/reina0721/neocloud/pkg/logger"
+	pkgobservability "github.com/reina0721/neocloud/pkg/observability"
 )
 
 // testMetrics 实现 pkgobservability.Metrics：暴露固定文本 handler 与 typed 摘要。

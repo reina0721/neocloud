@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	kernelcli "github.com/reina0721/clouddrive/internal/kernel/cli"
-	"github.com/reina0721/clouddrive/internal/module/todo/model"
-	"github.com/reina0721/clouddrive/internal/module/todo/service"
-	"github.com/reina0721/clouddrive/pkg/cli"
-	"github.com/reina0721/clouddrive/pkg/fault"
+	kernelcli "github.com/reina0721/neocloud/internal/kernel/cli"
+	"github.com/reina0721/neocloud/internal/module/todo/model"
+	"github.com/reina0721/neocloud/internal/module/todo/service"
+	"github.com/reina0721/neocloud/pkg/cli"
+	"github.com/reina0721/neocloud/pkg/fault"
 )
 
 func TestCommandsUseApplicationModeAndExternalWrite(t *testing.T) {

@@ -3,8 +3,8 @@ import type {
   AccountPreferences,
   AccountPreferencesPatch,
   AdministrationPort,
-} from '@clouddrive/surface/administration';
-import type { Preferences } from '@clouddrive/surface/preferences-model';
+} from '@neocloud/surface/administration';
+import type { Preferences } from '@neocloud/surface/preferences-model';
 import { ApiError } from '../api/json-client';
 import { useShellStore } from '../state/use-shell-store';
 

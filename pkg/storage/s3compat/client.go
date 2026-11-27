@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/smithy-go"
 
-	storageclient "github.com/reina0721/clouddrive/pkg/storage/client"
+	storageclient "github.com/reina0721/neocloud/pkg/storage/client"
 )
 
 const (

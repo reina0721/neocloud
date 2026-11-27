@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	pkgclock "github.com/reina0721/clouddrive/pkg/clock"
-	pkgschedule "github.com/reina0721/clouddrive/pkg/schedule"
+	pkgclock "github.com/reina0721/neocloud/pkg/clock"
+	pkgschedule "github.com/reina0721/neocloud/pkg/schedule"
 )
 
 func TestGocronEngineRejectsInvalidCronAtPrepare(t *testing.T) {

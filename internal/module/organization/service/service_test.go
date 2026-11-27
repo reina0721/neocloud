@@ -7,16 +7,16 @@ import (
 	"testing"
 	"time"
 
-	migrationbinding "github.com/reina0721/clouddrive/internal/module/organization/binding/migration"
-	"github.com/reina0721/clouddrive/internal/module/organization/model"
-	"github.com/reina0721/clouddrive/internal/module/organization/repo"
-	"github.com/reina0721/clouddrive/internal/module/organization/service"
-	"github.com/reina0721/clouddrive/pkg/clock"
-	"github.com/reina0721/clouddrive/pkg/database"
-	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
-	"github.com/reina0721/clouddrive/pkg/idgen"
+	migrationbinding "github.com/reina0721/neocloud/internal/module/organization/binding/migration"
+	"github.com/reina0721/neocloud/internal/module/organization/model"
+	"github.com/reina0721/neocloud/internal/module/organization/repo"
+	"github.com/reina0721/neocloud/internal/module/organization/service"
+	"github.com/reina0721/neocloud/pkg/clock"
+	"github.com/reina0721/neocloud/pkg/database"
+	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
+	"github.com/reina0721/neocloud/pkg/idgen"
 
-	"github.com/reina0721/clouddrive/pkg/testkit"
+	"github.com/reina0721/neocloud/pkg/testkit"
 )
 
 func TestDepartmentTreeCycleAndReferenceRules(t *testing.T) {

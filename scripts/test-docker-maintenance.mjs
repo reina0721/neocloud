@@ -41,15 +41,21 @@ const candidate = resolve(values.candidate);
 const version = values.version;
 const baseline = values.baseline && resolve(values.baseline);
 const baselineVersion = values["baseline-version"] ?? version;
-const trustDir = process.env.CLOUDDRIVE_OFFLINE_TRUST_DIR;
-assert.ok(trustDir, "需要独立提供 CLOUDDRIVE_OFFLINE_TRUST_DIR");
-const cosign = process.env.CLOUDDRIVE_COSIGN ?? "cosign";
+const trustDir = process.env.NEOCLOUD_OFFLINE_TRUST_DIR ?? process.env.CLOUDDRIVE_OFFLINE_TRUST_DIR;
+assert.ok(trustDir, "需要独立提供 NEOCLOUD_OFFLINE_TRUST_DIR");
+const cosign = process.env.NEOCLOUD_COSIGN ?? process.env.CLOUDDRIVE_COSIGN ?? "cosign";
 const arch = process.arch === "x64" ? "amd64" : process.arch;
 assert.match(arch, /^(amd64|arm64)$/);
-const tool = resolve(
-  values.tool ??
-    join(candidate, `clouddrive-maintenance_${version}_linux_${arch}`),
-);
+let tool = values.tool;
+async function dockerArchiveFamily(directory, tag) {
+  const checksums = (await readFile(join(directory, "checksums.txt"), "utf8")).split(/\r?\n/);
+  const names = ["neocloud", "clouddrive"].map((family) => `${family}_${tag}_linux_${arch}_docker.tar.gz`);
+  const matching = checksums.map((line) => line.trim().split(/\s+/)[1]?.replace(/^\*/, "")).filter((name) => names.includes(name));
+  assert.equal(matching.length, 1, "镜像归档必须对应唯一发布命名系列");
+  return matching[0].split("_")[0];
+}
+if (!tool) tool = join(candidate, `${await dockerArchiveFamily(candidate, version)}-maintenance_${version}_linux_${arch}`);
+tool = resolve(tool);
 const sandbox = await mkdtemp(join(tmpdir(), "clouddrive-maintenance-test-"));
 const root = join(sandbox, "instance");
 const ctrl = join(root, ".control", "maintenance");
@@ -78,8 +84,8 @@ function airgap(command, args) {
   return run("unshare", ["--net", "--", command, ...args]);
 }
 
-const imageRefs = (tag) =>
-  ["api", "web"].map((part) => `clouddrive-${part}:${tag}-${arch}`);
+const imageRefs = (tag, family) =>
+  ["api", "web"].map((part) => `${family}-${part}:${tag}-${arch}`);
 
 function baselineImageExists(ref) {
   const result = spawnSync("docker", ["image", "inspect", ref], {
@@ -195,7 +201,7 @@ async function finishedJob(id, action) {
 try {
   const initialBundle = baseline ?? candidate;
   const installer = join(initialBundle, "install.sh");
-  const previousRefs = baseline ? imageRefs(baselineVersion) : [];
+  const previousRefs = baseline ? imageRefs(baselineVersion, await dockerArchiveFamily(baseline, baselineVersion)) : [];
   const ownsPreviousImages =
     baseline && previousRefs.every((ref) => !baselineImageExists(ref));
   if (baseline) {
@@ -228,7 +234,7 @@ try {
     baselineVersion,
   ]);
   project = await read(join(root, ".control", "project"));
-  assert.match(project, /^clouddrive-[0-9a-f]{12}$/);
+  assert.match(project, /^(neocloud|clouddrive)-[0-9a-f]{12}$/);
   const imageID = (ref) =>
     run("docker", ["image", "inspect", "--format", "{{.Id}}", ref]);
   const previousImageIDs = previousRefs.map(imageID);
@@ -421,7 +427,7 @@ try {
     await verifyShare();
     // Discard recovery cookies; the new application must authorize its owner itself.
     if (!values["legacy-candidate"]) {
-      await owner.clearCookies({ name: "clouddrive_maintenance_recovery" });
+      await owner.clearCookies({ name: /^(neocloud|clouddrive)_maintenance_recovery$/ });
     }
   }
   if (values["legacy-candidate"]) {
@@ -598,14 +604,10 @@ try {
     ]);
     for (const unit of units)
       await rm(join("/etc/systemd/system", unit), { force: true });
-    await rm(join("/etc/clouddrive", project), {
-      force: true,
-      recursive: true,
-    });
-    await rm(join("/usr/local/lib/clouddrive", project), {
-      force: true,
-      recursive: true,
-    });
+    for (const family of ["neocloud", "clouddrive"]) {
+      await rm(join("/etc", family, project), { force: true, recursive: true });
+      await rm(join("/usr/local/lib", family, project), { force: true, recursive: true });
+    }
     spawnSync("groupdel", [project + "-gw"]);
     run("systemctl", ["daemon-reload"]);
   }

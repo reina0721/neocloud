@@ -1,4 +1,4 @@
-import type { TranslationResources } from '@clouddrive/i18n';
+import type { TranslationResources } from '@neocloud/i18n';
 
 /** loadFileAnnotationMessages 只在文件运行域加载整理界面文案，不增加登录首屏资源。 */
 export async function loadFileAnnotationMessages(): Promise<TranslationResources> {

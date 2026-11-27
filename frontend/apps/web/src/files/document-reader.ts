@@ -1,4 +1,4 @@
-import { FilesError, fileDetailSchema, type FileDocumentProps } from '@clouddrive/surface/files';
+import { FilesError, fileDetailSchema, type FileDocumentProps } from '@neocloud/surface/files';
 import type { createJsonClient } from '../api/json-client';
 
 type ByteSource = Readonly<{

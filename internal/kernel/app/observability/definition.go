@@ -4,8 +4,8 @@ package observability
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	pkgobservability "github.com/reina0721/clouddrive/pkg/observability"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	pkgobservability "github.com/reina0721/neocloud/pkg/observability"
 )
 
 const (

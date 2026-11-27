@@ -1,6 +1,6 @@
 'use client';
 
-import { createHydrationLifecycle, rehydrateStore } from '@clouddrive/state-foundation';
+import { createHydrationLifecycle, rehydrateStore } from '@neocloud/state-foundation';
 import { useEffect, useSyncExternalStore } from 'react';
 
 import { useDictionariesStore } from '../stores/dictionaries';

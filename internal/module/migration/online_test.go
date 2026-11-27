@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/reina0721/clouddrive/internal/module/migration"
-	migrationconfig "github.com/reina0721/clouddrive/internal/module/migration/binding/config"
-	"github.com/reina0721/clouddrive/pkg/database"
-	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
+	"github.com/reina0721/neocloud/internal/module/migration"
+	migrationconfig "github.com/reina0721/neocloud/internal/module/migration/binding/config"
+	"github.com/reina0721/neocloud/pkg/database"
+	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
 )
 
 func TestOnlineMigrationKeepsOldVersionCompatible(t *testing.T) {

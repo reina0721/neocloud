@@ -1,16 +1,16 @@
 'use client';
 
 import { useCallback, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { FrontendMessages, formatNumber, useFrontendTranslation } from '@clouddrive/i18n';
-import { formatInstant } from '@clouddrive/i18n/format';
-import { usePreferencesPort } from '@clouddrive/plugin-framework/preferences';
-import { Page, PageHeader, Section } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { DataTable } from '@clouddrive/ui-adapter/data-display';
-import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
-import { DisclosurePanel } from '@clouddrive/ui-adapter/disclosure';
-import { StateSurface } from '@clouddrive/ui-adapter/state-surface';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
+import { FrontendMessages, formatNumber, useFrontendTranslation } from '@neocloud/i18n';
+import { formatInstant } from '@neocloud/i18n/format';
+import { usePreferencesPort } from '@neocloud/plugin-framework/preferences';
+import { Page, PageHeader, Section } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { DataTable } from '@neocloud/ui-adapter/data-display';
+import { DescriptionList } from '@neocloud/ui-adapter/description-list';
+import { DisclosurePanel } from '@neocloud/ui-adapter/disclosure';
+import { StateSurface } from '@neocloud/ui-adapter/state-surface';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
 import { useRequiredAdministration } from '../../../src/administration/context';
 import {
   RuntimeReadError,

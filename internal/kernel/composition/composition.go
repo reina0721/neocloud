@@ -4,17 +4,17 @@ package composition
 import (
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel"
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	cacheapp "github.com/reina0721/clouddrive/internal/kernel/app/cache"
-	databaseapp "github.com/reina0721/clouddrive/internal/kernel/app/database"
-	executionapp "github.com/reina0721/clouddrive/internal/kernel/app/execution"
-	storageapp "github.com/reina0721/clouddrive/internal/kernel/app/storage"
-	pkgclock "github.com/reina0721/clouddrive/pkg/clock"
-	pkgi18n "github.com/reina0721/clouddrive/pkg/i18n"
-	pkgidgen "github.com/reina0721/clouddrive/pkg/idgen"
-	pkglogger "github.com/reina0721/clouddrive/pkg/logger"
-	pkgvalidation "github.com/reina0721/clouddrive/pkg/validation"
+	"github.com/reina0721/neocloud/internal/kernel"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	cacheapp "github.com/reina0721/neocloud/internal/kernel/app/cache"
+	databaseapp "github.com/reina0721/neocloud/internal/kernel/app/database"
+	executionapp "github.com/reina0721/neocloud/internal/kernel/app/execution"
+	storageapp "github.com/reina0721/neocloud/internal/kernel/app/storage"
+	pkgclock "github.com/reina0721/neocloud/pkg/clock"
+	pkgi18n "github.com/reina0721/neocloud/pkg/i18n"
+	pkgidgen "github.com/reina0721/neocloud/pkg/idgen"
+	pkglogger "github.com/reina0721/neocloud/pkg/logger"
+	pkgvalidation "github.com/reina0721/neocloud/pkg/validation"
 )
 
 // LoggerSelection 表示当前 composition 是否用配置化 App 替换 Kernel 内置 Logger。

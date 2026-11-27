@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
-	pkgdatabase "github.com/reina0721/clouddrive/pkg/database"
+	pkgdatabase "github.com/reina0721/neocloud/pkg/database"
 )
 
 type managedLease struct {

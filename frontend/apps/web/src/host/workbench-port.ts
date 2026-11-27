@@ -1,11 +1,11 @@
 /**
  * Host —— Workbench Port 实现（composition root 装配）。
  *
- * 把 `@clouddrive/plugin-framework/workbench` 契约接到 Host workbench store
+ * 把 `@neocloud/plugin-framework/workbench` 契约接到 Host workbench store
  * （use-workbench-store.ts）。Plugin 经 Port 读收藏/最近 + 切换收藏；记录最近访问
  * 由 Host 导航 commit（recent-visit-recorder）负责，不开放给 Plugin 写。
  */
-import type { WorkbenchPort } from '@clouddrive/plugin-framework/workbench';
+import type { WorkbenchPort } from '@neocloud/plugin-framework/workbench';
 import { useWorkbenchStore } from '../state/use-workbench-store';
 
 const listeners = new Set<() => void>();

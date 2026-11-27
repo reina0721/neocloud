@@ -38,6 +38,7 @@ func TestNativeCandidatesFiltersPublishedPlatformAssetsAndSorts(t *testing.T) {
 	}
 	page := make([]nativeReleaseSummary, 30)
 	page[0] = release("v0.9.0", "uploaded")
+	page[0].Assets[0].Name = strings.Replace(page[0].Assets[0].Name, "clouddrive_", "neocloud_", 1)
 	page[1] = release("v0.12.0", "uploaded")
 	page[1].Draft = true
 	page[2] = release("v0.13.0", "uploaded")
@@ -147,6 +148,19 @@ func TestNativeArchiveIdentityAndUnsafeEntries(t *testing.T) {
 				t.Fatal("接收了不安全的归档条目")
 			}
 		})
+	}
+}
+
+func TestNativeArchiveRequiresMatchingExecutableFamily(t *testing.T) {
+	entries := baselineNativeFixture(t)
+	entries[1].name, entries[2].name = "neocloud.exe", "neocloud-host.exe"
+	manifest, _, err := inspectNativeFile(writeNativeFixture(t, entries), "v0.2.3", "windows", "amd64")
+	if err != nil || manifest.family != neoRelease {
+		t.Fatalf("无法读取 NeoCloud 原生程序：%v %v", manifest.family, err)
+	}
+	entries[2].name = "clouddrive-host.exe"
+	if _, _, err := inspectNativeFile(writeNativeFixture(t, entries), "v0.2.3", "windows", "amd64"); err == nil {
+		t.Fatal("接受了不同命名系列的业务程序和宿主")
 	}
 }
 

@@ -1,17 +1,17 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { SectionBody } from '@clouddrive/surface-foundation/layout';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { DataTable } from '@clouddrive/ui-adapter/data-display';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { SectionBody } from '@neocloud/surface-foundation/layout';
+import { Action } from '@neocloud/ui-adapter/action';
+import { DataTable } from '@neocloud/ui-adapter/data-display';
 import {
   CheckboxField,
   SelectField,
   TextAreaField,
   TextField,
-} from '@clouddrive/ui-adapter/form-field';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
-import { Panel } from '@clouddrive/ui-adapter/panel';
+} from '@neocloud/ui-adapter/form-field';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
+import { Panel } from '@neocloud/ui-adapter/panel';
 import { ManagedPropertyInput } from '../../../src/files/managed-property-input';
 import { FilesError } from '../../../src/files/model';
 import {

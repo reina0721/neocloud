@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/reina0721/clouddrive/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/kernel/config"
 )
 
 // ID 是一个底层组件角色在当前进程中的稳定标识。

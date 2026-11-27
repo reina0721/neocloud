@@ -2,7 +2,7 @@ import {
   historyPreferencesSchema,
   FilesError,
   type HistoryPreferences,
-} from '@clouddrive/surface/files';
+} from '@neocloud/surface/files';
 import type { createJsonClient } from '../api/json-client';
 
 /** createHistoryPreferences 仅通过服务器保存账号策略，不维护本机回退副本。 */

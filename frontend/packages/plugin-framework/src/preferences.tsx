@@ -1,14 +1,14 @@
 /**
  * Plugin Framework —— Preferences Capability Port（client）。
  *
- * `@clouddrive/plugin-framework/preferences`：偏好能力的公共契约 + client
+ * `@neocloud/plugin-framework/preferences`：偏好能力的公共契约 + client
  * Provider/context/hook。Host 在 Composition Root 注入完整实现（读
  * `clouddrive.shell` v1 持久化，见 apps/web Host store）；Plugin（settings）与
  * Shell 经本入口读写同一份偏好，禁止跨 Plugin 直接读 Host store。
  *
  * 设计约束（R107-002）：
  * - 框架只定义**通用 Port 形状**：具体偏好模型（八分类 typed 状态/默认值/校验）由
- *   Product Surface 提供（`@clouddrive/surface/preferences-model`），结构上满足本
+ *   Product Surface 提供（`@neocloud/surface/preferences-model`），结构上满足本
  *   契约；框架不 import surface，保持依赖方向 surface → framework；
  * - 不读 pathname/history；无第二套 Router；
  * - `PersistResult` 让调用方判断成功/可判断失败（损坏/未知版本/存储拒绝/容量不足），

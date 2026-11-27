@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/app"
-	"github.com/reina0721/clouddrive/internal/kernel/config"
-	pkgschedule "github.com/reina0721/clouddrive/pkg/schedule"
+	"github.com/reina0721/neocloud/internal/kernel/app"
+	"github.com/reina0721/neocloud/internal/kernel/config"
+	pkgschedule "github.com/reina0721/neocloud/pkg/schedule"
 )
 
 const (

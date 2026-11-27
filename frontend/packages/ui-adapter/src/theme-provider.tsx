@@ -2,7 +2,7 @@
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { useMemo, type ReactNode } from 'react';
 import type {} from '@mui/x-date-pickers/themeAugmentation';
-import { designParameters } from '@clouddrive/design-system/parameters';
+import { designParameters } from '@neocloud/design-system/parameters';
 
 // MUI owns interaction anatomy; all visible roles follow the generated project tokens.
 // CSS variables keep theme/accent/density changes synchronous without rebuilding the theme.

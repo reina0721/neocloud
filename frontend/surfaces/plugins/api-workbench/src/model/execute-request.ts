@@ -5,7 +5,7 @@ import type {
   RequestTransport,
   ResolvedRequest,
   ScriptExecutionResult,
-} from '@clouddrive/surface/api-workbench';
+} from '@neocloud/surface/api-workbench';
 import { buildResolvedRequest } from './build-request';
 import { runExtractors } from './extractors';
 import { runScriptSandbox } from '../script/sandbox';

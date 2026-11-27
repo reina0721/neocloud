@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/reina0721/clouddrive/internal/module"
-	dbmigrate "github.com/reina0721/clouddrive/pkg/database/migrate"
+	"github.com/reina0721/neocloud/internal/module"
+	dbmigrate "github.com/reina0721/neocloud/pkg/database/migrate"
 )
 
 // Completion 是模块在版本 SQL 之外拥有的确定性数据完成门禁。

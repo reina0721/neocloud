@@ -1,12 +1,12 @@
-# clouddrive 前端
+# NeoCloud 前端
 
-这里是 CloudDrive 的 Web 界面与浏览器运行时。文件入口为 `/home`，管理入口为 `/workspace`，访客分享入口为 `/share`。前端与 Go 服务分进程运行，通过同源 `/api/console/v1` 访问既有业务与 IAM；页面不另建一套权限或存储事实。
+这里是 NeoCloud 的 Web 界面与浏览器运行时。文件入口为 `/home`，管理入口为 `/workspace`，访客分享入口为 `/share`。前端与 Go 服务分进程运行，通过同源 `/api/console/v1` 访问既有业务与 IAM；页面不另建一套权限或存储事实。
 
 ## 启动与交付
 
 从仓库根目录运行 `node scripts/dev.mjs --prepare`，需要独立真实预览时使用 `--preview`。完整前置、端口、账号准备与排障以[本地开发](../docs/getting-started/local-development.md)为准；已有服务可在本目录使用 `pnpm dev` 开发界面。
 
-生产采用 Next standalone，由部署环境分别管理 Web 与 Go。后端地址在运行时配置，构建时不绑定；API 代理、会话与 WebDAV 的地址边界见[部署说明](../docs/operations/clouddrive-deployment.md)。
+Docker 和源码整包使用 Next standalone，由部署环境分别管理 Web 与 Go。原生托管整包由 Go 同源提供 Next 静态导出和后端接口。Next standalone 的后端地址由运行时 `NEOCLOUD_BACKEND_URL` 提供，显式设置的旧名 `CLOUDDRIVE_BACKEND_URL` 仍可读取，双设时值必须一致。API 代理、会话与 WebDAV 的地址边界见[部署说明](../docs/operations/clouddrive-deployment.md)。
 
 产品版本与变更以根仓库的 GitHub Release 为准；私有工作区 `package.json` 的版本仅为包元数据，不表示独立产品发布，也不要求随产品 tag 同步修改。
 

@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
-import { PasswordField, TextField } from '@clouddrive/ui-adapter/form-field';
+import { PasswordField, TextField } from '@neocloud/ui-adapter/form-field';
 import type { FormEvent } from 'react';
 
 it('changes visibility without changing password value or submitting its form', () => {

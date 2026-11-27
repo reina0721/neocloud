@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeColumnLayout } from '@clouddrive/core';
+import { normalizeColumnLayout } from '@neocloud/core';
 import { parseAuditColumnLayoutPersisted } from './column-layout-schema';
 
 describe('audit column-layout 持久化校验', () => {

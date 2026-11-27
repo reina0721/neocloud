@@ -8,9 +8,9 @@ import { refreshServerNavigation, useServerNavigationStore } from '../state/use-
 import type {
   NavigationAdminPort,
   NavigationAdminSnapshot,
-} from '@clouddrive/plugin-framework/navigation-admin';
-import { NavigationAdminProvider } from '@clouddrive/plugin-framework/navigation-admin';
-import { rehydrateStore } from '@clouddrive/state-foundation';
+} from '@neocloud/plugin-framework/navigation-admin';
+import { NavigationAdminProvider } from '@neocloud/plugin-framework/navigation-admin';
+import { rehydrateStore } from '@neocloud/state-foundation';
 import { useEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 
 import { useNavigationAdminStore } from '../state/use-navigation-admin-store';

@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { TextField } from '@clouddrive/ui-adapter/form-field';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { TextField } from '@neocloud/ui-adapter/form-field';
 import { ReaderSurface } from './reader-surface';
-import { DialogSurface } from '@clouddrive/ui-adapter/overlays';
+import { DialogSurface } from '@neocloud/ui-adapter/overlays';
 import { fileApplicationDevice } from '../../../src/files/file-applications';
 import { FilesError, type FileEntry } from '../../../src/files/model';
 import { useDrawioEndpoint, useFiles, useReaderDraftAutosave } from '../../../src/files/runtime';

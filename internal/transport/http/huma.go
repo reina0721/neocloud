@@ -13,20 +13,20 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
-	"github.com/reina0721/clouddrive/internal/transport/http/humabinding"
-	"github.com/reina0721/clouddrive/pkg/httpx"
+	"github.com/reina0721/neocloud/internal/transport/http/humabinding"
+	"github.com/reina0721/neocloud/pkg/httpx"
 )
 
 func newHumaAPI(router chi.Router, gate OperationGate) huma.API {
-	config := huma.DefaultConfig("clouddrive HTTP API", "1.0.0-rc.1")
-	config.Info.Description = "当前模板的公开 HTTP 契约。所有失败使用 RFC 9457 Problem Details；operation 的认证与授权由项目 gate 统一执行。"
+	config := huma.DefaultConfig("NeoCloud HTTP API", "1.0.0-rc.1")
+	config.Info.Description = "NeoCloud 的原生 HTTP 契约。所有失败使用 RFC 9457 Problem Details；operation 的认证与授权由项目 gate 统一执行。"
 	config.OpenAPIPath = ""
 	config.DocsPath = ""
 	config.SchemasPath = ""
 	config.CreateHooks = nil
 	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 		humabinding.SecurityBearer:       {Type: "http", Scheme: "bearer", BearerFormat: "JWT"},
-		humabinding.SecurityWebUISession: {Type: "apiKey", In: "cookie", Name: "go_scaffold_session"},
+		humabinding.SecurityWebUISession: {Type: "apiKey", In: "cookie", Name: "__Host-neocloud_iam_session"},
 	}
 
 	adapter := &problemAdapter{Adapter: humachi.NewAdapter(router)}

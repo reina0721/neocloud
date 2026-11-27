@@ -1,4 +1,4 @@
-import { DataTable, type DataColumn } from '@clouddrive/ui-adapter/data-display';
+import { DataTable, type DataColumn } from '@neocloud/ui-adapter/data-display';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

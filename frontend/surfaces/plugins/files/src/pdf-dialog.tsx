@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useFrontendTranslation } from '@clouddrive/i18n';
+import { useFrontendTranslation } from '@neocloud/i18n';
 import { ReaderSurface } from './reader-surface';
 import { FileDocument } from '../../../src/files/runtime';
 import type { FileDocumentProps } from '../../../src/files/pdf-contract';

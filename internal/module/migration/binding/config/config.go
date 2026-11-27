@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/reina0721/clouddrive/internal/kernel/config"
+	"github.com/reina0721/neocloud/internal/kernel/config"
 )
 
 const (

@@ -1,7 +1,7 @@
 'use client';
-import { useFrontendTranslation } from '@clouddrive/i18n';
-import { Action } from '@clouddrive/ui-adapter/action';
-import { DescriptionList } from '@clouddrive/ui-adapter/description-list';
+import { useFrontendTranslation } from '@neocloud/i18n';
+import { Action } from '@neocloud/ui-adapter/action';
+import { DescriptionList } from '@neocloud/ui-adapter/description-list';
 import { formatFileBytes } from '../../../src/files/format';
 import type { FileAnnotationDetail } from '../../../src/files/annotations';
 import { AnnotationColorDot } from './annotation-fields';

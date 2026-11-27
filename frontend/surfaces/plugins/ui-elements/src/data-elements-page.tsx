@@ -1,6 +1,6 @@
 'use client';
 
-import { Action } from '@clouddrive/ui-adapter/action';
+import { Action } from '@neocloud/ui-adapter/action';
 import {
   AreaChart,
   BarChart,
@@ -8,24 +8,24 @@ import {
   Sparkline,
   type ChartSegment,
   type ChartSeries,
-} from '@clouddrive/ui-adapter/charts';
-import { DataTable } from '@clouddrive/ui-adapter/data-display';
-import { Badge } from '@clouddrive/ui-adapter/feedback';
-import { useFeedback } from '@clouddrive/ui-adapter/feedback-context';
-import { StatusPill } from '@clouddrive/ui-adapter/status-pill';
-import { ToggleGroup } from '@clouddrive/ui-adapter/toggle-group';
-import type { DataColumn } from '@clouddrive/ui-adapter/data-display';
+} from '@neocloud/ui-adapter/charts';
+import { DataTable } from '@neocloud/ui-adapter/data-display';
+import { Badge } from '@neocloud/ui-adapter/feedback';
+import { useFeedback } from '@neocloud/ui-adapter/feedback-context';
+import { StatusPill } from '@neocloud/ui-adapter/status-pill';
+import { ToggleGroup } from '@neocloud/ui-adapter/toggle-group';
+import type { DataColumn } from '@neocloud/ui-adapter/data-display';
 import { useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useFrontendTranslation, formatNumber } from '@clouddrive/i18n';
-import { Section } from '@clouddrive/surface-foundation/layout';
+import { useFrontendTranslation, formatNumber } from '@neocloud/i18n';
+import { Section } from '@neocloud/surface-foundation/layout';
 import {
   CollectionToolbar,
   type ColumnSettingsText,
   type DensityLevel,
-} from '@clouddrive/surface-foundation/collection-tools';
-import { toCsv, type CsvColumn } from '@clouddrive/core';
-import { usePluginLocale } from '@clouddrive/plugin-framework/plugin';
+} from '@neocloud/surface-foundation/collection-tools';
+import { toCsv, type CsvColumn } from '@neocloud/core';
+import { usePluginLocale } from '@neocloud/plugin-framework/plugin';
 import { ComponentPreview } from './component-preview';
 import { UiElementsFamilyPage } from './family-page';
 import { browserCsvExport } from './browser-csv-export';
